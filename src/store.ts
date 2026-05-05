@@ -197,6 +197,7 @@ export const useStore = create<AppState>((set) => ({
     minResponseRatio: LS.get('st-translator-advanced-settings', { minResponseRatio: 0.15 }).minResponseRatio ?? 0.15,
     systemPromptPrefix: LS.get('st-translator-advanced-settings', { systemPromptPrefix: '' }).systemPromptPrefix ?? '',
     useCorsProxy: LS.get('st-translator-use-cors-proxy', true),
+    useStream: LS.get('st-translator-use-stream', true),
     expertMode: LS.get('st-translator-advanced-settings', { expertMode: false }).expertMode ?? false,
   },
   setProxy: (partial) => {
@@ -209,6 +210,7 @@ export const useStore = create<AppState>((set) => ({
       LS.set('st-translator-api-keys', next.apiKeys);
       LS.set('st-translator-model', next.model);
       LS.set('st-translator-use-cors-proxy', next.useCorsProxy);
+      LS.set('st-translator-use-stream', next.useStream);
       LS.set('st-translator-advanced-settings', {
         maxTokens: next.maxTokens,
         temperature: next.temperature,

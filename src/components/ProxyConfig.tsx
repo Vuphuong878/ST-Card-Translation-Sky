@@ -559,6 +559,30 @@ export default function ProxyConfig() {
                 />
               </div>
 
+              {/* Stream Toggle */}
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.8rem',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  marginTop: '4px',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={proxy.useStream}
+                  onChange={(e) => setProxy({ useStream: e.target.checked })}
+                  style={{ cursor: 'pointer' }}
+                />
+                Use Streaming (SSE)
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                  Disable if proxy doesn't support streams
+                </span>
+              </label>
+
               {/* Reset Defaults */}
               <button
                 className="btn btn-ghost"
@@ -581,6 +605,7 @@ export default function ProxyConfig() {
                     minResponseRatio: 0.15,
                     systemPromptPrefix: '',
                     expertMode: false,
+                    useStream: true,
                   });
                 }}
               >

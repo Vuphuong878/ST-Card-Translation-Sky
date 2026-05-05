@@ -78,14 +78,14 @@ You receive ONE field at a time. Translate it in isolation but maintain consiste
 
 SUBSYSTEM 2 — SillyTavern Macro System:
 Macros are tokens wrapped in {{double curly braces}}, dynamically replaced at runtime.
-COMPLETE LIST of known macros (NEVER translate these):
+COMPLETE LIST of known macros (NEVER translate the macro names):
   Context:    {{char}} {{user}} {{persona}} {{original}}
   Variables:  {{getvar::NAME}} {{setvar::NAME::VALUE}} {{addvar::NAME::INCREMENT}} {{getglobalvar::NAME}} {{setglobalvar::NAME::VALUE}}
   Utility:    {{random}} {{random::A::B::C}} {{roll::NdM}} {{time}} {{date}} {{idle_duration}} {{input}}
   Message:    {{lastMessage}} {{lastMessageId}} {{newline}} {{trim}}
   Card data:  {{description}} {{personality}} {{scenario}} {{mesExamples}} {{charFirstMes}} {{charJailbreak}} {{sysPrompt}} {{worldInfo}} {{lorebook}} {{inventory}}
   Format:     {{noop}} <|im_start|> <|im_end|> <START>
-ANY text inside {{...}} is a macro. Preserve it byte-for-byte.
+PRESERVE MACRO SYNTAX STRICTLY. Do not translate the macro names (like "char", "user", "setvar"). HOWEVER, if the macro arguments are in CJK (e.g., {{setvar::愤怒程度::5}}), you MUST translate the arguments while keeping the syntax exactly identical (e.g., {{setvar::Mức độ tức giận::5}}).
 
 SUBSYSTEM 3 — Lorebook / World Info:
 Lorebook entries are injected into prompts when trigger keywords match.
@@ -233,19 +233,18 @@ function buildLorebookRules(): string {
   return `
 CODE PRESERVATION RULES (LOREBOOK & JSON STATE):
 
-CRITICAL — ZERO TOLERANCE FOR RESIDUAL CHINESE IN LOREBOOK:
-  Lorebook entries are the most common source of untranslated Chinese text surviving in the output.
-  You MUST translate EVERY SINGLE Chinese character in the content field. No exceptions.
-  Common missed items (you MUST catch ALL of these):
-    - Section headers/titles in Chinese (e.g., "人物设定：" → must become Vietnamese)
-    - YAML-like key names in Chinese (e.g., "外貌:" → "Ngoại hình:")
-    - Inline Chinese annotations or parenthetical notes (e.g., "(可爱的)" → "(dễ thương)")
-    - Chinese text inside XML/HTML tags (e.g., <palette_name>赵玉棠</palette_name> → translate the name inside)
-    - Chinese text mixed with Vietnamese/English text (translate the Chinese parts, keep the rest)
-    - Chinese punctuation with Chinese text (full-width commas, periods, brackets with Chinese content)
-    - Labels, category names, and structural markers in Chinese
-  After translating, mentally scan the ENTIRE output for any remaining Chinese characters (汉字).
-  If you find ANY, translate them. The final output must contain ZERO Chinese characters except inside code constructs that reference Chinese-named variables (and those should be renamed per the MVU dictionary if provided).
+CRITICAL — TRANSLATE ALL CJK CONTENT:
+  You MUST translate EVERY SINGLE CJK (Chinese/Japanese/Korean) character.
+  Only preserve the TECHNICAL SYNTAX (macros, JS keywords, JSON structure, EJS tags).
+  Do NOT preserve CJK content, no matter where it is located.
+
+  Examples of what MUST be translated:
+    - Prose: \`性格活泼可爱\` → \`Tính cách hoạt bát dễ thương\`
+    - YAML/Display keys: \`性格调色盘:\` → \`Bảng màu tính cách:\`
+    - JSON keys: \`{"愤怒程度": 0}\` → \`{"Mức độ tức giận": 0}\`
+    - Macro string literals: \`getvar("愤怒程度")\` → \`getvar("Mức độ tức giận")\`
+    - Macro arguments: \`{{setvar::愤怒程度::5}}\` → \`{{setvar::Mức độ tức giận::5}}\`
+    - Parenthetical labels: \`衍生一 (双面魅力)\` → \`Phái sinh một (Sức hút hai mặt)\`
 
 P5 — YAML-like Structured Data:
   Some lorebook entries use a structured format:
@@ -253,24 +252,22 @@ P5 — YAML-like Structured Data:
     主色调衍生 (可爱的美少女): ...
     Cultivation_Level: 筑基期
   RULES for structured data:
-    - If the KEY name (left side of the colon) is in Chinese/Japanese (e.g., "外貌", "主色调衍生"), you MUST TRANSLATE the KEY as well as the value (e.g., "Ngoại hình: Xinh đẹp").
-    - If parenthetical annotations contain Chinese (e.g., "(可爱的美少女)"), you MUST translate them too.
+    - If the KEY name (left side of the colon) is in CJK (e.g., "外貌", "主色调衍生"), you MUST TRANSLATE the KEY as well as the value (e.g., "Ngoại hình: Xinh đẹp").
+    - If parenthetical annotations contain CJK (e.g., "(可爱的美少女)"), you MUST translate them too.
     - If the KEY name is in English, PRESERVE the key exactly and only translate the value (e.g., "Cultivation_Level: Trúc Cơ Kỳ").
 
 RULE C2 — JSON Key Translation Integrity:
   When translating JSON structures used for MVU (Multi-Variable Update) state tracking, the keys themselves are variable names.
-  Dịch tiếng trung sang tiếng việt, không dịch tiếng anh. Dịch phù hợp quy tắc mvu và đồng biến với Schema. Nếu là tên riêng tiếng nhật thì dịch ra theo dạng phiên âm Romaji.
+  Dịch MỌI chữ CJK (Hán/Nhật/Hàn) ở JSON key, bảo toàn ngoặc kép và cú pháp kỹ thuật. Dịch phù hợp quy tắc mvu và đồng biến với Schema. Nếu là tên riêng tiếng nhật thì dịch ra theo dạng phiên âm Romaji.
   RULES FOR KEYS:
-    - Use natural spaces, NOT underscores.
+    - Use natural spaces, NOT underscores, unless specifically matching a dictionary.
     - Must be consistent. If "修为" is translated as "Tu Vi" in one place, it must be "Tu Vi" everywhere.
     - Do NOT translate English keys.
     - Japanese proper nouns should use Romaji transliteration.
   Example (Before):
     { "角色状态": "健康", "精神力": 100 }
   Example (After - CORRECT):
-    { "Trạng thái nhân vật": "Khỏe mạnh", "Tinh thần lực": 100 }
-  Example (After - WRONG - Underscores used in key):
-    { "Trạng_thái_nhân_vật": "Khỏe mạnh", "Tinh_thần_lực": 100 }`;
+    { "Trạng thái nhân vật": "Khỏe mạnh", "Tinh thần lực": 100 }`;
 }
 
 /** JSON Patch (RFC 6902) translation rules */
@@ -332,14 +329,15 @@ RULE C3.1 — Preserve Javascript Logic:
   NEVER translate: Math.random(), Math.floor(), Array.push(), String.replace().
   
   ONLY TRANSLATE:
-    1. Human-readable string literals intended for UI display (especially values of "label", "name", "help", "title", "text").
-    2. Variable identifiers (ONLY if following RULE C3 sync rules).
+    1. ALL CJK (Chinese/Japanese/Korean) characters.
+    2. Human-readable string literals intended for UI display.
+    3. Variable identifiers (ONLY if following RULE C3 sync rules).
     
   RULE C3.2 — Translate UI Labels and Display Text:
-    When you encounter object properties like \`label\`, \`name\`, \`help\`, \`text\`, or \`description\` inside JSON, arrays, or Javascript code, you MUST translate their string values. These are UI elements meant for the user.
-    Do NOT translate the property key itself (e.g. keep \`label:\`), only the value.
-    EXAMPLE (Before): { label: "点击这里", value: "click_here" }
-    EXAMPLE (After - CORRECT): { label: "Nhấn vào đây", value: "click_here" }
+    If a JSON key or object property is in CJK (e.g. \`{"愤怒程度": 0}\`), you MUST translate BOTH the key and the value (e.g. \`{"Mức độ tức giận": 0}\`).
+    If a JSON key or object property is in English (e.g. \`label\`, \`name\`, \`text\`), do NOT translate the key itself, only translate its string value.
+    EXAMPLE (Before): { label: "点击这里", "愤怒程度": 100 }
+    EXAMPLE (After - CORRECT): { label: "Nhấn vào đây", "Mức độ tức giận": 100 }
     
   EXAMPLE (Before):
     <% if (getvar('心情') > 50) { %>
@@ -427,7 +425,7 @@ RULE C11 — XML/YAML/Markdown Structure & Key Translation (Vietnamese Specific)
    ════════════════════════════════════════════════════════════════════ */
 function buildFailureModes(fieldType: TranslationFieldType): string {
   const allFailures: Record<string, string> = {
-    macro_translation: `  [FATAL] Translating Macros: Changing {{char}} to {{nhân vật}} or {{getvar::修为}} to {{lấy_biến::Tu Vi}}. Macros are machine tokens. NEVER translate anything inside {{ }}.`,
+    macro_translation: `  [FATAL] Translating Macros: Changing {{char}} to {{nhân vật}}. System macros must be preserved. Only translate the CJK arguments inside dynamic macros (e.g. {{setvar::Cận_Chiến::5}}).`,
     regex_modification: `  [FATAL] Regex Modification: Altering findRegex patterns. /hello/i becoming /xin chào/i. Regex is executed by the engine, not read by the user. Output it verbatim.`,
     json_key_inconsistency: `  [FATAL] JSON Key Inconsistency: If "修为" is translated as "Tu Vi" in one place, it must be "Tu Vi" everywhere. Inconsistent translations cause EJS desync and system crashes.`,
     ejs_desync: `  [FATAL] EJS Desync: Translating a JSON key but forgetting to translate the corresponding getvar() call, resulting in getvar('original_chinese') returning null because the JSON now holds 'translated_vietnamese'. SYNC IS MANDATORY.`,

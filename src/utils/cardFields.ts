@@ -55,6 +55,11 @@ export function setNestedValue(obj: Record<string, unknown>, path: string, value
 
 /* ─── Check if text is only HTML/code (should not translate) ─── */
 function isCodeOnly(text: string): boolean {
+  // If the text contains any CJK characters, it must be translated regardless of macros/HTML
+  if (/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(text)) {
+    return false;
+  }
+
   const stripped = text
     .replace(/<[^>]+>/g, '')
     .replace(/\{\{[^}]+\}\}/g, '')
@@ -71,6 +76,11 @@ function isCodeOnly(text: string): boolean {
  */
 function hasTranslatableText(text: string): boolean {
   if (!text || typeof text !== 'string' || text.trim() === '') return false;
+  
+  // If the text contains any CJK characters, it is immediately translatable
+  const hasCJK = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(text);
+  if (hasCJK) return true;
+
   // Strip pure code patterns
   let stripped = text
     .replace(/<style[\s\S]*?<\/style>/gi, '')  // remove style blocks
@@ -81,20 +91,19 @@ function hasTranslatableText(text: string): boolean {
     .replace(/[\{\}\[\]\(\);:,=<>!&|+\-*/%.#@~`"'\\]/g, '') // remove code symbols
     .replace(/\s+/g, ' ')
     .trim();
-  // If remaining text has CJK characters, Cyrillic, or >10 chars of Latin text, it's translatable
-  const hasCJK = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(stripped);
+  // If remaining text has Cyrillic or >10 chars of Latin text, it's translatable
   const hasCyrillic = /[\u0400-\u04ff]/.test(stripped);
   const hasSubstantialLatin = stripped.replace(/[^a-zA-ZÀ-ÿ]/g, '').length > 10;
-  return hasCJK || hasCyrillic || hasSubstantialLatin || stripped.length > 20;
+  return hasCyrillic || hasSubstantialLatin || stripped.length > 20;
 }
 
 /* ─── Classify lorebook entry type for MVU per-type strategy ─── */
 type LorebookEntryType = 'initvar' | 'mvu_logic' | 'rules' | 'narrative' | 'controller';
 
 function classifyLorebookEntry(entry: { name?: string; comment?: string; content?: string }): LorebookEntryType {
-  const name = (entry.name || '').toLowerCase();
-  const comment = (entry.comment || '').toLowerCase();
-  const content = entry.content || '';
+  const name = (typeof entry.name === 'string' ? entry.name : '').toLowerCase();
+  const comment = (typeof entry.comment === 'string' ? entry.comment : '').toLowerCase();
+  const content = typeof entry.content === 'string' ? entry.content : '';
 
   // [initvar] — variable initialization YAML
   if (content.includes('[initvar]') || comment.includes('initvar') || name.includes('initvar') || name.includes('var_init')) {

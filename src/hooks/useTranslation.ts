@@ -20,43 +20,41 @@ ADDITIONAL RULES FOR HTML/REGEX CONTENT:
     - 楷体 / KaiTi → 'Georgia', serif
     - Any other Chinese/Japanese font → 'Segoe UI', sans-serif
 15. UNDERSCORE DISPLAY: When translating variable names or labels that use underscores (e.g. Ngoại_giao_đoàn), keep the underscores in data-var attributes and variable references, but in visible display text/labels show spaces instead of underscores (e.g. display "Ngoại giao đoàn" to the user).
-16. Keep all HTML structure, data-var attributes, class names, and id attributes intact. Only translate visible text content and apply font changes.`;
+16. TRANSLATE ALL CJK (Chinese/Japanese/Korean) text. Keep all HTML structure, data-var attributes, class names, and id attributes intact, BUT if an attribute value or tag content contains CJK, you MUST translate it.`;
 
 /* ─── Prompt bổ sung dành riêng cho TavernHelper scripts ─── */
 const TAVERN_HELPER_EXTRA_PROMPT = `
 
 ADDITIONAL RULES FOR JAVASCRIPT/TAVERNHELPER SCRIPT CONTENT:
 14. This is JavaScript code from a SillyTavern TavernHelper/JS-Slash-Runner plugin script.
-15. ONLY translate human-readable string literals (text inside quotes that is displayed to the user or used as labels/descriptions).
-16. DO NOT translate: variable names, function names, API calls, import paths, object keys, SillyTavern macros ({{...}}), CSS selectors, HTML tag names, event names, or any code logic.
-17. DO NOT translate strings that look like identifiers, keys, or technical values (e.g. "chat_message", "user_input", "enabled").
-18. Translate strings that are clearly user-facing text: UI labels, descriptions, error messages, tooltips, dialog text, placeholder text.
-19. Keep ALL code structure intact — same line breaks, same indentation, same semicolons/brackets.
-20. If a string contains mixed code and text (e.g. template literals with \${var}), translate only the text parts and preserve the code interpolations.
-21. Preserve font-family replacements as specified for Chinese/Japanese fonts.`;
+15. TRANSLATE ALL CJK (Chinese/Japanese/Korean) characters no matter where they appear: in prose, object keys, variable names, or string literals.
+16. DO NOT translate English keywords, function names, API calls, import paths, CSS selectors, HTML tag names, event names, or any Javascript code logic.
+17. PRESERVE ONLY TECHNICAL SYNTAX. Do not preserve CJK content. If a variable name or object key is in CJK, TRANSLATE IT and maintain consistency (MVU sync).
+18. Keep ALL code structure intact — same line breaks, same indentation, same semicolons/brackets.
+19. If a string contains mixed code and text (e.g. template literals with \${var}), translate only the CJK/text parts and preserve the code interpolations.
+20. Preserve font-family replacements as specified for Chinese/Japanese fonts.`;
 
 /* ─── Prompt bổ sung cho [initvar] entries (YAML variable initialization) ─── */
 const INITVAR_EXTRA_PROMPT = `
 
 ADDITIONAL RULES FOR [initvar] VARIABLE INITIALIZATION ENTRIES:
 14. This is a YAML-structured variable initialization entry.
-15. TRANSLATE the VALUE part (text after the colon) into natural language.
-16. KEEP the KEY part (text before the colon) using the variable name mapping from the MVU dictionary if provided.
-17. PRESERVE the exact YAML structure: indentation, colons, line breaks.
-18. DO NOT translate numeric values, boolean values (true/false), or code expressions.
-19. Keep any {{macro}} placeholders exactly as-is.
-20. Example: "好感度: 陌生人" → "Hảo_Cảm: Người lạ" (key translated via dictionary, value translated naturally).`;
+15. TRANSLATE ALL CJK (Chinese/Japanese/Korean) characters, BOTH keys (before the colon) and values (after the colon).
+16. PRESERVE the exact YAML structure: indentation, colons, line breaks.
+17. DO NOT translate numeric values, boolean values (true/false), or code expressions.
+18. Keep any {{macro}} placeholders exactly as-is (except for their CJK arguments).
+19. Example: "好感度: 陌生人" → "Hảo Cảm: Người lạ" (both key and value translated).`;
 
 /* ─── Prompt bổ sung cho MVU logic entries (controller/update) ─── */
 const MVU_LOGIC_EXTRA_PROMPT = `
 
 ADDITIONAL RULES FOR MVU LOGIC/CONTROLLER ENTRIES:
 14. This entry contains MVU (Model-View-Update) logic code or controller definitions.
-15. ONLY translate human-readable strings and comments. Keep ALL code logic intact.
-16. Preserve ALL {{getvar::}}, {{setvar::}}, {{addvar::}} macros exactly.
+15. TRANSLATE ALL CJK (Chinese/Japanese/Korean) characters no matter where they appear.
+16. Preserve ALL {{getvar::}}, {{setvar::}}, {{addvar::}} macros exactly (but translate their CJK arguments).
 17. Variable names in macros should use the translated names from the MVU dictionary.
-18. Keep JSON structures, conditional expressions, and mathematical formulas unchanged.
-19. Translate descriptive text and labels but NOT code identifiers.`;
+18. Keep JSON structures, conditional expressions, and mathematical formulas unchanged, BUT translate their CJK keys and values.
+19. Translate all descriptive text and CJK labels.`;
 
 
 export function useTranslation() {
@@ -304,7 +302,7 @@ export function useTranslation() {
     const mvuCriticalCount = batchFields.filter(isMvuCriticalField).length;
     const entryTypes = [...new Set(batchFields.map(f => f.entryType).filter(Boolean))];
     const typeLabel = entryTypes.length > 0 ? ` [${entryTypes.join(',')}]` : '';
-    store.addLog('active', `${retryPrefix}Batch translating ${batchFields.length} entries${typeLabel} (${totalChars} chars${mvuCriticalCount > 0 ? `, ${mvuCriticalCount} MVU-critical` : ''})`);
+    store.addLog('active', `${retryPrefix}Batch translating ${batchFields.length} entries${typeLabel} (${totalChars} chars${mvuCriticalCount > 0 ? `, ${mvuCriticalCount} MVU-critical` : ''}) - Unlimited Context`);
 
     try {
       const items = batchFields.map(f => ({ text: f.original, fieldName: f.label }));

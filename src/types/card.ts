@@ -175,6 +175,8 @@ export interface ProxySettings {
   systemPromptPrefix: string;
   /** Route API calls through the Vite dev-server proxy to bypass CORS */
   useCorsProxy: boolean;
+  /** Use streaming (SSE) instead of waiting for full response */
+  useStream: boolean;
   /** Enable expert mode: AI uses <thought_process>/<translation> XML reasoning for higher quality */
   expertMode: boolean;
 }

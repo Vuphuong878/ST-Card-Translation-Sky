@@ -414,40 +414,25 @@ ${fragmentList}${mvuBlock}`;
   return currentResult;
 }
 
-/* ─── Chunk long text (CJK-aware) ─── */
-function chunkText(text: string, maxChars?: number, maxTokens?: number): string[] {
-  // Auto-detect optimal chunk size based on content language
-  // CJK characters use ~2-3 tokens each, so we need smaller chunks
-  // to avoid hitting output token limits on Gemini/etc.
+/* ─── Chunk long text (CJK-aware / Unlimited Context) ─── */
+export function chunkText(text: string, maxChars?: number, maxTokens?: number): string[] {
+  // Now using unlimited context approaches with high chunk thresholds
   if (maxChars === undefined) {
-    const cjkRatio = getCJKRatio(text);
-    
-    // If the proxy supports large output, maxTokens might be huge (e.g. 50,000 to unlimited)
-    // Roughly 1 token = 3-4 chars for English, 1-2 chars for CJK
     if (maxTokens && maxTokens > 4000) {
-      if (cjkRatio > 0.3) maxChars = maxTokens; // e.g. 100k tokens -> 100k chars for CJK
-      else if (cjkRatio > 0.1) maxChars = maxTokens * 2;
-      else maxChars = maxTokens * 3; // e.g. 100k tokens -> 300k chars for Latin
+      maxChars = maxTokens * 2;
     } else {
-      if (cjkRatio > 0.3) {
-        maxChars = 10000; // CJK-heavy
-      } else if (cjkRatio > 0.1) {
-        maxChars = 20000; // Mixed content
-      } else {
-        maxChars = 30000; // Latin/Cyrillic text
-      }
+      maxChars = 200000; // Use a large threshold for new models
     }
   }
 
-  // ═══ HARD CAP: Set to 30K chars per chunk ═══
-  const HARD_CAP = 30000;
+  // ═══ HARD CAP: Set to 200K chars per chunk ═══
+  const HARD_CAP = 200000;
   maxChars = Math.min(maxChars, HARD_CAP);
 
   if (text.length <= maxChars) return [text];
 
-  // Check if content is HTML (for smarter splitting)
+  // Smart splitting states
   const isHtml = /<[a-z][^>]*>/i.test(text) && /<\/[a-z]+>/i.test(text);
-  // Check if content contains HTML tables (need special protection)
   const hasTable = isHtml && /<table[\s>]/i.test(text);
 
   const chunks: string[] = [];
@@ -460,92 +445,114 @@ function chunkText(text: string, maxChars?: number, maxTokens?: number): string[
     }
 
     let splitIdx = -1;
+    
+    // ─── JSON / EJS / Markdown safe splitting ───
+    // First try to find a safe boundary outside of code blocks/objects
+    // Because parsing partial JSON/EJS breaks things easily.
+    
+    // Attempt double newline boundary, ensuring not in the middle of an EJS or Markdown block
+    let searchIdx = maxChars;
+    while (searchIdx > maxChars * 0.3) {
+      splitIdx = remaining.lastIndexOf('\n\n', searchIdx);
+      if (splitIdx !== -1) {
+        // Quick boundary check: if inside a backtick code block, try to jump out
+        const textBefore = remaining.slice(0, splitIdx);
+        const codeBlockMarkers = (textBefore.match(/```/g) || []).length;
+        // if inside backticks (odd number of ```), skip this split
+        if (codeBlockMarkers % 2 !== 0) {
+          searchIdx = remaining.lastIndexOf('```', splitIdx - 1);
+          continue;
+        }
+        
+        // if inside EJS block (more <% than %>), jump out
+        const ejsOpens = (textBefore.match(/<%/g) || []).length;
+        const ejsCloses = (textBefore.match(/%>/g) || []).length;
+        if (ejsOpens > ejsCloses) {
+          searchIdx = remaining.lastIndexOf('<%', splitIdx - 1);
+          continue;
+        }
+        break; // found safe split
+      }
+      break;
+    }
 
-    // ─── HTML-aware splitting: try to break at major block boundaries ───
-    if (isHtml) {
-      // Only split at TOP-LEVEL block boundaries.
-      // NEVER split inside a <table>...</table> — inner elements like <tr>, <td>
-      // must stay together or the table structure breaks.
+    // ─── HTML-aware splitting ───
+    if (splitIdx < maxChars * 0.3 && isHtml) {
       if (hasTable) {
-        // Table-safe splitting: only split at </table>, </div>, </section> boundaries
-        // Track table nesting to avoid splitting inside tables
         const safeBlockEndRegex = /<\/(div|section|article|table|ul|ol|p|h[1-6])>\s*/gi;
         let bestHtmlSplit = -1;
         let m;
         while ((m = safeBlockEndRegex.exec(remaining)) !== null) {
           const endPos = m.index + m[0].length;
           if (endPos > maxChars) break;
-          if (endPos <= maxChars && endPos > maxChars * 0.3) {
-            // Check if we're inside a <table> at this position
+          if (endPos > maxChars * 0.3) {
             const textBefore = remaining.slice(0, endPos);
             const tableOpens = (textBefore.match(/<table[\s>]/gi) || []).length;
             const tableCloses = (textBefore.match(/<\/table>/gi) || []).length;
-            const insideTable = tableOpens > tableCloses;
-            
-            // Only accept this split point if we're NOT inside a table,
-            // OR if the closing tag itself is </table>
-            if (!insideTable || m[1].toLowerCase() === 'table') {
+            if (!(tableOpens > tableCloses) || m[1].toLowerCase() === 'table') {
               bestHtmlSplit = endPos;
             }
           }
         }
-        if (bestHtmlSplit > maxChars * 0.3) {
-          splitIdx = bestHtmlSplit;
-        }
+        if (bestHtmlSplit > maxChars * 0.3) splitIdx = bestHtmlSplit;
       } else {
-        // No tables — safe to split at any block boundary including <tr>, <li> etc.
         const htmlBlockEndRegex = /<\/(?:div|section|article|table|ul|ol|tr|li|p|h[1-6])>\s*/gi;
         let bestHtmlSplit = -1;
         let m;
         while ((m = htmlBlockEndRegex.exec(remaining)) !== null) {
           const endPos = m.index + m[0].length;
-          if (endPos <= maxChars && endPos > maxChars * 0.3) {
-            bestHtmlSplit = endPos;
-          }
+          if (endPos <= maxChars && endPos > maxChars * 0.3) bestHtmlSplit = endPos;
           if (endPos > maxChars) break;
         }
-        if (bestHtmlSplit > maxChars * 0.3) {
-          splitIdx = bestHtmlSplit;
-        }
+        if (bestHtmlSplit > maxChars * 0.3) splitIdx = bestHtmlSplit;
       }
     }
 
-    // ─── Fallback: paragraph/newline/space splitting ───
+    // ─── Fallback splittings ───
+    if (splitIdx < maxChars * 0.3) splitIdx = remaining.lastIndexOf('\n', maxChars);
+    if (splitIdx < maxChars * 0.3) splitIdx = remaining.lastIndexOf(' ', maxChars);
     if (splitIdx < maxChars * 0.3) {
-      // Try to split at paragraph break
-      splitIdx = remaining.lastIndexOf('\n\n', maxChars);
-    }
-    if (splitIdx < maxChars * 0.3) {
-      // Fallback to single newline
-      splitIdx = remaining.lastIndexOf('\n', maxChars);
-    }
-    if (splitIdx < maxChars * 0.3) {
-      // Fallback to space
-      splitIdx = remaining.lastIndexOf(' ', maxChars);
-    }
-    if (splitIdx < maxChars * 0.3) {
-      // Fallback to closing HTML tag anywhere
-      const closeTag = remaining.slice(0, maxChars).lastIndexOf('>');
-      if (closeTag > maxChars * 0.3) {
-        splitIdx = closeTag + 1;
-      }
-    }
-    if (splitIdx < maxChars * 0.3) {
-      // Fallback to sentence-ending punctuation for CJK
       const sentenceEnd = remaining.slice(0, maxChars).search(/[。！？；」』】）\n][^。！？；」』】）]*$/); 
-      if (sentenceEnd > maxChars * 0.3) {
-        splitIdx = sentenceEnd + 1;
-      } else {
-        splitIdx = maxChars;
-      }
+      splitIdx = sentenceEnd > maxChars * 0.3 ? sentenceEnd + 1 : maxChars;
     }
 
     chunks.push(remaining.slice(0, splitIdx));
-    // For HTML content, don't trim whitespace — it may be significant
     remaining = isHtml ? remaining.slice(splitIdx) : remaining.slice(splitIdx).trimStart();
   }
 
   return chunks;
+}
+
+/* ─── Model Output Token Limits ─── */
+export function getMaxOutputTokens(modelId: string): number {
+  const model = modelId.toLowerCase();
+  
+  // Anthropic Models
+  if (model.includes('claude-4') || model.includes('claude-3-7') || model.includes('claude-3-5') || model.includes('claude-sonnet-4')) {
+    return 8192;
+  }
+  if (model.includes('claude-3-opus') || model.includes('claude-3-haiku')) {
+    return 4096;
+  }
+  
+  // Google Models
+  if (model.includes('gemini-2.5') || model.includes('gemini-3.') || model.includes('gemini-2.0') || model.includes('gemini-1.5')) {
+    return 8192;
+  }
+  
+  // OpenAI & Compatible
+  if (model.includes('gpt-5') || model.includes('gpt-4o') || model.includes('gpt-4.1')) {
+    return 16384;
+  }
+  if (model.includes('o3') || model.includes('o4')) {
+    return 100000;
+  }
+  if (model.includes('deepseek')) {
+    return 8192;
+  }
+  
+  // Default
+  return 8192; 
 }
 
 /* ─── OpenAI-compatible API call ─── */
@@ -555,6 +562,7 @@ async function callOpenAICompatible(
   user: string,
   signal?: AbortSignal
 ): Promise<string> {
+  const useStream = config.useStream !== false;
   const rawUrl = config.proxyUrl.replace(/\/+$/, '') + '/chat/completions';
   const url = corsProxyUrl(rawUrl, config.useCorsProxy);
 
@@ -564,8 +572,9 @@ async function callOpenAICompatible(
       { role: 'system', content: system },
       { role: 'user', content: user },
     ],
-    max_tokens: config.maxTokens,
+    max_tokens: getMaxOutputTokens(config.model),
     temperature: config.temperature,
+    stream: useStream,
   };
 
   const headers: Record<string, string> = {
@@ -595,12 +604,40 @@ async function callOpenAICompatible(
     throw new ApiError(`HTTP ${res.status}: ${errText}`, res.status);
   }
 
-  const json = await res.json();
-  const content = json.choices?.[0]?.message?.content;
-  if (typeof content !== 'string') {
-    throw new ApiError(`Invalid response format. Raw: ${JSON.stringify(json).slice(0, 200)}`);
+  if (!res.body) throw new ApiError('No response body from API');
+
+  if (!useStream) {
+    const json = await res.json();
+    const text = json.choices?.[0]?.message?.content || json.choices?.[0]?.text;
+    if (!text) throw new ApiError(`Empty response from API`);
+    return text.trim();
   }
-  return content.trim();
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let fullContent = '';
+  
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    
+    const lines = chunk.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+        try {
+          const parsed = JSON.parse(line.slice(6));
+          const text = parsed.choices?.[0]?.delta?.content;
+          if (text) fullContent += text;
+        } catch (e) {}
+      }
+    }
+  }
+
+  if (!fullContent) {
+    throw new ApiError(`Empty response from API`);
+  }
+  return fullContent.trim();
 }
 
 /* ─── Anthropic API call ─── */
@@ -610,15 +647,17 @@ async function callAnthropic(
   user: string,
   signal?: AbortSignal
 ): Promise<string> {
+  const useStream = config.useStream !== false;
   const rawUrl = config.proxyUrl.replace(/\/+$/, '') + '/messages';
   const url = corsProxyUrl(rawUrl, config.useCorsProxy);
 
   const body = {
     model: config.model,
-    max_tokens: config.maxTokens,
+    max_tokens: getMaxOutputTokens(config.model),
     system,
     messages: [{ role: 'user', content: user }],
     temperature: config.temperature,
+    stream: useStream,
   };
 
   // When using the CORS proxy, we don't need the dangerous-direct-browser-access header
@@ -652,12 +691,41 @@ async function callAnthropic(
     throw new ApiError(`HTTP ${res.status}: ${errText}`, res.status);
   }
 
-  const json = await res.json();
-  const content = json.content?.[0]?.text;
-  if (typeof content !== 'string') {
-    throw new ApiError(`Invalid Anthropic response. Raw: ${JSON.stringify(json).slice(0, 200)}`);
+  if (!res.body) throw new ApiError('No response body from Anthropic API');
+
+  if (!useStream) {
+    const json = await res.json();
+    const text = json.content?.[0]?.text;
+    if (!text) throw new ApiError(`Empty response from Anthropic API`);
+    return text.trim();
   }
-  return content.trim();
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let fullContent = '';
+  
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    
+    const lines = chunk.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const parsed = JSON.parse(line.slice(6));
+          if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+            fullContent += parsed.delta.text;
+          }
+        } catch (e) {}
+      }
+    }
+  }
+
+  if (!fullContent) {
+    throw new ApiError(`Empty response from Anthropic API`);
+  }
+  return fullContent.trim();
 }
 
 /* ─── Google Gemini API call ─── */
@@ -667,15 +735,17 @@ async function callGemini(
   user: string,
   signal?: AbortSignal
 ): Promise<string> {
+  const useStream = config.useStream !== false;
   const baseUrl = config.proxyUrl.replace(/\/+$/, '');
-  const rawUrl = `${baseUrl}/models/${config.model}:generateContent?key=${config.apiKey}`;
+  const endpoint = useStream ? 'streamGenerateContent?alt=sse&' : 'generateContent?';
+  const rawUrl = `${baseUrl}/models/${config.model}:${endpoint}key=${config.apiKey}`;
   const url = corsProxyUrl(rawUrl, config.useCorsProxy);
 
   const body = {
     system_instruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: [{ text: user }] }],
     generationConfig: {
-      maxOutputTokens: config.maxTokens,
+      maxOutputTokens: getMaxOutputTokens(config.model),
       temperature: config.temperature,
     },
     safetySettings: [
@@ -706,12 +776,42 @@ async function callGemini(
     throw new ApiError(`HTTP ${res.status}: ${errText}`, res.status);
   }
 
-  const json = await res.json();
-  const content = json.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (typeof content !== 'string') {
-    throw new ApiError(`Invalid Gemini response. Raw: ${JSON.stringify(json).slice(0, 200)}`);
+  if (!res.body) throw new ApiError('No response body from Gemini API');
+
+  if (!useStream) {
+    const json = await res.json();
+    const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new ApiError(`Empty response from Gemini API`);
+    return text.trim();
   }
-  return content.trim();
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let fullContent = '';
+  
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    
+    const lines = chunk.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+          const parsed = JSON.parse(jsonStr);
+          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) fullContent += text;
+        } catch (e) {}
+      }
+    }
+  }
+
+  if (!fullContent) {
+    throw new ApiError(`Empty response from Gemini API`);
+  }
+  return fullContent.trim();
 }
 
 /* ─── API Key Rotation ─── */
@@ -1389,32 +1489,31 @@ export function getModelSuggestions(provider: AIProvider): string[] {
     case 'openai':
     case 'custom':
       return [
-        // OpenAI latest
-        'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano',
-        'gpt-4o', 'gpt-4o-mini',
-        'o4-mini', 'o3', 'o3-mini',
+        // OpenAI latest (2026)
+        'gpt-5.4', 'gpt-5.3-instant', 'gpt-5.3-codex',
+        'gpt-5.2', 'o3-mini', 'o3-pro',
+        'gpt-4o', 'gpt-4.1',
         // DeepSeek
         'deepseek-chat', 'deepseek-reasoner',
         // Qwen
         'qwen3-235b-a22b', 'qwen3-32b', 'qwen3-30b-a3b',
         // Claude via proxy
-        'claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022',
+        'claude-4-7-opus-202604', 'claude-4-6-sonnet-202602',
         // Gemini via proxy
-        'gemini-3.1-pro-preview',
-        'gemini-2.5-pro-preview-05-06', 'gemini-2.5-flash-preview-04-17',
+        'gemini-3.1-pro', 'gemini-3.1-flash-lite',
       ];
     case 'anthropic':
       return [
-        'claude-sonnet-4-20250514',
+        'claude-4-7-opus-202604',
+        'claude-4-6-sonnet-202602',
         'claude-3-7-sonnet-20250219',
-        'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022',
-        'claude-3-opus-20240229', 'claude-3-haiku-20240307',
+        'claude-3-5-sonnet-20241022',
       ];
     case 'google':
       return [
-        'gemini-3.1-pro-preview',
-        'gemini-2.5-pro-preview-05-06', 'gemini-2.5-flash-preview-04-17',
-        'gemini-2.0-flash', 'gemini-2.0-flash-lite',
+        'gemini-3.1-pro', 'gemini-3.1-flash-lite',
+        'gemini-3.1-flash-live',
+        'gemini-2.5-pro', 'gemini-2.5-flash',
         'gemini-1.5-pro', 'gemini-1.5-flash',
       ];
     default:

@@ -203,6 +203,9 @@ function getWorldbookSummary(worldbook: any) {
 // ─── Field Extraction (copied from cardFields.ts) ───
 
 function isCodeOnly(text: string): boolean {
+  if (/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(text)) {
+    return false;
+  }
   const stripped = text
     .replace(/<[^>]+>/g, '')
     .replace(/\{\{[^}]+\}\}/g, '')
@@ -214,6 +217,9 @@ function isCodeOnly(text: string): boolean {
 
 function hasTranslatableText(text: string): boolean {
   if (!text || typeof text !== 'string' || text.trim() === '') return false;
+  if (/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(text)) {
+    return true;
+  }
   let stripped = text
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -223,10 +229,9 @@ function hasTranslatableText(text: string): boolean {
     .replace(/[\{\}\[\]\(\);:,=<>!&|+\-*/%.#@~`"'\\]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
-  const hasCJK = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(stripped);
   const hasCyrillic = /[\u0400-\u04ff]/.test(stripped);
   const hasSubstantialLatin = stripped.replace(/[^a-zA-ZÀ-ÿ]/g, '').length > 10;
-  return hasCJK || hasCyrillic || hasSubstantialLatin || stripped.length > 20;
+  return hasCyrillic || hasSubstantialLatin || stripped.length > 20;
 }
 
 type LorebookEntryType = 'initvar' | 'mvu_logic' | 'rules' | 'narrative' | 'controller';
