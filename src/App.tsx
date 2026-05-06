@@ -1,4 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react';
+import UpdateButton from './components/UpdateButton';
 import ProxyConfig from './components/ProxyConfig';
 import FileUpload from './components/FileUpload';
 import TranslateConfig from './components/TranslateConfig';
@@ -59,7 +60,10 @@ export default function App() {
             </div>
           </div>
           {/* Locale switcher */}
-          <LocaleSwitcher locale={locale} setLocale={setLocale} />
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <LocaleSwitcher locale={locale} setLocale={setLocale} />
+            <UpdateButton />
+          </div>
         </div>
 
         {/* Sidebar sections */}

@@ -4,7 +4,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { useT } from '../i18n/useLocale';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { FieldGroup } from '../types/card';
-import { RotateCcw, AlertTriangle, CheckCircle2, Clock, ArrowLeftRight, BarChart3, Ban } from 'lucide-react';
+import { RotateCcw, AlertTriangle, CheckCircle2, Clock, ArrowLeftRight, BarChart3, Ban, Search, X } from 'lucide-react';
 
 const TAB_IDS: (FieldGroup | 'all')[] = [
   'all', 'core', 'messages', 'lorebook', 'lorebook_keys', 'system', 'creator', 'regex', 'depth_prompt', 'tavern_helper',
@@ -382,11 +382,22 @@ export default function FieldEditor() {
   const tabLabels = useTabLabels();
   const [activeTab, setActiveTab] = useState<FieldGroup | 'all'>('all');
   const [viewMode, setViewMode] = useState<'table' | 'diff'>('table');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredFields = useMemo(() => {
-    if (activeTab === 'all') return fields;
-    return fields.filter((f) => f.group === activeTab);
-  }, [fields, activeTab]);
+    let result = activeTab === 'all' ? fields : fields.filter((f) => f.group === activeTab);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (f) =>
+          f.label.toLowerCase().includes(q) ||
+          f.original.toLowerCase().includes(q) ||
+          f.translated.toLowerCase().includes(q) ||
+          f.path.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [fields, activeTab, searchQuery]);
 
   // Count fields per tab
   const tabCounts = useMemo(() => {
@@ -403,13 +414,60 @@ export default function FieldEditor() {
     <div className="card fade-in" style={{ overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '16px 20px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
             {t.fieldEditor}
             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '8px' }}>
               ({filteredFields.length} fields)
             </span>
           </h3>
+          {/* Search box */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '4px 10px',
+            flex: '0 1 260px',
+            minWidth: '160px',
+            transition: 'border-color 0.2s',
+          }}>
+            <Search size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t.search}
+              style={{
+                flex: 1,
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--text-primary)',
+                fontSize: '0.8rem',
+                outline: 'none',
+                padding: '2px 0',
+                minWidth: 0,
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  padding: 0,
+                  display: 'flex',
+                  flexShrink: 0,
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
           {/* View mode toggle */}
           <div style={{
             display: 'flex', gap: '2px',

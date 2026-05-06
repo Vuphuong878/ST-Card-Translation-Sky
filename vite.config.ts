@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 import httpProxy from 'http-proxy';
+import { exec } from 'child_process';
 
 export default defineConfig({
   plugins: [
@@ -31,6 +32,26 @@ export default defineConfig({
         });
 
         server.middlewares.use((req, res, next) => {
+          if (req.url === '/api/update' && req.method === 'POST') {
+            res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache');
+            
+            res.write('Đang tải bản mới nhất từ GitHub...\n');
+            const child = exec('git pull && npm install');
+            
+            child.stdout?.on('data', (data) => {
+              res.write(data);
+            });
+            child.stderr?.on('data', (data) => {
+              res.write(data);
+            });
+            child.on('close', (code) => {
+              res.write(`\nCập nhật hoàn tất (code ${code}). Vui lòng tải lại trang hoặc khởi động lại app nếu cần.\n`);
+              res.end();
+            });
+            return;
+          }
+
           const match = (req.url ?? '').match(/^\/api-proxy\/custom\/([A-Za-z0-9_-]+)\/(.*)/);
           if (match) {
             try {

@@ -115,6 +115,7 @@ const en = {
 
   // Field Editor
   fieldEditor: 'Field Editor',
+  search: 'Search...',
   field: 'Field',
   original: 'Original',
   translated: 'Translated',
@@ -296,6 +297,7 @@ const vi: TranslationKeys = {
 
   // Field Editor
   fieldEditor: 'Chỉnh sửa trường',
+  search: 'Tìm kiếm...',
   field: 'Trường',
   original: 'Bản gốc',
   translated: 'Bản dịch',
