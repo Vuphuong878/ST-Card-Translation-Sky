@@ -14,6 +14,7 @@ import { Languages, X, Globe } from 'lucide-react';
 const FieldEditor = lazy(() => import('./components/FieldEditor'));
 const ExportPanel = lazy(() => import('./components/ExportPanel'));
 const VerifyPanel = lazy(() => import('./components/VerifyPanel'));
+const CustomTranslatePanel = lazy(() => import('./components/CustomTranslatePanel'));
 
 export default function App() {
   const { toasts, removeToast, card, locale, setLocale, loadStateFromIDB } = useStore();
@@ -135,6 +136,9 @@ export default function App() {
             </Suspense>
             <Suspense fallback={<LazyFallback />}>
               <ExportPanel />
+            </Suspense>
+            <Suspense fallback={<LazyFallback />}>
+              <CustomTranslatePanel />
             </Suspense>
           </div>
         )}

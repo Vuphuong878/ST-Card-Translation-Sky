@@ -400,12 +400,17 @@ RULE C9 — Completeness.
 
 RULE C10 — Do NOT translate text already in ${targetLang}.
   If the source text already contains ${targetLang} or English words
-  used as proper nouns/system names, keep them.`;
+  used as proper nouns/system names, keep them.
+
+RULE C11 — Do NOT translate URLs, File Paths, or Image Links.
+  Never translate any part of a URL, web link, file path, or image source
+  (e.g., https://..., src="...", href="...", .html, .png, .jpg), even if they
+  contain foreign characters. Doing so will break the links and cause 404 errors.`;
 
   if (isVietnamese) {
     rules += `
 
-RULE C11 — XML/YAML/Markdown Structure & Key Translation (Vietnamese Specific):
+RULE C12 — XML/YAML/Markdown Structure & Key Translation (Vietnamese Specific):
   Nhiệm vụ của bạn là dịch TOÀN BỘ các từ/cụm từ tiếng Trung sang tiếng Việt, giữ nguyên toàn bộ cấu trúc và phần tiếng Việt đã có sẵn.
   Quy tắc dịch:
   1. Chỉ dịch phần tiếng Trung, GIỮ NGUYÊN phần tiếng anh đã có. Không thay đổi bất kỳ thứ gì ngoài phần tiếng Trung.
@@ -413,7 +418,9 @@ RULE C11 — XML/YAML/Markdown Structure & Key Translation (Vietnamese Specific)
   3. Dịch sát nghĩa, tự nhiên, phù hợp ngữ cảnh.
   4. Nếu một từ tiếng Trung đóng vai trò là **key/nhãn** (ví dụ: \`主色调:\`, \`衍生一\`), BẮT BUỘC phải dịch thành nhãn tiếng Việt tương ứng. Có thể thay thế hoàn toàn hoặc đặt trong ngoặc đơn ngay sau nếu cần giữ cả hai.
   5. Không thêm, không bớt nội dung, không giải thích thêm.
-  6. Trả về toàn bộ đoạn văn bản gốc sau khi đã thay thế tất cả tiếng Trung bằng tiếng Việt.`;
+  6. Trả về toàn bộ đoạn văn bản gốc sau khi đã thay thế tất cả tiếng Trung bằng tiếng Việt.
+  
+  7. LƯU Ý QUAN TRỌNG: Tuyệt đối KHÔNG dịch các đường link, URL, hoặc đường dẫn file ngay cả khi chúng chứa chữ tiếng Trung. Việc dịch đường link sẽ làm hỏng thẻ. Phải giữ nguyên 100% các chuỗi URL này.`;
   }
 
   return rules;
