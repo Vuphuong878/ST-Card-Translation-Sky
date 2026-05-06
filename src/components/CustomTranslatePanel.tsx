@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { translateText } from '../utils/apiClient';
 import type { TranslationFieldType } from '../utils/masterPrompt';
@@ -12,13 +12,21 @@ import { Code2, Play, Copy, CheckCircle2, Loader2, Trash2 } from 'lucide-react';
  */
 export default function CustomTranslatePanel() {
   const { proxy, translationConfig } = useStore();
-  const [input, setInput] = useState('');
-  const [output, setOutput] = useState('');
+  const [input, setInput] = useState(() => localStorage.getItem('custom-translate-input') || '');
+  const [output, setOutput] = useState(() => localStorage.getItem('custom-translate-output') || '');
   const [isTranslating, setIsTranslating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
   const [fieldType, setFieldType] = useState<TranslationFieldType>('mixed');
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('custom-translate-input', input);
+  }, [input]);
+
+  useEffect(() => {
+    localStorage.setItem('custom-translate-output', output);
+  }, [output]);
 
   const handleTranslate = async () => {
     if (!input.trim()) return;

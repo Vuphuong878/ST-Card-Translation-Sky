@@ -511,6 +511,23 @@ export function chunkText(text: string, maxChars?: number, maxTokens?: number): 
     // ─── Fallback splittings ───
     if (splitIdx < maxChars * 0.3) splitIdx = remaining.lastIndexOf('\n', maxChars);
     if (splitIdx < maxChars * 0.3) splitIdx = remaining.lastIndexOf(' ', maxChars);
+    
+    // ─── Code-safe fallback splitting for minified JS/HTML ───
+    if (splitIdx < maxChars * 0.3) {
+      const maxSlice = remaining.slice(0, maxChars);
+      const codeBoundaries = /[;}>](?=[^\w]|$)/g;
+      let bestCodeSplit = -1;
+      let m;
+      while ((m = codeBoundaries.exec(maxSlice)) !== null) {
+        const pos = m.index + 1;
+        if (pos <= maxChars && pos > maxChars * 0.3) {
+          bestCodeSplit = pos;
+        }
+      }
+      if (bestCodeSplit > maxChars * 0.3) splitIdx = bestCodeSplit;
+    }
+
+    // ─── Prose punctuation fallback ───
     if (splitIdx < maxChars * 0.3) {
       const sentenceEnd = remaining.slice(0, maxChars).search(/[。！？；」』】）\n][^。！？；」』】）]*$/); 
       splitIdx = sentenceEnd > maxChars * 0.3 ? sentenceEnd + 1 : maxChars;
@@ -616,17 +633,34 @@ async function callOpenAICompatible(
   const reader = res.body.getReader();
   const decoder = new TextDecoder('utf-8');
   let fullContent = '';
+  let buffer = '';
   
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value, { stream: true });
+    if (done) {
+      if (buffer) {
+        // Process any remaining buffered text
+        const line = buffer.trim();
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try {
+            const parsed = JSON.parse(line.slice(6));
+            const text = parsed.choices?.[0]?.delta?.content;
+            if (text) fullContent += text;
+          } catch (e) {}
+        }
+      }
+      break;
+    }
     
-    const lines = chunk.split('\n');
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
+    
     for (const line of lines) {
-      if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
         try {
-          const parsed = JSON.parse(line.slice(6));
+          const parsed = JSON.parse(trimmedLine.slice(6));
           const text = parsed.choices?.[0]?.delta?.content;
           if (text) fullContent += text;
         } catch (e) {}
@@ -703,17 +737,34 @@ async function callAnthropic(
   const reader = res.body.getReader();
   const decoder = new TextDecoder('utf-8');
   let fullContent = '';
+  let buffer = '';
   
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value, { stream: true });
+    if (done) {
+      if (buffer) {
+        const line = buffer.trim();
+        if (line.startsWith('data: ')) {
+          try {
+            const parsed = JSON.parse(line.slice(6));
+            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              fullContent += parsed.delta.text;
+            }
+          } catch (e) {}
+        }
+      }
+      break;
+    }
     
-    const lines = chunk.split('\n');
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith('data: ')) {
         try {
-          const parsed = JSON.parse(line.slice(6));
+          const parsed = JSON.parse(trimmedLine.slice(6));
           if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
             fullContent += parsed.delta.text;
           }
@@ -788,17 +839,36 @@ async function callGemini(
   const reader = res.body.getReader();
   const decoder = new TextDecoder('utf-8');
   let fullContent = '';
+  let buffer = '';
   
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value, { stream: true });
+    if (done) {
+      if (buffer) {
+        const line = buffer.trim();
+        if (line.startsWith('data: ')) {
+          try {
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr) {
+              const parsed = JSON.parse(jsonStr);
+              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) fullContent += text;
+            }
+          } catch (e) {}
+        }
+      }
+      break;
+    }
     
-    const lines = chunk.split('\n');
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith('data: ')) {
         try {
-          const jsonStr = line.slice(6).trim();
+          const jsonStr = trimmedLine.slice(6).trim();
           if (!jsonStr) continue;
           const parsed = JSON.parse(jsonStr);
           const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
