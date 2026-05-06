@@ -1030,7 +1030,16 @@ async function translateChunk(
       let result = await callProvider(config, systemPrompt, userPrompt, combinedSignal);
       clearTimeout(timeoutId);
 
-      // ─── Truncation detection & continuation ───
+      // ─── Token limit truncation detection ───
+      // If AI hits max tokens inside a thought block, it never outputs the translation.
+      if (
+        result.match(/<(?:thought_process|think)>[\s\S]*$/i) && 
+        !result.match(/<\/(?:thought_process|think)>/i)
+      ) {
+        throw new Error('AI bị ngắt ngang do chạm giới hạn Max Tokens (chưa kịp xuất bản dịch).');
+      }
+
+      // ─── Length-based truncation detection & continuation ───
       const minRatio = config.minResponseRatio || 0.15;
       if (chunk.length > 500 && result.length > 0) {
         const responseRatio = result.length / chunk.length;

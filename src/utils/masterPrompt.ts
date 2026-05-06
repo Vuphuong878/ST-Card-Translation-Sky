@@ -661,11 +661,11 @@ export function extractTranslationFromResponse(raw: string): ParsedTranslationRe
   let thoughtProcess: string | undefined = undefined;
 
   // Extract thought process for debug logging and remove it from raw string if found
-  const thoughtMatch = trimmed.match(/<(?:thought_process|think)>([\s\S]*?)<\/(?:thought_process|think)>/i);
+  const thoughtMatch = trimmed.match(/<(?:thought_process|think)>([\s\S]*?)(?:<\/(?:thought_process|think)>|$)/i);
   if (thoughtMatch) {
     thoughtProcess = thoughtMatch[1].trim();
-    // We remove the thought block entirely from our working string
-    trimmed = trimmed.replace(/<(?:thought_process|think)>[\s\S]*?<\/(?:thought_process|think)>/i, '').trim();
+    // We remove the thought block entirely from our working string (even if unclosed)
+    trimmed = trimmed.replace(/<(?:thought_process|think)>[\s\S]*?(?:<\/(?:thought_process|think)>|$)/i, '').trim();
   }
 
   // Try to extract <translation> content
