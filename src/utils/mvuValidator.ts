@@ -144,24 +144,38 @@ export function autoFixMvuVariables(
   // Sort by length descending to avoid partial replacements (e.g. replacing 'var' inside 'variable')
   const sortedKeys = [...unreplacedKeys].sort((a, b) => b.length - a.length);
 
+  const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // CRITICAL: Escape `$` in replacement strings to prevent regex replacement pattern
+  // interpretation. Without this, `$1`, `$&`, `$'` in translated names cause
+  // the replacement to eat surrounding code characters like `{`, `$`.
+  const safeReplacement = (str: string) => str.replace(/\$/g, '$$$$');
+
   for (const key of sortedKeys) {
     const replacement = dictionary[key];
     if (!replacement || key === replacement) continue;
 
-    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escaped = escapeRegExp(key);
+    const safeRepl = safeReplacement(replacement);
     
-    // Replace in macros specifically FIRST
-    // This catches {{getvar::key}} and {{setvar::key::val}} specifically
-    const macroRegex = new RegExp(`(\\{\\{(?:getvar|setvar|addvar)::)${escaped}(\\}\\}|::)`, 'g');
-    fixed = fixed.replace(macroRegex, `$1${replacement}$2`);
+    // 1. Replace in macros: {{getvar::key}} and {{setvar::key::val}}
+    const macroRegex = new RegExp(`(\\{\\{(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar)::)${escaped}(\\}\\}|::)`, 'g');
+    fixed = fixed.replace(macroRegex, `$1${safeRepl}$2`);
 
-    // Replace standalone occurrences
+    // 2. Replace in EJS function calls: getvar('key') / setvar('key', ...)
+    const ejsRegex = new RegExp(`((?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar|getVariable|setVariable)\\s*\\(\\s*['"])${escaped}(['"])`, 'g');
+    fixed = fixed.replace(ejsRegex, `$1${safeRepl}$2`);
+
+    // 3. Replace in data-var attributes: data-var="key"
+    const dataVarRegex = new RegExp(`(data-var\\s*=\\s*["'])${escaped}(["'])`, 'g');
+    fixed = fixed.replace(dataVarRegex, `$1${safeRepl}$2`);
+
+    // 4. Replace standalone occurrences
     const isAscii = /^[a-zA-Z0-9_]+$/.test(key);
     const regex = isAscii
       ? new RegExp(`\\b${escaped}\\b`, 'g')
       : new RegExp(escaped, 'g');
 
-    fixed = fixed.replace(regex, replacement);
+    fixed = fixed.replace(regex, safeRepl);
   }
 
   return fixed;
@@ -175,18 +189,34 @@ export function validateGetvarSetvarSync(
   dictionary: Record<string, string>
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
-  const macros = translated.match(/\{\{(?:getvar|setvar|addvar)::([^}]+?)(?:\}\}|::)/g) || [];
+  
+  // 1. Check macro-style: {{getvar::key}} / {{setvar::key::val}}
+  const macros = translated.match(/\{\{(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar)::([^}]+?)(?:\}\}|::)/g) || [];
   
   for (const macro of macros) {
-    // Extract the variable name
-    const match = macro.match(/\{\{(?:getvar|setvar|addvar)::([^}]+?)(?:\}\}|::)/);
+    const match = macro.match(/\{\{(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar)::([^}]+?)(?:\}\}|::)/);
     if (!match) continue;
     
     const varName = match[1];
-    
-    // Check if the varName is an ORIGINAL key in the dictionary that should have been translated
     if (dictionary[varName] && dictionary[varName] !== varName) {
       errors.push(`Macro ${macro} uses original key "${varName}" instead of translated "${dictionary[varName]}"`);
+    }
+  }
+  
+  // 2. Check EJS function-call style: getvar('key') / setvar('key', ...)
+  const ejsCalls = translated.match(/(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar|getVariable|setVariable)\s*\(\s*['"]([^'"]+)['"]/g) || [];
+  
+  for (const call of ejsCalls) {
+    const match = call.match(/(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar|getVariable|setVariable)\s*\(\s*['"]([^'"]+)['"]/);
+    if (!match) continue;
+    
+    const varName = match[1];
+    // For dotted paths like stat_data.原始.field, check each segment
+    const segments = varName.split('.');
+    for (const seg of segments) {
+      if (dictionary[seg] && dictionary[seg] !== seg) {
+        errors.push(`EJS call ${call.slice(0, 60)} uses original key "${seg}" instead of translated "${dictionary[seg]}"`);
+      }
     }
   }
   

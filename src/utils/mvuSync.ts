@@ -21,12 +21,48 @@ export function applyMvuToText(
   if (entries.length === 0) return text;
   
   const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // CRITICAL: Escape `$` in replacement strings to prevent regex replacement pattern
+  // interpretation. Without this, `$1`, `$&`, `$'`, `$\`` in translated names
+  // cause the replacement to eat surrounding code characters like `{`, `$`.
+  const safeReplacement = (str: string) => str.replace(/\$/g, '$$$$');
   
   let newText = text;
   for (const [original, translated] of entries) {
     const escaped = escapeRegExp(original);
+    const safeTranslated = safeReplacement(translated);
     
     if (aggressive) {
+      // ── 1. Macro double-curly: {{getvar::KEY}} / {{setvar::KEY::VAL}} ──
+      newText = newText.replace(
+        new RegExp(`(\\{\\{(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar)::)${escaped}(\\}\\}|::)`, 'g'),
+        `$1${safeTranslated}$2`
+      );
+      
+      // ── 2. EJS function calls: getvar('KEY') / setvar('KEY', ...) ──
+      newText = newText.replace(
+        new RegExp(`((?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar|getVariable|setVariable)\\s*\\(\\s*['"])${escaped}(['"])`, 'g'),
+        `$1${safeTranslated}$2`
+      );
+      
+      // ── 3. data-var="KEY" ──
+      newText = newText.replace(
+        new RegExp(`(data-var\\s*=\\s*["'])${escaped}(["'])`, 'g'),
+        `$1${safeTranslated}$2`
+      );
+      
+      // ── 4. YAML-style KEY: (at start of line) ──
+      newText = newText.replace(
+        new RegExp(`^(\\s*)(["']?)${escaped}(["']?)(\\s*:)`, 'gm'),
+        `$1$2${safeTranslated}$3$4`
+      );
+      
+      // ── 5. Zod schema: { KEY: z.type() } or { "KEY": z.type() } ──
+      newText = newText.replace(
+        new RegExp(`([{,]\\s*)(["']?)${escaped}(["']?)(\\s*:\\s*z\\.)`, 'g'),
+        `$1$2${safeTranslated}$3$4`
+      );
+      
+      // ── 6. General standalone occurrences (fallback) ──
       const isAsciiOnly = /^[a-zA-Z0-9_]+$/.test(original);
       let regex: RegExp;
       if (isAsciiOnly) {
@@ -36,24 +72,32 @@ export function applyMvuToText(
         // Unicode keys (Trung/Nhật/Hàn): replace trực tiếp
         regex = new RegExp(escaped, 'g');
       }
-      newText = newText.replace(regex, translated);
+      newText = newText.replace(regex, safeTranslated);
     } else {
+      // ── Non-aggressive: chỉ thay thế trong cấu trúc cụ thể ──
+      
       // 1. {{getvar::KEY}} / {{setvar::KEY::}} / {{addvar::KEY}}
       newText = newText.replace(
-        new RegExp(`(\\{\\{(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar)::)${escaped}`, 'g'),
-        `$1${translated}`
+        new RegExp(`(\\{\\{(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar)::)${escaped}(\\}\\}|::)`, 'g'),
+        `$1${safeTranslated}$2`
       );
       
-      // 2. data-var="KEY"
+      // 2. EJS function calls: getvar('KEY') / setvar('KEY', ...)
+      newText = newText.replace(
+        new RegExp(`((?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar|getVariable|setVariable)\\s*\\(\\s*['"])${escaped}(['"])`, 'g'),
+        `$1${safeTranslated}$2`
+      );
+      
+      // 3. data-var="KEY"
       newText = newText.replace(
         new RegExp(`(data-var\\s*=\\s*["'])${escaped}(["'])`, 'g'),
-        `$1${translated}$2`
+        `$1${safeTranslated}$2`
       );
       
-      // 3. YAML-style KEY: (at start of line, with optional quotes)
+      // 4. YAML-style KEY: (at start of line, with optional quotes)
       newText = newText.replace(
         new RegExp(`^(\\s*)(["']?)${escaped}(["']?)(\\s*:)`, 'gm'),
-        `$1$2${translated}$3$4`
+        `$1$2${safeTranslated}$3$4`
       );
     }
   }

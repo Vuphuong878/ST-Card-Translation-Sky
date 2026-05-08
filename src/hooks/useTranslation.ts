@@ -556,22 +556,22 @@ export function useTranslation() {
 
     // ═══ Reorder fields for Strategy B (MVU-optimized) ═══
     // Khi bật MVU Sync, thứ tự dịch tối ưu:
-    // 1. core (name, description) → thiết lập ngữ cảnh nhân vật
-    // 2. system → system prompt  
-    // 3. tavern_helper → Zod schema, JS logic (quan trọng nhất cho MVU)
-    // 4. lorebook → initvar, mvu_update, rules (tham chiếu biến)
-    // 5. lorebook_keys → keywords
-    // 6. regex → HTML dashboard UI
+    // 1. tavern_helper → Zod schema, JS logic (quan trọng nhất — thiết lập biến MVU)
+    // 2. lorebook → initvar, mvu_update, rules (tham chiếu biến)
+    // 3. lorebook_keys → keywords
+    // 4. regex → HTML dashboard UI (sử dụng biến đã dịch)
+    // 5. system → OP/system prompt (ngữ cảnh tổng quát)
+    // 6. core (name, description) → thông tin nhân vật
     // 7. messages → dialogue examples
     // 8. depth_prompt, creator → phụ trợ
     if (store.translationConfig.enableMvuSync) {
       const MVU_GROUP_ORDER: Record<string, number> = {
-        core: 0,
-        system: 1,
-        tavern_helper: 2,
-        lorebook: 3,
-        lorebook_keys: 4,
-        regex: 5,
+        tavern_helper: 0,
+        lorebook: 1,
+        lorebook_keys: 2,
+        regex: 3,
+        system: 4,
+        core: 5,
         messages: 6,
         depth_prompt: 7,
         creator: 8,
@@ -581,7 +581,7 @@ export function useTranslation() {
         const orderB = MVU_GROUP_ORDER[b.group] ?? 99;
         return orderA - orderB;
       });
-      store.addLog('info', '📋 Strategy B: Reordered fields → core → system → tavernHelper → lorebook → regex → messages');
+      store.addLog('info', '📋 Strategy B: Reordered fields → schema → lorebook → regex → OP → rest');
     }
 
     const isBatchLorebook = store.translationConfig.lorebookStrategy === 'batch';
