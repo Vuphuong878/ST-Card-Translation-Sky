@@ -384,7 +384,7 @@ ${fragmentList}${mvuBlock}`;
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort('Residual check timeout'), (config.requestTimeout || 60000) * 2);
+      const timeout = setTimeout(() => controller.abort('Residual check timeout'), (config.requestTimeout || 300000) * 3);
       const combinedSignal = signal
         ? AbortSignal.any([signal, controller.signal])
         : controller.signal;
@@ -583,10 +583,11 @@ export function chunkText(text: string, maxChars?: number, maxTokens?: number): 
   // Now using unlimited context approaches with high chunk thresholds
   if (maxChars === undefined) {
     if (maxTokens && maxTokens > 0) {
-      // Đặt giới hạn 40,000 ký tự cho mỗi chunk theo yêu cầu để đảm bảo ổn định
-      maxChars = Math.min(Math.floor(maxTokens * 3.5), 40000); 
+      // Gemini 2.5 Pro: 65535 tokens * 3.5 ≈ 229K chars → cap at 200K per chunk
+      // Cho phép chunk lớn để tận dụng tối đa context window của model
+      maxChars = Math.min(Math.floor(maxTokens * 3.5), 200000); 
     } else {
-      maxChars = 40000; // Fallback
+      maxChars = 40000; // Fallback for unknown models
     }
   }
 
@@ -707,8 +708,11 @@ export function getMaxOutputTokens(modelId: string, maxTokensFromConfig?: number
     return 4096;
   }
   
-  // Google Models
-  if (model.includes('gemini-2.5') || model.includes('gemini-3.') || model.includes('gemini-2.0') || model.includes('gemini-1.5')) {
+  // Google Models — Gemini 2.5 Pro supports 65535 max output tokens
+  if (model.includes('gemini-2.5-pro') || model.includes('gemini-3.1-pro')) {
+    return 65535;
+  }
+  if (model.includes('gemini-2.5-flash') || model.includes('gemini-3.1-flash') || model.includes('gemini-3.') || model.includes('gemini-2.0') || model.includes('gemini-1.5')) {
     return 8192;
   }
   
@@ -1267,9 +1271,9 @@ async function translateChunk(
       if (signal?.aborted) throw new Error('Cancelled');
 
       const controller = new AbortController();
-      const baseTimeout = config.requestTimeout || 60000;
+      const baseTimeout = config.requestTimeout || 300000;
       const chunkRatio = Math.max(1, chunk.length / 2000);
-      const timeout = Math.min(baseTimeout * chunkRatio, baseTimeout * 3);
+      const timeout = Math.min(baseTimeout * chunkRatio, baseTimeout * 5);
       const timeoutId = setTimeout(() => controller.abort('Request timeout'), timeout);
 
       const combinedSignal = signal
@@ -1383,7 +1387,7 @@ async function verifySeams(
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort('Seam verify timeout'), (config.requestTimeout || 60000) * 2);
+    const timeout = setTimeout(() => controller.abort('Seam verify timeout'), (config.requestTimeout || 300000) * 3);
     const combinedSignal = signal
       ? AbortSignal.any([signal, controller.signal])
       : controller.signal;
@@ -1673,7 +1677,7 @@ BATCH FORMAT:
       if (signal?.aborted) throw new Error('Cancelled');
 
       const controller = new AbortController();
-      const timeout = (config.requestTimeout || 60000) * 2; // Double timeout for batch
+      const timeout = (config.requestTimeout || 300000) * 4; // 4× timeout for batch (65K token output can take minutes)
       const timeoutId = setTimeout(() => controller.abort('Batch request timeout'), timeout);
 
       const combinedSignal = signal
@@ -1840,9 +1844,9 @@ export function getModelSuggestions(provider: AIProvider): string[] {
       ];
     case 'google':
       return [
-        'gemini-3.1-pro', 'gemini-3.1-flash-lite',
+        'gemini-3.1-pro-preview', 'gemini-3.1-pro', 'gemini-3.1-flash-lite',
         'gemini-3.1-flash-live',
-        'gemini-2.5-pro', 'gemini-2.5-flash',
+        'gemini-2.5-pro-preview-05-06', 'gemini-2.5-pro', 'gemini-2.5-flash',
         'gemini-1.5-pro', 'gemini-1.5-flash',
       ];
     default:

@@ -256,8 +256,15 @@ Rules:
 - Variable names MUST be IDENTICAL between initvar YAML and schema z.object — no spelling or format differences`;
   }
 
-  return `\n\nVARIABLE NAME GLOSSARY (use these translations consistently):
-${dictList}`;
+  // Narrative fields: still enforce strict dictionary usage (not just a hint)
+  return `\n\nMVU VARIABLE NAME DICTIONARY — MANDATORY REPLACEMENT:
+This card uses a variable system. When you encounter ANY of the following original variable names in text, macros ({{getvar::}}, {{setvar::}}), data-var attributes, or any context, you MUST replace them with their translated equivalents:
+${dictList}
+Rules:
+- ALWAYS use the mapped translation from the dictionary above — do NOT invent alternatives
+- Use SPACES between words in translated variable names, NOT underscores
+- Variable names inside macros ({{getvar::NAME}}) MUST use the dictionary translation
+- This ensures consistency across ALL parts of the character card (lorebook, regex, schema, narrative)`;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

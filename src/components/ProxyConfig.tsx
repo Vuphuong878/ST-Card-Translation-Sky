@@ -444,10 +444,13 @@ export default function ProxyConfig() {
                   className="input"
                   type="number"
                   min={256}
-                  max={65536}
+                  max={1048576}
                   value={proxy.maxTokens}
                   onChange={(e) => setProxy({ maxTokens: parseInt(e.target.value) || 65536 })}
                 />
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Gemini 2.5 Pro: max 65535 output tokens, 1M input context
+                </div>
               </div>
 
               {/* Temperature */}
@@ -506,10 +509,10 @@ export default function ProxyConfig() {
                   className="input"
                   type="number"
                   min={5000}
-                  max={600000}
+                  max={1800000}
                   step={1000}
                   value={proxy.requestTimeout}
-                  onChange={(e) => setProxy({ requestTimeout: parseInt(e.target.value) || 60000 })}
+                  onChange={(e) => setProxy({ requestTimeout: parseInt(e.target.value) || 300000 })}
                 />
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                   {t.requestTimeoutHint}
@@ -600,7 +603,7 @@ export default function ProxyConfig() {
                     temperature: 0.3,
                     requestDelay: 500,
                     retryDelay: 1000,
-                    requestTimeout: 60000,
+                    requestTimeout: 300000,
                     maxRetries: 3,
                     minResponseRatio: 0.15,
                     systemPromptPrefix: '',

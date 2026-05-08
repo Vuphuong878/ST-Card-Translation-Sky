@@ -257,13 +257,17 @@ export function buildUnifiedRAGContext(input: UnifiedRAGInput): string {
           dictList + '\n' +
           'Rules:\n' +
           '- Replace ALL occurrences: {{getvar::}}, {{setvar::}}, data-var, YAML keys, z.object fields\n' +
-          '- Keep format (underscores, no spaces in variable names)\n' +
+          '- Use SPACES between words in translated variable names, NOT underscores\n' +
+          '- In JS/Zod code, use QUOTED string keys for multi-word names: { "Tên biến": z.string() }\n' +
           '- Use EXACTLY the mapped translation — do NOT invent your own';
       } else {
         section =
-          '═══ MVU/ZOD VARIABLE GLOSSARY ═══\n' +
-          'Variable name translations (use consistently):\n' +
-          dictList;
+          '═══ MVU/ZOD VARIABLE DICTIONARY (MANDATORY) ═══\n' +
+          'This card uses MVU variables. When you encounter ANY of these original variable names, REPLACE them with the translation:\n' +
+          dictList + '\n' +
+          '- Use SPACES between words, NOT underscores\n' +
+          '- Apply in macros ({{getvar::NAME}}), data-var attributes, and all contexts\n' +
+          '- Use EXACTLY the dictionary translation — do NOT invent alternatives';
       }
       sections.push(section);
       totalChars += section.length;

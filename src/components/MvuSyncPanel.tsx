@@ -436,7 +436,7 @@ export default function MvuSyncPanel() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <input
                         type="text"
-                        value={k.replace(/_/g, ' ')}
+                        value={k}
                         readOnly
                         title={keyInfo?.description || k}
                         style={{
@@ -466,9 +466,9 @@ export default function MvuSyncPanel() {
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>→</span>
                   <input
                     type="text"
-                    value={v.replace(/_/g, ' ')}
-                    onChange={(e) => updateEntry(k, e.target.value.replace(/ /g, '_'))}
-                    placeholder={isVi ? 'Bản dịch (VD: Do_Hao_Cam)' : 'Translation'}
+                    value={v}
+                    onChange={(e) => updateEntry(k, e.target.value)}
+                    placeholder={isVi ? 'Bản dịch (VD: Độ Hảo Cảm)' : 'Translation'}
                     style={{
                       flex: 1, padding: '5px 7px', fontSize: '0.72rem',
                       background: v ? 'var(--bg-primary)' : 'rgba(240,196,106,0.06)',
@@ -499,8 +499,8 @@ export default function MvuSyncPanel() {
           <div style={{ display: 'flex', gap: '6px', marginTop: '12px', alignItems: 'center' }}>
             <input
               type="text"
-              value={newKey.replace(/_/g, ' ')}
-              onChange={(e) => setNewKey(e.target.value.replace(/ /g, '_'))}
+              value={newKey}
+              onChange={(e) => setNewKey(e.target.value)}
               placeholder={isVi ? 'Key gốc' : 'Original Key'}
               style={{
                 flex: 1, padding: '6px 8px', fontSize: '0.75rem',
@@ -511,8 +511,8 @@ export default function MvuSyncPanel() {
             />
             <input
               type="text"
-              value={newValue.replace(/_/g, ' ')}
-              onChange={(e) => setNewValue(e.target.value.replace(/ /g, '_'))}
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
               placeholder={isVi ? 'Dịch' : 'Translated'}
               style={{
                 flex: 1, padding: '6px 8px', fontSize: '0.75rem',

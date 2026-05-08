@@ -87,7 +87,7 @@ export function useTranslation() {
     const currentChunkSize = store.translationConfig.chunkSize;
     const CHUNK_THRESHOLD = currentChunkSize && currentChunkSize > 0
       ? currentChunkSize
-      : (currentMaxTokens && currentMaxTokens > 0 ? Math.min(Math.floor(currentMaxTokens * 3.5), 40000) : 40000);
+      : (currentMaxTokens && currentMaxTokens > 0 ? Math.min(Math.floor(currentMaxTokens * 3.5), 200000) : 40000);
       
     if (charCount > CHUNK_THRESHOLD) {
       const estimatedChunks = Math.ceil(charCount / CHUNK_THRESHOLD);

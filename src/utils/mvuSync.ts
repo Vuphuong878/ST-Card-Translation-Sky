@@ -1,5 +1,6 @@
 import type { CharacterCard, ProxySettings } from '../types/card';
 import { extractPatchFieldNames } from './jsonPatchValidator';
+import { getMaxOutputTokens } from './apiClient';
 
 /**
  * Áp dụng logic thay thế biến MVU/Zod vào một đoạn văn bản (text).
@@ -564,7 +565,7 @@ RESPOND in EXACT JSON format (no markdown): {"translations": {"original_key": "T
         : `${i + 1}. "${k}"`;
     }).join('\n');
 
-    const userPrompt = `Translate these variable names to ${targetLang} (code-friendly, underscore-separated):${contextBlock}
+    const userPrompt = `Translate these variable names to ${targetLang} (natural language with spaces, NOT underscores):${contextBlock}
 Variables to translate:
 ${varList}`;
 
@@ -581,7 +582,7 @@ ${varList}`;
         headers['anthropic-dangerous-direct-browser-access'] = 'true';
         body = {
           model: proxy.model,
-          max_tokens: Math.min(proxy.maxTokens, 4096),
+          max_tokens: getMaxOutputTokens(proxy.model, proxy.maxTokens),
           system: systemPrompt,
           messages: [{ role: 'user', content: userPrompt }],
           temperature: 0.1,
@@ -591,7 +592,7 @@ ${varList}`;
         body = {
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-          generationConfig: { maxOutputTokens: Math.min(proxy.maxTokens, 4096), temperature: 0.1 },
+          generationConfig: { maxOutputTokens: getMaxOutputTokens(proxy.model, proxy.maxTokens), temperature: 0.1 },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
@@ -608,17 +609,26 @@ ${varList}`;
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
-          max_tokens: Math.min(proxy.maxTokens, 4096),
+          max_tokens: getMaxOutputTokens(proxy.model, proxy.maxTokens),
           temperature: 0.1,
         };
       }
+
+      // Add per-request timeout protection
+      const requestTimeout = (proxy as any).requestTimeout || 300000;
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort('MVU key translation timeout'), requestTimeout * 2);
+      const fetchSignal = signal
+        ? AbortSignal.any([signal, timeoutController.signal])
+        : timeoutController.signal;
 
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
-        signal,
+        signal: fetchSignal,
       });
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errText = await res.text().catch(() => '');
@@ -718,7 +728,7 @@ RULES:
       headers['anthropic-dangerous-direct-browser-access'] = 'true';
       body = {
         model: proxy.model,
-        max_tokens: Math.min(proxy.maxTokens, 4096),
+        max_tokens: getMaxOutputTokens(proxy.model, proxy.maxTokens),
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
         temperature: 0.1,
@@ -728,7 +738,7 @@ RULES:
       body = {
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: { maxOutputTokens: Math.min(proxy.maxTokens, 4096), temperature: 0.1 },
+        generationConfig: { maxOutputTokens: getMaxOutputTokens(proxy.model, proxy.maxTokens), temperature: 0.1 },
         safetySettings: [
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
           { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
@@ -745,12 +755,21 @@ RULES:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: Math.min(proxy.maxTokens, 4096),
+        max_tokens: getMaxOutputTokens(proxy.model, proxy.maxTokens),
         temperature: 0.1,
       };
     }
 
-    const res = await fetch(apiUrl, { method: 'POST', headers, body: JSON.stringify(body), signal });
+    // Add per-request timeout protection
+    const requestTimeout = (proxy as any).requestTimeout || 300000;
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort('Glossary extraction timeout'), requestTimeout * 2);
+    const fetchSignal = signal
+      ? AbortSignal.any([signal, timeoutController.signal])
+      : timeoutController.signal;
+
+    const res = await fetch(apiUrl, { method: 'POST', headers, body: JSON.stringify(body), signal: fetchSignal });
+    clearTimeout(timeoutId);
     if (!res.ok) throw new Error(`API ${res.status}`);
 
     const json = await res.json();
