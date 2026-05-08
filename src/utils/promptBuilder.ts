@@ -308,23 +308,26 @@ export function buildEffectivePrompt(options: PromptBuildOptions): PromptBuildRe
     prompt += OBJECTIVE_TRANSLATION_PROMPT;
   }
 
-  // ─── 2. Field-type extra prompts (SKIP in expertMode — masterPrompt.ts Layer 2 handles them) ───
-  if (!expertMode) {
-    // Determine if this is a code/logic field or batch for STRICT_SYNC
+  // ─── 2. Field-type extra prompts + STRICT_SYNC ───
+  {
     const isBatchMode = batchFields && batchFields.length > 0;
     const hasCodeOrLogic = isBatchMode
       ? batchFields.some(isCodeOrLogicField) || batchFields.some(f => f.group === 'lorebook')
       : isCodeOrLogicField(field);
 
+    // STRICT_SYNC is injected for BOTH expert and legacy modes
+    // (masterPrompt.ts does NOT include this — it's a promptBuilder concern)
     if (enableMvuSync && hasCodeOrLogic) {
       prompt += STRICT_SYNC_PROMPT;
     }
 
-    // Append per-type extra prompts
-    if (isBatchMode) {
-      prompt += getBatchFieldTypeExtraPrompts(batchFields, enableMvuSync);
-    } else {
-      prompt += getFieldTypeExtraPrompt(field);
+    // Field-type extra prompts: SKIP in expertMode (masterPrompt.ts Layer 2 handles them)
+    if (!expertMode) {
+      if (isBatchMode) {
+        prompt += getBatchFieldTypeExtraPrompts(batchFields, enableMvuSync);
+      } else {
+        prompt += getFieldTypeExtraPrompt(field);
+      }
     }
   }
 

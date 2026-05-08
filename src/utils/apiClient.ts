@@ -197,6 +197,24 @@ function buildTranslationMessages(
   if (expertMode && fieldType) {
     // ═══ EXPERT MODE: Use Master System Prompt ═══
     // Schema and glossary are baked into the master prompt via layers 5 & 6
+    // RAG context is injected as Layer 8 via ragContextBlock
+    
+    // Split customPrompt: RAG context goes to Layer 8, rest to suffix
+    let ragBlock: string | undefined;
+    let promptSuffix: string | undefined;
+    if (customPrompt?.trim()) {
+      // If customPrompt contains RAG sections (from promptBuilder.ts), route to Layer 8
+      const hasRAGContext = customPrompt.includes('═══ CROSS-FIELD') || 
+                           customPrompt.includes('═══ MANDATORY TERMINOLOGY') ||
+                           customPrompt.includes('═══ MVU/ZOD') ||
+                           customPrompt.includes('═══ CARD SCHEMA');
+      if (hasRAGContext) {
+        ragBlock = customPrompt;
+      } else {
+        promptSuffix = customPrompt;
+      }
+    }
+
     systemPrompt = buildMasterSystemPrompt({
       fieldType,
       sourceLang,
@@ -204,11 +222,12 @@ function buildTranslationMessages(
       enableThoughtProcess: true,
       mvuDictionary,
       glossary,
-      customPromptSuffix: customPrompt?.trim() || undefined,
+      customPromptSuffix: promptSuffix,
+      ragContextBlock: ragBlock,
     });
 
-    // Schema is injected via customPromptSuffix or RAG context — add separately if provided
-    if (customSchema) {
+    // Schema is injected via RAG context or Layer 8 — add separately if provided and not already in RAG
+    if (customSchema && !ragBlock) {
       systemPrompt += `\n\nCARD SCHEMA / VARIABLE DEFINITIONS:\n${customSchema}`;
     }
 
@@ -1090,13 +1109,65 @@ function advanceKeyRotation() {
   _keyIndex++;
 }
 
-/* ─── Route to correct provider (with key rotation) ─── */
+/* ─── Rate Limiter — Sliding Window (5 req / 60s) ─── */
+
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 5;
+const _requestTimestamps: number[] = [];
+
+/**
+ * Wait until a rate-limit slot is available.
+ * Uses a sliding window: keeps only timestamps within the last 60s,
+ * and waits if 5 requests were already made in that window.
+ */
+async function waitForRateLimit(signal?: AbortSignal): Promise<void> {
+  const now = Date.now();
+
+  // Prune old timestamps outside the window
+  while (_requestTimestamps.length > 0 && _requestTimestamps[0] <= now - RATE_LIMIT_WINDOW_MS) {
+    _requestTimestamps.shift();
+  }
+
+  // If under limit, record and go
+  if (_requestTimestamps.length < RATE_LIMIT_MAX_REQUESTS) {
+    _requestTimestamps.push(now);
+    return;
+  }
+
+  // Over limit — calculate wait time until oldest entry expires
+  const oldestInWindow = _requestTimestamps[0];
+  const waitMs = oldestInWindow + RATE_LIMIT_WINDOW_MS - now + 50; // +50ms buffer
+
+  if (waitMs > 0) {
+    console.log(`[RateLimit] 5/${RATE_LIMIT_WINDOW_MS / 1000}s limit hit — waiting ${(waitMs / 1000).toFixed(1)}s`);
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(resolve, waitMs);
+      if (signal) {
+        const onAbort = () => { clearTimeout(timer); reject(signal.reason || new Error('Aborted')); };
+        if (signal.aborted) { clearTimeout(timer); reject(signal.reason || new Error('Aborted')); return; }
+        signal.addEventListener('abort', onAbort, { once: true });
+      }
+    });
+  }
+
+  // Prune again after waiting and record
+  const now2 = Date.now();
+  while (_requestTimestamps.length > 0 && _requestTimestamps[0] <= now2 - RATE_LIMIT_WINDOW_MS) {
+    _requestTimestamps.shift();
+  }
+  _requestTimestamps.push(now2);
+}
+
+/* ─── Route to correct provider (with key rotation + rate limiting) ─── */
 async function callProvider(
   config: ProxySettings,
   system: string,
   user: string,
   signal?: AbortSignal
 ): Promise<string> {
+  // ═══ Rate limit gate ═══
+  await waitForRateLimit(signal);
+
   // Create a config copy with rotated key
   const activeKey = getRotatedKey(config);
   const rotatedConfig = { ...config, apiKey: activeKey };
@@ -1137,12 +1208,20 @@ function cleanTranslationResponse(original: string, translated: string, isExpert
     isExpertMode || 
     translated.includes('<translation>') || 
     translated.includes('<thought_process>') || 
-    translated.includes('<think>')
+    translated.includes('<think>') ||
+    translated.includes('<variable_map>') ||
+    translated.includes('<code_inventory>')
   ) {
     const parsed = extractTranslationFromResponse(translated);
     if (parsed.translation) {
       if (parsed.thoughtProcess) {
-        console.log('[Expert Mode] Thought process extracted:', parsed.thoughtProcess.slice(0, 200) + '...');
+        console.log('[Ultra Expert V2] Thought process:', parsed.thoughtProcess.slice(0, 200) + '...');
+      }
+      if (parsed.qualityScore !== undefined) {
+        console.log(`[Ultra Expert V2] Quality Score: ${parsed.qualityScore}/100`);
+      }
+      if (parsed.integrityReport) {
+        console.log('[Ultra Expert V2] Integrity:', parsed.integrityReport.slice(0, 200));
       }
       // Use extracted translation (which has thought blocks stripped) for further cleaning
       translated = parsed.translation;

@@ -31,6 +31,8 @@ export interface MasterPromptOptions {
   glossary?: GlossaryEntry[];
   /** Additional custom prompt to append */
   customPromptSuffix?: string;
+  /** RAG context block from ragContext.ts - injected as Layer 8 */
+  ragContextBlock?: string;
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -579,38 +581,73 @@ A character name translated differently in different locations = card crash.`;
    ════════════════════════════════════════════════════════════════════ */
 function buildThoughtProcessInstructions(): string {
   return `
-EXPERT MODE: XML REASONING & SELF-CHECK REQUIRED
-You MUST output your response using the following XML structure. This forces you to perform a rigorous self-audit of the code structure BEFORE generating the translation.
+ULTRA EXPERT MODE: STRUCTURED XML REASONING PIPELINE
+You MUST output your response using the following XML pipeline. Each section is MANDATORY.
+This forces a rigorous multi-phase audit: inventory BEFORE translating, verify AFTER.
+
+<variable_map>
+  List ALL CJK variable/key names found in the input, paired with their target translation.
+  Use the MVU Dictionary if provided. Format: one per line.
+  Example:
+    "ä¿®ä¸º" â†’ "Tu Vi"
+    "å¥½æ„Ÿåº¦" â†’ "Háº£o Cáº£m"
+  If NO CJK variables found, write: NONE
+</variable_map>
+
+<code_inventory>
+  List ALL protected code segments found. Categorize each one:
+    [MACRO] {{char}}, {{getvar::ä¿®ä¸º}}, {{setvar::å¥½æ„Ÿåº¦::5}}
+    [EJS] <% if(getvar('ä¿®ä¸º') == 'ç­‘åŸº') { %>
+    [HTML] <div data-var="å¥½æ„Ÿåº¦" class="stats">
+    [REGEX] /pattern/flags
+    [JSON] { "ä¿®ä¸º": "ç­‘åŸº" }
+    [CSS] font-family: SimSun, KaiTi
+    [CODE] function(), z.object(), const, let
+  If NO code segments found, write: NONE
+</code_inventory>
 
 <self_check>
-  PHASE 1 — SCAN:
-    Identify and list all protected segments: [REGEX], [MACRO], [EJS], [HTML], [JSON], [CSS], [CODE].
-    Example: "Found macro {{char}}, found EJS block <% if(getvar...) %>"
+  PHASE 1 â€” SCAN:
+    Cross-reference <variable_map> with <code_inventory>.
+    Verify every variable in the map appears in the inventory.
+    Flag any orphaned variables (in map but not in code, or vice versa).
   
-  PHASE 2 — ISOLATE:
-    Identify translatable human text. Note source language, register, and any Hán Việt proper nouns.
-    Build KEY TRANSLATION MAP if JSON/EJS variables are found (sync them!).
+  PHASE 2 â€” TRANSLATE:
+    Apply translations from <variable_map> to ALL occurrences:
+    JSON keys, data-var attributes, {{getvar::}}, {{setvar::}}, getvar(''), setvar(''), z.object fields.
+    Translate ALL remaining CJK text (prose, labels, annotations, YAML keys, comments).
   
-  PHASE 3 — REASSEMBLE & VERIFY:
-    Perform a 12-point pre-flight check before outputting:
-      1. Are all {{MACRO}} tokens intact byte-for-byte?
-      2. Are all <% EJS %> blocks completely preserved?
-      3. Is the /REGEX/ pattern totally unchanged?
-      4. Are JSON keys consistently translated (same key = same translation everywhere)?
-      5. Is the KEY MAP applied to getvar/setvar literals?
-      6. Are there ZERO markdown code fences (\`\`\`) in the output?
-      7. Was the CSS Font swapped correctly?
-      8. Are there any full-width Unicode corruptions (＜, ｛, “)?
-      9. Are HTML attributes (class, id) unchanged?
-      10. Is the whitespace and indentation preserved?
-      11. Is the translation 100% complete?
-      12. Are ALL Javascript keywords and Tavern Helper APIs (registerMacroLike, updateWorldbookWith, etc.) completely untranslated?
-      13. Did I preserve the "stat_data." prefix if it existed in the MVU variables?
+  PHASE 3 â€” PRE-FLIGHT VERIFICATION (15-point):
+    1. All {{MACRO}} tokens intact byte-for-byte?
+    2. All <% EJS %> blocks completely preserved?
+    3. /REGEX/ patterns totally unchanged?
+    4. JSON keys consistently translated (same key = same string everywhere)?
+    5. KEY MAP applied to ALL getvar/setvar string literals?
+    6. ZERO markdown code fences (\`\`\`) in output?
+    7. CSS font-family swapped (CJK fonts â†’ Vietnamese stack)?
+    8. ZERO full-width Unicode corruptions (ï¼œ, ï½›, ")?
+    9. HTML attributes (class, id, style) unchanged?
+    10. Whitespace and indentation preserved?
+    11. Translation 100% complete â€” no truncation?
+    12. ALL JS keywords and TavernHelper APIs untranslated?
+    13. "stat_data." prefix preserved in dotted paths?
+    14. ZERO residual Chinese/Japanese characters in prose sections?
+    15. Every variable in <variable_map> replaced in ALL contexts?
 </self_check>
 
 <translation>
-[The raw, final, structured translated string goes here — NOTHING ELSE]
-</translation>`;
+[The raw, final, complete translated string â€” NOTHING ELSE. No markdown fences. No explanations.]
+</translation>
+
+<integrity_report>
+  Variables mapped: X/Y (from variable_map)
+  Variables replaced in output: X/Y
+  Macros preserved: X/X
+  Residual CJK characters: 0 (or list any remaining)
+  Missing replacements: NONE (or list specifics)
+</integrity_report>
+
+<quality_score>0-100</quality_score>`;
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -685,9 +722,14 @@ export function buildMasterSystemPrompt(options: MasterPromptOptions): string {
     layers.push(buildGlossaryBlock(glossary));
   }
 
-  // Layer 7: Thought process instructions (optional — expert mode)
+  // Layer 7: Thought process instructions (Ultra Expert V2)
   if (enableThoughtProcess) {
     layers.push(buildThoughtProcessInstructions());
+  }
+
+  // Layer 8: RAG Context (cross-field translation reference)
+  if (options.ragContextBlock?.trim()) {
+    layers.push(`\n${options.ragContextBlock.trim()}`);
   }
 
   // Custom suffix (user's additional instructions)
@@ -714,6 +756,14 @@ export interface ParsedTranslationResponse {
   thoughtProcess?: string;
   /** Whether XML tags were found and used */
   usedXmlParsing: boolean;
+  /** V2: Variable map extracted from <variable_map> */
+  variableMap?: string;
+  /** V2: Code inventory extracted from <code_inventory> */
+  codeInventory?: string;
+  /** V2: Quality score from <quality_score> (0-100) */
+  qualityScore?: number;
+  /** V2: Integrity report from <integrity_report> */
+  integrityReport?: string;
 }
 
 export function extractTranslationFromResponse(raw: string): ParsedTranslationResponse {
@@ -723,6 +773,39 @@ export function extractTranslationFromResponse(raw: string): ParsedTranslationRe
 
   let trimmed = raw.trim();
   let thoughtProcess: string | undefined = undefined;
+  let variableMap: string | undefined = undefined;
+  let codeInventory: string | undefined = undefined;
+  let qualityScore: number | undefined = undefined;
+  let integrityReport: string | undefined = undefined;
+
+  // ═══ V2: Extract <variable_map> ═══
+  const varMapMatch = trimmed.match(/<variable_map>([\s\S]*?)<\/variable_map>/i);
+  if (varMapMatch) {
+    variableMap = varMapMatch[1].trim();
+    trimmed = trimmed.replace(/<variable_map>[\s\S]*?<\/variable_map>/i, '').trim();
+  }
+
+  // ═══ V2: Extract <code_inventory> ═══
+  const codeInvMatch = trimmed.match(/<code_inventory>([\s\S]*?)<\/code_inventory>/i);
+  if (codeInvMatch) {
+    codeInventory = codeInvMatch[1].trim();
+    trimmed = trimmed.replace(/<code_inventory>[\s\S]*?<\/code_inventory>/i, '').trim();
+  }
+
+  // ═══ V2: Extract <integrity_report> ═══
+  const integrityMatch = trimmed.match(/<integrity_report>([\s\S]*?)<\/integrity_report>/i);
+  if (integrityMatch) {
+    integrityReport = integrityMatch[1].trim();
+    trimmed = trimmed.replace(/<integrity_report>[\s\S]*?<\/integrity_report>/i, '').trim();
+  }
+
+  // ═══ V2: Extract <quality_score> ═══
+  const qScoreMatch = trimmed.match(/<quality_score>\s*(\d+)\s*<\/quality_score>/i);
+  if (qScoreMatch) {
+    qualityScore = parseInt(qScoreMatch[1], 10);
+    if (qualityScore < 0 || qualityScore > 100) qualityScore = undefined;
+    trimmed = trimmed.replace(/<quality_score>[\s\S]*?<\/quality_score>/i, '').trim();
+  }
 
   // Extract thought process/self-check for debug logging and remove it from raw string if found
   const thoughtMatch = trimmed.match(/<(?:thought_process|think|self_check)>([\s\S]*?)(?:<\/(?:thought_process|think|self_check)>|$)/i);
@@ -732,6 +815,17 @@ export function extractTranslationFromResponse(raw: string): ParsedTranslationRe
     trimmed = trimmed.replace(/<(?:thought_process|think|self_check)>[\s\S]*?(?:<\/(?:thought_process|think|self_check)>|$)/i, '').trim();
   }
 
+  // Log V2 metadata for debugging
+  if (variableMap || codeInventory || qualityScore !== undefined || integrityReport) {
+    console.log('[Ultra Expert V2] Metadata extracted:');
+    if (variableMap && variableMap !== 'NONE') console.log('  Variable Map:', variableMap.slice(0, 300));
+    if (codeInventory && codeInventory !== 'NONE') console.log('  Code Inventory:', codeInventory.slice(0, 300));
+    if (qualityScore !== undefined) console.log('  Quality Score:', qualityScore);
+    if (integrityReport) console.log('  Integrity Report:', integrityReport.slice(0, 300));
+  }
+
+  const v2Meta = { variableMap, codeInventory, qualityScore, integrityReport };
+
   // Try to extract <translation> content
   const translationMatch = trimmed.match(/<translation>([\s\S]*?)<\/translation>/i);
   if (translationMatch) {
@@ -739,6 +833,7 @@ export function extractTranslationFromResponse(raw: string): ParsedTranslationRe
       translation: translationMatch[1].trim(),
       thoughtProcess,
       usedXmlParsing: true,
+      ...v2Meta,
     };
   }
 
@@ -749,14 +844,16 @@ export function extractTranslationFromResponse(raw: string): ParsedTranslationRe
       translation: partialMatch[1].trim(),
       thoughtProcess,
       usedXmlParsing: true,
+      ...v2Meta,
     };
   }
 
-  // No <translation> tags found — return raw text (with thought blocks stripped)
+  // No <translation> tags found — return raw text (with V2 blocks stripped)
   return {
     translation: trimmed,
     thoughtProcess,
-    usedXmlParsing: !!thoughtProcess,
+    usedXmlParsing: !!(thoughtProcess || variableMap || codeInventory),
+    ...v2Meta,
   };
 }
 
