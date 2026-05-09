@@ -318,14 +318,14 @@ export function extractZodDescriptions(schemaText: string): Record<string, strin
   if (!schemaText) return result;
 
   // Pattern: fieldName: z.type().describe("description") or .describe('description')
-  const regex = /(\w+)\s*:\s*z\.\w+\([^)]*\)(?:\.\w+\([^)]*\))*\.describe\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
+  const regex = /([^\s:.,;()]+)\s*:\s*(?:z|Zod)\.\w+(?:\([^)]*\))?(?:\.\w+\([^)]*\))*\.describe\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
   let match;
   while ((match = regex.exec(schemaText)) !== null) {
     result[match[1]] = match[2];
   }
 
-  // Also try: z.object keys with describe
-  const regex2 = /['"]?([^'":\s]+)['"]?\s*:\s*z\.\w+(?:\([^)]*\))?\.describe\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
+  // Also try: z.object keys with describe, including quoted ones
+  const regex2 = /['"]([^'":\s]+)['"]\s*:\s*(?:z|Zod)\.\w+(?:\([^)]*\))?(?:\.\w+\([^)]*\))*\.describe\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
   while ((match = regex2.exec(schemaText)) !== null) {
     if (!result[match[1]]) {
       result[match[1]] = match[2];
@@ -398,8 +398,8 @@ export function extractPotentialMvuKeys(card: CharacterCard): MvuKeyInfo[] {
   // ─── Scan Zod schema fields ───
   const scanZodFields = (text: string) => {
     if (!text || typeof text !== 'string') return;
-    // Handle both unquoted (word chars) and quoted keys
-    const zodFieldRegex = /(?:["']([^"']+)["']|(\w+))\s*:\s*z\.\w+/g;
+    // Handle both unquoted (word chars + unicode) and quoted keys
+    const zodFieldRegex = /(?:["']([^"']+)["']|([^\s:.,;()]+))\s*:\s*(?:z|Zod)\.\w+/g;
     let match;
     while ((match = zodFieldRegex.exec(text)) !== null) {
       const key = match[1] || match[2];

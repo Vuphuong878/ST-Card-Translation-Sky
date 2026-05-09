@@ -239,6 +239,167 @@ function HtmlPreviewToggle({ html }: { html: string }) {
   );
 }
 
+/** Live Regex Match Simulator */
+function RegexSimulatorPane({ regexStr }: { regexStr: string }) {
+  const [testText, setTestText] = useState('');
+  
+  // Parse regex safely
+  const parsedRegex = useMemo(() => {
+    if (!regexStr) return null;
+    try {
+      let pattern = regexStr;
+      let flags = 'g';
+      // SillyTavern format: /pattern/flags
+      const match = regexStr.match(/^\/(.+)\/([gimsuy]*)$/);
+      if (match) {
+        pattern = match[1];
+        flags = match[2];
+        if (!flags.includes('g')) flags += 'g'; // Force global to find all matches
+      } else {
+        // If it doesn't have slashes, just treat as raw string
+      }
+      return new RegExp(pattern, flags);
+    } catch (e) {
+      return null; // Invalid regex
+    }
+  }, [regexStr]);
+
+  const highlightedElements = useMemo(() => {
+    if (!testText) return null;
+    if (!parsedRegex) return <span style={{color: 'var(--accent-danger)'}}>Invalid Regular Expression</span>;
+
+    const elements: React.ReactNode[] = [];
+    let lastIndex = 0;
+    
+    parsedRegex.lastIndex = 0; // reset
+    let match;
+    let key = 0;
+    let iterations = 0;
+    
+    while ((match = parsedRegex.exec(testText)) !== null) {
+      iterations++;
+      if (iterations > 1000) break; // Infinite loop safety
+      
+      const start = match.index;
+      const end = parsedRegex.lastIndex;
+      
+      // Zero-length match prevention
+      if (start === end) {
+        parsedRegex.lastIndex++;
+        continue;
+      }
+
+      if (start > lastIndex) {
+        elements.push(<span key={key++}>{testText.slice(lastIndex, start)}</span>);
+      }
+      
+      elements.push(
+        <mark key={key++} style={{ 
+          background: 'rgba(236,72,153,0.3)', 
+          color: '#ff9ecd', 
+          borderRadius: '2px',
+          padding: '0 2px'
+        }} title="Matched segment">
+          {testText.slice(start, end)}
+        </mark>
+      );
+      
+      lastIndex = end;
+    }
+    
+    if (lastIndex < testText.length) {
+      elements.push(<span key={key++}>{testText.slice(lastIndex)}</span>);
+    }
+    
+    if (elements.length === 1 && typeof elements[0] === 'object' && 'type' in (elements[0] as any) && (elements[0] as any).type === 'span') {
+      return <span style={{color: 'var(--text-muted)'}}>No matches found.</span>;
+    }
+    
+    return elements;
+  }, [testText, parsedRegex]);
+
+  return (
+    <div style={{
+      marginTop: '6px',
+      border: '1px solid rgba(236,72,153,0.2)',
+      borderRadius: 'var(--radius-md)',
+      padding: '8px',
+      background: '#1a1a2e',
+    }}>
+      <div style={{
+        fontSize: '0.6rem',
+        fontWeight: 600,
+        color: '#f472b6',
+        marginBottom: '6px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+      }}>
+        <Search size={10} />
+        Regex Match Simulator
+      </div>
+      <textarea
+        value={testText}
+        onChange={e => setTestText(e.target.value)}
+        placeholder="Paste narrative text here to simulate what this regex will match/eat..."
+        style={{
+          width: '100%',
+          minHeight: '60px',
+          background: 'rgba(0,0,0,0.2)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          color: 'var(--text-primary)',
+          padding: '6px',
+          borderRadius: '4px',
+          fontSize: '0.8rem',
+          resize: 'vertical',
+          marginBottom: '8px'
+        }}
+      />
+      {testText && (
+        <div style={{
+          padding: '8px',
+          background: 'rgba(0,0,0,0.3)',
+          borderRadius: '4px',
+          fontSize: '0.8rem',
+          color: 'var(--text-secondary)',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          maxHeight: '150px',
+          overflowY: 'auto'
+        }}>
+          {highlightedElements}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Toggle wrapper for RegexSimulatorPane */
+function RegexSimulatorToggle({ regexStr }: { regexStr: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ marginTop: '4px' }}>
+      <button
+        onClick={() => setShow(p => !p)}
+        className="btn btn-ghost btn-xs"
+        style={{
+          padding: '2px 8px',
+          fontSize: '0.62rem',
+          color: show ? '#f472b6' : 'var(--text-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          opacity: show ? 1 : 0.7,
+        }}
+      >
+        <Search size={11} />
+        {show ? 'Hide Simulator' : 'Test Regex Match'}
+      </button>
+      {show && <RegexSimulatorPane regexStr={regexStr} />}
+    </div>
+  );
+}
+
 /** Virtualized Table View — only renders visible rows */
 function VirtualTableView({
   fields,
@@ -353,6 +514,10 @@ function VirtualTableView({
                         placeholder={field.status === 'pending' ? 'Not translated yet' : ''}
                         rows={Math.min(Math.max(field.original.split('\n').length, 2), 8)}
                       />
+                      {/* Show Regex Simulator toggle for findRegex fields */}
+                      {field.group === 'regex' && field.path.includes('findRegex') && (
+                        <RegexSimulatorToggle regexStr={field.translated || field.original} />
+                      )}
                     </td>
 
                     {/* Actions */}
@@ -485,6 +650,10 @@ function VirtualDiffView({
                 {/* Show HTML preview toggle for regex fields */}
                 {field.group === 'regex' && field.path.includes('replaceString') && field.translated && (
                   <HtmlPreviewToggle html={field.translated} />
+                )}
+                {/* Show Regex Simulator toggle for findRegex fields */}
+                {field.group === 'regex' && field.path.includes('findRegex') && (
+                  <RegexSimulatorToggle regexStr={field.translated || field.original} />
                 )}
                 {field.error && (
                   <div style={{ fontSize: '0.65rem', color: 'var(--accent-danger)', marginTop: '6px' }}>
