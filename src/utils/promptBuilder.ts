@@ -311,11 +311,14 @@ export function buildEffectivePrompt(options: PromptBuildOptions): PromptBuildRe
 
   let prompt = translationPrompt || '';
 
+  const isModActive = Boolean(enableModMode && modInstructions.trim());
+
   // ─── 1. Jailbreak + Objective mode (always appended — masterPrompt.ts does NOT handle these) ───
   if (enableJailbreak) {
     prompt += JAILBREAK_PROMPT;
   }
-  if (enableObjectiveMode) {
+  // Vô hiệu hóa Bạch miêu (Objective Mode) nếu có Mod, vì Mod thường yêu cầu viết lại nội dung theo ý muốn
+  if (enableObjectiveMode && !isModActive) {
     prompt += OBJECTIVE_TRANSLATION_PROMPT;
   }
 
@@ -348,8 +351,13 @@ export function buildEffectivePrompt(options: PromptBuildOptions): PromptBuildRe
   }
 
   // ─── 3.5. Mod Instructions Override ───
-  if (enableModMode && modInstructions.trim()) {
-    prompt += `\n\n[CRITICAL OVERRIDE: USER MOD INSTRUCTIONS]\nBạn PHẢI tuân thủ các yêu cầu đặc biệt sau đây từ người dùng (nếu có xung đột, ưu tiên yêu cầu này):\n${modInstructions.trim()}`;
+  if (isModActive) {
+    prompt += `\n\n[CRITICAL OVERRIDE: MODIFICATION & REWRITE MODE]
+CHÚ Ý: ĐÂY LÀ CHẾ ĐỘ CHỈNH SỬA VÀ VIẾT LẠI (MOD). Bạn KHÔNG BỊ RÀNG BUỘC phải dịch đúng nghĩa đen của nguyên tác.
+Bạn ĐƯỢC TOÀN QUYỀN THAY ĐỔI cốt truyện, bối cảnh, xưng hô, tính cách, nội dung mô tả, và CÁC BIẾN SỐ (MVU) để tuân thủ tuyệt đối yêu cầu Mod dưới đây.
+Mọi mâu thuẫn giữa nguyên tác và yêu cầu Mod thì PHẢI ưu tiên yêu cầu Mod.
+YÊU CẦU MOD CỦA NGƯỜI DÙNG:
+${modInstructions.trim()}`;
   }
 
   // ─── 4. RAG Context OR Legacy MVU Dict Injection ───
