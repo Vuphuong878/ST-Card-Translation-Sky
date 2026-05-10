@@ -11,8 +11,8 @@ export interface CJKToken {
  */
 export function extractCJKTokens(text: string): CJKToken[] {
   const tokens: CJKToken[] = [];
-  // Match CJK blocks optionally joined by spaces, simple punctuation, letters/numbers
-  const regex = /[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u3000-\u303f\uff00-\uffef]+(?:[ \tA-Za-z0-9.,!?'"()\-:]+[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u3000-\u303f\uff00-\uffef]+)*/g;
+  // Match CJK blocks optionally joined by spaces, safe punctuation, letters/numbers
+  const regex = /[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u3000-\u303f\uff00-\uffef]+(?:[ \tA-Za-z0-9.,!?'"()\-:;/_+=*&^%@~|\u2000-\u206F]+[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u3000-\u303f\uff00-\uffef]+)*/g;
   
   let match;
   let id = 1;
@@ -92,9 +92,10 @@ Do NOT output any conversational text or markdown blocks. Do NOT skip items.`;
     const result = await callProvider(config, systemPrompt, payload, signal);
     
     // Parse result
-    const lines = result.split('\\n');
+    const lines = result.split('\n');
     for (const line of lines) {
-      const match = line.match(/^#(\\d+)\\t(.+)$/);
+      // Robust matching to handle LLM variations: "#1 text", "1. text", "#1: text", "[1] text"
+      const match = line.trim().match(/^(?:.*?#\s*)?(\d+)[\t \.\:\-\]]+(.+)$/);
       if (match) {
         const id = parseInt(match[1], 10);
         const translatedText = match[2].trim();

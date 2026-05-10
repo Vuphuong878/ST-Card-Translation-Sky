@@ -191,6 +191,21 @@ export function useTranslation() {
         );
       }
 
+      // ─── Post-single MVU variable validation + auto-fix ───
+      const hasMvuDict = currentMvuDict && Object.keys(currentMvuDict).length > 0;
+      if (hasMvuDict && translated) {
+        const fieldType = (field.entryType || field.group) as any;
+        const validation = validateMvuVariables(field.original, translated, currentMvuDict, fieldType);
+        
+        if (validation.unreplaced.length > 0) {
+          const fixed = autoFixMvuVariables(translated, currentMvuDict, validation.unreplaced);
+          if (fixed !== translated) {
+            translated = fixed;
+            store.addLog('info', `🔧 Auto-fixed ${validation.unreplaced.length} vars in ${field.label}`);
+          }
+        }
+      }
+
       // Post-process regex HTML: font swap + underscore display
       const isRegexContent = field.group === 'regex' && (field.path.includes('replaceString') || field.path.includes('trimStrings'));
       if (isRegexContent && translated) {

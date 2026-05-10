@@ -356,6 +356,61 @@ export function extractTranslatableFields(
       scriptsArray.forEach((script, i) => {
         if (!script || typeof script !== 'object') return;
         
+        const scriptName = script.name ? ` (${script.name})` : '';
+
+        // Extract script name
+        if (typeof script.name === 'string' && script.name.trim() !== '') {
+          const path = isDirectArray 
+            ? `data.extensions.${key}[${i}].name`
+            : `data.extensions.${key}.scripts[${i}].name`;
+          fields.push({
+            path,
+            label: `tavernHelper[${i}].name${scriptName}`,
+            group: 'tavern_helper',
+            original: script.name,
+            translated: '',
+            status: 'pending',
+            retries: 0,
+          });
+        }
+
+        // Extract script info
+        if (typeof script.info === 'string' && script.info.trim() !== '') {
+          const path = isDirectArray 
+            ? `data.extensions.${key}[${i}].info`
+            : `data.extensions.${key}.scripts[${i}].info`;
+          fields.push({
+            path,
+            label: `tavernHelper[${i}].info${scriptName}`,
+            group: 'tavern_helper',
+            original: script.info,
+            translated: '',
+            status: 'pending',
+            retries: 0,
+          });
+        }
+
+        // Extract script button names
+        if (script.button && Array.isArray(script.button.buttons)) {
+          script.button.buttons.forEach((btn: any, j: number) => {
+            if (typeof btn.name === 'string' && btn.name.trim() !== '') {
+              const path = isDirectArray 
+                ? `data.extensions.${key}[${i}].button.buttons[${j}].name`
+                : `data.extensions.${key}.scripts[${i}].button.buttons[${j}].name`;
+              fields.push({
+                path,
+                label: `tavernHelper[${i}].button[${j}]${scriptName}`,
+                group: 'tavern_helper',
+                original: btn.name,
+                translated: '',
+                status: 'pending',
+                retries: 0,
+              });
+            }
+          });
+        }
+
+        // Extract actual script content/code
         const contentKey = typeof script.content === 'string' ? 'content' : 
                           (typeof script.script === 'string' ? 'script' : 
                           (typeof script.code === 'string' ? 'code' : null));
@@ -369,7 +424,7 @@ export function extractTranslatableFields(
             
           fields.push({
             path,
-            label: `tavernHelper[${i}]${script.name ? ` (${script.name})` : ''}`,
+            label: `tavernHelper[${i}].${contentKey}${scriptName}`,
             group: 'tavern_helper',
             original: script[contentKey],
             translated: '',

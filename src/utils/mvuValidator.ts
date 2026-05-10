@@ -179,6 +179,14 @@ export function autoFixMvuVariables(
       return `${prefix}${newInner}${suffix}`;
     });
 
+    // 2.5. Replace in object accessors: _get(char, 'key') / _set(char, 'key', val)
+    const getSetRegex = new RegExp(`(\\b(?:_get|_set|get|set)\\s*\\(\\s*[a-zA-Z0-9_$]+\\s*,\\s*['"])([^'"]+)(['"])`, 'g');
+    fixed = fixed.replace(getSetRegex, (match, prefix, inner, suffix) => {
+      const segmentRegex = new RegExp(`(^|\\.)(${escaped})(\\.|$)`, 'g');
+      const newInner = inner.replace(segmentRegex, `$1${safeRepl}$3`);
+      return `${prefix}${newInner}${suffix}`;
+    });
+
     // 3. Replace in data-var attributes: data-var="key"
     const dataVarRegex = new RegExp(`(data-var\\s*=\\s*["'])${escaped}(["'])`, 'g');
     fixed = fixed.replace(dataVarRegex, `$1${safeRepl}$2`);
