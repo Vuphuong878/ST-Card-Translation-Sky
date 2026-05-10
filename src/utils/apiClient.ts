@@ -1233,14 +1233,32 @@ function cleanTranslationResponse(original: string, translated: string, isExpert
   }
 
   // Strip markdown code fences if present (e.g. ```html ... ```)
+  // B2 FIX: PRESERVE code fences when the ORIGINAL text had them.
+  // SillyTavern uses ```html ... ``` to determine that content is renderable HTML.
+  const codeFenceRegex = /^```([a-z]*)\r?\n([\s\S]*?)\r?\n```\s*$/i;
+  
   const stripMarkdownFences = (text: string, orig: string) => {
     const trimmedText = text.trim();
     const trimmedOrig = orig.trim();
-    const markdownRegex = /^```[a-z]*\n([\s\S]*?)\n```$/i;
     
-    const match = trimmedText.match(markdownRegex);
-    if (match && !trimmedOrig.match(markdownRegex)) {
-      return match[1].trim();
+    const origCodeFenceMatch = trimmedOrig.match(codeFenceRegex);
+    const transCodeFenceMatch = trimmedText.match(codeFenceRegex);
+    
+    if (origCodeFenceMatch) {
+      // Original HAD code fences — they are part of the content, not AI hallucination
+      if (transCodeFenceMatch) {
+        // Translation also has code fences → keep as-is (already correct)
+        return text;
+      } else {
+        // AI dropped the code fences → RE-WRAP with the original fence type
+        const fenceType = origCodeFenceMatch[1] || '';
+        return `\`\`\`${fenceType}\n${trimmedText}\n\`\`\``;
+      }
+    }
+    
+    // Original did NOT have code fences — strip them if AI added them
+    if (transCodeFenceMatch) {
+      return transCodeFenceMatch[2].trim();
     }
     
     // Fallback: strip any leading/trailing backticks if original didn't have them
@@ -1252,7 +1270,7 @@ function cleanTranslationResponse(original: string, translated: string, isExpert
 
   const isHtmlContent = /<[a-z][^>]*>/i.test(original) && /<\/[a-z]+>/i.test(original);
   if (isHtmlContent) {
-    // For HTML content, only strip backtick wrapping (safe operation)
+    // For HTML content, apply code fence logic (safe operation)
     let cleaned = stripMarkdownFences(translated, original);
     return cleaned.trim() || translated.trim();
   }

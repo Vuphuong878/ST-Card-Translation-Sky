@@ -863,6 +863,64 @@ export function buildEntryNameDictionary(
 }
 
 /**
+ * B1 FIX: Build regex trigger dictionary from translated findRegex fields.
+ * 
+ * When findRegex patterns contain CJK text (e.g. 【开场】), and the AI translates
+ * it to (e.g. 【Mở đầu】), the system prompt / narrative must also use 【Mở đầu】
+ * so the AI model outputs the exact string the regex expects to match.
+ * 
+ * This dictionary is merged into the entry name dictionary to ensure consistency.
+ * 
+ * @param fields - All translation fields (needs findRegex fields with status='done')
+ * @returns Dictionary mapping original CJK segments → translated equivalents
+ */
+export function buildRegexTriggerDictionary(
+  fields: { path: string; original: string; translated: string; status: string }[]
+): Record<string, string> {
+  const dict: Record<string, string> = {};
+  
+  for (const f of fields) {
+    // Only process findRegex fields that have been translated
+    if (!f.path.includes('findRegex') || f.status !== 'done' || !f.translated) continue;
+    if (f.original === f.translated) continue;
+    
+    // Extract CJK text segments from original and translated findRegex
+    const origSegments = extractCjkSegments(f.original);
+    const transSegments = extractCjkSegments(f.translated);
+    
+    // Map CJK segments 1:1 (they appear in same structural positions)
+    for (let i = 0; i < Math.min(origSegments.length, transSegments.length); i++) {
+      if (origSegments[i] !== transSegments[i] && origSegments[i].length >= 2) {
+        dict[origSegments[i]] = transSegments[i];
+      }
+    }
+    
+    // Also add the full findRegex value as context (useful for wrapped patterns like 【X】)
+    // Extract bracketed patterns: 【X】, 「X」, 『X』, etc.
+    const bracketedOrig = f.original.match(/[【「『《〈\u300a][^\u3011\u300b\u300d\u3009\u3001】」』》〉]+[】」』》〉\u3011\u300b\u300d\u3009]/g) || [];
+    const bracketedTrans = f.translated.match(/[【「『《〈\u300a][^\u3011\u300b\u300d\u3009\u3001】」』》〉]+[】」』》〉\u3011\u300b\u300d\u3009]/g) || [];
+    
+    for (let i = 0; i < Math.min(bracketedOrig.length, bracketedTrans.length); i++) {
+      if (bracketedOrig[i] !== bracketedTrans[i]) {
+        dict[bracketedOrig[i]] = bracketedTrans[i];
+      }
+    }
+  }
+  
+  return dict;
+}
+
+/**
+ * Extract contiguous CJK character runs from text.
+ * Used to align original ↔ translated segments in findRegex patterns.
+ */
+function extractCjkSegments(text: string): string[] {
+  // Match runs of CJK Unified Ideographs, CJK Extension A/B, Kana, Hangul
+  const matches = text.match(/[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u3000-\u303f\uff00-\uffef]+/g);
+  return matches || [];
+}
+
+/**
  * Validate that translated lorebook entry names appear in translated narrative text.
  * 
  * SillyTavern auto-loads lorebook entries when their EXACT NAME appears in

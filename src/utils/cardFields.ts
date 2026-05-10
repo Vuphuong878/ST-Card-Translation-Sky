@@ -480,6 +480,124 @@ export function applyTranslationsToCard(
   return result as CharacterCard;
 }
 
+/**
+ * B3 FIX: Auto-translate lorebook trigger keys at export time.
+ * 
+ * After a card is translated from CJK → target language, lorebook entries may still
+ * have CJK-only trigger keys (e.g. character names like "夏目贵志"). Since the AI
+ * will now write translated names (e.g. "Natsume Takashi"), the CJK trigger keys
+ * will never match → lorebook entries never activate.
+ * 
+ * This function:
+ * 1. Builds a dictionary from translated lorebook entry names and MVU variables
+ * 2. For each lorebook entry's keys/secondary_keys, finds CJK keys
+ * 3. If a CJK key matches a known translated name, adds the translated name
+ * 4. De-duplicates the final key list
+ * 
+ * @param card - The card with translations already applied
+ * @param fields - All translation fields (for building name dictionary)
+ * @param mvuDictionary - Optional MVU variable dictionary for additional mappings
+ * @returns Card with auto-translated trigger keys added
+ */
+export function autoTranslateLorebookTriggerKeys(
+  card: CharacterCard,
+  fields: TranslationField[],
+  mvuDictionary?: Record<string, string>
+): CharacterCard {
+  const entries = card.data?.character_book?.entries;
+  if (!entries || entries.length === 0) return card;
+
+  // Build name mapping: original CJK name → translated name
+  const nameDict: Record<string, string> = {};
+  
+  // From lorebook entry names (name fields that were translated)
+  for (const f of fields) {
+    if (
+      f.status === 'done' &&
+      f.translated &&
+      f.translated.trim() &&
+      /\.name$/.test(f.path) &&
+      f.path.includes('character_book.entries[')
+    ) {
+      const orig = f.original.trim();
+      const trans = f.translated.trim();
+      if (orig && trans && orig !== trans) {
+        nameDict[orig] = trans;
+      }
+    }
+  }
+
+  // From MVU dictionary (variable names that map CJK → translated)
+  if (mvuDictionary) {
+    for (const [k, v] of Object.entries(mvuDictionary)) {
+      if (k && v && k !== v && !nameDict[k]) {
+        nameDict[k] = v;
+      }
+    }
+  }
+
+  // From translated lorebook key fields themselves
+  for (const f of fields) {
+    if (
+      f.status === 'done' &&
+      f.translated &&
+      (f.path.endsWith('.keys') || f.path.endsWith('.secondary_keys')) &&
+      f.path.includes('character_book.entries[')
+    ) {
+      const origKeys = f.original.split(',').map(k => k.trim()).filter(Boolean);
+      const transKeys = f.translated.split(',').map(k => k.trim()).filter(Boolean);
+      for (let i = 0; i < Math.min(origKeys.length, transKeys.length); i++) {
+        if (origKeys[i] !== transKeys[i] && !nameDict[origKeys[i]]) {
+          nameDict[origKeys[i]] = transKeys[i];
+        }
+      }
+    }
+  }
+
+  if (Object.keys(nameDict).length === 0) return card;
+
+  // CJK character detection regex
+  const isCjk = (text: string) => /[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af]/.test(text);
+
+  // Deep clone for modification
+  const result = JSON.parse(JSON.stringify(card)) as CharacterCard;
+  const resultEntries = result.data?.character_book?.entries;
+  if (!resultEntries) return result;
+
+  let addedCount = 0;
+  for (const entry of resultEntries) {
+    // Process keys
+    if (Array.isArray(entry.keys)) {
+      const newKeys = [...entry.keys];
+      for (const key of entry.keys) {
+        if (isCjk(key) && nameDict[key] && !newKeys.includes(nameDict[key])) {
+          newKeys.push(nameDict[key]);
+          addedCount++;
+        }
+      }
+      entry.keys = [...new Set(newKeys)];
+    }
+
+    // Process secondary_keys
+    if (Array.isArray(entry.secondary_keys)) {
+      const newSecKeys = [...entry.secondary_keys];
+      for (const key of entry.secondary_keys) {
+        if (isCjk(key) && nameDict[key] && !newSecKeys.includes(nameDict[key])) {
+          newSecKeys.push(nameDict[key]);
+          addedCount++;
+        }
+      }
+      entry.secondary_keys = [...new Set(newSecKeys)];
+    }
+  }
+
+  if (addedCount > 0) {
+    console.log(`[B3 AutoTrigger] Added ${addedCount} translated trigger keys to lorebook entries`);
+  }
+
+  return result;
+}
+
 /* ─── Validate if JSON is a valid SillyTavern card ─── */
 export function validateCard(json: unknown): { valid: boolean; error?: string } {
   if (!json || typeof json !== 'object') {

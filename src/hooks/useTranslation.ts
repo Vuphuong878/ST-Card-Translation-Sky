@@ -1,12 +1,12 @@
 import { useCallback, useRef } from 'react';
 import { useStore } from '../store';
 import { translateText, translateBatch, fieldGroupToFieldType } from '../utils/apiClient';
-import { extractTranslatableFields, applyTranslationsToCard } from '../utils/cardFields';
+import { extractTranslatableFields, applyTranslationsToCard, autoTranslateLorebookTriggerKeys } from '../utils/cardFields';
 import { syncMvuVariables, postProcessRegexHtml, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, extractZodDescriptions } from '../utils/mvuSync';
 import { shouldSkipTranslation } from '../utils/langDetect';
 import { clearRAGCache } from '../utils/ragContext';
 import { getMvuCardSummary } from '../utils/mvuDetector';
-import { validateMvuVariables, autoFixMvuVariables, generateSyncReport, buildEntryNameDictionary, validateEntryNameSync } from '../utils/mvuValidator';
+import { validateMvuVariables, autoFixMvuVariables, generateSyncReport, buildEntryNameDictionary, buildRegexTriggerDictionary, validateEntryNameSync } from '../utils/mvuValidator';
 import { buildEffectivePrompt } from '../utils/promptBuilder';
 import { surgicalTranslate } from '../utils/surgical';
 import type { FieldGroup, FieldGroupConfig, TranslationField } from '../types/card';
@@ -115,7 +115,7 @@ export function useTranslation() {
 
       // ═══ Centralized prompt building (single source of truth) ═══
       // Build entry name dictionary from already-translated lorebook name fields
-      const entryNameDict = buildEntryNameDictionary(fields);
+      const entryNameDict = { ...buildEntryNameDictionary(fields), ...buildRegexTriggerDictionary(fields) };
 
       const promptResult = buildEffectivePrompt({
         translationPrompt: store.translationConfig.translationPrompt,
@@ -310,7 +310,7 @@ export function useTranslation() {
       
       // ═══ Centralized prompt building (single source of truth) ═══
       // Build entry name dictionary from already-translated lorebook name fields
-      const batchEntryNameDict = buildEntryNameDictionary(store.fields);
+      const batchEntryNameDict = { ...buildEntryNameDictionary(store.fields), ...buildRegexTriggerDictionary(store.fields) };
 
       const promptResult = buildEffectivePrompt({
         translationPrompt: store.translationConfig.translationPrompt,
@@ -673,6 +673,18 @@ export function useTranslation() {
         return orderA - orderB;
       });
       store.addLog('info', '📋 Strategy B: Reordered fields → schema → lorebook → regex → OP → rest');
+    } else {
+      // B1 FIX: Even without MVU, move findRegex fields BEFORE narrative/system fields.
+      // This ensures regex trigger patterns are translated first, so the regex trigger
+      // dictionary is available when translating system prompts and narrative content.
+      const hasFindRegex = fields.some(f => f.path.includes('findRegex'));
+      if (hasFindRegex) {
+        const findRegexFields = fields.filter(f => f.path.includes('findRegex'));
+        const otherFields = fields.filter(f => !f.path.includes('findRegex'));
+        fields.length = 0;
+        fields.push(...findRegexFields, ...otherFields);
+        store.addLog('info', `📋 findRegex fields moved to front (${findRegexFields.length} patterns → translate before narrative)`);
+      }
     }
 
     const isBatchLorebook = store.translationConfig.lorebookStrategy === 'batch';
@@ -978,7 +990,7 @@ export function useTranslation() {
 
       // ═══ Centralized prompt building (single source of truth) ═══
       // Build entry name dictionary from already-translated lorebook name fields
-      const retranslateEntryNameDict = buildEntryNameDictionary(store.fields);
+      const retranslateEntryNameDict = { ...buildEntryNameDictionary(store.fields), ...buildRegexTriggerDictionary(store.fields) };
 
       const promptResult = buildEffectivePrompt({
         translationPrompt: store.translationConfig.translationPrompt,
@@ -1051,6 +1063,15 @@ export function useTranslation() {
         .map((g: FieldGroupConfig) => g.id);
       exportCard = syncMvuVariables(exportCard, store.translationConfig.mvuDictionary, enabledGroups);
     }
+    
+    // B3 FIX: Auto-add translated trigger keys for lorebook entries.
+    // Ensures CJK trigger keys are supplemented with their translated equivalents
+    // so lorebook entries activate correctly when the AI writes in the target language.
+    exportCard = autoTranslateLorebookTriggerKeys(
+      exportCard,
+      store.fields,
+      store.translationConfig.enableMvuSync ? store.translationConfig.mvuDictionary : undefined
+    );
     
     return exportCard;
   }, [store]);
