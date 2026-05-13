@@ -364,11 +364,20 @@ export function useTranslation() {
 
         const isTargetNonCJK = !(/chinese|中文|japanese|日本語|korean|한국어/i.test(store.translationConfig.targetLanguage));
         const f = batchFields[j];
-        const isSchemaCritical = f.entryType === 'initvar' || f.entryType === 'controller' || f.entryType === 'mvu_logic' || f.group === 'tavern_helper';
-        if (isTargetNonCJK && isSchemaCritical) {
-          const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef]/;
-          if (cjkRegex.test(translated)) {
-            store.addLog('warning', `⚠️ Chinese characters detected in Schema batch (${f.label}). Will retry individually.`);
+
+        // ─── Residual CJK detection: retry individually if Chinese text remains ───
+        if (isTargetNonCJK) {
+          const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf]/g;
+          const cjkMatches = translated.match(cjkRegex);
+          const residualCount = cjkMatches ? cjkMatches.length : 0;
+          const isSchemaCritical = f.entryType === 'initvar' || f.entryType === 'controller' || f.entryType === 'mvu_logic' || f.group === 'tavern_helper';
+
+          // Schema-critical: ZERO tolerance (any CJK = retry individually)
+          // Non-schema: high residual threshold (>5 CJK chars = retry individually)
+          const threshold = isSchemaCritical ? 0 : 5;
+          if (residualCount > threshold) {
+            const typeLabel = isSchemaCritical ? 'Schema' : 'Content';
+            store.addLog('warning', `⚠️ ${residualCount} Chinese chars in ${typeLabel} batch (${f.label}). Will retry individually.`);
             emptyFields.push(f);
             continue;
           }

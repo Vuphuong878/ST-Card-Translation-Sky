@@ -1961,10 +1961,11 @@ export async function translateBatch(
 BATCH FORMAT:
 - The input contains ${items.length} numbered sections, each starting with ${DELIMITER}N${DELIMITER} (e.g., ${DELIMITER}1${DELIMITER}, ${DELIMITER}2${DELIMITER}).
 - You MUST return the same numbered delimiters with the translated text for each section.
-- Do NOT merge or skip any sections. Every section must be present in your output.${schemaInstructions}${glossaryBlock}`;
+- Do NOT merge or skip any sections. Every section must be present in your output.
+- CRITICAL: You MUST translate ALL Chinese/Japanese/Korean characters in EVERY section. Do NOT leave any CJK text untranslated. This includes section headers, YAML keys, annotations, labels, and text inside XML/HTML tags. Scan each section before outputting — if ANY Chinese characters remain, translate them immediately.${schemaInstructions}${glossaryBlock}`;
 
   const sourceHint = sourceLang && sourceLang !== 'auto' ? ` (from ${sourceLang})` : '';
-  const user = `Translate these ${items.length} sections${sourceHint} to ${targetLang}. Keep the ${DELIMITER}N${DELIMITER} delimiters. Return ONLY translations:\n\n${combinedText}`;
+  const user = `Translate these ${items.length} sections${sourceHint} to ${targetLang}. Keep the ${DELIMITER}N${DELIMITER} delimiters. Return ONLY translations. IMPORTANT: Translate ALL Chinese text in every section — ZERO Chinese characters should remain in the output:\n\n${combinedText}`;
 
   // Call provider
   let lastError: Error | null = null;
@@ -1973,7 +1974,7 @@ BATCH FORMAT:
       if (signal?.aborted) throw new Error('Cancelled');
 
       const controller = new AbortController();
-      const timeout = (config.requestTimeout || 300000) * 4; // 4× timeout for batch (65K token output can take minutes)
+      const timeout = (config.requestTimeout || 300000) * 6; // 6× timeout for batch (large batches with many sections need more time)
       const timeoutId = setTimeout(() => controller.abort('Batch request timeout'), timeout);
 
       const combinedSignal = signal
@@ -1985,6 +1986,31 @@ BATCH FORMAT:
 
       // Parse response by delimiters
       const results = parseBatchResponse(rawResult, items.length);
+
+      // ═══ RESIDUAL CJK CHECK for each batch result ═══
+      // Single-field translateText() always runs postTranslationResidualCheck(),
+      // but batch mode was missing this — causing residual Chinese in batch translations.
+      const isTargetCJK = /chinese|japanese|korean/i.test(targetLang);
+      if (!isTargetCJK) {
+        for (let ri = 0; ri < results.length; ri++) {
+          if (results[ri] && results[ri].trim() && items[ri]) {
+            const origChinese = countChineseChars(items[ri].text);
+            const residual = countChineseChars(results[ri]);
+            if (origChinese >= 3 && residual > 2) {
+              try {
+                results[ri] = await postTranslationResidualCheck(
+                  items[ri].text, results[ri], items[ri].fieldName,
+                  config, targetLang, sourceLang, combinedSignal,
+                  undefined, undefined
+                );
+              } catch (residualErr) {
+                console.warn(`[BatchResidualCheck] ${items[ri].fieldName}: cleanup failed, keeping original`, residualErr);
+              }
+            }
+          }
+        }
+      }
+
       return results;
     } catch (err) {
       lastError = err as Error;

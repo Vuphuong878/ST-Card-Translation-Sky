@@ -438,7 +438,46 @@ RULE E3 — EJS String Literal Synchronization Checklist:
     When you encounter CJK text inside a JavaScript string literal (single or double quotes within EJS blocks):
     - ALWAYS translate the CJK text to the target language
     - PRESERVE the quote characters and string boundaries exactly
-    - NEVER leave CJK text inside JS string literals — it causes variable lookup failures at runtime.`;
+    - NEVER leave CJK text inside JS string literals — it causes variable lookup failures at runtime.
+
+RULE C3.3 — BRACKET NOTATION FOR KEYS WITH SPACES (CRITICAL FOR VIETNAMESE/MULTI-WORD TRANSLATIONS):
+   When CJK keys (e.g., 系统, 角色) are translated into multi-word target language strings
+   (e.g., "Hệ Thống", "Nhân Vật"), JavaScript dot notation BREAKS because JS identifiers
+   cannot contain spaces. You MUST convert ALL property access to bracket notation.
+   
+   MANDATORY CONVERSIONS:
+     1. DOT NOTATION → BRACKET NOTATION for object access:
+        Before (Chinese — dot notation works because keys have no spaces):
+          stat.系统  →  stat['Hệ Thống']     (NOT: stat.Hệ Thống — SYNTAX ERROR)
+          data.是否出场  →  data['Có Xuất Hiện']  (NOT: data.Có Xuất Hiện)
+          data.服装详情.外套  →  data['Trang Phục Chi Tiết']['Áo Khoác']
+        
+     2. HTML id ATTRIBUTES — MUST USE ASCII-ONLY (no spaces, no diacritics):
+        HTML id cannot contain spaces. When translating tab/panel ids, convert to
+        camelCase or PascalCase ASCII (strip diacritics, remove spaces):
+          id="tab-住所"     →  id="tab-NhaO"        (NOT: id="tab-Nhà Ở")
+          id="tab-商店"     →  id="tab-CuaHang"     (NOT: id="tab-Cửa Hàng")
+          id="tab-工作地点"  →  id="tab-NoiLamViec"  (NOT: id="tab-Nơi Làm Việc")
+        The same ASCII id must be used in data-target attributes and CSS selectors.
+        The human-readable translated name goes in the VISIBLE TEXT, not in the id.
+        Example:
+          <button data-target="tab-NhaO">Nhà Ở</button>
+          <div id="tab-NhaO">...</div>
+        
+     3. lodash _.get() PATH STRINGS — Use bracket notation or array path:
+        _.get(obj, 'path.with spaces') interprets dots as path separators.
+        If a key segment contains spaces, _.get WILL FAIL silently (returns undefined).
+          Before: _.get(data, '服装详情.外套', '无')
+          After:  (data['Trang Phục Chi Tiết'] || {})['Áo Khoác'] || 'Không'
+          OR use array path: _.get(data, ['Trang Phục Chi Tiết', 'Áo Khoác'], 'Không')
+        
+     4. CSS SELECTORS referencing ids — must match the ASCII id:
+          .tab-btn[data-target="tab-NhaO"]   (matches id="tab-NhaO")
+   
+   ROOT CAUSE: Chinese keys like 系统, 角色 are single tokens without spaces,
+   so obj.系统 works in JS. Vietnamese translations often have spaces ("Hệ Thống"),
+   making obj.Hệ Thống a SYNTAX ERROR. ALWAYS use bracket notation for multi-word keys.
+   This applies to ALL JavaScript code: EJS blocks, TavernHelper scripts, and inline JS.`;
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -521,16 +560,18 @@ function buildFailureModes(fieldType: TranslationFieldType): string {
     html_attr_translation: `  [FATAL] Translating HTML Attributes: Changing <div class="stats"> to <div class="chỉ-số">. CSS styling relies on class names remaining exactly as they are.`,
     truncation: `  [FATAL] Truncation: Stopping translation midway through a long Lorebook entry or system prompt, discarding the rest of the text.`,
     residual_chinese: `  [CRITICAL] Residual Chinese: Leaving ANY Chinese characters (汉字) untranslated in the output. This is the #1 most common failure. You MUST translate ALL Chinese text — including section headers, YAML keys, parenthetical annotations, labels, and category names. Scan your output before returning it. If you see any 汉字, translate them.`,
+    space_in_key_dot_notation: `  [FATAL] Space-In-Key Dot Notation: Using dot notation (obj.Hệ Thống) for translated keys that contain spaces. JavaScript does NOT allow spaces in dot notation — obj.Hệ Thống is a SYNTAX ERROR. MUST use bracket notation: obj['Hệ Thống']. Also applies to nested access: data['Trang Phục Chi Tiết']['Áo Khoác'] NOT data.Trang Phục Chi Tiết.Áo Khoác. And for lodash _.get() — use array path or direct bracket access instead of dot-delimited strings.`,
+    space_in_html_id: `  [FATAL] Space-In-HTML-ID: Using spaces or diacritics in HTML id attributes (id="tab-Nhà Ở"). HTML id CANNOT contain spaces — querySelector and getElementById will fail silently. Use ASCII-only ids (id="tab-NhaO") and put the readable name in visible text only. The same ASCII id must appear in matching data-target attributes and CSS selectors.`,
   };
 
   const fieldFailureMap: Record<TranslationFieldType, string[]> = {
     narrative: ['macro_translation', 'truncation', 'markdown_fences', 'residual_chinese'],
-    regex: ['regex_modification', 'html_attr_translation', 'macro_translation'],
-    lorebook: ['residual_chinese', 'json_key_inconsistency', 'ejs_desync', 'macro_translation'],
-    ejs_code: ['js_keyword_translation', 'ejs_desync', 'macro_translation', 'html_attr_translation'],
-    json_state: ['json_key_inconsistency', 'ejs_desync', 'markdown_fences'],
+    regex: ['regex_modification', 'html_attr_translation', 'macro_translation', 'space_in_key_dot_notation'],
+    lorebook: ['residual_chinese', 'json_key_inconsistency', 'ejs_desync', 'macro_translation', 'space_in_key_dot_notation', 'space_in_html_id'],
+    ejs_code: ['js_keyword_translation', 'ejs_desync', 'macro_translation', 'html_attr_translation', 'space_in_key_dot_notation', 'space_in_html_id'],
+    json_state: ['json_key_inconsistency', 'ejs_desync', 'markdown_fences', 'space_in_key_dot_notation'],
     json_patch: ['json_key_inconsistency', 'ejs_desync', 'markdown_fences'],
-    mixed: ['residual_chinese', 'macro_translation', 'ejs_desync', 'truncation', 'js_keyword_translation', 'json_key_inconsistency'],
+    mixed: ['residual_chinese', 'macro_translation', 'ejs_desync', 'truncation', 'js_keyword_translation', 'json_key_inconsistency', 'space_in_key_dot_notation', 'space_in_html_id'],
   };
 
   const relevantKeys = fieldFailureMap[fieldType] || fieldFailureMap.mixed;
@@ -703,6 +744,8 @@ This forces a rigorous multi-phase audit: inventory BEFORE translating, verify A
     13. "stat_data." prefix preserved in dotted paths?
     14. ZERO residual Chinese/Japanese characters in prose sections?
     15. Every variable in <variable_map> replaced in ALL contexts?
+    16. BRACKET NOTATION: Any translated key with spaces uses obj['key'] NOT obj.key? No dot notation for multi-word keys?
+    17. HTML id ASCII-ONLY: All id and data-target attributes use ASCII without spaces? Readable text in visible content only?
 </self_check>
 
 <translation>
