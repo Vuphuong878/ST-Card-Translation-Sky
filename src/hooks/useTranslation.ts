@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useStore } from '../store';
-import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries } from '../utils/apiClient';
+import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError } from '../utils/apiClient';
 import { extractTranslatableFields, applyTranslationsToCard, autoTranslateLorebookTriggerKeys, injectNewLorebookEntries } from '../utils/cardFields';
 import { syncMvuVariables, postProcessRegexHtml, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions } from '../utils/mvuSync';
 import { shouldSkipTranslation, detectLanguage } from '../utils/langDetect';
@@ -9,6 +9,7 @@ import { getMvuCardSummary } from '../utils/mvuDetector';
 import { validateMvuVariables, autoFixMvuVariables, generateSyncReport, buildEntryNameDictionary, buildRegexTriggerDictionary, validateEntryNameSync } from '../utils/mvuValidator';
 import { buildEffectivePrompt } from '../utils/promptBuilder';
 import { surgicalTranslate } from '../utils/surgical';
+import { parsePatchOutput, applyPatches, validatePatchResult } from '../utils/patchEngine';
 import type { FieldGroup, FieldGroupConfig, TranslationField } from '../types/card';
 
 
@@ -208,6 +209,15 @@ export function useTranslation() {
       }
 
       if (!isEligibleForSurgical || surgicalFallback) {
+        // ═══ Chunk-level resume: pass previously completed chunks + progress callback ═══
+        const prevChunks = field.completedChunks && field.completedChunks.length > 0
+          ? field.completedChunks
+          : undefined;
+
+        if (prevChunks) {
+          store.addLog('info', `🔄 Resuming ${field.label} from chunk ${prevChunks.length + 1} (${prevChunks.length} chunks cached)`);
+        }
+
         translated = await translateText(
           field.original,
           field.label,
@@ -222,7 +232,23 @@ export function useTranslation() {
           field.previousTranslation,
           resolvedFieldType,
           currentMvuDict,
-          store.translationConfig.chunkSize
+          store.translationConfig.chunkSize,
+          prevChunks,
+          // onChunkComplete: save chunk progress in real-time
+          (chunkIdx, translatedChunk, totalChunks) => {
+            // Read fresh field state to merge with any concurrent updates
+            const currentField = useStore.getState().fields.find(f => f.path === field.path);
+            const currentCompleted = currentField?.completedChunks || [];
+            // Only update if this chunk is new (avoid duplicates from retries)
+            if (chunkIdx >= currentCompleted.length) {
+              const updatedChunks = [...currentCompleted];
+              updatedChunks[chunkIdx] = translatedChunk;
+              store.updateField(field.path, {
+                completedChunks: updatedChunks,
+                totalChunks,
+              });
+            }
+          },
         );
       }
 
@@ -304,15 +330,43 @@ export function useTranslation() {
         }
       }
 
-      store.updateField(field.path, { status: 'done', translated });
+      // Clear chunk state on success — full translation is in `translated`
+      store.updateField(field.path, { status: 'done', translated, completedChunks: undefined, totalChunks: undefined, failedChunkIndex: undefined });
       store.addLog('success', `Translated: ${field.label} (${translated.length} chars)`);
       return 'done';
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg === 'Cancelled' || checkAbort()) {
-        store.updateField(field.path, { status: 'pending' });
+        // On cancel, preserve any completed chunks for resume
+        if (err instanceof ChunkError) {
+          store.updateField(field.path, {
+            status: 'pending',
+            completedChunks: err.completedChunks,
+            failedChunkIndex: err.failedChunkIndex,
+            totalChunks: err.totalChunks,
+          });
+          store.addLog('info', `⏸ ${field.label}: saved ${err.completedChunks.length}/${err.totalChunks} chunks for resume`);
+        } else {
+          store.updateField(field.path, { status: 'pending' });
+        }
         throw err; // Re-throw for cancel handling
       }
+
+      // ═══ CHUNK-LEVEL RESUME: Save partial progress on chunk failure ═══
+      if (err instanceof ChunkError) {
+        store.updateField(field.path, {
+          status: 'error',
+          error: msg,
+          retries: freshRetries() + 1,
+          completedChunks: err.completedChunks,
+          failedChunkIndex: err.failedChunkIndex,
+          totalChunks: err.totalChunks,
+        });
+        store.addLog('error', `Failed: ${field.label} — chunk ${err.failedChunkIndex + 1}/${err.totalChunks} (${err.completedChunks.length} chunks saved for resume)`);
+        store.addToast('error', `${field.label}: chunk ${err.failedChunkIndex + 1}/${err.totalChunks} failed — retry will resume`);
+        return 'error';
+      }
+
       store.updateField(field.path, { status: 'error', error: msg, retries: freshRetries() + 1 });
       store.addLog('error', `Failed: ${field.label} — ${msg}`);
       store.addToast('error', `Failed: ${field.label}`);
@@ -1154,6 +1208,15 @@ export function useTranslation() {
           }
         }
 
+        // Chunk-level resume: pass previously completed chunks if available
+        const prevChunks = field.completedChunks && field.completedChunks.length > 0
+          ? field.completedChunks
+          : undefined;
+
+        if (prevChunks) {
+          store.addLog('info', `🔄 Resuming ${field.label} from chunk ${prevChunks.length + 1} (${prevChunks.length} chunks cached)`);
+        }
+
         const translated = await translateText(
           field.original,
           field.label,
@@ -1168,10 +1231,28 @@ export function useTranslation() {
           field.previousTranslation,
           undefined,
           undefined,
-          store.translationConfig.chunkSize
+          store.translationConfig.chunkSize,
+          prevChunks,
+          // onChunkComplete: save chunk progress in real-time
+          (chunkIdx, translatedChunk, totalChunks) => {
+            const currentField = useStore.getState().fields.find(f => f.path === field.path);
+            const currentCompleted = currentField?.completedChunks || [];
+            if (chunkIdx >= currentCompleted.length) {
+              const updatedChunks = [...currentCompleted];
+              updatedChunks[chunkIdx] = translatedChunk;
+              store.updateField(field.path, {
+                completedChunks: updatedChunks,
+                totalChunks,
+              });
+            }
+          },
         );
 
-        store.updateField(field.path, { status: 'done', translated, retries: field.retries + 1 });
+        // Clear chunk state on success
+        store.updateField(field.path, {
+          status: 'done', translated, retries: field.retries + 1,
+          completedChunks: undefined, totalChunks: undefined, failedChunkIndex: undefined,
+        });
         store.addLog('success', `✓ Retry OK: ${field.label}`);
         successCount++;
 
@@ -1181,8 +1262,20 @@ export function useTranslation() {
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        store.updateField(field.path, { status: 'error', error: msg, retries: field.retries + 1 });
-        store.addLog('error', `✗ Retry failed: ${field.label} — ${msg}`);
+
+        // Save partial chunk progress on ChunkError
+        if (err instanceof ChunkError) {
+          store.updateField(field.path, {
+            status: 'error', error: msg, retries: field.retries + 1,
+            completedChunks: err.completedChunks,
+            failedChunkIndex: err.failedChunkIndex,
+            totalChunks: err.totalChunks,
+          });
+          store.addLog('error', `✗ Retry failed: ${field.label} — chunk ${err.failedChunkIndex + 1}/${err.totalChunks} (${err.completedChunks.length} saved)`);
+        } else {
+          store.updateField(field.path, { status: 'error', error: msg, retries: field.retries + 1 });
+          store.addLog('error', `✗ Retry failed: ${field.label} — ${msg}`);
+        }
         failCount++;
       }
     }
@@ -1340,6 +1433,7 @@ export function useTranslation() {
         enableModMode: true,
         modInstructions: store.translationConfig.modInstructions,
         forceModStandalone: true,
+        enablePatchMode: store.translationConfig.enablePatchMode,
       });
 
       const resolvedFieldType = fieldGroupToFieldType(field.group, field.entryType);
@@ -1364,8 +1458,66 @@ export function useTranslation() {
         store.translationConfig.chunkSize
       );
 
-      // Post-process regex HTML
+      // ═══ PATCH MODE: parse find/replace patches and apply to original ═══
       const isRegexContent = field.group === 'regex' && (field.path.includes('replaceString') || field.path.includes('trimStrings'));
+      const isPatchMode = store.translationConfig.enablePatchMode && isRegexContent;
+
+      if (isPatchMode && result) {
+        const patches = parsePatchOutput(result);
+        if (patches.length > 0) {
+          const patchResult = applyPatches(inputContent, patches);
+          const validation = validatePatchResult(inputContent, patchResult.result);
+
+          if (patchResult.applied > 0) {
+            store.addLog('success', `🩹 Patch: ${patchResult.applied}/${patchResult.totalPatches} applied to ${field.label}`);
+            if (patchResult.failed.length > 0) {
+              store.addLog('warning', `🩹 ${patchResult.failed.length} patch(es) not found: ${patchResult.failed.slice(0, 2).join(', ')}`);
+            }
+            if (!validation.valid) {
+              store.addLog('warning', `🩹 Structure warnings: ${validation.warnings.join('; ')}`);
+            }
+            result = patchResult.result;
+          } else {
+            // All patches failed — fallback to full mode
+            store.addLog('warning', `🩹 All patches failed to match — falling back to full mode for ${field.label}`);
+            const fullPromptResult = buildEffectivePrompt({
+              translationPrompt: store.translationConfig.translationPrompt,
+              enableJailbreak: store.translationConfig.enableJailbreak,
+              enableObjectiveMode: false,
+              enableMvuSync: store.translationConfig.enableMvuSync,
+              enableRAGContext: store.translationConfig.enableRAGContext,
+              enablePatchMode: false,
+              enableModMode: true,
+              modInstructions: store.translationConfig.modInstructions,
+              forceModStandalone: true,
+              field,
+              allFields: freshFields,
+              mvuDictionary: freshMvuDict,
+              glossary: store.translationConfig.glossary,
+              customSchema: effectiveCustomSchema,
+              liveSchemaContext: freshLiveSchema,
+              ragMaxFields: store.translationConfig.ragMaxFields,
+              ragMaxChars: store.translationConfig.ragMaxChars,
+              expertMode: store.proxy.expertMode,
+            });
+            result = await translateText(
+              inputContent, field.label, store.proxy, effectiveLang, effectiveLang,
+              fullPromptResult.effectivePrompt, fullPromptResult.schemaForApi,
+              controller.signal, contextHint, fullPromptResult.glossaryForApi,
+              undefined, resolvedFieldType, currentMvuDict, store.translationConfig.chunkSize
+            );
+          }
+        } else if (/<<<\s*NO_CHANGES\s*>>>/.test(result)) {
+          // AI says no changes needed
+          store.addLog('info', `🩹 Patch: no changes needed for ${field.label}`);
+          result = inputContent;
+        } else {
+          // Parse failed — fallback to treating as full output
+          store.addLog('warning', `🩹 Patch parse failed — treating response as full output for ${field.label}`);
+        }
+      }
+
+      // Post-process regex HTML
       if (isRegexContent && result) {
         result = postProcessRegexHtml(result);
       }
@@ -1655,6 +1807,7 @@ export function useTranslation() {
           enableModMode: true,
           modInstructions: store.translationConfig.modInstructions,
           forceModStandalone: true,
+          enablePatchMode: store.translationConfig.enablePatchMode,
         });
 
         const resolvedFieldType = fieldGroupToFieldType(field.group, field.entryType);
@@ -1679,8 +1832,66 @@ export function useTranslation() {
           store.translationConfig.chunkSize
         );
 
-        // Post-process regex HTML
+        // ═══ PATCH MODE: parse find/replace patches and apply to original ═══
         const isRegexContent = field.group === 'regex' && (field.path.includes('replaceString') || field.path.includes('trimStrings'));
+        const isPatchMode = store.translationConfig.enablePatchMode && isRegexContent;
+
+        if (isPatchMode && result) {
+          const patches = parsePatchOutput(result);
+          if (patches.length > 0) {
+            const patchResult = applyPatches(inputContent, patches);
+            const validation = validatePatchResult(inputContent, patchResult.result);
+
+            if (patchResult.applied > 0) {
+              store.addLog('success', `🩹 Patch: ${patchResult.applied}/${patchResult.totalPatches} applied to ${field.label}`);
+              if (patchResult.failed.length > 0) {
+                store.addLog('warning', `🩹 ${patchResult.failed.length} patch(es) not found: ${patchResult.failed.slice(0, 2).join(', ')}`);
+              }
+              if (!validation.valid) {
+                store.addLog('warning', `🩹 Structure warnings: ${validation.warnings.join('; ')}`);
+              }
+              result = patchResult.result;
+            } else {
+              // All patches failed — fallback to full mode
+              store.addLog('warning', `🩹 All patches failed — falling back to full mode for ${field.label}`);
+              const fullPromptResult = buildEffectivePrompt({
+                translationPrompt: store.translationConfig.translationPrompt,
+                enableJailbreak: store.translationConfig.enableJailbreak,
+                enableObjectiveMode: false,
+                enableMvuSync: store.translationConfig.enableMvuSync,
+                enableRAGContext: store.translationConfig.enableRAGContext,
+                field,
+                allFields: freshFields,
+                mvuDictionary: freshMvuDict,
+                glossary: store.translationConfig.glossary,
+                customSchema: effectiveCustomSchema,
+                liveSchemaContext: freshLiveSchema,
+                ragMaxFields: store.translationConfig.ragMaxFields,
+                ragMaxChars: store.translationConfig.ragMaxChars,
+                entryNameDictionary: Object.keys(modEntryNameDict).length > 0 ? modEntryNameDict : undefined,
+                regexTriggerDictionary: Object.keys(modRegexTriggerDict).length > 0 ? modRegexTriggerDict : undefined,
+                expertMode: store.proxy.expertMode,
+                enableModMode: true,
+                modInstructions: store.translationConfig.modInstructions,
+                forceModStandalone: true,
+                enablePatchMode: false,
+              });
+              result = await translateText(
+                inputContent, field.label, store.proxy, effectiveLang, effectiveLang,
+                fullPromptResult.effectivePrompt, fullPromptResult.schemaForApi,
+                abortRef.current?.signal, contextHint, fullPromptResult.glossaryForApi,
+                undefined, resolvedFieldType, currentMvuDict, store.translationConfig.chunkSize
+              );
+            }
+          } else if (/<<<\s*NO_CHANGES\s*>>>/.test(result)) {
+            store.addLog('info', `🩹 Patch: no changes needed for ${field.label}`);
+            result = inputContent;
+          } else {
+            store.addLog('warning', `🩹 Patch parse failed — treating as full output for ${field.label}`);
+          }
+        }
+
+        // Post-process regex HTML
         if (isRegexContent && result) {
           result = postProcessRegexHtml(result);
         }

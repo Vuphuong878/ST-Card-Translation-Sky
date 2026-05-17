@@ -137,6 +137,12 @@ export interface TranslationField {
   entryType?: 'initvar' | 'mvu_logic' | 'rules' | 'narrative' | 'controller' | 'json_patch';
   /** Surgical result state if field was processed using surgical translate */
   surgicalResult?: { type: 'success' | 'fallback'; info?: string };
+  /** Chunk-level resume: successfully translated chunks from a previous attempt */
+  completedChunks?: string[];
+  /** Chunk-level resume: total number of chunks for this field */
+  totalChunks?: number;
+  /** Chunk-level resume: index of the chunk that failed (resume from here) */
+  failedChunkIndex?: number;
 }
 
 export type FieldGroup =
@@ -221,6 +227,7 @@ export interface TranslationConfig {
   surgicalMode: boolean; // Extract and translate only CJK substrings for code-heavy fields
   enableModMode: boolean; // Enable custom user mod instructions for translation
   modInstructions: string; // The custom instructions provided by the user
+  enablePatchMode: boolean; // Patch mode: AI outputs find/replace patches instead of full content (regex fields only)
 }
 
 /* ─── Log Entry ─── */

@@ -66,12 +66,13 @@ export default function CustomTranslatePanel() {
         modInstructions: translationConfig.modInstructions,
       });
 
-      // Tự động tính toán CHUNK_THRESHOLD dựa trên token user nhập
-      const currentMaxTokens = proxy.maxTokens;
+      // Chunk size: ưu tiên cấu hình người dùng (translationConfig.chunkSize),
+      // fallback 40K chars mặc định — an toàn cho mọi model.
+      // Chunk quá lớn (>60K) dễ khiến AI chạm giới hạn max output tokens → mất đuôi.
       const currentChunkSize = translationConfig.chunkSize;
       const CHUNK_THRESHOLD = currentChunkSize && currentChunkSize > 0
         ? currentChunkSize
-        : (currentMaxTokens && currentMaxTokens > 0 ? Math.min(Math.floor(currentMaxTokens * 3.5), 200000) : 40000);
+        : 40000;
 
       let result = '';
       let usedSurgical = false;

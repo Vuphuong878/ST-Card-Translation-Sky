@@ -103,6 +103,8 @@ const en = {
   clear: 'Clear',
   skipped: 'Skipped',
   ignored: 'Ignored',
+  chunkProgress: 'Chunk {current}/{total}',
+  chunkResume: 'Will resume from chunk {index}',
   skipAlreadyTranslated: 'Skip fields already in target language',
 
   // Mod Mode
@@ -132,6 +134,13 @@ const en = {
   modGenerateSuccess: '{count} new lorebook entries created!',
   modGenerateEmpty: 'No new entries needed — all concepts already have entries.',
   modGenerateError: 'Failed to generate lorebook entries',
+
+  // Patch Mode
+  patchMode: 'Patch Mode (Regex)',
+  patchModeDesc: 'AI only outputs changes instead of full content — saves tokens for regex fields',
+  patchApplied: '{applied}/{total} patches applied',
+  patchFailed: 'Patch failed — falling back to full mode',
+  patchNoChanges: 'AI reported no changes needed',
 
   // Log Filter
   all: 'All',
@@ -313,6 +322,8 @@ const vi: TranslationKeys = {
   clear: 'Xóa',
   skipped: 'Bỏ qua',
   ignored: 'Bỏ qua (không dịch)',
+  chunkProgress: 'Chunk {current}/{total}',
+  chunkResume: 'Tiếp tục từ chunk {index}',
   skipAlreadyTranslated: 'Bỏ qua trường đã đúng ngôn ngữ đích',
 
   // Mod Mode
@@ -342,6 +353,13 @@ const vi: TranslationKeys = {
   modGenerateSuccess: 'Đã tạo {count} lorebook entry mới!',
   modGenerateEmpty: 'Không cần entry mới — tất cả khái niệm đã có entry.',
   modGenerateError: 'Lỗi khi tạo lorebook entries',
+
+  // Patch Mode
+  patchMode: 'Patch Mode (Regex)',
+  patchModeDesc: 'AI chỉ xuất thay đổi thay vì toàn bộ nội dung — tiết kiệm token cho regex fields',
+  patchApplied: '{applied}/{total} thay đổi đã áp dụng',
+  patchFailed: 'Patch thất bại — chuyển sang chế độ thường',
+  patchNoChanges: 'AI báo không cần thay đổi',
 
   // Log Filter
   all: 'Tất cả',

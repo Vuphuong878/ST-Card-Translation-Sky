@@ -135,6 +135,40 @@ HOÀN CHỈNH:
 - KHÔNG bỏ qua đoạn nào dù có vẻ lặp lại.
 - KHÔNG tóm tắt hay rút gọn nội dung trừ khi yêu cầu Mod yêu cầu.`;
 
+/** Patch Mode Prompt — AI outputs find/replace patches instead of full content (regex fields) */
+export const PATCH_MODE_PROMPT = `[CRITICAL: PATCH MODE — REGEX FIELD]
+Bạn đang chỉnh sửa nội dung regex HTML/CSS/JS. Thay vì xuất lại TOÀN BỘ nội dung,
+hãy chỉ xuất DANH SÁCH CÁC THAY ĐỔI theo format sau:
+
+<<<FIND>>>
+(đoạn text gốc cần thay — phải CHÍNH XÁC từng ký tự, bao gồm cả khoảng trắng, xuống dòng)
+<<<REPLACE>>>
+(đoạn text mới thay thế)
+<<<END>>>
+
+QUY TẮC BẮT BUỘC:
+1. FIND phải copy CHÍNH XÁC từ nguyên bản — sai 1 ký tự = không thay thế được.
+2. Mỗi <<<FIND>>>...<<<REPLACE>>>...<<<END>>> là 1 thay đổi riêng biệt.
+3. Nếu không cần thay đổi gì → chỉ xuất: <<<NO_CHANGES>>>
+4. KHÔNG xuất toàn bộ nội dung — CHỈ xuất các đoạn cần thay đổi.
+5. FIND phải đủ dài và đủ unique trong văn bản gốc (tránh thay nhầm chỗ khác).
+6. KHÔNG thêm giải thích, comment, hay markdown code fences.
+7. Giữ nguyên tất cả code syntax, HTML structure, CSS rules, JS logic.
+8. Chỉ thay đổi NỘI DUNG TEXT (chữ CJK, nhãn, giá trị) — không đụng vào cấu trúc code.
+
+VÍ DỤ:
+<<<FIND>>>
+<span class="label">好感度</span>
+<<<REPLACE>>>
+<span class="label">Hảo cảm</span>
+<<<END>>>
+<<<FIND>>>
+font-family: '微软雅黑';
+<<<REPLACE>>>
+font-family: 'Segoe UI', sans-serif;
+<<<END>>>
+`;
+
 /** Prompt tạo lorebook entries mới — phân tích card content và sinh entries */
 export const LOREBOOK_GENERATION_PROMPT = `[SYSTEM: LOREBOOK ENTRY GENERATOR FOR SILLYTAVERN CHARACTER CARD]
 
@@ -249,6 +283,11 @@ export interface PromptBuildOptions {
    * Uses MOD_STANDALONE_PROMPT instead of translation prompts.
    */
   forceModStandalone?: boolean;
+  /**
+   * When true AND field is a regex content field, uses PATCH_MODE_PROMPT
+   * so AI outputs <<<FIND>>>/<<<REPLACE>>> blocks instead of full content.
+   */
+  enablePatchMode?: boolean;
   /**
    * When true, masterPrompt.ts handles field-type rules + MVU dict + glossary,
    * so we skip those here to avoid double injection.
@@ -421,6 +460,15 @@ export function buildEffectivePrompt(options: PromptBuildOptions): PromptBuildRe
   // instead of translation prompts. This rewrites content in-place.
   if (forceModStandalone && modInstructions.trim()) {
     let modPrompt = MOD_STANDALONE_PROMPT;
+
+    // ═══ PATCH MODE: for regex content fields, use PATCH_MODE_PROMPT instead ═══
+    const isRegexContent = field?.group === 'regex' && (
+      field.path.includes('replaceString') || field.path.includes('trimStrings')
+    );
+    const usePatchMode = Boolean(options.enablePatchMode) && isRegexContent;
+    if (usePatchMode) {
+      modPrompt = PATCH_MODE_PROMPT;
+    }
 
     // Inject jailbreak if enabled (Mod may need uncensored output)
     if (enableJailbreak) {

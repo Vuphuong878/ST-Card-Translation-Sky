@@ -22,6 +22,32 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * ChunkError — thrown when a multi-chunk translation fails partway through.
+ * Carries the successfully translated chunks so the caller can save partial progress.
+ */
+export class ChunkError extends Error {
+  completedChunks: string[];
+  failedChunkIndex: number;
+  totalChunks: number;
+  originalError: Error;
+
+  constructor(
+    message: string,
+    completedChunks: string[],
+    failedChunkIndex: number,
+    totalChunks: number,
+    originalError: Error,
+  ) {
+    super(message);
+    this.name = 'ChunkError';
+    this.completedChunks = completedChunks;
+    this.failedChunkIndex = failedChunkIndex;
+    this.totalChunks = totalChunks;
+    this.originalError = originalError;
+  }
+}
+
 /* ─── CORS Proxy URL Rewriting ─── */
 
 /** Known provider proxy paths (must match vite.config.ts proxy entries) */
@@ -724,11 +750,11 @@ function findSafeBoundary(text: string, targetPos: number, minPos: number): numb
 }
 
 export function chunkText(text: string, maxChars?: number, _maxTokens?: number): string[] {
-  // Default 50K per chunk for ALL models.
+  // Default 40K per chunk for ALL models.
   // Chunk quá lớn (100K+) sẽ khiến AI chạm giới hạn max output tokens → mất đuôi.
-  // 50K chars ≈ 15K tokens (mixed content) — an toàn cho mọi model.
+  // 40K chars ≈ 12K tokens (mixed content) — an toàn cho mọi model kể cả code-heavy.
   if (maxChars === undefined) {
-    maxChars = 50000;
+    maxChars = 40000;
   }
 
   // ═══ HARD CAP: 500K chars per chunk ═══
@@ -1577,10 +1603,11 @@ async function translateChunk(
       }
 
       // ─── Multi-round truncation detection & continuation ───
-      // Nếu AI trả về < 50% input → gần chắc chắn bị cắt do max output tokens.
-      // Loop tối đa 3 lần, mỗi lần yêu cầu AI dịch tiếp phần còn lại.
-      const CONT_THRESHOLD = 0.5; // 50% — nếu response ngắn hơn nửa input → continuation
-      const MAX_CONT_ROUNDS = 3;
+      // Nếu AI trả về < 70% input → gần chắc chắn bị cắt do max output tokens.
+      // Loop tối đa 5 lần, mỗi lần yêu cầu AI dịch tiếp phần còn lại.
+      // Code-heavy content thường có tỷ lệ 1:1 (code giữ nguyên), nên 70% threshold.
+      const CONT_THRESHOLD = 0.7; // 70% — code-heavy content cần ratio cao hơn
+      const MAX_CONT_ROUNDS = 5;
 
       if (chunk.length > 500 && result.length > 0) {
         for (let contRound = 0; contRound < MAX_CONT_ROUNDS; contRound++) {
@@ -1590,11 +1617,12 @@ async function translateChunk(
           console.log(`[translateChunk] ${fieldName} chunk ${chunkIdx + 1}/${totalChunks}: response ${(responseRatio * 100).toFixed(0)}% < ${(CONT_THRESHOLD * 100).toFixed(0)}% → continuation round ${contRound + 1}/${MAX_CONT_ROUNDS}...`);
 
           // Estimate where in the original text we need to pick up
-          const estimatedCoverage = Math.max(responseRatio - 0.05, 0.1);
+          // Use the accumulated result length as a better coverage indicator
+          const estimatedCoverage = Math.min(Math.max(result.length / chunk.length - 0.05, 0.1), 0.95);
           const remainingOriginal = chunk.slice(Math.floor(chunk.length * estimatedCoverage));
 
           const continuationPrompt = `The previous translation was cut off at approximately ${(responseRatio * 100).toFixed(0)}% of the content. Continue translating from where you stopped.\n` +
-            `The last translated text ended with: "${result.slice(-200)}"\n\n` +
+            `The last translated text ended with: "${result.slice(-300)}"\n\n` +
             `Continue translating the remaining original text below. Return ONLY the continuation, do NOT repeat what was already translated:\n\n` +
             `${remainingOriginal}`;
 
@@ -1813,6 +1841,10 @@ export async function translateText(
   mvuDictionary?: Record<string, string>,
   /** Custom chunk size (override default logic) */
   chunkSize?: number,
+  /** Chunk-level resume: previously completed chunk translations */
+  previouslyCompletedChunks?: string[],
+  /** Callback fired after each chunk is successfully translated */
+  onChunkComplete?: (chunkIndex: number, translatedChunk: string, totalChunks: number) => void,
 ): Promise<string> {
   if (!text || text.trim() === '') return '';
 
@@ -1846,12 +1878,30 @@ export async function translateText(
   // CRITICAL: Translate sequentially so each chunk gets the FULL previous
   // translated chunk as context. This prevents word loss at chunk boundaries
   // and preserves code structure across splits.
-  console.log(`[translateText] ${fieldName}: Translating ${chunks.length} chunks sequentially (with full context)...`);
+  //
+  // ═══ CHUNK-LEVEL RESUME: If previouslyCompletedChunks is provided, skip
+  // already-completed chunks and resume from the failed chunk index. ═══
+  const hasResume = previouslyCompletedChunks && previouslyCompletedChunks.length > 0
+    && previouslyCompletedChunks.length < chunks.length;
+  const resumeFromIdx = hasResume ? previouslyCompletedChunks!.length : 0;
+
+  if (hasResume) {
+    console.log(`[translateText] ${fieldName}: RESUMING from chunk ${resumeFromIdx + 1}/${chunks.length} (${resumeFromIdx} chunks already done)`);
+  } else {
+    console.log(`[translateText] ${fieldName}: Translating ${chunks.length} chunks sequentially (with full context)...`);
+  }
 
   const ORIGINAL_BOUNDARY_CHARS = 500; // Tail of original prev chunk for code structure awareness
   const translatedChunks: string[] = [];
 
-  for (let idx = 0; idx < chunks.length; idx++) {
+  // Pre-fill with previously completed chunks (already cleaned)
+  if (hasResume) {
+    for (let ri = 0; ri < previouslyCompletedChunks!.length; ri++) {
+      translatedChunks.push(previouslyCompletedChunks![ri]);
+    }
+  }
+
+  for (let idx = hasResume ? resumeFromIdx : 0; idx < chunks.length; idx++) {
     if (signal?.aborted) throw new Error('Cancelled');
 
     // Build rich context: full previous translated chunk + original boundary
@@ -1870,7 +1920,7 @@ export async function translateText(
       chunks[idx], `${fieldName} [part ${idx + 1}/${chunks.length}]`, targetLang, config.systemPromptPrefix,
       sourceLang, customPrompt, customSchema, contextHint, glossary,
       prevContext, // ← context from previous chunk's translation
-      idx === 0 ? previousTranslationToUpdate : undefined,
+      idx === 0 && !hasResume ? previousTranslationToUpdate : undefined,
       fieldType, isExpert, mvuDictionary,
     );
 
@@ -1883,9 +1933,27 @@ export async function translateText(
       const chunkCleaned = cleanTranslationResponse(chunks[idx], translated, isExpert);
       translatedChunks.push(chunkCleaned);
       console.log(`[translateText] ${fieldName}: chunk ${idx + 1}/${chunks.length} done ✓`);
+
+      // Notify caller of chunk progress for real-time state persistence
+      if (onChunkComplete) {
+        onChunkComplete(idx, chunkCleaned, chunks.length);
+      }
     } catch (err: any) {
       if (signal?.aborted || err?.message === 'Cancelled') {
         throw new Error('Cancelled');
+      }
+      // ═══ CHUNK-LEVEL RESUME: Wrap error with partial progress ═══
+      // Save all successfully translated chunks so the caller can persist them
+      // and resume from this chunk on retry instead of starting over.
+      if (translatedChunks.length > 0) {
+        const chunkErr = new ChunkError(
+          `Chunk ${idx + 1}/${chunks.length} failed: ${err?.message || String(err)}`,
+          [...translatedChunks], // Copy — don't mutate
+          idx,
+          chunks.length,
+          err instanceof Error ? err : new Error(String(err)),
+        );
+        throw chunkErr;
       }
       throw err;
     }
@@ -1894,6 +1962,7 @@ export async function translateText(
   console.log(`[translateText] ${fieldName}: All ${chunks.length} chunks done. Verifying seams...`);
 
   // ═══ SEAM VERIFICATION — check chunk boundaries for coherence ═══
+  // When resuming, only verify seams that include newly-translated chunks
   const verifiedChunks = await verifySeams(translatedChunks, chunks, config, targetLang, signal);
 
   // For HTML content, join without separator to avoid injecting text nodes

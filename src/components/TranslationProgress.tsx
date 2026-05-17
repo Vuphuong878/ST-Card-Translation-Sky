@@ -241,6 +241,15 @@ function ModModePanel() {
           {errorFields > 0 && (
             <div style={{ fontSize: '0.7rem', color: 'var(--accent-danger)', marginTop: '4px' }}>
               {errorFields} {t.error.toLowerCase()}
+              {(() => {
+                const resumable = fields.filter(f => f.status === 'error' && f.completedChunks && f.completedChunks.length > 0);
+                if (resumable.length > 0) {
+                  return <span style={{ color: 'var(--accent-info)', marginLeft: '8px' }}>
+                    ({resumable.length} resumable)
+                  </span>;
+                }
+                return null;
+              })()}
             </div>
           )}
         </div>
@@ -498,6 +507,15 @@ function TranslationPanel() {
           {errorFields > 0 && (
             <div style={{ fontSize: '0.7rem', color: 'var(--accent-danger)', marginTop: '4px' }}>
               {errorFields} {t.error.toLowerCase()}
+              {(() => {
+                const resumable = fields.filter(f => f.status === 'error' && f.completedChunks && f.completedChunks.length > 0);
+                if (resumable.length > 0) {
+                  return <span style={{ color: 'var(--accent-info)', marginLeft: '8px' }}>
+                    ({resumable.length} resumable)
+                  </span>;
+                }
+                return null;
+              })()}
             </div>
           )}
         </div>

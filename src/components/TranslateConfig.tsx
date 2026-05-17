@@ -240,6 +240,23 @@ export default function TranslateConfig() {
                   {locale === 'vi' ? '⚠ Lưu yêu cầu trước khi áp dụng' : '⚠ Save instructions before applying'}
                 </span>
               )}
+
+              {/* Patch Mode toggle */}
+              <label className="checkbox-wrapper" style={{ marginTop: '6px' }}>
+                <input
+                  type="checkbox"
+                  checked={translationConfig.enablePatchMode || false}
+                  onChange={(e) => setTranslationConfig({ enablePatchMode: e.target.checked })}
+                />
+                <div>
+                  <span style={{ color: translationConfig.enablePatchMode ? '#9b59b6' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem' }}>
+                    🩹 {t.patchMode}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.6rem', display: 'block', marginTop: '2px' }}>
+                    {t.patchModeDesc}
+                  </span>
+                </div>
+              </label>
             </div>
           )}
         </div>

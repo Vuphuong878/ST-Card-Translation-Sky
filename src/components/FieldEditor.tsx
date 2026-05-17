@@ -525,6 +525,30 @@ function VirtualTableView({
                           {field.error}
                         </div>
                       )}
+                      {field.completedChunks && field.completedChunks.length > 0 && field.totalChunks && (
+                        <div
+                          style={{
+                            fontSize: '0.6rem',
+                            color: 'var(--accent-info)',
+                            marginTop: '3px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <span style={{
+                            padding: '1px 5px',
+                            background: 'rgba(124,106,240,0.12)',
+                            borderRadius: '3px',
+                            fontWeight: 600,
+                          }}>
+                            ✓ {field.completedChunks.length}/{field.totalChunks} chunks
+                          </span>
+                          <span style={{ color: 'var(--text-muted)' }}>
+                            — retry resumes from chunk {field.completedChunks.length + 1}
+                          </span>
+                        </div>
+                      )}
                     </td>
 
                     {/* Original */}
@@ -741,6 +765,30 @@ function VirtualDiffView({
                 {field.error && (
                   <div style={{ fontSize: '0.65rem', color: 'var(--accent-danger)', marginTop: '6px' }}>
                     {field.error}
+                  </div>
+                )}
+                {field.completedChunks && field.completedChunks.length > 0 && field.totalChunks && (
+                  <div
+                    style={{
+                      fontSize: '0.6rem',
+                      color: 'var(--accent-info)',
+                      marginTop: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span style={{
+                      padding: '1px 5px',
+                      background: 'rgba(124,106,240,0.12)',
+                      borderRadius: '3px',
+                      fontWeight: 600,
+                    }}>
+                      ✓ {field.completedChunks.length}/{field.totalChunks} chunks
+                    </span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      — retry resumes from chunk {field.completedChunks.length + 1}
+                    </span>
                   </div>
                 )}
               </div>

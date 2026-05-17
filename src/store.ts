@@ -300,6 +300,7 @@ export const useStore = create<AppState>((set) => ({
     surgicalMode: LS.get('st-translator-surgical-mode', false),
     enableModMode: LS.get('st-translator-mod-mode', false),
     modInstructions: LS.get('st-translator-mod-instructions', ''),
+    enablePatchMode: LS.get('st-translator-patch-mode', false),
   },
   setTranslationConfig: (partial) =>
     set((s) => {
@@ -336,6 +337,9 @@ export const useStore = create<AppState>((set) => ({
       }
       if ('modInstructions' in partial) {
         LS.set('st-translator-mod-instructions', next.modInstructions);
+      }
+      if ('enablePatchMode' in partial) {
+        LS.set('st-translator-patch-mode', next.enablePatchMode);
       }
       if ('translationPrompt' in partial) {
         LS.set('st-translator-custom-prompt', next.translationPrompt);
