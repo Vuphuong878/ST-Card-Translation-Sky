@@ -99,6 +99,33 @@ function validateEjsCode(code: string): string[] {
   return warnings;
 }
 
+// Thuật toán xếp hạng độ tương quan (RAG) đơn giản phía client
+function rankEntriesByRelevance(query: string, entries: CharacterBookEntry[]): CharacterBookEntry[] {
+  if (!query || entries.length === 0) return [];
+  
+  const queryTokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+  if (queryTokens.length === 0) return [];
+
+  const scored = entries.map(entry => {
+    const title = (entry.name || entry.comment || '').toLowerCase();
+    const content = (entry.content || '').toLowerCase();
+    const keys = (entry.keys || []).join(' ').toLowerCase();
+
+    let score = 0;
+    queryTokens.forEach(token => {
+      if (title.includes(token)) score += 10;
+      if (keys.includes(token)) score += 5;
+      if (content.includes(token)) score += 1;
+    });
+    return { entry, score };
+  });
+
+  return scored
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(item => item.entry);
+}
+
 // Component xem trước nhiều entries dạng Accordion
 function GeneratedEntriesPreview({ 
   entries, 
@@ -194,6 +221,59 @@ export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const entriesRef = useRef(entries);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+
+  const completionProviderRef = useRef<any>(null);
+
+  const handleEditorDidMount = (editor: any, monaco: any) => {
+    if (completionProviderRef.current) {
+      completionProviderRef.current.dispose();
+    }
+
+    completionProviderRef.current = monaco.languages.registerCompletionItemProvider('html', {
+      triggerCharacters: ["'", '"'],
+      provideCompletionItems: (model: any, position: any) => {
+        const textUntilPosition = model.getValueInRange({
+          startLineNumber: 1,
+          startColumn: 1,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column,
+        });
+
+        const suggestions = entriesRef.current.map((e: any) => {
+          const entryName = e.name || e.comment || 'Không tên';
+          const keysStr = e.keys && e.keys.length > 0 ? e.keys.join(', ') : 'Không có';
+          const contentSnippet = e.content ? e.content.slice(0, 150) + '...' : 'Trống';
+          return {
+            label: entryName,
+            kind: monaco.languages.CompletionItemKind.Field,
+            documentation: `Từ khóa: ${keysStr}\nNội dung:\n${contentSnippet}`,
+            insertText: entryName,
+            range: {
+              startLineNumber: position.lineNumber,
+              endLineNumber: position.lineNumber,
+              startColumn: position.column,
+              endColumn: position.column,
+            }
+          };
+        });
+
+        return { suggestions };
+      },
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (completionProviderRef.current) {
+        completionProviderRef.current.dispose();
+      }
+    };
+  }, []);
+
   // Linter warnings
   const warnings = validateEjsCode(content);
 
@@ -276,7 +356,26 @@ export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
     const cardName = card?.data?.name || 'Chưa rõ';
     const cardDesc = card?.data?.description || 'Trống';
     const cardScenario = card?.data?.scenario || 'Trống';
-    const entryNames = entries.map(e => e.name || e.comment || 'Không tên').join(', ');
+    
+    // Nén toàn bộ nội dung của Lorebook Entries để gửi lên AI làm ngữ cảnh cốt truyện thực tế
+    const compactLorebookText = entries.map((e, index) => {
+      const entryName = e.name || e.comment || `Entry ${index + 1}`;
+      const entryKeys = e.keys && e.keys.length > 0 ? e.keys.join(', ') : 'Không có';
+      const entryContent = e.content || 'Nội dung trống';
+      return `[Entry ${index + 1}: ${entryName}]\nKeys kích hoạt: ${entryKeys}\nNội dung thực tế:\n${entryContent}\n-------------------------`;
+    }).join('\n');
+
+    // Chạy RAG chấm điểm tìm các Entry có liên quan nhất với yêu cầu hiện tại để làm nổi bật ngữ cảnh
+    const rankedEntries = rankEntriesByRelevance(promptText, entries);
+    const topRelevantEntries = rankedEntries.slice(0, 5);
+    let ragFocusText = '';
+    if (topRelevantEntries.length > 0) {
+      ragFocusText = `TIÊU ĐIỂM NGỮ CẢNH (CÁC ENTRIES LIÊN QUAN NHẤT CẦN CHÚ Ý ĐẶC BIỆT):
+${topRelevantEntries.map((e, idx) => {
+        return `${idx + 1}. [${e.name || e.comment}]\n   - Từ khóa: ${(e.keys || []).join(', ')}\n   - Nội dung thực tế:\n${e.content || 'Trống'}`;
+      }).join('\n-------------------------\n')}
+==================================\n\n`;
+    }
 
     // Xây dựng prompt có cấu trúc dựa trên lựa chọn hệ thống
     let structuredUserMsg = '';
@@ -332,7 +431,11 @@ CRITICAL CARD CONTEXT:
 - Tên nhân vật chính: ${cardName}
 - Mô tả thẻ: ${cardDesc.slice(0, 1000)}
 - Bối cảnh thẻ (Scenario): ${cardScenario.slice(0, 500)}
-- Các Lorebook Entries hiện có: ${entryNames}
+
+DANH SÁCH TOÀN BỘ LOREBOOK ENTRIES THỰC TẾ TRONG CARD (BẮT BUỘC ĐỌC NỘI DUNG NÀY ĐỂ THAM CHIẾU VÀ TRÁNH TỰ BỊA RA):
+==================================
+${ragFocusText}${compactLorebookText}
+==================================
 
 Use variables or getwi calls matching this card context if relevant to the user request.
 
@@ -811,6 +914,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
               theme="vs-dark"
               value={content}
               onChange={(val) => setContent(val || '')}
+              onMount={handleEditorDidMount}
               options={{ minimap: { enabled: false }, wordWrap: 'on', fontSize: 14, lineHeight: 24, padding: { top: 16 } }}
             />
           </div>
