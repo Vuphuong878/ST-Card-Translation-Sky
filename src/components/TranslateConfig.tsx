@@ -257,6 +257,23 @@ export default function TranslateConfig() {
                   </span>
                 </div>
               </label>
+
+              {/* MVU-Zod Conversion toggle */}
+              <label className="checkbox-wrapper" style={{ marginTop: '2px' }}>
+                <input
+                  type="checkbox"
+                  checked={translationConfig.enableMvuConversion || false}
+                  onChange={(e) => setTranslationConfig({ enableMvuConversion: e.target.checked })}
+                />
+                <div>
+                  <span style={{ color: translationConfig.enableMvuConversion ? '#3b82f6' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 500 }}>
+                    ✨ Biến thành thẻ MVU-Zod
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.6rem', display: 'block', marginTop: '2px' }}>
+                    Tự động sinh cấu trúc Zod, viết Rules và tiêm các Regex tiện ích. Thẻ sẽ biến thành thẻ MVU!
+                  </span>
+                </div>
+              </label>
             </div>
           )}
         </div>
@@ -615,7 +632,9 @@ export default function TranslateConfig() {
                   resize: 'vertical',
                   borderColor: schemaDirty ? 'var(--accent-warning)' : undefined,
                 }}
-                placeholder={t.customSchemaDesc || "Optional: Provide a JSON schema, MVU rules, or Zod format. The AI will strictly follow this structure."}
+                placeholder={translationConfig.enableMvuConversion 
+                  ? "Nếu bạn dán Zod Schema vào đây, hệ thống sẽ dùng luôn Schema này để biến thẻ thành MVU-Zod (Bỏ qua bước AI tự sinh)."
+                  : (t.customSchemaDesc || "Optional: Provide a JSON schema, MVU rules, or Zod format. The AI will strictly follow this structure.")}
                 value={schemaDraft}
                 onChange={(e) => setSchemaDraft(e.target.value)}
                 onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveSchema(); } }}

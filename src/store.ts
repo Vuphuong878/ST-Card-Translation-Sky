@@ -99,6 +99,10 @@ interface AppState {
   setLiveSchemaContext: (s: string) => void;
   clearLiveSchemaContext: () => void;
 
+  // MVU-Zod Conversion Progress
+  mvuConversionProgress: string;
+  setMvuConversionProgress: (p: string) => void;
+
   // Per-file translation cache
   saveTranslationCache: () => void;
   loadTranslationCache: (fileName: string) => Promise<boolean>;
@@ -131,6 +135,7 @@ export const useStore = create<AppState>((set) => ({
       currentFieldIndex: 0,
       startTime: null,
       liveSchemaContext: '',
+      mvuConversionProgress: '',
       translationConfig: {
         ...s.translationConfig,
         mvuDictionary: {}, // Clear dictionary for new card
@@ -186,6 +191,7 @@ export const useStore = create<AppState>((set) => ({
       fields: [],
       phase: 'idle',
       logs: [],
+      mvuConversionProgress: '',
       translationConfig: {
         ...s.translationConfig,
         mvuDictionary: {},
@@ -301,6 +307,7 @@ export const useStore = create<AppState>((set) => ({
     enableModMode: LS.get('st-translator-mod-mode', false),
     modInstructions: LS.get('st-translator-mod-instructions', ''),
     enablePatchMode: LS.get('st-translator-patch-mode', false),
+    enableMvuConversion: LS.get('st-translator-mvu-conversion', false),
   },
   setTranslationConfig: (partial) =>
     set((s) => {
@@ -340,6 +347,9 @@ export const useStore = create<AppState>((set) => ({
       }
       if ('enablePatchMode' in partial) {
         LS.set('st-translator-patch-mode', next.enablePatchMode);
+      }
+      if ('enableMvuConversion' in partial) {
+        LS.set('st-translator-mvu-conversion', next.enableMvuConversion);
       }
       if ('translationPrompt' in partial) {
         LS.set('st-translator-custom-prompt', next.translationPrompt);
@@ -429,6 +439,9 @@ export const useStore = create<AppState>((set) => ({
   liveSchemaContext: '',
   setLiveSchemaContext: (s) => set({ liveSchemaContext: s }),
   clearLiveSchemaContext: () => set({ liveSchemaContext: '' }),
+
+  mvuConversionProgress: '',
+  setMvuConversionProgress: (p) => set({ mvuConversionProgress: p }),
 
   // ─── Per-file Translation Cache ───
   saveTranslationCache: () => {

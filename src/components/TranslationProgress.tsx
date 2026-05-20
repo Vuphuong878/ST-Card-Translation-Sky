@@ -431,6 +431,21 @@ function ModModePanel() {
         </div>
       )}
 
+      {/* MVU Conversion Progress */}
+      {useStore().mvuConversionProgress && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '12px 14px', marginBottom: '16px',
+          background: 'rgba(230, 126, 34, 0.08)',
+          borderRadius: 'var(--radius-sm)',
+          border: '1px solid rgba(230, 126, 34, 0.25)',
+          fontSize: '0.8rem', color: '#e67e22',
+        }}>
+          <Loader2 size={16} className="spin" />
+          {useStore().mvuConversionProgress}
+        </div>
+      )}
+
       {/* Logs */}
       <LogPanel logEndRef={logEndRef} />
     </div>

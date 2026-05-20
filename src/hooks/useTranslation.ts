@@ -10,6 +10,7 @@ import { validateMvuVariables, autoFixMvuVariables, generateSyncReport, buildEnt
 import { buildEffectivePrompt } from '../utils/promptBuilder';
 import { surgicalTranslate } from '../utils/surgical';
 import { parsePatchOutput, applyPatches, validatePatchResult } from '../utils/patchEngine';
+import { injectMvuZodSystem } from '../utils/mvuGenerator';
 import type { FieldGroup, FieldGroupConfig, TranslationField } from '../types/card';
 
 
@@ -2278,6 +2279,31 @@ export function useTranslation() {
 
     // ═══ Bake all modded fields into card so next operations use updated base ═══
     bakeModdedFieldsIntoCard();
+
+    // ═══ MVU-ZOD Conversion Pipeline ═══
+    if (store.translationConfig.enableMvuConversion) {
+      const baseCard = useStore.getState().card;
+      if (baseCard) {
+        try {
+          const mvuCard = await injectMvuZodSystem(
+            baseCard,
+            store.proxy,
+            (msg) => store.setMvuConversionProgress(msg),
+            store.translationConfig.customSchema || '',
+            abortRef.current?.signal
+          );
+          useStore.getState().updateCard(mvuCard);
+          store.addLog('success', '✨ Thẻ đã được chuyển đổi thành MVU-Zod thành công!');
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg !== 'Cancelled') {
+            store.addLog('error', `❌ Lỗi chuyển đổi MVU-Zod: ${msg}`);
+          }
+        } finally {
+          store.setMvuConversionProgress('');
+        }
+      }
+    }
 
     // Only set to 'done' if not already cancelled
     if (useStore.getState().phase === 'translating') {

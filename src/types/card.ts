@@ -228,6 +228,7 @@ export interface TranslationConfig {
   enableModMode: boolean; // Enable custom user mod instructions for translation
   modInstructions: string; // The custom instructions provided by the user
   enablePatchMode: boolean; // Patch mode: AI outputs find/replace patches instead of full content (regex fields only)
+  enableMvuConversion: boolean; // Also convert the card to MVU-Zod during modding
 }
 
 /* ─── Log Entry ─── */

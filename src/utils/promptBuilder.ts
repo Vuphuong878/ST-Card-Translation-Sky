@@ -680,3 +680,39 @@ ${modInstructions.trim()}`;
     glossaryForApi,
   };
 }
+
+/* ─── MVU-ZOD Generator Prompts ─── */
+
+export const MVU_SCHEMA_GENERATION_PROMPT = `Bạn là một chuyên gia thiết kế hệ thống biến trạng thái MVU-Zod cho thẻ nhân vật (Character Card) SillyTavern.
+Nhiệm vụ của bạn là đọc thông tin về nhân vật và bối cảnh (thể loại, phong cách), sau đó sinh ra MỘT LƯỢC ĐỒ (Zod Schema) phù hợp để theo dõi trạng thái.
+
+QUY TẮC BẮT BUỘC:
+1. Bạn phải trả về định dạng JSON thuần túy (không bọc trong markdown code block \`\`\`), chứa 2 thuộc tính: "zod_schema" (dạng chuỗi mã JavaScript) và "initvar" (dạng chuỗi JSON).
+2. Schema Zod PHẢI sử dụng phương thức \`.prefault()\` để tương thích. Ví dụ: \`z.object({ health: z.number().prefault(100) }).prefault({ health: 100 })\`.
+3. ID của biến không được chứa dấu cách (dùng snake_case hoặc camelCase).
+4. Thiết kế các biến hợp lý (Ví dụ: Thể lực, Tình cảm, Trạng thái, Chức vụ, Điểm kinh nghiệm...) tuỳ theo bối cảnh (Tiên hiệp, RPG, Đời thường).
+5. "initvar" phải tương đồng hoàn toàn 100% với cấu trúc của "zod_schema".
+6. Không thêm các trường không cần thiết. Giữ cấu trúc rõ ràng.
+
+ĐỊNH DẠNG TRẢ VỀ CHÍNH XÁC NHƯ SAU:
+{
+  "zod_schema": "z.object({ hp: z.number().prefault(100), affection: z.number().prefault(0) }).prefault({ hp: 100, affection: 0 })",
+  "initvar": "{\\"hp\\": 100, \\"affection\\": 0}"
+}`;
+
+export const MVU_RULES_GENERATION_PROMPT = `Bạn là một hệ thống thiết lập luật lệ cho trí tuệ nhân tạo (AI Rules) chạy trong môi trường SillyTavern MVU.
+Tôi sẽ cung cấp cho bạn cấu trúc Zod Schema (Các biến số hiện có).
+Nhiệm vụ của bạn là viết một khối XML <Variable_rules> để hướng dẫn AI cách thức và điều kiện thay đổi các biến số này trong quá trình Roleplay.
+
+QUY TẮC BẮT BUỘC:
+1. Bạn chỉ trả về ĐÚNG MỘT khối XML <Variable_rules>... </Variable_rules>. KHÔNG TRẢ VỀ BẤT KỲ VĂN BẢN NÀO KHÁC BÊN NGOÀI.
+2. Bên trong <Variable_rules>, liệt kê từng biến và quy tắc mô tả khi nào biến đó bị tăng, giảm, hoặc thay đổi.
+3. Giải thích ngắn gọn và dễ hiểu cho AI hiểu rõ logic Roleplay.
+4. KHÔNG SỬ DỤNG Markdown code block (như \`\`\`xml). Viết trực tiếp mã XML.
+5. Nếu văn bản bị ngắt giữa chừng do quá dài, hãy sẵn sàng viết tiếp ở lượt sau.
+
+Ví dụ định dạng đầu ra:
+<Variable_rules>
+  - hp: Điểm sinh mệnh. Giảm khi bị tấn công, tăng khi được hồi phục.
+  - affection: Tình cảm. Tăng khi được quan tâm, giảm khi bị lạnh nhạt. Tối đa 100.
+</Variable_rules>`;
