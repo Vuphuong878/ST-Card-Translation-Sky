@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { useT } from '../i18n/useLocale';
 import Editor from '@monaco-editor/react';
-import { X, Copy, Save, Plus, Book, Sparkles, Upload, FileJson, ArrowRight, AlertTriangle, Check, Send, RotateCcw, PenTool } from 'lucide-react';
+import { X, Copy, Save, Plus, Book, Sparkles, Upload, FileJson, ArrowRight, AlertTriangle, Check, Send, RotateCcw, PenTool, Cpu } from 'lucide-react';
 import type { CharacterBookEntry } from '../types/card';
 import { callProvider } from '../utils/apiClient';
 import { isWorldbookFormat } from '../utils/worldbookParser';
+import MvuEjsToolkit from './MvuEjsToolkit';
 
 const EJS_SNIPPETS = [
   {
@@ -14,7 +15,7 @@ const EJS_SNIPPETS = [
     code: `<%_ 
 var _hp = getvar('stat_data.hp_current', { defaults: 100 }); 
 setvar('stat_data.hp_current', _hp - 10);
-_%>`,
+_%>\n`,
   },
   {
     title: 'Lệnh điều kiện (If / Else)',
@@ -23,7 +24,7 @@ _%>`,
 Nhân vật đang bị thương nặng.
 <%_ } else { _%>
 Khỏe mạnh.
-<%_ } _%>`,
+<%_ } _%>\n`,
   },
   {
     title: 'Nạp Lorebook động (getwi)',
@@ -42,7 +43,84 @@ if (typeof getChatMessages === 'function') {
     _txt += _um[_i] + ' '; 
   }
 }
-_%>`,
+_%>\n`,
+  },
+  {
+    title: 'Bộ điều khiển thế giới quan (@@preprocessing)',
+    desc: 'Thiết lập khung cơ bản thế giới quan thường trú, không bị ảnh hưởng bởi vị trí.',
+    code: `@@preprocessing
+<%
+/* ===== Bộ điều khiển thế giới quan =====
+ * Đèn xanh thường trú, luôn kích hoạt tất cả các mục thiết lập cơ bản của thế giới quan hay [Thế Giới Quan] hay các từ tương đương
+ * Những mục này là khung cơ bản của toàn bộ thế giới, không bị ảnh hưởng bởi biến vị trí
+ */
+-%>
+<%- await getwi('Thế_Giới_Quan_Nguồn_Gốc_Thế_Giới') %>
+<%- await getwi('Thế giới quan_Cảnh giới tu luyện') %>
+<%- await getwi('Thế_Giới_Quan_Phàm_Tục_Và_Quy_Tắc') %>
+<%- await getwi('Thế giới quan_Hệ thống Linh_Căn') %>
+<%- await getwi('Thế Giới Quan_Hệ Thống Phẩm Cấp') %>
+<%- await getwi('Thế giới quan_Hệ thống dị hỏa') %>
+<%- await getwi('Thế_Giới_Quan_Tài_Nguyên_Tu_Chân') %>
+<%- await getwi('Thế_Giới_Quan_Âm_Dương_Lịch_Pháp') %>
+<%- await getwi('Tổng Quan Thế Lực Và Địa Điểm') %>`,
+  },
+  {
+    title: 'Bộ điều khiển đa giai đoạn (Controller)',
+    desc: 'Điều hướng động để tải các giai đoạn nhân vật khác nhau dựa trên chỉ số (Hảo cảm).',
+    code: `<%_
+if (typeof goodwill === 'undefined') var goodwill = getvar('stat_data.quan_he.hao_cam', { defaults: 0 });
+if (typeof relationship === 'undefined') var relationship = getvar('stat_data.quan_he.trang_thai', { defaults: 'Xa lạ' });
+_%>
+
+<%_ if (goodwill < 30) { _%>
+<%- await getwi('NhanVat_GiaiDoan_XaLa') %>
+<%_ } else if (goodwill < 60) { _%>
+<%- await getwi('NhanVat_GiaiDoan_QuenThuoc') %>
+<%_ } else if (relationship === 'Người yêu') { _%>
+<%- await getwi('NhanVat_GiaiDoan_LuyenAi') %>
+<%_ } else { _%>
+<%- await getwi('NhanVat_GiaiDoan_ThanThiet') %>
+<%_ } _%>`,
+  },
+  {
+    title: 'Thanh trạng thái nhân vật (@@iframe & @@if)',
+    desc: 'Tạo giao diện hiển thị chỉ số động ở cuối tin nhắn, sử dụng iframe để tránh xung đột CSS.',
+    code: `@@render_after
+@@iframe Trạng thái của nhân vật (Click để xem)
+@@if !is_user && !is_system
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; color: #ff69b4; margin: 0; padding: 8px; }
+    .stat-bar { border: 1px solid #ff69b422; padding: 8px; border-radius: 6px; background: #ff69b405; }
+  </style>
+</head>
+<body>
+  <div class="stat-bar">
+    💖 Độ hảo cảm: <strong><%- getvar('stat_data.quan_he.hao_cam', { defaults: 0 }) %></strong>
+  </div>
+</body>
+</html>`,
+  },
+  {
+    title: 'Zod Schema MVU Zod 4 Cơ Bản',
+    desc: 'Mẫu định nghĩa Schema biến trạng thái an toàn, tự động ép kiểu và đặt giá trị mặc định.',
+    code: `import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
+
+export const Schema = z.object({
+  hp: z.coerce.number().prefault(100).transform(v => _.clamp(v, 0, 100)),
+  mp: z.coerce.number().prefault(50).transform(v => _.clamp(v, 0, 100)),
+  trang_thai: z.string().prefault('Bình thường'),
+  tui_do: z.record(z.string().describe('Tên vật phẩm'), z.object({
+    mo_ta: z.string().prefault(''),
+    so_luong: z.coerce.number().prefault(1)
+  })).prefault({})
+});
+
+$(() => {
+  registerMvuSchema(Schema);
+});`,
   }
 ];
 
@@ -58,27 +136,27 @@ interface ChatMessage {
   generatedEntries?: GeneratedEntry[];
 }
 
-// Hàm kiểm tra lỗi EJS tĩnh đơn giản kèm theo kiểm tra await
+// Hàm kiểm tra lỗi EJS tĩnh nâng cao để bắt lỗi MVU / EJS phổ biến
 function validateEjsCode(code: string): string[] {
   const warnings: string[] = [];
   if (!code) return warnings;
 
-  // Kiểm tra cặp thẻ EJS
+  // 1. Kiểm tra cặp thẻ EJS
   const opens = (code.match(/<%/g) || []).length;
   const closes = (code.match(/%>/g) || []).length;
   if (opens !== closes) {
     warnings.push(`Không khớp thẻ EJS. Tìm thấy ${opens} thẻ mở (<%) và ${closes} thẻ đóng (%>).`);
   }
 
-  // Kiểm tra thẻ script
+  // 2. Kiểm tra thẻ script
   const scriptOpens = (code.match(/<script[\s>]/gi) || []).length;
   const scriptCloses = (code.match(/<\/script>/gi) || []).length;
   if (scriptOpens !== scriptCloses) {
     warnings.push(`Không khớp thẻ HTML <script>. Mở: ${scriptOpens}, Đóng: ${scriptCloses}.`);
   }
 
-  // Kiểm tra ngoặc nhọn lồng nhau trong EJS block
-  const ejsBlocks = code.match(/<%_([\s\S]*?)_%>/g) || [];
+  // 3. Kiểm tra ngoặc nhọn lồng nhau trong EJS block
+  const ejsBlocks = code.match(/<%_([\s\S]*?)_%>/g) || code.match(/<%([\s\S]*?)%>/g) || [];
   ejsBlocks.forEach((block, index) => {
     const oBraces = (block.match(/\{/g) || []).length;
     const cBraces = (block.match(/\}/g) || []).length;
@@ -87,8 +165,46 @@ function validateEjsCode(code: string): string[] {
     }
   });
 
-  // Kiểm tra await cho các hàm bất đồng bộ của ST-Prompt-Template
-  const asyncFuncs = ['getwi', 'execute', 'getchar', 'getpreset', 'evalTemplate', 'getChara', 'getPresetPrompt'];
+  // 4. Kiểm tra vị trí Decorator (Decorator phải đặt ở dòng đầu của entry, không nằm giữa nội dung)
+  const lines = code.split('\n');
+  let foundContent = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line === '') continue;
+    if (line.startsWith('@@')) {
+      if (foundContent) {
+        warnings.push(`Dòng ${i + 1}: Decorator '${line}' phải đặt ở đầu tiên của nội dung entry (không đặt sau chữ thường hay mã HTML/EJS).`);
+      }
+    } else {
+      foundContent = true;
+    }
+  }
+
+  // 5. Kiểm tra hàm getvar/setvar thiếu tiền tố biến (stat_data hay variables)
+  const getvarRegex = /(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar|getVariable|setVariable)\s*\(\s*['"]([^'"]+)['"]/g;
+  let match;
+  while ((match = getvarRegex.exec(code)) !== null) {
+    const path = match[1];
+    if (!path.startsWith('stat_data.') && !path.startsWith('variables.') && !path.startsWith('global.') && !path.startsWith('temp.') && !path.includes('::')) {
+      warnings.push(`Cảnh báo: Hàm getvar/setvar gọi biến '${path}' không có tiền tố (khuyến nghị dùng 'stat_data.${path}' hoặc 'variables.${path}' để tránh lỗi).`);
+    }
+  }
+
+  // 6. Kiểm tra thiếu typeof check chống xung đột biến toàn cục
+  ejsBlocks.forEach((block, index) => {
+    const varRegex = /\bvar\s+(\w+)\s*=\s*/g;
+    let vMatch;
+    while ((vMatch = varRegex.exec(block)) !== null) {
+      const varName = vMatch[1];
+      const typeofCheck = new RegExp(`typeof\\s+${varName}\\s*===\\s*['"]undefined['"]`, 'i');
+      if (!typeofCheck.test(block)) {
+        warnings.push(`Block EJS thứ ${index + 1}: Nên kiểm tra 'typeof ${varName} === "undefined"' trước khi khai báo 'var ${varName}' để tránh xung đột phạm vi biến toàn cục.`);
+      }
+    }
+  });
+
+  // 7. Kiểm tra await cho các hàm bất đồng bộ của ST-Prompt-Template
+  const asyncFuncs = ['getwi', 'execute', 'getchar', 'getpreset', 'evalTemplate', 'getChara', 'getPresetPrompt', 'activewi'];
   asyncFuncs.forEach(func => {
     const regex = new RegExp(`(?<!await\\s+)${func}\\s*\\(`, 'g');
     if (regex.test(code)) {
@@ -206,7 +322,7 @@ export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
   const [content, setContent] = useState<string>('');
   const [name, setName] = useState<string>('');
   
-  const [activeTab, setActiveTab] = useState<'reference' | 'ai'>('reference');
+  const [activeTab, setActiveTab] = useState<'reference' | 'ai' | 'toolkit'>('reference');
   
   // Prompt Builder States
   const [systemType, setSystemType] = useState<'general' | 'combat' | 'survival' | 'relationship' | 'npc_router'>('general');
@@ -401,7 +517,7 @@ ${topRelevantEntries.map((e, idx) => {
     structuredUserMsg += `Yêu cầu mới: "${promptText}"`;
 
     const systemPrompt = `You are an expert Senior Game Developer specializing in SillyTavern EJS game engine scripts for character cards and Lorebooks.
-You are extremely familiar with the ST-Prompt-Template extension (by zonde306) and its full EJS API:
+You are extremely familiar with the ST-Prompt-Template extension (by zonde306) and its full EJS API, as well as the MVU ZOD variables framework (by Autumn Qingzi).
 
 API REFERENCES:
 1. Variables:
@@ -426,6 +542,22 @@ Format the entry name/comment as: @INJECT pos=X,role=Y OR @INJECT target=A,index
 - pos=-1,role=user: Inject as a user message at the very end of prompt.
 - target=user,index=1,at=before,role=system: Inject system instructions right before the first user message.
 Important: Set enabled to false for the entries using @INJECT or prefix triggers to avoid double execution.
+
+CRITICAL WORKFLOW BEST PRACTICES (ZOD 4 & EJS 2026):
+1. Zod 4 Schema Design:
+   - Always use 'z.coerce.number()' instead of 'z.number()' for numeric fields to ensure automatic conversion.
+   - Never use 'z.coerce.boolean()'; use raw 'z.boolean()' instead.
+   - Always use '.prefault(defaultValue)' instead of '.default(defaultValue)'. If a compound object has '.prefault()', all its inner fields must also have '.prefault()'.
+   - Avoid using '.strict()' or '.passthrough()' as they are not supported in the MVU ZOD environment.
+   - Prefer 'z.record()' over 'z.array()' for list items to make JSON Patch updates more robust.
+   - Do NOT import 'z' or '_' (lodash) in MVU scripts, as they are already injected globally.
+   - Implement value clamping on numerical ranges using '.transform(v => _.clamp(v, min, max))'.
+2. EJS Scripting:
+   - Always call asynchronous functions with the 'await' keyword (e.g., 'await getwi(...)', 'await activewi(...)', 'await execute(...)').
+   - For JSON Patch updates in AI comments, write paths starting from the root of the variable tree WITHOUT the 'stat_data' prefix (e.g., '/user/hp' instead of '/stat_data/user/hp').
+   - However, when reading or writing variables inside EJS code, always include the 'stat_data' prefix (e.g., 'getvar("stat_data.user.hp")').
+   - To prevent duplicate variable declaration errors when multiple EJS blocks run, always check if a variable exists before declaring it (e.g., 'if (typeof myVar === "undefined") var myVar = getvar(...)') or use the '@@private' decorator.
+   - Use '@@preprocessing' at the top of a Lorebook entry to perform early computations and dynamically trigger keyword greenlights before prompt assembly.
 
 CRITICAL CARD CONTEXT:
 - Tên nhân vật chính: ${cardName}
@@ -647,7 +779,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
         
         {/* Left Column: Tabs */}
         <div style={{
-          width: '450px', borderRight: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)',
+          width: '520px', borderRight: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)',
           display: 'flex', flexDirection: 'column', flexShrink: 0
         }}>
           {/* Tab Headers */}
@@ -655,22 +787,32 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
             <button
               onClick={() => setActiveTab('reference')}
               style={{
-                flex: 1, padding: '12px', background: activeTab === 'reference' ? 'var(--bg-primary)' : 'transparent',
+                flex: 1, padding: '12px 6px', background: activeTab === 'reference' ? 'var(--bg-primary)' : 'transparent',
                 border: 'none', borderBottom: activeTab === 'reference' ? '2px solid var(--accent-primary)' : '2px solid transparent',
                 color: activeTab === 'reference' ? 'var(--text-primary)' : 'var(--text-muted)',
-                fontWeight: activeTab === 'reference' ? 600 : 400, cursor: 'pointer', display: 'flex', justifyContent: 'center', gap: '6px'
+                fontWeight: activeTab === 'reference' ? 600 : 400, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', fontSize: '0.78rem'
               }}>
-              <FileJson size={16} /> Cẩm Nang EJS
+              <FileJson size={14} /> Cẩm Nang
             </button>
             <button
               onClick={() => setActiveTab('ai')}
               style={{
-                flex: 1, padding: '12px', background: activeTab === 'ai' ? 'var(--bg-primary)' : 'transparent',
+                flex: 1, padding: '12px 6px', background: activeTab === 'ai' ? 'var(--bg-primary)' : 'transparent',
                 border: 'none', borderBottom: activeTab === 'ai' ? '2px solid var(--accent-primary)' : '2px solid transparent',
                 color: activeTab === 'ai' ? 'var(--accent-primary)' : 'var(--text-muted)',
-                fontWeight: activeTab === 'ai' ? 600 : 400, cursor: 'pointer', display: 'flex', justifyContent: 'center', gap: '6px'
+                fontWeight: activeTab === 'ai' ? 600 : 400, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', fontSize: '0.78rem'
               }}>
-              <Sparkles size={16} /> Trợ Lý AI Chat (EJS Master)
+              <Sparkles size={14} /> Trợ Lý AI
+            </button>
+            <button
+              onClick={() => setActiveTab('toolkit')}
+              style={{
+                flex: 1, padding: '12px 6px', background: activeTab === 'toolkit' ? 'var(--bg-primary)' : 'transparent',
+                border: 'none', borderBottom: activeTab === 'toolkit' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                color: activeTab === 'toolkit' ? 'var(--accent-primary)' : 'var(--text-muted)',
+                fontWeight: activeTab === 'toolkit' ? 600 : 400, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', fontSize: '0.78rem'
+              }}>
+              <Cpu size={14} /> Công cụ MVU
             </button>
           </div>
 
@@ -725,7 +867,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                     padding: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
                     borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)'
                   }}>
-                    <RotateCcw size={16} />
+                    <RotateCcw size={14} />
                   </button>
                 </div>
 
@@ -815,6 +957,10 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                   </button>
                 </div>
               </div>
+            )}
+
+            {activeTab === 'toolkit' && (
+              <MvuEjsToolkit card={card} updateCard={updateCard} addToast={addToast} />
             )}
           </div>
         </div>
