@@ -20,8 +20,6 @@ export default function ExportPanel() {
   const t = useT();
   const isWorldbook = contentType === 'worldbook';
 
-  if (!card || fields.length === 0) return null;
-
   const doneCount = fields.filter((f) => f.status === 'done').length;
   const errorCount = fields.filter((f) => f.status === 'error').length;
   const pendingCount = fields.filter((f) => f.status === 'pending').length;
@@ -243,6 +241,8 @@ export default function ExportPanel() {
     }
     return results;
   }, [card, fields]);
+
+  if (!card || fields.length === 0) return null;
 
   const handleExportSingleRegex = (script: any, name: string) => {
     const json = JSON.stringify(script, null, 2);
