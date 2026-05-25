@@ -17,6 +17,7 @@ import type {
 import type { Worldbook } from './utils/worldbookParser';
 import { DEFAULT_FIELD_GROUPS } from './utils/cardFields';
 import { IDB } from './utils/idb';
+import { clearRAGCache } from './utils/ragContext';
 
 /* ─── localStorage helpers ─── */
 const LS = {
@@ -562,33 +563,92 @@ export const useStore = create<AppState>((set) => ({
     if (s.cardFileName) {
       // Remove cache key in IDB
       await IDB.remove(`st-cache-${s.cardFileName}`);
+      
       // Reset translation state of all fields in the active store
-      if (s.fields.length > 0) {
-        const resetFields = s.fields.map(f => ({
-          ...f,
-          translated: '',
-          status: 'pending' as const,
-          error: undefined,
-        }));
-        set({ fields: resetFields, phase: 'idle', currentFieldIndex: 0 });
+      const resetFields = s.fields.length > 0
+        ? s.fields.map(f => ({
+            ...f,
+            translated: '',
+            status: 'pending' as const,
+            error: undefined,
+            completedChunks: undefined,
+            totalChunks: undefined,
+            failedChunkIndex: undefined,
+          }))
+        : [];
+
+      set((state) => ({
+        fields: resetFields,
+        phase: 'idle',
+        currentFieldIndex: 0,
+        liveSchemaContext: '',
+        mvuConversionProgress: '',
+        translationConfig: {
+          ...state.translationConfig,
+          mvuDictionary: {},
+          ejsEntryNameDict: {},
+          ejsKeywordDict: {},
+        },
+      }));
+
+      // Reset dictionaries in localStorage
+      LS.set('st-translator-mvu-dict', {});
+      LS.set('st-translator-ejs-entry-dict', {});
+      LS.set('st-translator-ejs-keyword-dict', {});
+
+      // Clear memory RAG cache
+      clearRAGCache();
+
+      if (resetFields.length > 0) {
         IDB.set('st-translator-fields-data', { fields: resetFields, phase: 'idle' });
+      } else {
+        IDB.remove('st-translator-fields-data');
       }
     }
   },
   deleteAllCaches: async () => {
     // Remove all cache keys starting with 'st-cache-'
     await IDB.clearPrefix('st-cache-');
-    // Also reset current fields and phase in active session
+    
     const s = useStore.getState();
-    if (s.fields.length > 0) {
-      const resetFields = s.fields.map(f => ({
-        ...f,
-        translated: '',
-        status: 'pending' as const,
-        error: undefined,
-      }));
-      set({ fields: resetFields, phase: 'idle', currentFieldIndex: 0 });
+    const resetFields = s.fields.length > 0
+      ? s.fields.map(f => ({
+          ...f,
+          translated: '',
+          status: 'pending' as const,
+          error: undefined,
+          completedChunks: undefined,
+          totalChunks: undefined,
+          failedChunkIndex: undefined,
+        }))
+      : [];
+
+    set((state) => ({
+      fields: resetFields,
+      phase: 'idle',
+      currentFieldIndex: 0,
+      liveSchemaContext: '',
+      mvuConversionProgress: '',
+      translationConfig: {
+        ...state.translationConfig,
+        mvuDictionary: {},
+        ejsEntryNameDict: {},
+        ejsKeywordDict: {},
+      },
+    }));
+
+    // Reset dictionaries in localStorage
+    LS.set('st-translator-mvu-dict', {});
+    LS.set('st-translator-ejs-entry-dict', {});
+    LS.set('st-translator-ejs-keyword-dict', {});
+
+    // Clear memory RAG cache
+    clearRAGCache();
+
+    if (resetFields.length > 0) {
       IDB.set('st-translator-fields-data', { fields: resetFields, phase: 'idle' });
+    } else {
+      IDB.remove('st-translator-fields-data');
     }
   },
 }));
