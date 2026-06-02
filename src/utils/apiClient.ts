@@ -1723,6 +1723,24 @@ export function recoverTruncatedTail(original: string, translation: string): str
 
   const tail = original.slice(splitIdx);
   
+  // ═══ SAFETY GUARD: prevent content doubling ═══
+  // If the tail to append is too large relative to original, it's likely a false positive
+  // from detectStructuralTruncation (minor structural differences between languages).
+  // A genuine truncation typically loses 5-25% of the content, not 50%+.
+  const tailRatio = tail.length / Math.max(1, original.length);
+  const resultWouldBe = translation.length + tail.length;
+  const sizeRatio = resultWouldBe / Math.max(1, original.length);
+  
+  if (tailRatio > 0.30) {
+    console.warn(`[recoverTruncatedTail] SKIPPED: tail is ${(tailRatio * 100).toFixed(0)}% of original (${tail.length}/${original.length} chars) — likely false positive truncation detection`);
+    return translation;
+  }
+  
+  if (sizeRatio > 1.5) {
+    console.warn(`[recoverTruncatedTail] SKIPPED: result would be ${(sizeRatio * 100).toFixed(0)}% of original (${resultWouldBe} chars vs ${original.length}) — would cause content bloat`);
+    return translation;
+  }
+  
   // Adjust quote seam
   const trimmedTrans = translation.trimEnd();
   const trimmedTail = tail.trimStart();
@@ -1731,10 +1749,12 @@ export function recoverTruncatedTail(original: string, translation: string): str
     const lastChar = trimmedTrans.slice(-1);
     const firstChar = trimmedTail.slice(0, 1);
     if ((lastChar === "'" || lastChar === '"' || lastChar === '`') && firstChar === lastChar) {
+      console.log(`[recoverTruncatedTail] Appending ${tail.length} chars of original tail (quote seam adjusted)`);
       return translation + tail.slice(tail.indexOf(firstChar) + 1);
     }
   }
   
+  console.log(`[recoverTruncatedTail] Appending ${tail.length} chars of original tail`);
   return translation + tail;
 }
 
@@ -1770,13 +1790,13 @@ export function detectStructuralTruncation(original: string, translation: string
   const origBrackets = getBracketBalances(original);
   const transBrackets = getBracketBalances(translation);
 
-  if (transBrackets.paren > Math.max(0, origBrackets.paren)) {
+  if (transBrackets.paren > Math.max(0, origBrackets.paren) && Math.abs(transBrackets.paren - origBrackets.paren) > 2) {
     return { isTruncated: true, reason: `Unbalanced parentheses (excess open: ${transBrackets.paren} vs original: ${origBrackets.paren})` };
   }
-  if (transBrackets.bracket > Math.max(0, origBrackets.bracket)) {
+  if (transBrackets.bracket > Math.max(0, origBrackets.bracket) && Math.abs(transBrackets.bracket - origBrackets.bracket) > 2) {
     return { isTruncated: true, reason: `Unbalanced square brackets (excess open: ${transBrackets.bracket} vs original: ${origBrackets.bracket})` };
   }
-  if (transBrackets.brace > Math.max(0, origBrackets.brace)) {
+  if (transBrackets.brace > Math.max(0, origBrackets.brace) && Math.abs(transBrackets.brace - origBrackets.brace) > 2) {
     return { isTruncated: true, reason: `Unbalanced curly braces (excess open: ${transBrackets.brace} vs original: ${origBrackets.brace})` };
   }
 
@@ -1808,12 +1828,9 @@ export function detectStructuralTruncation(original: string, translation: string
   const origQuotes = getQuoteCounts(original);
   const transQuotes = getQuoteCounts(translation);
 
-  if (origQuotes.single % 2 === 0 && transQuotes.single % 2 !== 0) {
-    return { isTruncated: true, reason: 'Odd number of single quotes (unclosed string)' };
-  }
-  if (origQuotes.double % 2 === 0 && transQuotes.double % 2 !== 0) {
-    return { isTruncated: true, reason: 'Odd number of double quotes (unclosed string)' };
-  }
+  // NOTE: Only check backtick balance (code-critical). Skip single/double quotes
+  // because translation legitimately changes quote parity (Vietnamese contractions,
+  // different quoting conventions, etc.) — these are NOT reliable truncation signals.
   if (origQuotes.backtick % 2 === 0 && transQuotes.backtick % 2 !== 0) {
     return { isTruncated: true, reason: 'Odd number of backticks (unclosed template literal)' };
   }
@@ -1850,7 +1867,8 @@ export function detectStructuralTruncation(original: string, translation: string
   for (const tag in transTags) {
     const origVal = origTags[tag] || 0;
     const transVal = transTags[tag] || 0;
-    if (transVal > Math.max(0, origVal)) {
+    // Only flag if excess is >1 to avoid false positives from minor tag differences
+    if (transVal > Math.max(0, origVal) && (transVal - origVal) > 1) {
       return { isTruncated: true, reason: `Unclosed HTML tag <${tag}> (excess open: ${transVal} vs original: ${origVal})` };
     }
   }
@@ -1976,6 +1994,13 @@ async function translateChunk(
 
           console.log(`[translateChunk] ${fieldName} chunk ${chunkIdx + 1}/${totalChunks}: response ${(responseRatio * 100).toFixed(0)}% < ${(CONT_THRESHOLD * 100).toFixed(0)}% (or structural issue) → continuation round ${contRound + 1}/${MAX_CONT_ROUNDS}...`);
 
+          // ═══ SIZE GUARD: prevent bloat from false-positive structural checks ═══
+          // If result is already bigger than the chunk, continuation is not needed.
+          if (result.length > chunk.length * 1.8) {
+            console.warn(`[translateChunk] STOPPING continuation: result (${result.length}) already > 1.8x chunk (${chunk.length}) — likely false positive truncation`);
+            break;
+          }
+
           // Estimate where in the original text we need to pick up
           // Account for CJK→Latin expansion: if source is mostly CJK, the translation
           // will be longer per-character, so we need to adjust the coverage estimate.
@@ -2000,6 +2025,11 @@ async function translateChunk(
             clearTimeout(contTimeout);
 
             if (continuation.trim()) {
+              // ═══ SIZE GUARD: don't append if it would make result absurdly large ═══
+              if ((result.length + continuation.length) > chunk.length * 2.5) {
+                console.warn(`[translateChunk] SKIPPED continuation append: would make result ${result.length + continuation.length} chars (${((result.length + continuation.length) / chunk.length * 100).toFixed(0)}% of chunk) — likely duplicate content`);
+                break;
+              }
               result = result + '\n' + continuation;
               console.log(`[translateChunk] Continuation +${continuation.length} chars → total ${result.length} chars (${((result.length / chunk.length) * 100).toFixed(0)}%)`);
             } else {
@@ -2611,6 +2641,13 @@ export async function translateText(
       }
     }
     
+    // ═══ SINGLE-CHUNK BLOAT GUARD ═══
+    const singleBloatRatio = cleaned.length / Math.max(1, text.length);
+    if (singleBloatRatio > 1.8 && text.length > 5000) {
+      console.error(`[translateText] ⚠️ SINGLE CHUNK BLOAT for ${fieldName}: ${cleaned.length} chars is ${(singleBloatRatio * 100).toFixed(0)}% of original ${text.length} — trimming`);
+      cleaned = cleaned.slice(0, Math.floor(text.length * 1.3));
+    }
+
     // RESIDUAL CJK CHECK: auto-retry if Chinese text remains
     return postTranslationResidualCheck(
       text, cleaned, fieldName, config, targetLang, sourceLang, signal, fieldType, mvuDictionary
@@ -2912,6 +2949,39 @@ export async function translateText(
     }
   }
   
+  // ═══ ULTIMATE BLOAT GUARD — last line of defense against content doubling ═══
+  // If translation is >1.8x the original, something went very wrong (false positive
+  // structural truncation, duplicate continuations, etc.). Log and trim.
+  const bloatRatio = cleaned.length / Math.max(1, text.length);
+  if (bloatRatio > 1.8 && text.length > 5000) {
+    console.error(`[translateText] ⚠️ BLOAT DETECTED for ${fieldName}: result ${cleaned.length} chars is ${(bloatRatio * 100).toFixed(0)}% of original ${text.length} chars — trimming to prevent content doubling`);
+    // Try to find where the duplication starts by checking if the second half
+    // is similar to the first half (common pattern: translation + original tail)
+    const halfLen = Math.floor(cleaned.length / 2);
+    const firstHalf = cleaned.slice(0, halfLen);
+    const secondHalf = cleaned.slice(halfLen);
+    
+    // Check structural similarity of the two halves by sampling
+    const sampleSize = Math.min(500, halfLen);
+    const firstSample = firstHalf.slice(-sampleSize);
+    const secondSampleStart = secondHalf.slice(0, sampleSize);
+    
+    // If the end of first half and start of second half share significant structural overlap,
+    // it's likely the second half is a duplicate
+    const firstStructure = getStructure(firstSample);
+    const secondStructure = getStructure(secondSampleStart);
+    const overlapLen = getLcpLength(firstStructure, secondStructure);
+    
+    if (overlapLen > firstStructure.length * 0.3) {
+      console.error(`[translateText] BLOAT CONFIRMED: structural overlap at midpoint (${overlapLen}/${firstStructure.length}) — keeping first ${halfLen} chars`);
+      cleaned = cleaned.slice(0, Math.floor(text.length * 1.3));
+    } else {
+      // Not a clear duplicate, but still too long — trim conservatively
+      console.warn(`[translateText] BLOAT WARNING: no clear duplicate pattern, trimming to 130% of original`);
+      cleaned = cleaned.slice(0, Math.floor(text.length * 1.3));
+    }
+  }
+
   // RESIDUAL CJK CHECK: auto-retry if Chinese text remains
   return postTranslationResidualCheck(
     text, cleaned, fieldName, config, targetLang, sourceLang, signal, fieldType, mvuDictionary
