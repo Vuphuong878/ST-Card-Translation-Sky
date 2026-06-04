@@ -1904,6 +1904,8 @@ async function translateChunk(
   systemPrompt: string,
   userPrompt: string,
   signal?: AbortSignal,
+  /** Mod mode: skip bloat guards since output can legitimately be much larger than input */
+  isModMode = false,
 ): Promise<string> {
   let lastError: Error | null = null;
 
@@ -1996,7 +1998,8 @@ async function translateChunk(
 
           // ═══ SIZE GUARD: prevent bloat from false-positive structural checks ═══
           // If result is already bigger than the chunk, continuation is not needed.
-          if (result.length > chunk.length * 1.8) {
+          // MOD MODE: skip this guard — mod output can legitimately be much larger than input
+          if (!isModMode && result.length > chunk.length * 1.8) {
             console.warn(`[translateChunk] STOPPING continuation: result (${result.length}) already > 1.8x chunk (${chunk.length}) — likely false positive truncation`);
             break;
           }
@@ -2026,7 +2029,8 @@ async function translateChunk(
 
             if (continuation.trim()) {
               // ═══ SIZE GUARD: don't append if it would make result absurdly large ═══
-              if ((result.length + continuation.length) > chunk.length * 2.5) {
+              // MOD MODE: skip this guard — mod output can legitimately be much larger than input
+              if (!isModMode && (result.length + continuation.length) > chunk.length * 2.5) {
                 console.warn(`[translateChunk] SKIPPED continuation append: would make result ${result.length + continuation.length} chars (${((result.length + continuation.length) / chunk.length * 100).toFixed(0)}% of chunk) — likely duplicate content`);
                 break;
               }
@@ -2611,6 +2615,9 @@ export async function translateText(
   const { maskedText, map: urlMap } = maskUrls(secretMasked);
 
   const isExpert = config.expertMode;
+  // Detect Mod Mode: output can legitimately be much larger than input (e.g. 200-word prompt → 2000+ words)
+  // so all bloat guards must be bypassed
+  const isModMode = customPrompt?.includes('[CRITICAL: STANDALONE MODIFICATION & REWRITE MODE]') || false;
   const isCodeHeavy = fieldName.toLowerCase().includes('regex') || fieldName.toLowerCase().includes('code') || fieldName.toLowerCase().includes('script') || fieldName.toLowerCase().includes('helper');
   // Adaptive chunk size: code-heavy content cần chunk nhỏ hơn
   // vì AI output limit không đủ cho 100K chars code 1:1
@@ -2638,7 +2645,7 @@ export async function translateText(
       fieldType, isExpert, mvuDictionary,
     );
     const result = await translateChunk(
-      chunks[0], 0, 1, fieldName, config, targetLang, sourceLang, system, user, signal
+      chunks[0], 0, 1, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
     );
     let cleaned = cleanTranslationResponse(maskedText, result, isExpert, false);
     cleaned = unmaskUrls(cleaned, urlMap);  // Unmask URLs
@@ -2653,8 +2660,9 @@ export async function translateText(
     }
     
     // ═══ SINGLE-CHUNK BLOAT GUARD ═══
+    // MOD MODE: skip — mod output can legitimately be much larger than input
     const singleBloatRatio = cleaned.length / Math.max(1, text.length);
-    if (singleBloatRatio > 1.8 && text.length > 5000) {
+    if (!isModMode && singleBloatRatio > 1.8 && text.length > 5000) {
       console.error(`[translateText] ⚠️ SINGLE CHUNK BLOAT for ${fieldName}: ${cleaned.length} chars is ${(singleBloatRatio * 100).toFixed(0)}% of original ${text.length} — trimming`);
       cleaned = cleaned.slice(0, Math.floor(text.length * 1.3));
     }
@@ -2739,7 +2747,7 @@ export async function translateText(
 
         try {
           const translated = await translateChunk(
-            chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal
+            chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
           );
           const chunkCleaned = cleanTranslationResponse(chunks[idx], translated, isExpert, true);
           translatedChunks[idx] = chunkCleaned;
@@ -2765,7 +2773,7 @@ export async function translateText(
               // Auto-retry the chunk once
               try {
                 const retryResult = await translateChunk(
-                  chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal
+                  chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
                 );
                 const retryCleaned = cleanTranslationResponse(chunks[idx], retryResult, isExpert, true);
                 const retryVerify = await verifyChunkIntegrity(
@@ -2864,7 +2872,7 @@ export async function translateText(
 
       try {
         const translated = await translateChunk(
-          chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal
+          chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
         );
         const chunkCleaned = cleanTranslationResponse(chunks[idx], translated, isExpert, true);
         translatedChunks[idx] = chunkCleaned;
@@ -2889,7 +2897,7 @@ export async function translateText(
             console.warn(`[translateText] Chunk ${idx + 1} failed verification, retrying once...`);
             try {
               const retryResult = await translateChunk(
-                chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal
+                chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
               );
               const retryCleaned = cleanTranslationResponse(chunks[idx], retryResult, isExpert, true);
               const retryVerify = await verifyChunkIntegrity(
@@ -2963,8 +2971,10 @@ export async function translateText(
   // ═══ ULTIMATE BLOAT GUARD — last line of defense against content doubling ═══
   // If translation is >1.8x the original, something went very wrong (false positive
   // structural truncation, duplicate continuations, etc.). Log and trim.
+  // MOD MODE: skip entirely — mod output can legitimately be much larger than input
+  // (e.g. a 200-word prompt can produce 2000+ words of modded content)
   const bloatRatio = cleaned.length / Math.max(1, text.length);
-  if (bloatRatio > 1.8 && text.length > 5000) {
+  if (!isModMode && bloatRatio > 1.8 && text.length > 5000) {
     console.error(`[translateText] ⚠️ BLOAT DETECTED for ${fieldName}: result ${cleaned.length} chars is ${(bloatRatio * 100).toFixed(0)}% of original ${text.length} chars — trimming to prevent content doubling`);
     // Try to find where the duplication starts by checking if the second half
     // is similar to the first half (common pattern: translation + original tail)
@@ -2991,6 +3001,8 @@ export async function translateText(
       console.warn(`[translateText] BLOAT WARNING: no clear duplicate pattern, trimming to 130% of original`);
       cleaned = cleaned.slice(0, Math.floor(text.length * 1.3));
     }
+  } else if (isModMode && bloatRatio > 1.8) {
+    console.log(`[translateText] ℹ️ MOD MODE: output ${cleaned.length} chars is ${(bloatRatio * 100).toFixed(0)}% of original ${text.length} — bloat guard skipped (mod mode allows larger output)`);
   }
 
   // RESIDUAL CJK CHECK: auto-retry if Chinese text remains
