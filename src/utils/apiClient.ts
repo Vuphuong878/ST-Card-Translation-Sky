@@ -3063,10 +3063,11 @@ BATCH FORMAT:
 - The input contains ${items.length} numbered sections, each starting with ${DELIMITER}N${DELIMITER} (e.g., ${DELIMITER}1${DELIMITER}, ${DELIMITER}2${DELIMITER}).
 - You MUST return the same numbered delimiters with the translated text for each section.
 - Do NOT merge or skip any sections. Every section must be present in your output.
-- CRITICAL: You MUST translate ALL Chinese/Japanese/Korean characters in EVERY section. Do NOT leave any CJK text untranslated. This includes section headers, YAML keys, annotations, labels, and text inside XML/HTML tags. Scan each section before outputting — if ANY Chinese characters remain, translate them immediately.${schemaInstructions}${glossaryBlock}`;
+- CRITICAL: You MUST translate ALL Chinese/Japanese/Korean characters in EVERY section. Do NOT leave any CJK text untranslated. This includes section headers, YAML keys, annotations, labels, and text inside XML/HTML tags.
+- SELF-CHECK MANDATE: Before outputting EACH section, scan your translation for ANY remaining Chinese characters (Unicode \u4e00-\u9fff). If you find even ONE Chinese character that should be translated, fix it BEFORE outputting. Common mistake: leaving single CJK characters at word boundaries (e.g. "nhân际" should be "nhân tế", "关系" should be "quan hệ"). ZERO Chinese characters may remain in the output.${schemaInstructions}${glossaryBlock}`;
 
   const sourceHint = sourceLang && sourceLang !== 'auto' ? ` (from ${sourceLang})` : '';
-  const user = `Translate these ${items.length} sections${sourceHint} to ${targetLang}. Keep the ${DELIMITER}N${DELIMITER} delimiters. Return ONLY translations. IMPORTANT: Translate ALL Chinese text in every section — ZERO Chinese characters should remain in the output:\n\n${combinedText}`;
+  const user = `Translate these ${items.length} sections${sourceHint} to ${targetLang}. Keep the ${DELIMITER}N${DELIMITER} delimiters. Return ONLY translations. IMPORTANT: Translate ALL Chinese text in every section — ZERO Chinese characters should remain in the output. Before outputting each section, re-scan for any remaining CJK and translate them:\n\n${combinedText}`;
 
   // Call provider
   let lastError: Error | null = null;
@@ -3097,7 +3098,7 @@ BATCH FORMAT:
           if (results[ri] && results[ri].trim() && items[ri]) {
             const origChinese = countChineseChars(items[ri].text);
             const residual = countChineseChars(results[ri]);
-            if (origChinese >= 3 && residual > 2) {
+            if (origChinese >= 3 && residual > 0) {
               try {
                 results[ri] = await postTranslationResidualCheck(
                   items[ri].text, results[ri], items[ri].fieldName,

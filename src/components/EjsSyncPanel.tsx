@@ -23,8 +23,8 @@ export default function EjsSyncPanel() {
 
   // ─── EJS Detection Summary (only scan when enabled to avoid crashes) ───
   const ejsDetection = useMemo(() => {
-    if (!enableEjsSync) return { isEjs: false, confidence: 0, ejsBlockCount: 0, entryWithEjsCount: 0, hasGetwi: false, hasDefine: false, hasGetChatMessages: false, hasExecute: false, hasDecorators: false, reasons: [] };
-    try { return detectEjsCard(card); } catch { return { isEjs: false, confidence: 0, ejsBlockCount: 0, entryWithEjsCount: 0, hasGetwi: false, hasDefine: false, hasGetChatMessages: false, hasExecute: false, hasDecorators: false, reasons: [] }; }
+    if (!enableEjsSync) return { isEjs: false, confidence: 0, ejsBlockCount: 0, entryWithEjsCount: 0, hasGetwi: false, hasActivewi: false, hasDefine: false, hasGetChatMessages: false, hasExecute: false, hasDecorators: false, reasons: [] };
+    try { return detectEjsCard(card); } catch { return { isEjs: false, confidence: 0, ejsBlockCount: 0, entryWithEjsCount: 0, hasGetwi: false, hasActivewi: false, hasDefine: false, hasGetChatMessages: false, hasExecute: false, hasDecorators: false, reasons: [] }; }
   }, [card, enableEjsSync]);
   const ejsEntryRefs = useMemo(() => {
     if (!enableEjsSync) return [];
@@ -249,6 +249,7 @@ export default function EjsSyncPanel() {
                 <>
                   <strong>EJS card detected</strong> — {ejsDetection.ejsBlockCount} blocks, {ejsDetection.entryWithEjsCount} entries with EJS
                   {ejsDetection.hasGetwi && ', getwi()'}
+                  {ejsDetection.hasActivewi && ', activewi()'}
                   {ejsDetection.hasDefine && ', define()'}
                   {ejsDetection.hasDecorators && ', decorators'}
                 </>
@@ -278,6 +279,38 @@ export default function EjsSyncPanel() {
             <button className="btn btn-sm" onClick={importDict} title="Import dictionaries">
               <Upload size={13} />
             </button>
+          </div>
+
+          {/* EJS Scan Passes Control */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: 12,
+            fontSize: 13,
+          }}>
+            <span style={{ whiteSpace: 'nowrap' }}>
+              {isVi ? '🔄 Số lần quét:' : '🔄 Scan passes:'}
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={5}
+              value={translationConfig.ejsScanPasses || 1}
+              onChange={(e) => setTranslationConfig({ ejsScanPasses: Math.max(1, Math.min(5, parseInt(e.target.value) || 1)) })}
+              style={{
+                width: 48,
+                padding: '2px 6px',
+                fontSize: 12,
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 4,
+                textAlign: 'center' as const,
+              }}
+            />
+            <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+              {isVi ? '(1-5, mỗi pass chỉ dịch biến mới)' : '(1-5, each pass translates new vars only)'}
+            </span>
           </div>
 
           {/* ─── Decorator Preserve Toggle ─── */}

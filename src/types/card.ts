@@ -246,6 +246,8 @@ export interface TranslationConfig {
   ejsDecoratorPreserve: boolean;       // Auto-detect & protect EJS decorators (@@, [GENERATE:], @INJECT)
   enableChunkVerification: boolean;     // Enable AI-powered chunk verification (compare original vs translated)
   enableTranslationMemory: boolean;    // Enable Translation Memory (persistent cross-session term/translation cache)
+  mvuScanPasses: number;               // Số lần quét biến MVU (Strategy B), mỗi pass chỉ dịch biến mới
+  ejsScanPasses: number;               // Số lần quét biến EJS (Strategy C), mỗi pass chỉ dịch biến mới
 }
 
 /* ─── Log Entry ─── */

@@ -39,6 +39,7 @@ export interface EjsDetectionResult {
   ejsBlockCount: number;       // Total <% %> blocks across all fields
   entryWithEjsCount: number;   // Lorebook entries containing EJS
   hasGetwi: boolean;           // Uses getwi() / getWorldInfo()
+  hasActivewi: boolean;        // Uses activewi() / activateWorldInfo() for dynamic entry control
   hasDefine: boolean;          // Uses define() for shared helpers
   hasGetChatMessages: boolean; // Uses getChatMessages() for context scanning
   hasExecute: boolean;         // Uses execute() for slash commands
@@ -54,7 +55,7 @@ export interface EjsEntryRef {
   /** The actual lorebook entry index (if matched), -1 if unresolved */
   entryIndex: number;
   /** Source type of the reference */
-  sourceType: 'getwi' | 'getWorldInfo' | 'getWorldInfoData' | 'getWorldInfoActivatedData';
+  sourceType: 'getwi' | 'getWorldInfo' | 'getWorldInfoData' | 'getWorldInfoActivatedData' | 'activewi' | 'activateWorldInfo';
 }
 
 export interface EjsKeyword {
@@ -111,6 +112,7 @@ export function detectEjsCard(card: CharacterCard): EjsDetectionResult {
     ejsBlockCount: 0,
     entryWithEjsCount: 0,
     hasGetwi: false,
+    hasActivewi: false,
     hasDefine: false,
     hasGetChatMessages: false,
     hasExecute: false,
@@ -193,6 +195,7 @@ export function detectEjsCard(card: CharacterCard): EjsDetectionResult {
   // Scan all texts
   const ejsTagRegex = /<%[\s\S]*?%>/g;
   const getwiRegex = /(?:getwi|getWorldInfo)\s*\(/g;
+  const activewiRegex = /(?:activewi|activateWorldInfo)\s*\(/g;
   const getWorldInfoDataRegex = /(?:getWorldInfoData|getWorldInfoActivatedData)\s*\(/g;
   const defineRegex = /define\s*\(\s*['"`]/g;
   const getChatMessagesRegex = /getChatMessages\s*\(/g;
@@ -211,6 +214,7 @@ export function detectEjsCard(card: CharacterCard): EjsDetectionResult {
 
     // Detect API usage
     if (getwiRegex.test(text)) { result.hasGetwi = true; getwiRegex.lastIndex = 0; }
+    if (activewiRegex.test(text)) { result.hasActivewi = true; activewiRegex.lastIndex = 0; }
     if (getWorldInfoDataRegex.test(text)) { result.hasGetwi = true; getWorldInfoDataRegex.lastIndex = 0; }
     if (defineRegex.test(text)) { result.hasDefine = true; defineRegex.lastIndex = 0; }
     if (getChatMessagesRegex.test(text)) { result.hasGetChatMessages = true; getChatMessagesRegex.lastIndex = 0; }
@@ -225,6 +229,7 @@ export function detectEjsCard(card: CharacterCard): EjsDetectionResult {
   if (result.ejsBlockCount > 50) { score += 10; }
   if (result.entryWithEjsCount > 0) { score += 10; result.reasons.push(`${result.entryWithEjsCount} entries with EJS`); }
   if (result.hasGetwi) { score += 15; result.reasons.push('getwi() calls'); }
+  if (result.hasActivewi) { score += 15; result.reasons.push('activewi() dynamic entry control'); }
   if (result.hasDefine) { score += 10; result.reasons.push('define() shared helpers'); }
   if (result.hasGetChatMessages) { score += 10; result.reasons.push('getChatMessages() context scan'); }
   if (result.hasExecute) { score += 5; result.reasons.push('execute() slash commands'); }
@@ -311,6 +316,30 @@ export function extractEjsEntryNames(card: CharacterCard): EjsEntryRef[] {
             referencedIn: [source],
             entryIndex: entryNameMap.get(entryName) ?? -1,
             sourceType: 'getWorldInfoData',
+          });
+        }
+      }
+    }
+
+    // Scan activewi() / activateWorldInfo() — dynamic entry enable/disable
+    // Pattern: activewi(null, 'Entry Name', true/false) or activateWorldInfo(null, 'Entry Name', true)
+    const activewiPattern1 = /(?:activewi|activateWorldInfo)\s*\(\s*(?:null|''|""|[\w.]+)\s*,\s*['"`]([^'"`]+)['"`]/g;
+    const activewiPattern2 = /await\s+(?:activewi|activateWorldInfo)\s*\(\s*(?:null|''|""|[\w.]+)\s*,\s*['"`]([^'"`]+)['"`]/g;
+    for (const awPattern of [activewiPattern1, activewiPattern2]) {
+      awPattern.lastIndex = 0;
+      let aw: RegExpExecArray | null;
+      while ((aw = awPattern.exec(text)) !== null) {
+        const entryName = aw[1].trim();
+        if (!entryName) continue;
+        const existing = refMap.get(entryName);
+        if (existing) {
+          if (!existing.referencedIn.includes(source)) existing.referencedIn.push(source);
+        } else {
+          refMap.set(entryName, {
+            name: entryName,
+            referencedIn: [source],
+            entryIndex: entryNameMap.get(entryName) ?? -1,
+            sourceType: aw[0].includes('activateWorldInfo') ? 'activateWorldInfo' : 'activewi',
           });
         }
       }
@@ -458,6 +487,33 @@ export function extractEjsKeywords(card: CharacterCard): EjsKeyword[] {
     let gvc: RegExpExecArray | null;
     while ((gvc = getvarCompPattern.exec(text)) !== null) {
       addKeyword(gvc[1], 'comparison', source, gvc[0]);
+    }
+
+    // ═══ 8. getvar() dotted path CJK segments ═══
+    // 'stat_data.Giai đoạn thế giới' → extract 'Giai đoạn thế giới'
+    // 'stat_data.Trạng thái phái sinh.nationality' → extract 'Trạng thái phái sinh'
+    const getvarPathPattern = /getvar\s*\(\s*['"`]([^'"`]+)['"`]/g;
+    getvarPathPattern.lastIndex = 0;
+    let gvp: RegExpExecArray | null;
+    while ((gvp = getvarPathPattern.exec(text)) !== null) {
+      const fullPath = gvp[1];
+      const segments = fullPath.split('.');
+      for (const seg of segments) {
+        const trimmed = seg.trim();
+        if (trimmed.length >= 2) {
+          addKeyword(trimmed, 'comparison', source, `getvar path: ${fullPath}`);
+        }
+      }
+    }
+
+    // ═══ 9. .includes() keywords in full text (not just EJS blocks) ═══
+    // Catches patterns like: _p.includes('kinh nguyệt'), _p.includes('mang thai')
+    // These appear in EJS blocks but the full-text scan ensures nothing is missed
+    const includesFullTextPattern = /\.includes\s*\(\s*['"`]([^'"`]{2,})['"`]\s*\)/g;
+    includesFullTextPattern.lastIndex = 0;
+    let incl: RegExpExecArray | null;
+    while ((incl = includesFullTextPattern.exec(text)) !== null) {
+      addKeyword(incl[1], 'comparison', source, incl[0]);
     }
   }
 
@@ -704,13 +760,14 @@ export function validateEjsSync(
   report.totalEntryNames = entryEntries.length;
 
   for (const [original, translated] of entryEntries) {
-    // Check if translated name appears in any getwi() call in translated fields
+    // Check if translated name appears in any getwi()/activewi() call in translated fields
+    const quoteClass = "['\"\x60]";
     const getwiPattern = new RegExp(
-      `(?:getwi|getWorldInfo)\\s*\\(\\s*(?:null|''|""|\\w+)\\s*,\\s*['"\`]${escapeRegex(translated)}['"\`]`,
+      '(?:getwi|getWorldInfo|activewi|activateWorldInfo)\\s*\\(\\s*(?:null|\'\'|""|[\\w.]+)\\s*,\\s*' + quoteClass + escapeRegex(translated) + quoteClass,
     );
 
     const originalGetwiPattern = new RegExp(
-      `(?:getwi|getWorldInfo)\\s*\\(\\s*(?:null|''|""|\\w+)\\s*,\\s*['"\`]${escapeRegex(original)}['"\`]`,
+      '(?:getwi|getWorldInfo|activewi|activateWorldInfo)\\s*\\(\\s*(?:null|\'\'|""|[\\w.]+)\\s*,\\s*' + quoteClass + escapeRegex(original) + quoteClass,
     );
 
     const translatedHasCorrect = getwiPattern.test(allTranslatedText);
@@ -813,15 +870,16 @@ export function buildEjsPromptBlock(
   const entryEntries = Object.entries(ejsEntryNameDict).filter(([k, v]) => k && v && k !== v);
   if (entryEntries.length > 0) {
     const entryList = entryEntries.map(([k, v]) => `  "${k}" → "${v}"`).join('\n');
-    block += `\n\nCRITICAL — EJS ENTRY NAME DICTIONARY (getwi() SYNC):
-This card uses EJS Entry Jumping — lorebook entries are loaded dynamically via getwi(null, 'Entry Name').
-You MUST replace ALL original entry names with their translated equivalents in getwi() calls:
+    block += `\n\nCRITICAL — EJS ENTRY NAME DICTIONARY (getwi() & activewi() SYNC):
+This card uses EJS Entry Jumping — lorebook entries are loaded dynamically via getwi(null, 'Entry Name') and enabled/disabled via activewi(null, 'Entry Name', true/false).
+You MUST replace ALL original entry names with their translated equivalents in these calls:
 ${entryList}
 Rules:
 - In getwi() / getWorldInfo() calls, the entry name argument MUST use the translated name
+- In activewi() / activateWorldInfo() calls, the entry name argument MUST also use the translated name
 - The actual lorebook entry comment/name field will also be translated — they MUST match exactly
 - If you see a narrative text referencing an entry name (for auto-trigger), use the translated name
-- NEVER leave the original CJK entry name in a getwi() call if a translation is provided above`;
+- NEVER leave the original CJK entry name in a getwi() or activewi() call if a translation is provided above`;
   }
 
   // ─── Keyword Dictionary ───

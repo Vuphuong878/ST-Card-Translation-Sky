@@ -35,7 +35,7 @@ ADDITIONAL RULES FOR HTML/REGEX CONTENT:
     - 宋体 / SimSun → 'Times New Roman', 'Noto Serif', serif
     - 楷体 / KaiTi → 'Georgia', serif
     - Any other Chinese/Japanese font → 'Segoe UI', sans-serif
-15. VARIABLE NAME FORMATTING: Translated variable names may use natural spacing. The ONLY rule is EXACT CONSISTENCY — every occurrence of the same variable across all fields (Initvar, Zod schema, HTML data-var, macros) MUST use the identical string, character for character.
+15. VARIABLE NAME FORMATTING: Translated variable names may use natural spacing. The ONLY rule is EXACT CONSISTENCY — every occurrence of the same variable across all fields (Initvar, Zod schema, HTML data-var, macros) MUST use the identical string, character for character, INCLUDING CAPITALIZATION. If the MVU Dictionary says "Hảo Cảm" (Title Case), you MUST write data-var="Hảo Cảm" and {{getvar::Hảo Cảm}} — NOT "hảo cảm" or "Hảo cảm". Wrong casing = broken card.
 16. TRANSLATE ALL CJK (Chinese/Japanese/Korean) text. Keep all HTML structure, data-var attributes, class names, and id attributes intact, BUT if an attribute value or tag content contains CJK, you MUST translate it.
 17. PROPER NOUN RULE: Chinese proper nouns → Hán Việt. Japanese proper nouns → Romaji (NOT Hán Việt). Western/Fantasy names phonetically transcribed into CJK (e.g., 维拉→Vera, 塞勒涅→Selene) → restore to original Latin spelling (NEVER Hán Việt).
 18. BRACKET NOTATION: If translated keys contain spaces (e.g., "Hệ Thống"), use bracket notation: obj['Hệ Thống'] NOT obj.Hệ Thống. For nested: data['Key']['SubKey'].
@@ -593,6 +593,7 @@ ${dictList}
 Rules:
 - Replace ALL occurrences of the original name with the translated name
 - Variable names may use natural spacing. The ONLY rule is 100% consistency — same variable = identical string in initvar, schema, macros, and HTML
+- CASING IS CRITICAL: Use the EXACT capitalization from the dictionary above. If the dictionary says "Hảo Cảm" (Title Case), you MUST write "Hảo Cảm" — NOT "hảo cảm", "Hảo cảm", or "HẢO CẢM". Wrong casing = broken card (getvar('Hảo Cảm') ≠ 'hảo cảm').
 - In z.object() or JS code, use QUOTED keys for multi-word names: { "Tên biến": z.string() }
 - Do NOT invent your own translations for these variables — use EXACTLY the dictionary above
 - If you see a variable name from the dictionary, ALWAYS use the mapped translation
@@ -606,7 +607,8 @@ ${dictList}
 Rules:
 - ALWAYS use the mapped translation from the dictionary above — do NOT invent alternatives
 - Variable names may use natural spacing. CONSISTENCY is mandatory — same variable = identical string everywhere
-- Variable names inside macros ({{getvar::NAME}}) MUST use the dictionary translation
+- EXACT CASING: Copy the variable name CHARACTER-FOR-CHARACTER from the dictionary, including capitalization. "Hảo Cảm" ≠ "hảo cảm". Wrong casing breaks the card.
+- Variable names inside macros ({{getvar::NAME}}) MUST use the dictionary translation with exact casing
 - This ensures consistency across ALL parts of the character card (lorebook, regex, schema, narrative)`;
 }
 

@@ -360,6 +360,8 @@ export const useStore = create<AppState>((set) => ({
     ejsDecoratorPreserve: LS.get('st-translator-ejs-decorator-preserve', true),
     enableChunkVerification: LS.get('st-translator-chunk-verification', false),
     enableTranslationMemory: LS.get('st-translator-tm-enabled', true),
+    mvuScanPasses: LS.get('st-translator-mvu-scan-passes', 1),
+    ejsScanPasses: LS.get('st-translator-ejs-scan-passes', 1),
   },
   setTranslationConfig: (partial) =>
     set((s) => {
@@ -465,6 +467,12 @@ export const useStore = create<AppState>((set) => ({
       }
       if ('skipAlreadyTranslated' in partial) {
         LS.set('st-translator-skip-already-translated', next.skipAlreadyTranslated);
+      }
+      if ('mvuScanPasses' in partial) {
+        LS.set('st-translator-mvu-scan-passes', next.mvuScanPasses);
+      }
+      if ('ejsScanPasses' in partial) {
+        LS.set('st-translator-ejs-scan-passes', next.ejsScanPasses);
       }
       if ('exportKeyMode' in partial) {
         LS.set('st-translator-export-key-mode', next.exportKeyMode);

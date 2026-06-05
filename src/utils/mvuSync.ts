@@ -558,6 +558,186 @@ export function enforceInitvarCovariance(
 }
 
 /**
+ * Enforce variable casing in regex/lorebook/tavern_helper content to match
+ * the MVU Dictionary EXACTLY.
+ *
+ * Problem: AI translates schema variables as Title Case ("Hảo Cảm") but
+ * when translating regex/lorebook content, uses lowercase ("hảo cảm").
+ * This breaks the card because getvar('Hảo Cảm') ≠ 'hảo cảm'.
+ *
+ * Solution: After AI translation, scan for all variable-like references
+ * and replace any that match a dictionary value case-insensitively but
+ * differ in exact casing with the canonical dictionary form.
+ *
+ * @param translatedText The AI-translated regex/lorebook/etc text
+ * @param mvuDictionary The MVU dictionary (original CJK → translated name)
+ * @returns { text: string, fixes: { found: string, replaced: string }[] }
+ */
+export function enforceVariableCasing(
+  translatedText: string,
+  mvuDictionary: Record<string, string>
+): { text: string; fixes: { found: string; replaced: string }[] } {
+  if (!translatedText || typeof translatedText !== 'string') {
+    return { text: translatedText, fixes: [] };
+  }
+
+  const fixes: { found: string; replaced: string }[] = [];
+
+  // Build case-insensitive lookup: lowercased translated value → canonical translated value
+  const canonicalMap = new Map<string, string>();
+  for (const [, trans] of Object.entries(mvuDictionary)) {
+    if (trans && trans.trim()) {
+      const lower = trans.toLowerCase();
+      // If there are multiple entries with same lowercase form, prefer longer one
+      if (!canonicalMap.has(lower) || trans.length > (canonicalMap.get(lower)?.length || 0)) {
+        canonicalMap.set(lower, trans);
+      }
+    }
+  }
+
+  if (canonicalMap.size === 0) {
+    return { text: translatedText, fixes: [] };
+  }
+
+  let result = translatedText;
+
+  const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const safeReplacement = (str: string) => str.replace(/\$/g, '$$$$');
+
+  // Helper: check if a variable name needs casing fix
+  const getCasingFix = (varName: string): string | null => {
+    if (!varName || varName.length < 2) return null;
+    const lower = varName.toLowerCase();
+    const canonical = canonicalMap.get(lower);
+    if (canonical && canonical !== varName) {
+      return canonical;
+    }
+    return null;
+  };
+
+  // ─── Pass 1: Macro variables {{getvar::KEY}} / {{setvar::KEY::}} ───
+  const macroRegex = /(\{\{(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar)::)([^:}]+)(}}|::)/g;
+  let macroMatch;
+  const macroFixes: { from: string; to: string }[] = [];
+  while ((macroMatch = macroRegex.exec(result)) !== null) {
+    const varName = macroMatch[2].trim();
+    const canonical = getCasingFix(varName);
+    if (canonical) {
+      macroFixes.push({ from: varName, to: canonical });
+    }
+  }
+  for (const mf of macroFixes) {
+    const escaped = escapeRegExp(mf.from);
+    const safe = safeReplacement(mf.to);
+    const mfRegex = new RegExp(
+      `(\\{\\{(?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar)::)${escaped}(}}|::)`,
+      'g'
+    );
+    const newText = result.replace(mfRegex, `$1${safe}$2`);
+    if (newText !== result) {
+      result = newText;
+      if (!fixes.some(f => f.found === mf.from)) {
+        fixes.push({ found: mf.from, replaced: mf.to });
+      }
+    }
+  }
+
+  // ─── Pass 2: data-var="KEY" ───
+  const dataVarRegex = /(data-var\s*=\s*["'])([^"']+)(["'])/g;
+  result = result.replace(dataVarRegex, (match, prefix, inner, suffix) => {
+    const canonical = getCasingFix(inner);
+    if (canonical) {
+      if (!fixes.some(f => f.found === inner)) {
+        fixes.push({ found: inner, replaced: canonical });
+      }
+      return `${prefix}${canonical}${suffix}`;
+    }
+    return match;
+  });
+
+  // ─── Pass 3: Bracket access obj['KEY'] / data["KEY"] ───
+  const bracketRegex = /(\[\s*['"])([^'"]+)(['"]\s*\])/g;
+  result = result.replace(bracketRegex, (match, prefix, inner, suffix) => {
+    const canonical = getCasingFix(inner);
+    if (canonical) {
+      if (!fixes.some(f => f.found === inner)) {
+        fixes.push({ found: inner, replaced: canonical });
+      }
+      return `${prefix}${canonical}${suffix}`;
+    }
+    return match;
+  });
+
+  // ─── Pass 4: EJS function calls getvar('KEY') / setvar('KEY', ...) ───
+  const ejsRegex = /((?:getvar|setvar|addvar|getglobalvar|setglobalvar|addglobalvar|getVariable|setVariable)\s*\(\s*['"])([^'"]+)(['"])/g;
+  result = result.replace(ejsRegex, (match, prefix, inner, suffix) => {
+    if (!inner) return match;
+    const segments = inner.split('.');
+    let changed = false;
+    const newSegments = segments.map((seg: string) => {
+      const canonical = getCasingFix(seg);
+      if (canonical) {
+        changed = true;
+        if (!fixes.some(f => f.found === seg)) {
+          fixes.push({ found: seg, replaced: canonical });
+        }
+        return canonical;
+      }
+      return seg;
+    });
+    return changed ? `${prefix}${newSegments.join('.')}${suffix}` : match;
+  });
+
+  // ─── Pass 5: String comparisons === 'KEY' / !== "KEY" / case 'KEY' ───
+  const compRegex = /((?:===|!==|==|!=|case)\s*['"])([^'"]+)(['"])/g;
+  result = result.replace(compRegex, (match, prefix, inner, suffix) => {
+    const canonical = getCasingFix(inner);
+    if (canonical) {
+      if (!fixes.some(f => f.found === inner)) {
+        fixes.push({ found: inner, replaced: canonical });
+      }
+      return `${prefix}${canonical}${suffix}`;
+    }
+    return match;
+  });
+
+  // ─── Pass 6: YAML keys (start of line) ───
+  const yamlKeyRegex = /^(\s*)(["']?)([^"':\s\n][^"':\n]*[^"':\s\n]|[^"':\s\n])(["']?)(\s*:)/gm;
+  result = result.replace(yamlKeyRegex, (match, indent, q1, key, q2, colon) => {
+    const canonical = getCasingFix(key.trim());
+    if (canonical) {
+      if (!fixes.some(f => f.found === key.trim())) {
+        fixes.push({ found: key.trim(), replaced: canonical });
+      }
+      return `${indent}${q1}${canonical}${q2}${colon}`;
+    }
+    return match;
+  });
+
+  // ─── Pass 7: Lodash paths _.get(data, 'KEY') ───
+  const lodashRegex = /(_\.(?:get|set|has|result|pick|omit)\s*\([^,]+,\s*['"])([^'"]+)(['"])/g;
+  result = result.replace(lodashRegex, (match, prefix, inner, suffix) => {
+    if (!inner) return match;
+    const segments = inner.split('.');
+    let changed = false;
+    const newSegments = segments.map((seg: string) => {
+      const canonical = getCasingFix(seg);
+      if (canonical) {
+        changed = true;
+        if (!fixes.some(f => f.found === seg)) {
+          fixes.push({ found: seg, replaced: canonical });
+        }
+        return canonical;
+      }
+      return seg;
+    });
+    return changed ? `${prefix}${newSegments.join('.')}${suffix}` : match;
+  });
+
+  return { text: result, fixes };
+}
+
+/**
  * Find the closest matching dictionary value for a potentially mismatched YAML key.
  * Uses 3-pass matching strategy:
  * Pass 1: Normalized exact match (case, whitespace, underscore insensitive)

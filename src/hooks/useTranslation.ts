@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 import { useStore } from '../store';
 import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError } from '../utils/apiClient';
 import { extractTranslatableFields, applyTranslationsToCard, autoTranslateLorebookTriggerKeys, injectNewLorebookEntries } from '../utils/cardFields';
-import { syncMvuVariables, postProcessRegexHtml, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency } from '../utils/mvuSync';
+import { syncMvuVariables, postProcessRegexHtml, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency, enforceVariableCasing } from '../utils/mvuSync';
 import { shouldSkipTranslation, detectLanguage } from '../utils/langDetect';
 import { clearRAGCache } from '../utils/ragContext';
 import { storeTranslation, lookupTranslationMemory } from '../utils/translationMemory';
@@ -447,6 +447,18 @@ export function useTranslation() {
         }
       }
 
+      // ─── CASING FIX: Enforce variable casing for regex/lorebook/tavern_helper ───
+      // AI often uses lowercase for variable names in regex/lorebook content even though
+      // the schema uses Title Case. This post-processing step fixes the casing.
+      if (hasMvuDict && translated && (field.group === 'regex' || field.group === 'lorebook' || field.group === 'tavern_helper')) {
+        const casingResult = enforceVariableCasing(translated, currentMvuDict);
+        if (casingResult.fixes.length > 0) {
+          translated = casingResult.text;
+          const fixSummary = casingResult.fixes.map(f => `"${f.found}"→"${f.replaced}"`).join(', ');
+          store.addLog('info', `🔠 Casing: fixed ${casingResult.fixes.length} variable(s) in ${field.label}: ${fixSummary}`);
+        }
+      }
+
       // Post-process regex HTML: font swap + underscore display
       const isRegexContent = field.group === 'regex' && (field.path.includes('replaceString') || field.path.includes('trimStrings'));
       if (isRegexContent && translated) {
@@ -729,12 +741,12 @@ export function useTranslation() {
           const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf]/g;
           const cjkMatches = translated.match(cjkRegex);
           const residualCount = cjkMatches ? cjkMatches.length : 0;
-          const isSchemaCritical = f.entryType === 'initvar' || f.entryType === 'controller' || f.entryType === 'mvu_logic' || f.group === 'tavern_helper';
 
-          // Schema-critical: ZERO tolerance (any CJK = retry individually)
-          // Non-schema: high residual threshold (>5 CJK chars = retry individually)
-          const threshold = isSchemaCritical ? 0 : 5;
-          if (residualCount > threshold) {
+          // ZERO TOLERANCE: Any CJK remaining = retry individually
+          // Previously non-schema fields allowed up to 5 CJK chars — this caused
+          // scattered Chinese characters like "nhân际" in final output.
+          if (residualCount > 0) {
+            const isSchemaCritical = f.entryType === 'initvar' || f.entryType === 'controller' || f.entryType === 'mvu_logic' || f.group === 'tavern_helper';
             const typeLabel = isSchemaCritical ? 'Schema' : 'Content';
             store.addLog('warning', `⚠️ ${residualCount} Chinese chars in ${typeLabel} batch (${f.label}). Will retry individually.`);
             emptyFields.push(f);
@@ -798,6 +810,17 @@ export function useTranslation() {
             store.addLog('warning', `${batchFields[j].label}: ${w}`);
           }
         }
+
+          // ─── CASING FIX (batch): Enforce variable casing for regex/lorebook/tavern_helper ───
+          if (hasMvuDict && (batchFields[j].group === 'regex' || batchFields[j].group === 'lorebook' || batchFields[j].group === 'tavern_helper')) {
+            const casingResult = enforceVariableCasing(translated, mvuDict);
+            if (casingResult.fixes.length > 0) {
+              translated = casingResult.text;
+              autoFixCount += casingResult.fixes.length;
+              const fixSummary = casingResult.fixes.map(f => `"${f.found}"→"${f.replaced}"`).join(', ');
+              store.addLog('info', `🔠 Casing: fixed ${casingResult.fixes.length} var(s) in ${batchFields[j].label}: ${fixSummary}`);
+            }
+          }
 
         // Post-process regex HTML
         const isRegexField = batchFields[j].group === 'regex' && (batchFields[j].path.includes('replaceString') || batchFields[j].path.includes('trimStrings'));
@@ -1139,12 +1162,26 @@ export function useTranslation() {
               store.addLog('success', logParts.join(''));
             }
             
-            // 2. Filter out keys already in dictionary
-            const newKeys = extractedKeys.filter(k => !(k in existingDict));
+            // 2. Multi-pass scan: filter and translate new keys
+            const totalMvuPasses = Math.max(1, Math.min(5, store.translationConfig.mvuScanPasses || 1));
+            for (let mvuPass = 0; mvuPass < totalMvuPasses; mvuPass++) {
+              // Re-read dictionary each pass (accumulated from previous passes)
+              existingDict = useStore.getState().translationConfig.mvuDictionary;
+              const newKeys = extractedKeys.filter(k => !(k in existingDict));
             
-            store.addLog('info', `Found ${extractedKeys.length} variables (${newKeys.length} new, ${extractedKeys.length - newKeys.length} already mapped)`);
-            
-            if (newKeys.length > 0) {
+              if (totalMvuPasses > 1) {
+                store.addLog('info', `🔧 Strategy B Pass ${mvuPass + 1}/${totalMvuPasses}: Found ${extractedKeys.length} variables (${newKeys.length} new, ${extractedKeys.length - newKeys.length} already mapped)`);
+              } else {
+                store.addLog('info', `Found ${extractedKeys.length} variables (${newKeys.length} new, ${extractedKeys.length - newKeys.length} already mapped)`);
+              }
+
+              if (newKeys.length === 0) {
+                if (totalMvuPasses > 1 && mvuPass > 0) {
+                  store.addLog('success', `🔧 Strategy B: All variables mapped after ${mvuPass} pass(es) — no new keys to translate`);
+                }
+                break;
+              }
+
               store.addLog('active', `🤖 Calling AI to translate ${newKeys.length} variable names...`);
               
               // Use translated TavernHelper scripts as context
@@ -1156,9 +1193,9 @@ export function useTranslation() {
                   .join('\n\n');
                 if (allTranslatedSchemas.trim()) {
                   schemaContext = allTranslatedSchemas;
-                  store.addLog('info', '📋 Used translated TavernHelper scripts as context for variable translation');
+                  if (mvuPass === 0) store.addLog('info', '📋 Used translated TavernHelper scripts as context for variable translation');
                 } else {
-                  schemaContext = extractSchemaContextFromCard(store.card);
+                  schemaContext = extractSchemaContextFromCard(store.card!);
                 }
               }
 
@@ -1215,6 +1252,7 @@ export function useTranslation() {
                 store.addLog('success', `✅ Auto-added ${addedCount} variable translations to MVU Dictionary`);
               } else {
                 store.addLog('info', 'All variables are already ASCII or mapped — no AI translation needed');
+                break; // No point continuing passes if AI returned nothing new
               }
             }
           } else {
@@ -1238,28 +1276,42 @@ export function useTranslation() {
         try {
           store.addLog('info', '🔮 Strategy C: Scanning EJS entry names & keywords...');
 
-          // Extract getwi() entry name references
+          // Extract getwi()/activewi() entry name references
           const ejsEntryRefs = extractEjsEntryNames(store.card);
           // Extract keyword/alias references
           const ejsKeywords = extractEjsKeywords(store.card);
 
-          const existingEntryDict = store.translationConfig.ejsEntryNameDict;
-          const existingKwDict = store.translationConfig.ejsKeywordDict;
+          // Multi-pass scan: filter and translate new items
+          const totalEjsPasses = Math.max(1, Math.min(5, store.translationConfig.ejsScanPasses || 1));
+          for (let ejsPass = 0; ejsPass < totalEjsPasses; ejsPass++) {
+            // Re-read dictionaries each pass (accumulated from previous passes)
+            const existingEntryDict = useStore.getState().translationConfig.ejsEntryNameDict;
+            const existingKwDict = useStore.getState().translationConfig.ejsKeywordDict;
 
-          const newEntryNames = ejsEntryRefs
-            .map(r => r.name)
-            .filter(n => !(n in existingEntryDict));
-          const newKeywords = ejsKeywords
-            .map(k => k.keyword)
-            .filter(k => !(k in existingKwDict));
+            const newEntryNames = ejsEntryRefs
+              .map(r => r.name)
+              .filter(n => !(n in existingEntryDict));
+            const newKeywords = ejsKeywords
+              .map(k => k.keyword)
+              .filter(k => !(k in existingKwDict));
 
-          store.addLog('info', `Found ${ejsEntryRefs.length} entry refs (${newEntryNames.length} new), ${ejsKeywords.length} keywords (${newKeywords.length} new)`);
+            if (totalEjsPasses > 1) {
+              store.addLog('info', `🔮 Strategy C Pass ${ejsPass + 1}/${totalEjsPasses}: Found ${ejsEntryRefs.length} entry refs (${newEntryNames.length} new), ${ejsKeywords.length} keywords (${newKeywords.length} new)`);
+            } else {
+              store.addLog('info', `Found ${ejsEntryRefs.length} entry refs (${newEntryNames.length} new), ${ejsKeywords.length} keywords (${newKeywords.length} new)`);
+            }
 
-          if (newEntryNames.length > 0 || newKeywords.length > 0) {
+            if (newEntryNames.length === 0 && newKeywords.length === 0) {
+              if (totalEjsPasses > 1 && ejsPass > 0) {
+                store.addLog('success', `🔮 Strategy C: All EJS items mapped after ${ejsPass} pass(es)`);
+              }
+              break;
+            }
+
             store.addLog('active', `🤖 Calling AI to translate ${newEntryNames.length} entry names + ${newKeywords.length} keywords...`);
 
             // Build EJS context from card
-            const ejsContext = (store.card.data?.character_book?.entries || [])
+            const ejsContext = (store.card!.data?.character_book?.entries || [])
               .filter((e: any) => e.content && /<%[\s\S]*?%>/.test(e.content))
               .map((e: any) => e.content)
               .join('\n\n')
@@ -1285,6 +1337,7 @@ export function useTranslation() {
               store.addLog('success', `✅ Strategy C: Added ${addedEntries} entry name translations + ${addedKw} keyword translations`);
             } else {
               store.addLog('info', 'All EJS items already mapped or no CJK content to translate');
+              break; // No point continuing passes if AI returned nothing new
             }
           }
 

@@ -695,6 +695,38 @@ export default function MvuSyncPanel() {
             </span>
           </div>
 
+          {/* MVU Scan Passes Control */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '12px',
+            fontSize: '0.75rem',
+          }}>
+            <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+              {isVi ? '🔄 Số lần quét biến:' : '🔄 Scan passes:'}
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={5}
+              value={translationConfig.mvuScanPasses || 1}
+              onChange={(e) => setTranslationConfig({ mvuScanPasses: Math.max(1, Math.min(5, parseInt(e.target.value) || 1)) })}
+              style={{
+                width: '48px',
+                padding: '3px 6px',
+                fontSize: '0.75rem',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                textAlign: 'center',
+              }}
+            />
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>
+              {isVi ? '(1-5, mỗi pass chỉ dịch biến mới)' : '(1-5, each pass translates new vars only)'}
+            </span>
+          </div>
+
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
             <button className="btn btn-secondary" onClick={autoExtract} style={{ flex: 1, padding: '6px', fontSize: '0.75rem', minWidth: '100px' }}>
               <Wand2 size={14} />
