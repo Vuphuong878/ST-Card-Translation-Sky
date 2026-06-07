@@ -1051,6 +1051,61 @@ export default function TranslateConfig() {
             </div>
             )}
 
+            {/* ═══ CSS CJK Protection — Xử lý ký tự Hán trong CSS ═══ */}
+            {!isModMode && (
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
+              <label className="label" style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                🛡️ {locale === 'vi' ? 'Bảo vệ CSS khỏi CJK' : 'CSS CJK Protection'}
+              </label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  onClick={() => setTranslationConfig({ cssCjkHandling: 'preserve' })}
+                  style={{
+                    flex: 1, padding: '6px 10px', fontSize: '0.72rem', fontWeight: 600,
+                    border: translationConfig.cssCjkHandling === 'preserve' ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: translationConfig.cssCjkHandling === 'preserve' ? 'rgba(124,106,240,0.12)' : 'transparent',
+                    color: translationConfig.cssCjkHandling === 'preserve' ? 'var(--accent-primary)' : 'var(--text-muted)',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  {locale === 'vi' ? '🔒 Giữ nguyên (Preserve)' : '🔒 Preserve'}
+                </button>
+                <button
+                  onClick={() => setTranslationConfig({ cssCjkHandling: 'strip' })}
+                  style={{
+                    flex: 1, padding: '6px 10px', fontSize: '0.72rem', fontWeight: 600,
+                    border: translationConfig.cssCjkHandling === 'strip' ? '1px solid var(--accent-danger)' : '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: translationConfig.cssCjkHandling === 'strip' ? 'rgba(239,68,68,0.12)' : 'transparent',
+                    color: translationConfig.cssCjkHandling === 'strip' ? 'var(--accent-danger)' : 'var(--text-muted)',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  {locale === 'vi' ? '🗑️ Xóa bỏ (Strip)' : '🗑️ Strip'}
+                </button>
+                <button
+                  onClick={() => setTranslationConfig({ cssCjkHandling: 'ask' })}
+                  style={{
+                    flex: 1, padding: '6px 10px', fontSize: '0.72rem', fontWeight: 600,
+                    border: translationConfig.cssCjkHandling === 'ask' ? '1px solid var(--accent-warning, #f59e0b)' : '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: translationConfig.cssCjkHandling === 'ask' ? 'rgba(245,158,11,0.12)' : 'transparent',
+                    color: translationConfig.cssCjkHandling === 'ask' ? 'var(--accent-warning, #f59e0b)' : 'var(--text-muted)',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  {locale === 'vi' ? '❓ Hỏi (Ask)' : '❓ Ask'}
+                </button>
+              </div>
+              <div style={{ fontSize: '0.63rem', color: 'var(--text-muted)', marginTop: '5px', lineHeight: '1.4' }}>
+                {locale === 'vi'
+                  ? 'Xử lý ký tự Hán/CJK đơn lẻ trong CSS values (VD: drop-shadow(商 10px ...)). "Giữ nguyên" = giữ lại, "Xóa bỏ" = loại bỏ, "Hỏi" = hiển thị hộp thoại xác nhận khi phát hiện.'
+                  : 'How to handle lone CJK chars inside CSS values (e.g. drop-shadow(商 10px ...)). "Preserve" = keep as-is, "Strip" = remove, "Ask" = show confirm dialog when found.'}
+              </div>
+            </div>
+            )}
+
             {/* ═══ Mod Mode settings are now at the top of the section ═══ */}
 
             {/* MVU Sync Panel (Chiến Lược B) */}

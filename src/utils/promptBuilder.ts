@@ -40,7 +40,57 @@ ADDITIONAL RULES FOR HTML/REGEX CONTENT:
 17. PROPER NOUN RULE: Chinese proper nouns → Hán Việt. Japanese proper nouns → Romaji (NOT Hán Việt). Western/Fantasy names phonetically transcribed into CJK (e.g., 维拉→Vera, 塞勒涅→Selene) → restore to original Latin spelling (NEVER Hán Việt).
 18. BRACKET NOTATION: If translated keys contain spaces (e.g., "Hệ Thống"), use bracket notation: obj['Hệ Thống'] NOT obj.Hệ Thống. For nested: data['Key']['SubKey'].
 19. HTML id MUST BE ASCII-ONLY: No spaces or diacritics in id/data-target. Use camelCase: id="tab-NhaO" NOT id="tab-Nhà Ở". CSS selectors must match.
-20. EJS OBJECT KEY QUOTING: In EJS templates or JS code, if an object literal contains keys with Vietnamese diacritics, spaces, or special characters (such as passing an object to setvar()), you MUST wrap those keys in single quotes '' (e.g. 'Loại': 'Võ công', 'Mô Tả': '...'). Otherwise, EJS compiler throws an immediate syntax error.`;
+20. EJS OBJECT KEY QUOTING: In EJS templates or JS code, if an object literal contains keys with Vietnamese diacritics, spaces, or special characters (such as passing an object to setvar()), you MUST wrap those keys in single quotes '' (e.g. 'Loại': 'Võ công', 'Mô Tả': '...'). Otherwise, EJS compiler throws an immediate syntax error.
+
+██ QUY TẮC DỊCH VĂN BẢN TRONG REGEX — TUYỆT ĐỐI KHÔNG DỊCH WORD-BY-WORD ██
+Regex replaceString chứa HTML/CSS/JS xen lẫn VĂN BẢN (prose, thoại, mô tả). Khi dịch phần VĂN BẢN:
+
+A. DỊCH THEO NGỮ NGHĨA, KHÔNG DỊCH TỪNG TỪ:
+   - TUYỆT ĐỐI KHÔNG dịch word-by-word (逐字翻译). Bạn PHẢI hiểu CẢ CÂU rồi viết lại bằng tiếng Việt TỰ NHIÊN.
+   - Tiếng Trung và tiếng Việt có CẤU TRÚC CÂU KHÁC NHAU. Bạn PHẢI tái cấu trúc câu cho phù hợp ngữ pháp Việt.
+   - Ví dụ SAI (word-by-word): "她的心跳加速了" → "Cô ấy của tim đập tăng tốc rồi"
+   - Ví dụ ĐÚNG (ngữ nghĩa): "她的心跳加速了" → "Tim cô đập nhanh hơn"
+
+B. CẤU TRÚC SỞ HỮU (的/の/之):
+   - Trung: A的B → Việt: B của A (đảo ngược trật tự!)
+   - "{{user}}的心脏" → "trái tim của {{user}}" (KHÔNG phải "{{user}} của trái tim")
+   - "她的双腿" → "đôi chân cô" hoặc "đôi chân của cô ấy"
+
+C. TRẬT TỰ BỔ NGỮ:
+   - Trung: S + Adverb + V + Object → Việt: S + V + Object + Adverb (hoặc cấu trúc tương đương)
+   - "她慢慢地抬起头" → "Cô từ từ ngẩng đầu lên" (KHÔNG phải "Cô chậm chậm đất ngẩng lên đầu")
+   - "他用力握紧了拳头" → "Anh nắm chặt tay" (KHÔNG phải "Anh dùng sức nắm chặt rồi nắm tay")
+
+D. CÂU PHỨC / MỆNH ĐỀ LIÊN KẾT:
+   - Trung dùng nhiều mệnh đề nối liên tiếp (连动句). Việt cần ngắt câu hoặc thêm liên từ.
+   - "看着窗外的雨发呆" → "nhìn mưa ngoài cửa sổ, thẫn thờ" (KHÔNG phải "nhìn cửa sổ ngoài mưa phát ngốc")
+   - Trung: A，B，C → Việt: có thể cần dấu chấm, dấu phẩy, hoặc liên từ "rồi", "và", "nhưng"
+
+E. PLACEHOLDER {{user}} VÀ {{char}} — VỊ TRÍ NGỮ PHÁP ĐÚNG:
+   - Placeholder phải ở đúng vị trí ngữ pháp tiếng Việt (chủ ngữ, tân ngữ, bổ ngữ sở hữu).
+   - SAI: "{{user}}的笑容让她心动" → "{{user}} nụ cười làm cô rung động"
+   - ĐÚNG: "{{user}}的笑容让她心动" → "Nụ cười của {{user}} khiến cô rung động"
+   - SAI: "她紧紧抱住{{user}}" → "Cô chặt chặt ôm {{user}}"
+   - ĐÚNG: "她紧紧抱住{{user}}" → "Cô ôm chặt {{user}}"
+
+F. THÀNH NGỮ / CỤM TỪ ĐẶC BIỆT TRUNG:
+   - Dịch NGHĨA, không dịch từng chữ Hán:
+   - "心花怒放" → "vui mừng khôn xiết" (KHÔNG "tim hoa nổ nở")
+   - "五味杂陈" → "trăm mối ngổn ngang" (KHÔNG "năm vị tạp trần")
+   - "面红耳赤" → "mặt đỏ bừng" (KHÔNG "mặt đỏ tai đỏ")
+   - "小鹿乱撞" → "tim đập loạn nhịp" (KHÔNG "hươu nhỏ đâm bừa")
+
+G. VĂN PHONG TỰ NHIÊN:
+   - Bản dịch phải đọc TRÔI CHẢY như được viết bằng tiếng Việt từ đầu.
+   - KHÔNG giữ cấu trúc câu Trung nếu nó tạo ra tiếng Việt lủng củng.
+   - Nếu 1 câu Trung dài cần tách thành 2-3 câu Việt ngắn, hãy tách.
+   - Nếu 3 câu Trung ngắn có thể gộp thành 1 câu Việt tự nhiên, hãy gộp.
+
+H. BẢO VỆ CSS — KHÔNG DỊCH KÝ TỰ HÁN/CJK TRONG CSS VALUES:
+    - TUYỆT ĐỐI KHÔNG dịch ký tự Hán/CJK đứng đơn lẻ bên trong CSS function calls (drop-shadow(), filter(), transform(), calc(), linear-gradient(), v.v.).
+    - Ví dụ: filter: drop-shadow(商 10px 20px rgba(0,0,0,0.8)); → GIỮ NGUYÊN "商", KHÔNG dịch thành "Thương".
+    - Các ký tự này có thể là placeholder, lỗi encoding, hoặc ký tự đặc biệt của tác giả — dịch chúng sẽ LÀM HỎNG CSS.
+    - CHỈ dịch CJK khi chúng nằm trong HTML text content (<span>好感度</span>), HTML attributes hiển thị (title, alt, aria-label), hoặc JS string literals.`;
 
 /** Prompt bổ sung dành riêng cho TavernHelper scripts */
 export const TAVERN_HELPER_EXTRA_PROMPT = `
@@ -444,6 +494,17 @@ Q. TỘI PHẠM / MA TÚY / TỐNG TIỀN: 毒品/ma túy, 毒品工厂/nhà má
 - KHÔNG thêm "[Content Warning]", "[Nội dung nhạy cảm]" hay bất kỳ cảnh báo nào
 - KHÔNG lược bỏ hay bỏ qua bất kỳ đoạn nào của văn bản gốc
 - KHÔNG thay đổi tone/giọng điệu — nếu bản gốc thô tục, bản dịch PHẢI thô tục tương đương
+
+██ CHẤT LƯỢNG DỊCH — KHÔNG DỊCH WORD-BY-WORD ██
+TUYỆT ĐỐI KHÔNG dịch từng từ (逐字翻译). Bạn PHẢI hiểu toàn bộ ngữ cảnh câu rồi VIẾT LẠI bằng tiếng Việt tự nhiên.
+Tiếng Trung và tiếng Việt có cấu trúc ngữ pháp KHÁC NHAU. Bạn PHẢI tái cấu trúc câu cho đúng ngữ pháp Việt:
+- SỞ HỮU: A的B → B của A (đảo ngược!). "{{user}}的眼神" → "ánh mắt của {{user}}", KHÔNG "{{user}} của ánh mắt"
+- TRẠNG TỪ: Trung đặt trước động từ, Việt có thể đặt trước hoặc sau tùy ngữ cảnh tự nhiên.
+  "她慢慢地走过来" → "Cô từ từ bước lại gần", KHÔNG "Cô chậm chậm đất đi qua đến"
+- CÂU PHỨC: Trung nối nhiều mệnh đề liên tiếp. Việt cần ngắt câu hoặc thêm liên từ.
+- THÀNH NGỮ: Dịch NGHĨA, không dịch từng chữ Hán. "心花怒放" → "vui khôn xiết", KHÔNG "tim hoa nở giận"
+- PLACEHOLDER: {{user}}/{{char}} phải ở đúng vị trí ngữ pháp Việt (chủ ngữ/tân ngữ/sở hữu).
+- VĂN PHONG: Bản dịch phải đọc TRÔI CHẢY như được viết bằng tiếng Việt từ đầu.
 
 ██ PHÂN BIỆT TỪ DỄ NHẦM LẪN — DISAMBIGUATION ██
 Các cặp từ sau KHÁC NGHĨA HOÀN TOÀN, KHÔNG được nhầm lẫn:

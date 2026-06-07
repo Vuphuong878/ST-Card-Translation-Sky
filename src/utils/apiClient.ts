@@ -1778,7 +1778,7 @@ export function recoverTruncatedTail(original: string, translation: string): str
   const resultWouldBe = translation.length + tail.length;
   const sizeRatio = resultWouldBe / Math.max(1, original.length);
   
-  if (tailRatio > 0.30) {
+  if (tailRatio > 0.50) {
     console.warn(`[recoverTruncatedTail] SKIPPED: tail is ${(tailRatio * 100).toFixed(0)}% of original (${tail.length}/${original.length} chars) — likely false positive truncation detection`);
     return translation;
   }
@@ -1933,6 +1933,16 @@ export function detectStructuralTruncation(original: string, translation: string
       if (/[\}\]\)>'"`]/.test(lastCharOrig) && /\w/.test(lastCharTrans)) {
         return { isTruncated: true, reason: `Ends with word character "${lastCharTrans}" but original ends with closing structural character "${lastCharOrig}"` };
       }
+    }
+  }
+  // CSS-specific truncation detection: property declaration cut mid-value
+  // Pattern: CSS property with value that doesn't end properly (e.g. `transform: scale(0.` without closing `)` and `}`)
+  if (translation.length > 100) {
+    const lastCssBlock = trimmedTrans.slice(-200);
+    // Check for CSS property cut mid-value: ends with partial number, partial function, or hanging colon
+    const cssTrailingCut = /[a-z-]+\s*:\s*[^;{}]*(?:\d+\.\.?|[a-z]+\((?:[^)]*$))$/i.test(lastCssBlock);
+    if (cssTrailingCut && !trimmedOrig.endsWith(lastCssBlock.slice(-50))) {
+      return { isTruncated: true, reason: 'CSS property declaration cut mid-value (incomplete number or unclosed function)' };
     }
   }
 
@@ -2625,6 +2635,77 @@ function unmaskUrls(text: string, map: UrlMaskMap): string {
   return unmaskedText;
 }
 
+// ─── CSS CJK Value Masking ───
+// Protects CJK characters inside CSS property values from being translated.
+// Prevents bugs like: `drop-shadow(商 10px)` → `drop-shadow(Thương 10px)`
+interface CssCjkMaskMap {
+  [placeholder: string]: string;
+}
+
+function maskCssCjkValues(text: string, mode: 'preserve' | 'strip' | 'ask' = 'preserve'): { maskedText: string; map: CssCjkMaskMap; mode: 'preserve' | 'strip' | 'ask' } {
+  const map: CssCjkMaskMap = {};
+  let maskedText = text;
+  let counter = 0;
+
+  // Pattern: find CSS property declarations containing CJK characters
+  // Matches content between { } in CSS-like contexts
+  // We specifically target CSS function calls that contain CJK: drop-shadow(商 ...), filter(...), etc.
+  const cssFuncWithCjk = /([a-zA-Z-]+\s*\(\s*)([\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af]+)(\s+[^)]*\))/g;
+  
+  maskedText = maskedText.replace(cssFuncWithCjk, (_match, prefix, cjk, suffix) => {
+    // Both modes: mask CJK so AI doesn't translate it
+    // Difference is in unmask: preserve → restore, strip → remove
+    const placeholder = `__CSS_CJK_${counter++}__`;
+    map[placeholder] = cjk;
+    return `${prefix}${placeholder}${suffix}`;
+  });
+
+  // Also mask CJK inside CSS string values: content: "商品"; font-family: '微软雅黑';
+  // These CJK are legitimate CSS values and should NOT be translated
+  const cssStringPropWithCjk = /((?:content|font-family|quotes)\s*:\s*)(['"])((?:[^'"]*[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af][^'"]*)+)\2/gi;
+  maskedText = maskedText.replace(cssStringPropWithCjk, (_match, prop, quote, value) => {
+    const placeholder = `__CSS_CJK_${counter++}__`;
+    map[placeholder] = value;
+    return `${prop}${quote}${placeholder}${quote}`;
+  });
+
+  return { maskedText, map, mode };
+}
+
+function unmaskCssCjkValues(text: string, map: CssCjkMaskMap, mode: 'preserve' | 'strip' | 'ask' = 'preserve'): string {
+  let unmasked = text;
+  const userChoices: { [val: string]: 'preserve' | 'strip' } = {};
+
+  for (const [placeholder, value] of Object.entries(map)) {
+    let resolvedMode = mode;
+    if (mode === 'ask') {
+      if (userChoices[value] !== undefined) {
+        resolvedMode = userChoices[value];
+      } else if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+        const preserve = window.confirm(
+          `[ST Card Translator]\n\n` +
+          `Phát hiện ký tự CJK "${value}" trong CSS.\n` +
+          `Bạn có muốn GIỮ LẠI (Preserve) ký tự này không?\n\n` +
+          `- OK: Giữ lại (Preserve)\n` +
+          `- Cancel: Xóa bỏ (Strip)\n\n` +
+          `-----------------------------------\n\n` +
+          `Detected CJK character "${value}" inside CSS.\n` +
+          `Do you want to PRESERVE it?\n\n` +
+          `- OK: Preserve\n` +
+          `- Cancel: Strip`
+        );
+        resolvedMode = preserve ? 'preserve' : 'strip';
+        userChoices[value] = resolvedMode;
+      } else {
+        resolvedMode = 'preserve';
+      }
+    }
+    // preserve: restore original CJK char | strip: remove it (replace with empty)
+    unmasked = unmasked.split(placeholder).join(resolvedMode === 'strip' ? '' : value);
+  }
+  return unmasked;
+}
+
 // ─── Code Block Masking Utilities ───
 interface CodeBlockMaskMap {
   [placeholder: string]: string;
@@ -2637,51 +2718,50 @@ async function maskCodeBlocks(
   sourceLang: string,
   signal?: AbortSignal,
   glossary?: GlossaryEntry[],
-  mvuDictionary?: Record<string, string>
+  mvuDictionary?: Record<string, string>,
+  cssCjkHandling?: 'preserve' | 'strip' | 'ask'
 ): Promise<{ maskedText: string; map: CodeBlockMaskMap }> {
   const map: CodeBlockMaskMap = {};
   let maskedText = text;
   let counter = 0;
 
-  // Pattern to find <script>...</script> blocks
-  const scriptRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
-  // Pattern to find <style>...</style> blocks
-  const styleRegex = /<style\b([^>]*)>([\s\S]*?)<\/style>/gi;
-
   interface CodeBlockMatch {
-    fullMatch: string;
-    attrs: string;
     content: string;
-    type: 'script' | 'style';
+    type: 'script' | 'style' | 'inline-style';
     placeholder: string;
+    quote?: string;
   }
   
   const matches: CodeBlockMatch[] = [];
   
   // Find script blocks
-  let match;
-  while ((match = scriptRegex.exec(maskedText)) !== null) {
-    const fullMatch = match[0];
-    const attrs = match[1];
-    const content = match[2];
-    if (content.trim()) {
-      const placeholder = `__PROTECTED_SCRIPT_${counter++}__`;
-      matches.push({ fullMatch, attrs, content, type: 'script', placeholder });
-    }
-  }
+  const scriptRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  maskedText = maskedText.replace(scriptRegex, (fullMatch, attrs, content) => {
+    if (!content.trim()) return fullMatch;
+    const placeholder = `__PROTECTED_SCRIPT_${counter++}__`;
+    matches.push({ content, type: 'script', placeholder });
+    return `<script${attrs}>${placeholder}</script>`;
+  });
   
   // Find style blocks
-  while ((match = styleRegex.exec(maskedText)) !== null) {
-    const fullMatch = match[0];
-    const attrs = match[1];
-    const content = match[2];
-    if (content.trim()) {
-      const placeholder = `__PROTECTED_STYLE_${counter++}__`;
-      matches.push({ fullMatch, attrs, content, type: 'style', placeholder });
-    }
-  }
+  const styleRegex = /<style\b([^>]*)>([\s\S]*?)<\/style>/gi;
+  maskedText = maskedText.replace(styleRegex, (fullMatch, attrs, content) => {
+    if (!content.trim()) return fullMatch;
+    const placeholder = `__PROTECTED_STYLE_${counter++}__`;
+    matches.push({ content, type: 'style', placeholder });
+    return `<style${attrs}>${placeholder}</style>`;
+  });
 
-  // Surgically translate the CJK contents of script/style blocks
+  // Find inline style attributes in HTML tags
+  const inlineStyleRegex = /\bstyle=(["'])((?:(?!\1)[\s\S])*)\1/gi;
+  maskedText = maskedText.replace(inlineStyleRegex, (fullMatch, quote, content) => {
+    if (!content.trim()) return fullMatch;
+    const placeholder = `__PROTECTED_INLINE_STYLE_${counter++}__`;
+    matches.push({ content, type: 'inline-style', placeholder, quote });
+    return `style=${quote}${placeholder}${quote}`;
+  });
+
+  // Surgically translate the CJK contents of script/style/inline-style blocks
   for (const m of matches) {
     let translatedContent = m.content;
     
@@ -2820,14 +2900,13 @@ Do NOT output any conversational text or markdown blocks. Do NOT skip items.${gl
       console.warn(`[maskCodeBlocks] Failed to surgically translate ${m.type} block:`, err);
     }
     
-    map[m.placeholder] = translatedContent;
-    
-    // Replace in maskedText safely using indexOf
-    const idx = maskedText.indexOf(m.fullMatch);
-    if (idx !== -1) {
-      const replacement = `<${m.type}${m.attrs}>${m.placeholder}</${m.type}>`;
-      maskedText = maskedText.slice(0, idx) + replacement + maskedText.slice(idx + m.fullMatch.length);
+    // ─── Post-processing for CSS CJK values (style & inline-style) ───
+    if (m.type === 'style' || m.type === 'inline-style') {
+      const { maskedText: tempMasked, map: tempMap } = maskCssCjkValues(translatedContent, cssCjkHandling || 'preserve');
+      translatedContent = unmaskCssCjkValues(tempMasked, tempMap, cssCjkHandling || 'preserve');
     }
+
+    map[m.placeholder] = translatedContent;
   }
 
   return { maskedText, map };
@@ -2869,10 +2948,12 @@ export async function translateText(
   enableChunkVerification?: boolean,
   /** Callback fired when chunks are determined and unmasked */
   onChunksReady?: (rawChunks: string[]) => void,
+  /** CSS CJK handling mode: 'preserve' keeps CJK in CSS as-is, 'strip' removes them, 'ask' prompts user */
+  cssCjkHandling?: 'preserve' | 'strip' | 'ask',
 ): Promise<string> {
   if (!text || text.trim() === '') return '';
 
-  // 0. Mask code blocks (<script>, <style>) before translation
+  // 0. Mask code blocks (<script>, <style>, inline styles) before translation
   const { maskedText: codeMasked, map: codeMap } = await maskCodeBlocks(
     text,
     config,
@@ -2880,10 +2961,14 @@ export async function translateText(
     sourceLang,
     signal,
     glossary,
-    mvuDictionary
+    mvuDictionary,
+    cssCjkHandling
   );
+  // 0.5. Mask CJK characters inside CSS values to prevent them from being translated
+  // e.g. drop-shadow(商 10px ...) → drop-shadow(__CSS_CJK_0__ 10px ...)
+  const { maskedText: cssCjkMasked, map: cssCjkMap } = maskCssCjkValues(codeMasked, cssCjkHandling || 'preserve');
   // 1. Mask secrets (API keys, tokens, passwords) before translation
-  const { maskedText: secretMasked, map: secretMap } = maskSecrets(codeMasked);
+  const { maskedText: secretMasked, map: secretMap } = maskSecrets(cssCjkMasked);
   // 2. Mask URLs/image links to prevent AI from translating them
   const { maskedText, map: urlMap } = maskUrls(secretMasked);
 
@@ -2896,7 +2981,15 @@ export async function translateText(
   // vì AI output limit không đủ cho 100K chars code 1:1
   let effectiveChunkSize = chunkSize && chunkSize >= 100 ? chunkSize : undefined;
   if (!effectiveChunkSize && isCodeHeavy) {
-    effectiveChunkSize = 30000; // ~10K tokens output — an toàn cho mọi model
+    // Detect inline CSS density: if heavy inline CSS outside masked blocks, use smaller chunks
+    const inlineCssSignals = (maskedText.match(/[{;}]\s*[a-z-]+\s*:/gi) || []).length;
+    const htmlBodySignals = (maskedText.match(/<(?:div|span|button|input|label|section|article)\b/gi) || []).length;
+    if (inlineCssSignals > 50 || htmlBodySignals > 30) {
+      effectiveChunkSize = 20000; // ~6K tokens — smaller chunks for CSS/HTML-heavy regex fields
+      console.log(`[translateText] ${fieldName}: Heavy inline CSS/HTML detected (${inlineCssSignals} CSS, ${htmlBodySignals} HTML signals) — using 20K chunk size`);
+    } else {
+      effectiveChunkSize = 30000; // ~10K tokens output — an toàn cho mọi model
+    }
   }
   const chunks = chunkText(maskedText, effectiveChunkSize, config.maxTokens);
 
@@ -2945,7 +3038,8 @@ export async function translateText(
     const finalResult = await postTranslationResidualCheck(
       maskedText, cleaned, fieldName, config, targetLang, sourceLang, signal, fieldType, mvuDictionary
     );
-    return unmaskCodeBlocks(finalResult, codeMap);
+    const cssCjkRestored = unmaskCssCjkValues(finalResult, cssCjkMap, cssCjkHandling || 'preserve');
+    return unmaskCodeBlocks(cssCjkRestored, codeMap);
   }
 
   // ═══ MULTIPLE CHUNKS — sequential OR parallel translation ═══
@@ -3284,7 +3378,8 @@ export async function translateText(
   const finalResult = await postTranslationResidualCheck(
     maskedText, cleaned, fieldName, config, targetLang, sourceLang, signal, fieldType, mvuDictionary
   );
-  return unmaskCodeBlocks(finalResult, codeMap);
+  const cssCjkRestored = unmaskCssCjkValues(finalResult, cssCjkMap, cssCjkHandling || 'preserve');
+  return unmaskCodeBlocks(cssCjkRestored, codeMap);
 }
 
 /* ─── Batch translate multiple fields in one API call ─── */

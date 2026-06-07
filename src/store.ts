@@ -403,6 +403,7 @@ export const useStore = create<AppState>((set) => ({
     enableTranslationMemory: LS.get('st-translator-tm-enabled', true),
     mvuScanPasses: LS.get('st-translator-mvu-scan-passes', 1),
     ejsScanPasses: LS.get('st-translator-ejs-scan-passes', 1),
+    cssCjkHandling: LS.get('st-translator-css-cjk-handling', 'preserve') as 'preserve' | 'strip' | 'ask',
   },
   setTranslationConfig: (partial) =>
     set((s) => {
@@ -515,6 +516,9 @@ export const useStore = create<AppState>((set) => ({
       if ('ejsScanPasses' in partial) {
         LS.set('st-translator-ejs-scan-passes', next.ejsScanPasses);
       }
+      if ('cssCjkHandling' in partial) {
+        LS.set('st-translator-css-cjk-handling', next.cssCjkHandling);
+      }
       if ('exportKeyMode' in partial) {
         LS.set('st-translator-export-key-mode', next.exportKeyMode);
       }
@@ -607,6 +611,7 @@ export const useStore = create<AppState>((set) => ({
       enableTranslationMemory: true,
       mvuScanPasses: 1,
       ejsScanPasses: 1,
+      cssCjkHandling: 'preserve' as const,
     };
 
     LS.set('st-translator-source-lang', defaultTranslationConfig.sourceLanguage);
@@ -653,6 +658,7 @@ export const useStore = create<AppState>((set) => ({
     LS.set('st-translator-tm-enabled', defaultTranslationConfig.enableTranslationMemory);
     LS.set('st-translator-mvu-scan-passes', defaultTranslationConfig.mvuScanPasses);
     LS.set('st-translator-ejs-scan-passes', defaultTranslationConfig.ejsScanPasses);
+    LS.set('st-translator-css-cjk-handling', defaultTranslationConfig.cssCjkHandling);
 
     set((s) => {
       let updatedFields = s.fields;

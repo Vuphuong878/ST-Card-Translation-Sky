@@ -395,7 +395,9 @@ export function useTranslation() {
             store.updateField(field.path, {
               rawChunks,
             });
-          }
+          },
+          // cssCjkHandling
+          store.translationConfig.cssCjkHandling,
         );
       }
 
@@ -1840,7 +1842,9 @@ export function useTranslation() {
           store.updateField(field.path, {
             rawChunks,
           });
-        }
+        },
+        // cssCjkHandling
+        store.translationConfig.cssCjkHandling,
       );
 
       // Post-process regex HTML: font swap + underscore display
@@ -2045,7 +2049,9 @@ export function useTranslation() {
               store.updateField(field.path, {
                 rawChunks,
               });
-            }
+            },
+            // cssCjkHandling
+            store.translationConfig.cssCjkHandling,
           );
 
           // Keep chunk progress for export, clear failed index only
@@ -2320,7 +2326,13 @@ export function useTranslation() {
         undefined,
         resolvedFieldType,
         currentMvuDict,
-        store.translationConfig.chunkSize
+        store.translationConfig.chunkSize,
+        undefined, // previouslyCompletedChunks
+        undefined, // onChunkComplete
+        undefined, // parallelChunks
+        undefined, // enableChunkVerification
+        undefined, // onChunksReady
+        store.translationConfig.cssCjkHandling,
       );
 
       // ═══ PATCH MODE: parse find/replace patches and apply to original ═══
@@ -2377,7 +2389,9 @@ export function useTranslation() {
               inputContent, field.label, effectiveProxy, effectiveLang, effectiveLang,
               fullPromptResult.effectivePrompt, fullPromptResult.schemaForApi,
               controller.signal, contextHint, fullPromptResult.glossaryForApi,
-              undefined, resolvedFieldType, currentMvuDict, store.translationConfig.chunkSize
+              undefined, resolvedFieldType, currentMvuDict, store.translationConfig.chunkSize,
+              undefined, undefined, undefined, undefined, undefined,
+              store.translationConfig.cssCjkHandling,
             );
           }
         } else if (/<<<\s*NO_CHANGES\s*>>>/.test(result)) {

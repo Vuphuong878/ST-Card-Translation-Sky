@@ -19,6 +19,19 @@ export function extractCJKTokens(text: string): CJKToken[] {
   while ((match = regex.exec(text)) !== null) {
     const hasIdeograph = /[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af]/.test(match[0]);
     if (hasIdeograph) {
+      // Skip CJK tokens that appear inside CSS function calls
+      // Check the context before this match for CSS function patterns: func-name(
+      const contextBefore = text.slice(Math.max(0, match.index - 80), match.index);
+      const isCssFunction = /[a-zA-Z-]+\s*\(\s*$/.test(contextBefore);
+      // Also check if surrounded by CSS property syntax: { ... property: value ... }
+      const contextAfter = text.slice(match.index + match[0].length, Math.min(text.length, match.index + match[0].length + 30));
+      const isCssValue = isCssFunction && /^\s*[\d\s,.)px%ems]+/.test(contextAfter);
+      
+      if (isCssValue) {
+        // Skip this token — it's inside a CSS function call (e.g. drop-shadow(商 10px ...))
+        continue;
+      }
+
       tokens.push({
         id: id++,
         text: match[0],
