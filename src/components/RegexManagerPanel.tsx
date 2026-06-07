@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
 import { useT } from '../i18n/useLocale';
-import { X, Regex, Languages, Save, Check, Loader2, Sparkles } from 'lucide-react';
+import { X, Regex, Languages, Save, Check, Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import type { RegexScript } from '../types/card';
 import AiCompanionPanel from './AiCompanionPanel';
 
@@ -217,6 +217,24 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
     }
   };
 
+  // ─── Re-translate ALL regex fields (including done) ───
+  const handleRetranslateAll = async () => {
+    const allRegexFields = fields.filter(f => f.group === 'regex');
+    if (allRegexFields.length === 0) {
+      addToast('info', 'Không có trường regex nào để dịch lại');
+      return;
+    }
+
+    addToast('info', `Dịch lại tất cả ${allRegexFields.length} trường regex...`);
+    for (const f of allRegexFields) {
+      try {
+        await retranslateField(f.path);
+      } catch (err) {
+        console.error(`Failed to retranslate ${f.path}:`, err);
+      }
+    }
+  };
+
   // ─── Apply translations back to card ───
   const handleApplyToCard = () => {
     if (!card) return;
@@ -420,6 +438,13 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
                 </button>
               )}
               {doneCount > 0 && !isTranslating && (
+                <button className="btn btn-secondary btn-sm" onClick={handleRetranslateAll}
+                  title="Dịch lại tất cả regex fields (kể cả đã dịch xong)"
+                >
+                  <RefreshCw size={12} /> Dịch lại tất cả
+                </button>
+              )}
+              {doneCount > 0 && !isTranslating && (
                 <button className="btn btn-secondary btn-sm" onClick={handleApplyToCard}>
                   <Save size={12} /> Áp dụng vào Card
                 </button>
@@ -461,6 +486,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
               fieldRows={fieldRows}
               updateField={updateField}
               isTranslating={isTranslating}
+              retranslateField={retranslateField}
             />
           </div>
         {showAiChat && (
@@ -481,13 +507,16 @@ function FieldsTab({
   fieldRows,
   updateField,
   isTranslating,
+  retranslateField,
 }: {
   scripts: RegexScript[];
   selectedScriptIdx: number;
   fieldRows: (RegexFieldRow & { path: string })[];
   updateField: (path: string, update: any) => void;
   isTranslating: boolean;
+  retranslateField: (path: string) => Promise<void>;
 }) {
+  const [retranslatingPaths, setRetranslatingPaths] = useState<Set<string>>(new Set());
   const selectedScript = scripts[selectedScriptIdx];
   if (!selectedScript) {
     return (
@@ -569,6 +598,43 @@ function FieldsTab({
                     </span>
                   )}
                 </div>
+                {/* Per-field retranslate button */}
+                <button
+                  onClick={async () => {
+                    setRetranslatingPaths(prev => new Set(prev).add(row.path));
+                    try {
+                      await retranslateField(row.path);
+                    } catch (err) {
+                      console.error(`Retranslate failed for ${row.path}:`, err);
+                    } finally {
+                      setRetranslatingPaths(prev => { const next = new Set(prev); next.delete(row.path); return next; });
+                    }
+                  }}
+                  disabled={isTranslating || retranslatingPaths.has(row.path)}
+                  title="Dịch lại trường này"
+                  style={{
+                    background: 'none',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: retranslatingPaths.has(row.path) ? 'var(--accent-primary)' : 'var(--text-muted)',
+                    cursor: isTranslating || retranslatingPaths.has(row.path) ? 'not-allowed' : 'pointer',
+                    padding: '3px 8px',
+                    fontSize: '0.65rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s',
+                    opacity: isTranslating ? 0.4 : 1,
+                  }}
+                  onMouseEnter={e => { if (!isTranslating) { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.color = 'var(--accent-primary)'; } }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                >
+                  {retranslatingPaths.has(row.path) ? (
+                    <><Loader2 size={10} className="animate-spin" /> Đang dịch...</>
+                  ) : (
+                    <><RefreshCw size={10} /> Dịch lại</>
+                  )}
+                </button>
               </div>
 
               {/* Original */}
