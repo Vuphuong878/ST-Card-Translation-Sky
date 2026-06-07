@@ -1,0 +1,1 @@
+const parsed = JSON.parse('{\"html\": \"<style>body { color: red; }<\\\\/style>\"}'); console.log(parsed.html); const regex = /<style\\b([^>]*)>([\\s\\S]*?)<\\/style>/gi; console.log(regex.test(parsed.html));

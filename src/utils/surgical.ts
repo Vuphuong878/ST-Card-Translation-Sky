@@ -11,8 +11,8 @@ export interface CJKToken {
  */
 export function extractCJKTokens(text: string): CJKToken[] {
   const tokens: CJKToken[] = [];
-  // Match CJK blocks optionally joined by spaces, safe punctuation, letters/numbers
-  const regex = /[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u3000-\u303f\uff00-\uffef]+(?:[ \tA-Za-z0-9.,!?'"()\-:;/_+=*&^%@~|\u2000-\u206F]+[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u3000-\u303f\uff00-\uffef]+)*/g;
+  // Match CJK blocks optionally joined by safe non-code characters (spaces, letters, numbers, hyphens, periods, slashes, etc.)
+  const regex = /[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u3000-\u303f\uff00-\uffef]+(?:[ \tA-Za-z0-9.\-_/!?%~]+[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u3000-\u303f\uff00-\uffef]+)*/g;
   
   let match;
   let id = 1;
@@ -79,7 +79,84 @@ import { extractTranslationFromResponse } from './masterPrompt';
 import type { ProxySettings, GlossaryEntry } from '../types/card';
 
 /**
+ * Sanitize structural characters from LLM translated text.
+ * Prevents verification failures caused by LLM adding < > { } ` to translations.
+ */
+function sanitizeTranslatedText(text: string): string {
+  return text
+    .replace(/[<>{}`]/g, '')
+    .trim();
+}
+
+/**
+ * Parse a batch of LLM response lines into id-text pairs.
+ */
+function parseBatchResponse(rawResult: string): { id?: number; text: string }[] {
+  const parsed = extractTranslationFromResponse(rawResult);
+  const cleanedResult = parsed.translation || rawResult;
+  const lines = cleanedResult.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  
+  const results: { id?: number; text: string }[] = [];
+  for (const line of lines) {
+    const matchLine = line.match(/^(?:[^\d#]*#?\s*)(\d+)[\t \.\:\-\]\)]+(.+)$/);
+    if (matchLine) {
+      results.push({ id: parseInt(matchLine[1], 10), text: matchLine[2].trim() });
+    } else {
+      results.push({ text: line });
+    }
+  }
+  return results;
+}
+
+/**
+ * Apply parsed translations to a batch of tokens, sanitizing structural chars.
+ */
+function applyBatchTranslations(batch: CJKToken[], parsedTranslations: { id?: number; text: string }[]): number {
+  let matched = 0;
+
+  const cleanTranslation = (token: CJKToken, raw: string): string => {
+    let t = raw;
+    if (t.startsWith(token.text)) {
+      t = t.substring(token.text.length).trim();
+      t = t.replace(/^[\s\:\-\=\>\t\(\)\[\]\{\}]+/, '').trim();
+    }
+    const parenthesized = `(${token.text})`;
+    if (t.endsWith(parenthesized)) t = t.substring(0, t.length - parenthesized.length).trim();
+    const bracketed = `[${token.text}]`;
+    if (t.endsWith(bracketed)) t = t.substring(0, t.length - bracketed.length).trim();
+    return sanitizeTranslatedText(t);
+  };
+
+  if (parsedTranslations.length === batch.length) {
+    // Positional mapping (most robust if line count matches)
+    for (let idx = 0; idx < batch.length; idx++) {
+      const cleaned = cleanTranslation(batch[idx], parsedTranslations[idx].text);
+      if (cleaned) {
+        batch[idx].translated = cleaned;
+        matched++;
+      }
+    }
+  } else {
+    // Match strictly by ID
+    for (const p of parsedTranslations) {
+      if (p.id !== undefined) {
+        const token = batch.find(t => t.id === p.id);
+        if (token) {
+          const cleaned = cleanTranslation(token, p.text);
+          if (cleaned) {
+            token.translated = cleaned;
+            matched++;
+          }
+        }
+      }
+    }
+  }
+  return matched;
+}
+
+/**
  * The main surgical translation orchestrator.
+ * @param strictVerification If false, accept results even if structural verification fails slightly (for replaceString with no fallback)
  */
 export async function surgicalTranslate(
   text: string,
@@ -87,7 +164,8 @@ export async function surgicalTranslate(
   targetLang: string,
   signal?: AbortSignal,
   glossary?: GlossaryEntry[],
-  mvuDictionary?: Record<string, string>
+  mvuDictionary?: Record<string, string>,
+  strictVerification: boolean = true
 ): Promise<{ translated: string; success: boolean; fallbackTriggered: boolean }> {
   const { callProvider } = await import('./apiClient');
   const tokens = extractCJKTokens(text);
@@ -118,17 +196,30 @@ export async function surgicalTranslate(
   
   // Only send tokens that weren't translated locally
   const pendingTokens = tokens.filter(t => !t.translated);
-  if (pendingTokens.length === 0) {
+  
+  // Deduplicate tokens by text to avoid sending duplicates to LLM and save tokens
+  const uniquePendingMap = new Map<string, CJKToken>();
+  for (const token of pendingTokens) {
+    if (!uniquePendingMap.has(token.text)) {
+      uniquePendingMap.set(token.text, token); // Keep the first token as representative
+    }
+  }
+  const uniquePendingTokens = Array.from(uniquePendingMap.values());
+
+  if (uniquePendingTokens.length === 0) {
     const reinserted = reinsertTranslations(text, tokens);
     return { translated: reinserted, success: true, fallbackTriggered: false };
   }
 
   // Batch tokens (e.g. 80 tokens per batch) to avoid exceeding output token limits on large scripts/regexes
   const BATCH_SIZE = 80;
+  const MAX_RETRIES = 2;
   const tokenBatches: CJKToken[][] = [];
-  for (let i = 0; i < pendingTokens.length; i += BATCH_SIZE) {
-    tokenBatches.push(pendingTokens.slice(i, i + BATCH_SIZE));
+  for (let i = 0; i < uniquePendingTokens.length; i += BATCH_SIZE) {
+    tokenBatches.push(uniquePendingTokens.slice(i, i + BATCH_SIZE));
   }
+
+  console.log(`[surgicalTranslate] Extracted ${tokens.length} tokens (${uniquePendingTokens.length} unique pending, ${tokens.length - pendingTokens.length} local-resolved), ${tokenBatches.length} batches planned`);
   
   let glossaryPrompt = '';
   if (glossary && glossary.length > 0) {
@@ -155,101 +246,84 @@ export async function surgicalTranslate(
   const systemPrompt = `You are a surgical translation tool. Your job is to translate CJK strings into ${targetLang} exactly line-by-line.
 You will receive a list of items formatted as "#{id}\t{text}".
 Return ONLY the translated items in the exact same format "#{id}\t{translated_text}".
-Do NOT output any conversational text or markdown blocks. Do NOT skip items.${glossaryPrompt}${mvuPrompt}`;
+Do NOT output any conversational text or markdown blocks. Do NOT skip items.
+IMPORTANT: Never use "<" or ">" or "\`" or "{" or "}" in your translations. Use standard quotes or parentheses instead.${glossaryPrompt}${mvuPrompt}`;
 
   try {
-    for (const batch of tokenBatches) {
+    for (let batchIdx = 0; batchIdx < tokenBatches.length; batchIdx++) {
+      const batch = tokenBatches[batchIdx];
       const payload = batch.map(t => `#${t.id}\t${t.text}`).join('\n');
-      const rawResult = await callProvider(config, systemPrompt, payload, signal);
       
-      // Clean raw result from XML reasoning tags (think, thought_process, self_check)
-      const parsed = extractTranslationFromResponse(rawResult);
-      const cleanedResult = parsed.translation || rawResult;
+      let matched = 0;
+      let lastError: unknown = null;
 
-      // Parse result
-      const lines = cleanedResult.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      
-      const parsedTranslations: { id?: number; text: string }[] = [];
-      for (const line of lines) {
-        const matchLine = line.match(/^(?:[^\d#]*#?\s*)?(\d+)[\t \.\:\-\]\)]+(.+)$/);
-        if (matchLine) {
-          parsedTranslations.push({ id: parseInt(matchLine[1], 10), text: matchLine[2].trim() });
-        } else {
-          parsedTranslations.push({ text: line });
-        }
-      }
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const rawResult = await callProvider(config, systemPrompt, payload, signal);
+          const parsedTranslations = parseBatchResponse(rawResult);
+          matched = applyBatchTranslations(batch, parsedTranslations);
 
-      if (parsedTranslations.length === batch.length) {
-        // Positional fallback mapping (most robust if line count matches)
-        for (let idx = 0; idx < batch.length; idx++) {
-          const token = batch[idx];
-          let translatedText = parsedTranslations[idx].text;
-          
-          if (translatedText.startsWith(token.text)) {
-            translatedText = translatedText.substring(token.text.length).trim();
-            translatedText = translatedText.replace(/^[\s\:\-\=\>\t\(\)\[\]\{\}]+/, '').trim();
+          if (matched >= batch.length * 0.5) {
+            // At least 50% matched — accept this result
+            console.log(`[surgicalTranslate] Batch ${batchIdx + 1}/${tokenBatches.length}: ${matched}/${batch.length} tokens matched${attempt > 0 ? ` (retry ${attempt})` : ''}`);
+            break;
+          } else if (attempt < MAX_RETRIES) {
+            console.warn(`[surgicalTranslate] Batch ${batchIdx + 1}/${tokenBatches.length}: only ${matched}/${batch.length} matched, retrying (${attempt + 1}/${MAX_RETRIES})...`);
+          } else {
+            console.warn(`[surgicalTranslate] Batch ${batchIdx + 1}/${tokenBatches.length}: ${matched}/${batch.length} matched after ${MAX_RETRIES} retries, accepting partial result`);
           }
-          const parenthesized = `(${token.text})`;
-          if (translatedText.endsWith(parenthesized)) {
-            translatedText = translatedText.substring(0, translatedText.length - parenthesized.length).trim();
-          }
-          const bracketed = `[${token.text}]`;
-          if (translatedText.endsWith(bracketed)) {
-            translatedText = translatedText.substring(0, translatedText.length - bracketed.length).trim();
-          }
-          token.translated = translatedText;
-        }
-      } else {
-        // Match strictly by ID
-        for (const parsed of parsedTranslations) {
-          if (parsed.id !== undefined) {
-            const token = batch.find(t => t.id === parsed.id);
-            if (token) {
-              let translatedText = parsed.text;
-              if (translatedText.startsWith(token.text)) {
-                translatedText = translatedText.substring(token.text.length).trim();
-                translatedText = translatedText.replace(/^[\s\:\-\=\>\t\(\)\[\]\{\}]+/, '').trim();
-              }
-              const parenthesized = `(${token.text})`;
-              if (translatedText.endsWith(parenthesized)) {
-                translatedText = translatedText.substring(0, translatedText.length - parenthesized.length).trim();
-              }
-              const bracketed = `[${token.text}]`;
-              if (translatedText.endsWith(bracketed)) {
-                translatedText = translatedText.substring(0, translatedText.length - bracketed.length).trim();
-              }
-              token.translated = translatedText;
-            }
+        } catch (err) {
+          lastError = err;
+          if (attempt < MAX_RETRIES) {
+            console.warn(`[surgicalTranslate] Batch ${batchIdx + 1}/${tokenBatches.length}: error on attempt ${attempt + 1}, retrying...`, err);
+          } else {
+            console.error(`[surgicalTranslate] Batch ${batchIdx + 1}/${tokenBatches.length}: failed after ${MAX_RETRIES} retries:`, err);
           }
         }
       }
     }
     
-    // Fill in any missing translations with the original text to prevent blank drops
+    // Build a cache of successful translations from unique tokens (and local glossary matches)
+    const translationCache: Record<string, string> = {};
+    for (const token of tokens) {
+      if (token.translated && token.translated !== token.text && token.translated.trim() !== '') {
+        translationCache[token.text] = token.translated;
+      }
+    }
+
+    // Apply translations to all tokens, filling missing ones from cache or keeping original
     for (const token of tokens) {
       if (!token.translated || token.translated.trim() === '') {
-        token.translated = token.text;
+        if (translationCache[token.text]) {
+          token.translated = translationCache[token.text];
+        } else {
+          token.translated = token.text;
+        }
       }
     }
     
     const reinserted = reinsertTranslations(text, tokens);
     const isValid = verifySurgicalResult(text, reinserted);
     
+    const translatedCount = tokens.filter(t => t.translated !== t.text).length;
+    const missedCount = tokens.filter(t => t.translated === t.text).length;
+    console.log(`[surgicalTranslate] Complete: ${translatedCount}/${tokens.length} tokens translated, ${missedCount} remained original, verification=${isValid ? 'PASS' : 'FAIL'}`);
+
     if (isValid) {
-      const missing = tokens.filter(t => t.translated === t.text);
-      if (missing.length > 0) {
-        console.warn(`[surgicalTranslate] ${missing.length} tokens could not be translated, keeping original CJK:`, missing.map(m => m.text));
+      if (missedCount > 0) {
+        console.warn(`[surgicalTranslate] ${missedCount} tokens could not be translated:`, tokens.filter(t => t.translated === t.text).map(m => m.text).slice(0, 20));
       }
       return { translated: reinserted, success: true, fallbackTriggered: false };
+    } else if (!strictVerification) {
+      // Lenient mode: accept the result even if verification fails (for replaceString with no fallback)
+      console.warn(`[surgicalTranslate] Verification failed but strictVerification=false, accepting result with ${translatedCount} translations applied`);
+      return { translated: reinserted, success: true, fallbackTriggered: false };
     } else {
-      console.warn('Surgical translation failed verification. Falling back to normal translation.', { 
-        text, 
-        reinserted
-      });
-      return { translated: text, success: false, fallbackTriggered: true }; // Caller must do standard translation
+      console.warn('[surgicalTranslate] Verification FAILED (strict mode). Falling back to normal translation.');
+      return { translated: text, success: false, fallbackTriggered: true };
     }
   } catch (err) {
-    console.error('Surgical translation error:', err);
-    return { translated: text, success: false, fallbackTriggered: true }; // Caller must do standard translation
+    console.error('[surgicalTranslate] Fatal error:', err);
+    return { translated: text, success: false, fallbackTriggered: true };
   }
 }

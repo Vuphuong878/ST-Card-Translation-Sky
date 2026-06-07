@@ -258,7 +258,7 @@ export interface TranslationConfig {
   enableTranslationMemory: boolean;    // Enable Translation Memory (persistent cross-session term/translation cache)
   mvuScanPasses: number;               // Số lần quét biến MVU (Strategy B), mỗi pass chỉ dịch biến mới
   ejsScanPasses: number;               // Số lần quét biến EJS (Strategy C), mỗi pass chỉ dịch biến mới
-  cssCjkHandling: 'preserve' | 'strip' | 'ask'; // How to handle CJK chars found inside CSS values: 'preserve' = keep as-is, 'strip' = remove them, 'ask' = ask user
+  cssCjkHandling: 'preserve' | 'translate' | 'ask'; // How to handle CJK chars found inside CSS values
 }
 
 /* ─── Log Entry ─── */

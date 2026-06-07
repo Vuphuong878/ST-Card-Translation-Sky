@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
 import { useT } from '../i18n/useLocale';
-import { X, Regex, Languages, Save, Check, Loader2, Sparkles, RefreshCw, Copy } from 'lucide-react';
+import { X, Regex, Languages, Save, Check, Loader2, Sparkles, RefreshCw, Copy, Trash2, StopCircle } from 'lucide-react';
 import type { RegexScript } from '../types/card';
 import AiCompanionPanel from './AiCompanionPanel';
 
@@ -157,7 +157,7 @@ interface RegexFieldRow {
    ════════════════════════════════════════════════════════════════════ */
 export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: () => void; isFullscreen?: boolean }) {
   const t = useT();
-  const { card, updateCard, addToast, fields, updateField, phase } = useStore();
+  const { card, updateCard, addToast, fields, updateField, phase, deleteCurrentCardCache } = useStore();
   const { retranslateField, cancelTranslation } = useTranslation();
 
   // ─── Regex scripts from card ───
@@ -272,6 +272,23 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
   // ─── Cancel translation ───
   const handleCancel = () => {
     cancelTranslation();
+  };
+
+  // ─── Clear all regex cache ───
+  const handleClearCache = async () => {
+    if (!confirm('Xác nhận xóa toàn bộ cache dịch thuật? Tất cả bản dịch regex sẽ được reset về trạng thái chưa dịch.')) return;
+    
+    // Reset only regex fields to pending
+    const regexFields = fields.filter(f => f.group === 'regex');
+    for (const f of regexFields) {
+      updateField(f.path, {
+        translated: '',
+        status: 'pending',
+        error: undefined,
+      });
+    }
+    
+    addToast('success', `Đã xóa cache ${regexFields.length} trường regex`);
   };
 
 
@@ -449,6 +466,14 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
                   <Save size={12} /> Áp dụng vào Card
                 </button>
               )}
+              {!isTranslating && totalCount > 0 && (
+                <button className="btn btn-secondary btn-sm" onClick={handleClearCache}
+                  title="Xóa toàn bộ cache dịch regex"
+                  style={{ color: 'var(--accent-danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                >
+                  <Trash2 size={12} /> Xóa cache
+                </button>
+              )}
               <button
                 className="btn btn-secondary btn-sm"
                 onClick={() => setShowAiChat(true)}
@@ -487,6 +512,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
               updateField={updateField}
               isTranslating={isTranslating}
               retranslateField={retranslateField}
+              cancelTranslation={handleCancel}
             />
           </div>
         {showAiChat && (
@@ -508,6 +534,7 @@ function FieldsTab({
   updateField,
   isTranslating,
   retranslateField,
+  cancelTranslation,
 }: {
   scripts: RegexScript[];
   selectedScriptIdx: number;
@@ -515,6 +542,7 @@ function FieldsTab({
   updateField: (path: string, update: any) => void;
   isTranslating: boolean;
   retranslateField: (path: string) => Promise<void>;
+  cancelTranslation: () => void;
 }) {
   const [retranslatingPaths, setRetranslatingPaths] = useState<Set<string>>(new Set());
   const selectedScript = scripts[selectedScriptIdx];
@@ -631,6 +659,24 @@ function FieldsTab({
                 >
                   {retranslatingPaths.has(row.path) ? (
                     <><Loader2 size={10} className="animate-spin" /> Đang dịch...</>
+                  ) : row.status === 'translating' ? (
+                    <button
+                      onClick={cancelTranslation}
+                      style={{
+                        background: 'none',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        borderRadius: 'var(--radius-sm)',
+                        color: 'var(--accent-danger)',
+                        cursor: 'pointer',
+                        padding: '3px 8px',
+                        fontSize: '0.65rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <StopCircle size={10} /> Dừng
+                    </button>
                   ) : (
                     <><RefreshCw size={10} /> Dịch lại</>
                   )}

@@ -7,7 +7,7 @@ import {
   type MasterPromptOptions,
 } from './masterPrompt';
 import { LOREBOOK_GENERATION_PROMPT } from './promptBuilder';
-import { extractCJKTokens, reinsertTranslations } from './surgical';
+import { extractCJKTokens, reinsertTranslations, surgicalTranslate } from './surgical';
 
 /* ─── Error types ─── */
 export class ApiError extends Error {
@@ -2642,10 +2642,14 @@ interface CssCjkMaskMap {
   [placeholder: string]: string;
 }
 
-function maskCssCjkValues(text: string, mode: 'preserve' | 'strip' | 'ask' = 'preserve'): { maskedText: string; map: CssCjkMaskMap; mode: 'preserve' | 'strip' | 'ask' } {
+function maskCssCjkValues(text: string, mode: 'preserve' | 'translate' | 'ask' = 'preserve'): { maskedText: string; map: CssCjkMaskMap; mode: 'preserve' | 'translate' | 'ask' } {
   const map: CssCjkMaskMap = {};
   let maskedText = text;
   let counter = 0;
+
+  if (mode === 'translate') {
+    return { maskedText, map, mode };
+  }
 
   // Pattern: find CSS property declarations containing CJK characters
   // Matches content between { } in CSS-like contexts
@@ -2654,7 +2658,7 @@ function maskCssCjkValues(text: string, mode: 'preserve' | 'strip' | 'ask' = 'pr
   
   maskedText = maskedText.replace(cssFuncWithCjk, (_match, prefix, cjk, suffix) => {
     // Both modes: mask CJK so AI doesn't translate it
-    // Difference is in unmask: preserve → restore, strip → remove
+    // Difference is in unmask: preserve → restore, translate → remove (strip)
     const placeholder = `__CSS_CJK_${counter++}__`;
     map[placeholder] = cjk;
     return `${prefix}${placeholder}${suffix}`;
@@ -2672,9 +2676,9 @@ function maskCssCjkValues(text: string, mode: 'preserve' | 'strip' | 'ask' = 'pr
   return { maskedText, map, mode };
 }
 
-function unmaskCssCjkValues(text: string, map: CssCjkMaskMap, mode: 'preserve' | 'strip' | 'ask' = 'preserve'): string {
+function unmaskCssCjkValues(text: string, map: CssCjkMaskMap, mode: 'preserve' | 'translate' | 'ask' = 'preserve'): string {
   let unmasked = text;
-  const userChoices: { [val: string]: 'preserve' | 'strip' } = {};
+  const userChoices: { [val: string]: 'preserve' | 'translate' } = {};
 
   for (const [placeholder, value] of Object.entries(map)) {
     let resolvedMode = mode;
@@ -2687,21 +2691,21 @@ function unmaskCssCjkValues(text: string, map: CssCjkMaskMap, mode: 'preserve' |
           `Phát hiện ký tự CJK "${value}" trong CSS.\n` +
           `Bạn có muốn GIỮ LẠI (Preserve) ký tự này không?\n\n` +
           `- OK: Giữ lại (Preserve)\n` +
-          `- Cancel: Xóa bỏ (Strip)\n\n` +
+          `- Cancel: Dịch (Translate)\n\n` +
           `-----------------------------------\n\n` +
           `Detected CJK character "${value}" inside CSS.\n` +
           `Do you want to PRESERVE it?\n\n` +
           `- OK: Preserve\n` +
-          `- Cancel: Strip`
+          `- Cancel: Translate`
         );
-        resolvedMode = preserve ? 'preserve' : 'strip';
+        resolvedMode = preserve ? 'preserve' : 'translate';
         userChoices[value] = resolvedMode;
       } else {
         resolvedMode = 'preserve';
       }
     }
-    // preserve: restore original CJK char | strip: remove it (replace with empty)
-    unmasked = unmasked.split(placeholder).join(resolvedMode === 'strip' ? '' : value);
+    // preserve: restore original CJK char | translate: remove it (replace with empty)
+    unmasked = unmasked.split(placeholder).join(resolvedMode === 'translate' ? '' : value);
   }
   return unmasked;
 }
@@ -2719,7 +2723,7 @@ async function maskCodeBlocks(
   signal?: AbortSignal,
   glossary?: GlossaryEntry[],
   mvuDictionary?: Record<string, string>,
-  cssCjkHandling?: 'preserve' | 'strip' | 'ask'
+  cssCjkHandling?: 'preserve' | 'translate' | 'ask'
 ): Promise<{ maskedText: string; map: CodeBlockMaskMap }> {
   const map: CodeBlockMaskMap = {};
   let maskedText = text;
@@ -2766,136 +2770,15 @@ async function maskCodeBlocks(
     let translatedContent = m.content;
     
     try {
-      const tokens = extractCJKTokens(m.content);
-      if (tokens.length > 0) {
-        // 1. Apply local glossary / MVU dictionary translations first to save API tokens
-        for (const token of tokens) {
-          const trimmed = token.text.trim();
-          
-          // Check MVU dictionary
-          if (mvuDictionary && mvuDictionary[trimmed]) {
-            token.translated = mvuDictionary[trimmed];
-            continue;
-          }
-          
-          // Check Glossary
-          if (glossary) {
-            const match = glossary.find(g => g.source.trim() === trimmed);
-            if (match && match.target.trim()) {
-              token.translated = match.target.trim();
-              continue;
-            }
-          }
-        }
-
-        const pendingTokens = tokens.filter(t => !t.translated);
-        if (pendingTokens.length > 0) {
-          console.log(`[maskCodeBlocks] Surgically translating ${pendingTokens.length} CJK tokens (out of ${tokens.length} total) in ${m.type} block...`);
-          
-          let glossaryPrompt = '';
-          if (glossary && glossary.length > 0) {
-            const terms = glossary
-              .filter(g => g.source.trim() && g.target.trim())
-              .map(g => `  "${g.source}" → "${g.target}"`)
-              .join('\n');
-            if (terms) {
-              glossaryPrompt = `\n\nGlossary terms (use these translations if they appear in text):\n${terms}`;
-            }
-          }
-          
-          let mvuPrompt = '';
-          if (mvuDictionary && Object.keys(mvuDictionary).length > 0) {
-            const terms = Object.entries(mvuDictionary)
-              .filter(([k, v]) => k && v && k !== v)
-              .map(([k, v]) => `  "${k}" → "${v}"`)
-              .join('\n');
-            if (terms) {
-              mvuPrompt = `\n\nMVU variable mappings (use these translations if they appear in text):\n${terms}`;
-            }
-          }
-
-          const BATCH_SIZE = 80;
-          const systemPrompt = `You are a surgical translation tool. Your job is to translate CJK strings into ${targetLang} exactly line-by-line.
-You will receive a list of items formatted as "#{id}\t{text}".
-Return ONLY the translated items in the exact same format "#{id}\t{translated_text}".
-Do NOT output any conversational text or markdown blocks. Do NOT skip items.${glossaryPrompt}${mvuPrompt}`;
-
-          for (let i = 0; i < pendingTokens.length; i += BATCH_SIZE) {
-            const batch = pendingTokens.slice(i, i + BATCH_SIZE);
-            const payload = batch.map(t => `#${t.id}\t${t.text}`).join('\n');
-            const rawResult = await callProvider(config, systemPrompt, payload, signal);
-            
-            const parsed = extractTranslationFromResponse(rawResult);
-            const cleanedResult = parsed.translation || rawResult;
-
-            const lines = cleanedResult.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const parsedTranslations: { id?: number; text: string }[] = [];
-            
-            for (const line of lines) {
-              const matchLine = line.match(/^(?:[^\d#]*#?\s*)?(\d+)[\t \.\:\-\]\)]+(.+)$/);
-              if (matchLine) {
-                parsedTranslations.push({ id: parseInt(matchLine[1], 10), text: matchLine[2].trim() });
-              } else {
-                parsedTranslations.push({ text: line });
-              }
-            }
-
-            if (parsedTranslations.length === batch.length) {
-              // Positional fallback mapping (most robust if line count matches)
-              for (let idx = 0; idx < batch.length; idx++) {
-                const token = batch[idx];
-                let translatedText = parsedTranslations[idx].text;
-                
-                if (translatedText.startsWith(token.text)) {
-                  translatedText = translatedText.substring(token.text.length).trim();
-                  translatedText = translatedText.replace(/^[\s\:\-\=\>\t\(\)\[\]\{\}]+/, '').trim();
-                }
-                const parenthesized = `(${token.text})`;
-                if (translatedText.endsWith(parenthesized)) {
-                  translatedText = translatedText.substring(0, translatedText.length - parenthesized.length).trim();
-                }
-                const bracketed = `[${token.text}]`;
-                if (translatedText.endsWith(bracketed)) {
-                  translatedText = translatedText.substring(0, translatedText.length - bracketed.length).trim();
-                }
-                token.translated = translatedText;
-              }
-            } else {
-              // Match strictly by ID
-              for (const parsed of parsedTranslations) {
-                if (parsed.id !== undefined) {
-                  const token = batch.find(t => t.id === parsed.id);
-                  if (token) {
-                    let translatedText = parsed.text;
-                    if (translatedText.startsWith(token.text)) {
-                      translatedText = translatedText.substring(token.text.length).trim();
-                      translatedText = translatedText.replace(/^[\s\:\-\=\>\t\(\)\[\]\{\}]+/, '').trim();
-                    }
-                    const parenthesized = `(${token.text})`;
-                    if (translatedText.endsWith(parenthesized)) {
-                      translatedText = translatedText.substring(0, translatedText.length - parenthesized.length).trim();
-                    }
-                    const bracketed = `[${token.text}]`;
-                    if (translatedText.endsWith(bracketed)) {
-                      translatedText = translatedText.substring(0, translatedText.length - bracketed.length).trim();
-                    }
-                    token.translated = translatedText;
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // Fill in any missing translations with original CJK to keep structural stability
-        for (const token of tokens) {
-          if (!token.translated || token.translated.trim() === '') {
-            token.translated = token.text;
-          }
-        }
-        
-        translatedContent = reinsertTranslations(m.content, tokens);
-      }
+      const result = await surgicalTranslate(
+        m.content,
+        config,
+        targetLang,
+        signal,
+        glossary,
+        mvuDictionary
+      );
+      translatedContent = result.translated;
     } catch (err) {
       console.warn(`[maskCodeBlocks] Failed to surgically translate ${m.type} block:`, err);
     }
@@ -2949,9 +2832,32 @@ export async function translateText(
   /** Callback fired when chunks are determined and unmasked */
   onChunksReady?: (rawChunks: string[]) => void,
   /** CSS CJK handling mode: 'preserve' keeps CJK in CSS as-is, 'strip' removes them, 'ask' prompts user */
-  cssCjkHandling?: 'preserve' | 'strip' | 'ask',
+  cssCjkHandling?: 'preserve' | 'translate' | 'ask',
 ): Promise<string> {
   if (!text || text.trim() === '') return '';
+
+  if (fieldName.includes('replaceString')) {
+    console.log(`[translateText] Field "${fieldName}" is a replaceString. Performing surgical translation without chunking...`);
+    try {
+      // First attempt: strict verification
+      const result = await surgicalTranslate(text, config, targetLang, signal, glossary, mvuDictionary, true);
+      if (result.success) {
+        return result.translated;
+      }
+      // Retry with lenient verification (no fallback to chunk/mask)
+      console.warn(`[translateText] Surgical strict verification failed for "${fieldName}", retrying with lenient verification...`);
+      const retryResult = await surgicalTranslate(text, config, targetLang, signal, glossary, mvuDictionary, false);
+      if (retryResult.success) {
+        return retryResult.translated;
+      }
+      // Even lenient failed — return what we have (surgical always returns something)
+      console.error(`[translateText] Surgical translation fully failed for "${fieldName}", returning original text`);
+      return retryResult.translated;
+    } catch (err) {
+      console.error(`[translateText] Error during surgical translation for "${fieldName}":`, err);
+      return text; // Don't fall through to maskCodeBlocks for replaceString
+    }
+  }
 
   // 0. Mask code blocks (<script>, <style>, inline styles) before translation
   const { maskedText: codeMasked, map: codeMap } = await maskCodeBlocks(

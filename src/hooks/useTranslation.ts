@@ -1323,9 +1323,9 @@ export function useTranslation() {
 
           // Process each type group with appropriate batch sizes
           const TYPE_BATCH_SIZES: Record<string, number> = {
-            initvar: batchSize,          // YAML: normal size
-            mvu_logic: Math.min(batchSize, 5),  // Code: smaller batches (complex, longer)
-            controller: Math.min(batchSize, 5), // Code: smaller batches
+            initvar: 1,                  // YAML: ONE BY ONE
+              mvu_logic: 1,                // Code: ONE BY ONE
+              controller: 1,               // Code: ONE BY ONE
             rules: batchSize,            // Rules: normal size
             narrative: batchSize,        // Narrative: normal size
             other: batchSize,            // Default: normal size
@@ -2947,9 +2947,9 @@ export function useTranslation() {
           }
 
           const TYPE_BATCH_SIZES: Record<string, number> = {
-            initvar: batchSize,
-            mvu_logic: Math.min(batchSize, 5),
-            controller: Math.min(batchSize, 5),
+            initvar: 1,
+            mvu_logic: 1,
+            controller: 1,
             rules: batchSize,
             narrative: batchSize,
             other: batchSize,

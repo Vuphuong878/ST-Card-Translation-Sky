@@ -1072,17 +1072,17 @@ export default function TranslateConfig() {
                   {locale === 'vi' ? '🔒 Giữ nguyên (Preserve)' : '🔒 Preserve'}
                 </button>
                 <button
-                  onClick={() => setTranslationConfig({ cssCjkHandling: 'strip' })}
+                  onClick={() => setTranslationConfig({ cssCjkHandling: 'translate' })}
                   style={{
                     flex: 1, padding: '6px 10px', fontSize: '0.72rem', fontWeight: 600,
-                    border: translationConfig.cssCjkHandling === 'strip' ? '1px solid var(--accent-danger)' : '1px solid var(--border-subtle)',
+                    border: translationConfig.cssCjkHandling === 'translate' ? '1px solid var(--accent-success, #10b981)' : '1px solid var(--border-subtle)',
                     borderRadius: 'var(--radius-sm)',
-                    background: translationConfig.cssCjkHandling === 'strip' ? 'rgba(239,68,68,0.12)' : 'transparent',
-                    color: translationConfig.cssCjkHandling === 'strip' ? 'var(--accent-danger)' : 'var(--text-muted)',
+                    background: translationConfig.cssCjkHandling === 'translate' ? 'rgba(16,185,129,0.12)' : 'transparent',
+                    color: translationConfig.cssCjkHandling === 'translate' ? 'var(--accent-success, #10b981)' : 'var(--text-muted)',
                     cursor: 'pointer', transition: 'all 0.15s',
                   }}
                 >
-                  {locale === 'vi' ? '🗑️ Xóa bỏ (Strip)' : '🗑️ Strip'}
+                  {locale === 'vi' ? '📝 Dịch (Translate)' : '📝 Translate'}
                 </button>
                 <button
                   onClick={() => setTranslationConfig({ cssCjkHandling: 'ask' })}
@@ -1100,8 +1100,8 @@ export default function TranslateConfig() {
               </div>
               <div style={{ fontSize: '0.63rem', color: 'var(--text-muted)', marginTop: '5px', lineHeight: '1.4' }}>
                 {locale === 'vi'
-                  ? 'Xử lý ký tự Hán/CJK đơn lẻ trong CSS values (VD: drop-shadow(商 10px ...)). "Giữ nguyên" = giữ lại, "Xóa bỏ" = loại bỏ, "Hỏi" = hiển thị hộp thoại xác nhận khi phát hiện.'
-                  : 'How to handle lone CJK chars inside CSS values (e.g. drop-shadow(商 10px ...)). "Preserve" = keep as-is, "Strip" = remove, "Ask" = show confirm dialog when found.'}
+                  ? 'Xử lý ký tự Hán/CJK đơn lẻ trong CSS values (VD: drop-shadow(商 10px ...)). "Giữ nguyên" = mã hoá ẩn đi để không bị dịch, "Dịch" = cho phép AI dịch các ký tự này, "Hỏi" = hiển thị hộp thoại xác nhận khi phát hiện.'
+                  : 'How to handle lone CJK chars inside CSS values (e.g. drop-shadow(商 10px ...)). "Preserve" = hide from AI to keep as-is, "Translate" = let AI translate them, "Ask" = show confirm dialog when found.'}
               </div>
             </div>
             )}
