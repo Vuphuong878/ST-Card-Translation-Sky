@@ -211,15 +211,17 @@ export async function surgicalTranslate(
     return { translated: reinserted, success: true, fallbackTriggered: false };
   }
 
-  // Batch tokens (e.g. 80 tokens per batch) to avoid exceeding output token limits on large scripts/regexes
-  const BATCH_SIZE = 80;
+  // Adaptive batch sizing: bigger batches for bigger jobs to reduce API calls
+  const BATCH_SIZE = uniquePendingTokens.length > 2000 ? 300 :
+                     uniquePendingTokens.length > 500 ? 200 :
+                     uniquePendingTokens.length > 100 ? 120 : 80;
   const MAX_RETRIES = 2;
   const tokenBatches: CJKToken[][] = [];
   for (let i = 0; i < uniquePendingTokens.length; i += BATCH_SIZE) {
     tokenBatches.push(uniquePendingTokens.slice(i, i + BATCH_SIZE));
   }
 
-  console.log(`[surgicalTranslate] Extracted ${tokens.length} tokens (${uniquePendingTokens.length} unique pending, ${tokens.length - pendingTokens.length} local-resolved), ${tokenBatches.length} batches planned`);
+  console.log(`[surgicalTranslate] Extracted ${tokens.length} tokens (${uniquePendingTokens.length} unique pending, ${tokens.length - pendingTokens.length} local-resolved), ${tokenBatches.length} batches × ${BATCH_SIZE} planned`);
   
   let glossaryPrompt = '';
   if (glossary && glossary.length > 0) {
@@ -228,7 +230,7 @@ export async function surgicalTranslate(
       .map(g => `  "${g.source}" → "${g.target}"`)
       .join('\n');
     if (terms) {
-      glossaryPrompt = `\n\nGlossary terms (use these translations if they appear in text):\n${terms}`;
+      glossaryPrompt = `\n\nMANDATORY GLOSSARY (use these translations exactly):\n${terms}`;
     }
   }
   
@@ -239,23 +241,41 @@ export async function surgicalTranslate(
       .map(([k, v]) => `  "${k}" → "${v}"`)
       .join('\n');
     if (terms) {
-      mvuPrompt = `\n\nMVU variable mappings (use these translations if they appear in text):\n${terms}`;
+      mvuPrompt = `\n\nMVU VARIABLE MAPPINGS (use these translations exactly):\n${terms}`;
     }
   }
 
-  const systemPrompt = `You are a surgical translation tool. Your job is to translate CJK strings into ${targetLang} exactly line-by-line.
-You will receive a list of items formatted as "#{id}\t{text}".
-Return ONLY the translated items in the exact same format "#{id}\t{translated_text}".
-Do NOT output any conversational text or markdown blocks. Do NOT skip items.
-IMPORTANT: Never use "<" or ">" or "\`" or "{" or "}" in your translations. Use standard quotes or parentheses instead.${glossaryPrompt}${mvuPrompt}`;
+  const isVietnamese = targetLang.toLowerCase().includes('việt') || targetLang.toLowerCase().includes('vietnamese');
+  const langRules = isVietnamese
+    ? `
+VIETNAMESE-SPECIFIC RULES:
+- Chinese proper nouns (人名, 地名, 国名, 官职) → MUST use Hán Việt (Sino-Vietnamese reading). Examples: 清河 → Thanh Hà, 慕容冲 → Mộ Dung Xung, 洛阳 → Lạc Dương, 东晋 → Đông Tấn, 前秦 → Tiền Tần.
+- Dynasty/era names → Hán Việt. Examples: 永嘉 → Vĩnh Gia, 太元 → Thái Nguyên, 建元 → Kiến Nguyên.
+- Titles/positions → Hán Việt. Examples: 太守 → Thái thú, 刺史 → Thứ sử, 将军 → Tướng quân.
+- Use natural Vietnamese roleplay pronouns (ta, ngươi, hắn, nàng).
+- Maintain literary/classical Vietnamese tone for historical content.`
+    : '';
+
+  const systemPrompt = `You are a professional CJK-to-${targetLang} translation engine specialized in game/roleplay character cards.
+You MUST translate ALL items completely. Do NOT skip any item.
+The source text is from a historical Chinese roleplay card containing proper nouns (人名, 地名, 朝代), game mechanics, and narrative descriptions.
+
+INPUT FORMAT: Lines formatted as "#{id}\t{CJK text}"
+OUTPUT FORMAT: Return ONLY "#{id}\t{translated text}" for EACH input line. One line per item.
+
+CRITICAL RULES:
+1. Translate EVERY item. Zero untranslated Chinese characters allowed in output.
+2. Keep output format exactly: #{id}\t{translated text}
+3. Do NOT output any markdown, explanations, or conversational text.
+4. Do NOT use < > \` { } in your translations.
+5. Output ALL items — do NOT truncate or summarize even if the list is long.
+${langRules}${glossaryPrompt}${mvuPrompt}`;
 
   try {
-    for (let batchIdx = 0; batchIdx < tokenBatches.length; batchIdx++) {
-      const batch = tokenBatches[batchIdx];
+    const processBatch = async (batch: CJKToken[], label: string): Promise<void> => {
       const payload = batch.map(t => `#${t.id}\t${t.text}`).join('\n');
       
       let matched = 0;
-      let lastError: unknown = null;
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
@@ -264,21 +284,35 @@ IMPORTANT: Never use "<" or ">" or "\`" or "{" or "}" in your translations. Use 
           matched = applyBatchTranslations(batch, parsedTranslations);
 
           if (matched >= batch.length * 0.5) {
-            // At least 50% matched — accept this result
-            console.log(`[surgicalTranslate] Batch ${batchIdx + 1}/${tokenBatches.length}: ${matched}/${batch.length} tokens matched${attempt > 0 ? ` (retry ${attempt})` : ''}`);
+            console.log(`[surgicalTranslate] ${label}: ${matched}/${batch.length} tokens matched${attempt > 0 ? ` (retry ${attempt})` : ''}`);
             break;
           } else if (attempt < MAX_RETRIES) {
-            console.warn(`[surgicalTranslate] Batch ${batchIdx + 1}/${tokenBatches.length}: only ${matched}/${batch.length} matched, retrying (${attempt + 1}/${MAX_RETRIES})...`);
+            console.warn(`[surgicalTranslate] ${label}: only ${matched}/${batch.length} matched, retrying (${attempt + 1}/${MAX_RETRIES})...`);
           } else {
-            console.warn(`[surgicalTranslate] Batch ${batchIdx + 1}/${tokenBatches.length}: ${matched}/${batch.length} matched after ${MAX_RETRIES} retries, accepting partial result`);
+            console.warn(`[surgicalTranslate] ${label}: ${matched}/${batch.length} matched after ${MAX_RETRIES} retries`);
           }
         } catch (err) {
-          lastError = err;
           if (attempt < MAX_RETRIES) {
-            console.warn(`[surgicalTranslate] Batch ${batchIdx + 1}/${tokenBatches.length}: error on attempt ${attempt + 1}, retrying...`, err);
+            console.warn(`[surgicalTranslate] ${label}: error on attempt ${attempt + 1}, retrying...`, err);
           } else {
-            console.error(`[surgicalTranslate] Batch ${batchIdx + 1}/${tokenBatches.length}: failed after ${MAX_RETRIES} retries:`, err);
+            console.error(`[surgicalTranslate] ${label}: failed after ${MAX_RETRIES} retries:`, err);
           }
+        }
+      }
+    };
+
+    for (let batchIdx = 0; batchIdx < tokenBatches.length; batchIdx++) {
+      const batch = tokenBatches[batchIdx];
+      await processBatch(batch, `Batch ${batchIdx + 1}/${tokenBatches.length}`);
+      
+      // Sub-batch recovery: if many tokens in this batch are still untranslated, split and retry
+      const untranslated = batch.filter(t => !t.translated || t.translated.trim() === '');
+      if (untranslated.length > 5 && untranslated.length > batch.length * 0.2) {
+        console.log(`[surgicalTranslate] Batch ${batchIdx + 1}: ${untranslated.length} tokens still untranslated, splitting into sub-batches...`);
+        const SUB_BATCH_SIZE = 50;
+        for (let si = 0; si < untranslated.length; si += SUB_BATCH_SIZE) {
+          const subBatch = untranslated.slice(si, si + SUB_BATCH_SIZE);
+          await processBatch(subBatch, `Batch ${batchIdx + 1} sub ${Math.floor(si / SUB_BATCH_SIZE) + 1}`);
         }
       }
     }

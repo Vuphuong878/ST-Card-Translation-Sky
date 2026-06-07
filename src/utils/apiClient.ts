@@ -2837,25 +2837,14 @@ export async function translateText(
   if (!text || text.trim() === '') return '';
 
   if (fieldName.includes('replaceString')) {
-    console.log(`[translateText] Field "${fieldName}" is a replaceString. Performing surgical translation without chunking...`);
+    console.log(`[translateText] Field "${fieldName}" is a replaceString. Performing surgical translation (lenient verification)...`);
     try {
-      // First attempt: strict verification
-      const result = await surgicalTranslate(text, config, targetLang, signal, glossary, mvuDictionary, true);
-      if (result.success) {
-        return result.translated;
-      }
-      // Retry with lenient verification (no fallback to chunk/mask)
-      console.warn(`[translateText] Surgical strict verification failed for "${fieldName}", retrying with lenient verification...`);
-      const retryResult = await surgicalTranslate(text, config, targetLang, signal, glossary, mvuDictionary, false);
-      if (retryResult.success) {
-        return retryResult.translated;
-      }
-      // Even lenient failed — return what we have (surgical always returns something)
-      console.error(`[translateText] Surgical translation fully failed for "${fieldName}", returning original text`);
-      return retryResult.translated;
+      // Use lenient verification directly — replaceString with <script> blocks will never pass strict char-count verification
+      const result = await surgicalTranslate(text, config, targetLang, signal, glossary, mvuDictionary, false);
+      return result.translated;
     } catch (err) {
       console.error(`[translateText] Error during surgical translation for "${fieldName}":`, err);
-      return text; // Don't fall through to maskCodeBlocks for replaceString
+      return text;
     }
   }
 
