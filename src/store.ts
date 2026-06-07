@@ -375,7 +375,7 @@ export const useStore = create<AppState>((set) => ({
     customSchema: LS.get('st-translator-custom-schema', ''),
     exportKeyMode: LS.get('st-translator-export-key-mode', 'merge') as ExportKeyMode,
     glossary: LS.get('st-translator-glossary', []) as GlossaryEntry[],
-    enableMvuSync: false,
+    enableMvuSync: LS.get('st-translator-mvu-sync-enabled', true),
     mvuDictionary: LS.get('st-translator-mvu-dict', {}) as Record<string, string>,
     enableRAGContext: LS.get('st-translator-rag-enabled', true),
     ragMaxFields: LS.get('st-translator-rag-max-fields', 5),
@@ -446,6 +446,9 @@ export const useStore = create<AppState>((set) => ({
       }
       if ('enablePatchMode' in partial) {
         LS.set('st-translator-patch-mode', next.enablePatchMode);
+      }
+      if ('enableMvuSync' in partial) {
+        LS.set('st-translator-mvu-sync-enabled', next.enableMvuSync);
       }
       if ('enableMvuConversion' in partial) {
         LS.set('st-translator-mvu-conversion', next.enableMvuConversion);
@@ -632,6 +635,7 @@ export const useStore = create<AppState>((set) => ({
     LS.set('st-translator-custom-schema', defaultTranslationConfig.customSchema);
     LS.set('st-translator-export-key-mode', defaultTranslationConfig.exportKeyMode);
     LS.set('st-translator-glossary', defaultTranslationConfig.glossary);
+    LS.set('st-translator-mvu-sync-enabled', defaultTranslationConfig.enableMvuSync);
     LS.set('st-translator-mvu-dict', defaultTranslationConfig.mvuDictionary);
     LS.set('st-translator-rag-enabled', defaultTranslationConfig.enableRAGContext);
     LS.set('st-translator-rag-max-fields', defaultTranslationConfig.ragMaxFields);

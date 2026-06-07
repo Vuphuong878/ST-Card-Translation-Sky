@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 import httpProxy from 'http-proxy';
 import { exec } from 'child_process';
+import fs from 'fs';
 
 export default defineConfig({
   plugins: [
@@ -32,6 +33,38 @@ export default defineConfig({
         });
 
         server.middlewares.use((req, res, next) => {
+          if (req.url === '/api/dump-config' && req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+              try {
+                fs.writeFileSync('config_dump.json', body, 'utf8');
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
+                res.end('Dumped successfully');
+              } catch (err: any) {
+                res.writeHead(500, { 'Content-Type': 'text/plain' });
+                res.end(err.message || String(err));
+              }
+            });
+            return;
+          }
+
+          if (req.url === '/api/debug-log' && req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+              try {
+                fs.appendFileSync('translation_debug.log', body + '\n', 'utf8');
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
+                res.end('Logged');
+              } catch (err: any) {
+                res.writeHead(500, { 'Content-Type': 'text/plain' });
+                res.end(err.message || String(err));
+              }
+            });
+            return;
+          }
+
           if (req.url === '/api/update' && req.method === 'POST') {
             res.setHeader('Content-Type', 'text/plain; charset=utf-8');
             res.setHeader('Cache-Control', 'no-cache');

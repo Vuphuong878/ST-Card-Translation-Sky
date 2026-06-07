@@ -77,6 +77,7 @@ export function verifySurgicalResult(original: string, translated: string): bool
 
 import { extractTranslationFromResponse } from './masterPrompt';
 import type { ProxySettings, GlossaryEntry } from '../types/card';
+import { writeDebugLog } from './debugLogger';
 
 /**
  * Sanitize structural characters from LLM translated text.
@@ -170,7 +171,10 @@ export async function surgicalTranslate(
   const { callProvider } = await import('./apiClient');
   const tokens = extractCJKTokens(text);
   
+  writeDebugLog(`[surgicalTranslate] Starting with strictVerification=${strictVerification}. Tokens extracted: ${tokens.length}`);
+
   if (tokens.length === 0) {
+    writeDebugLog(`[surgicalTranslate] Zero tokens extracted, returning early`);
     return { translated: text, success: true, fallbackTriggered: false };
   }
 
@@ -181,6 +185,7 @@ export async function surgicalTranslate(
     // Check MVU dictionary
     if (mvuDictionary && mvuDictionary[trimmed]) {
       token.translated = mvuDictionary[trimmed];
+      writeDebugLog(`[surgicalTranslate] Resolved locally via MVU dictionary: "${trimmed}" -> "${token.translated}"`);
       continue;
     }
     
@@ -189,6 +194,7 @@ export async function surgicalTranslate(
       const match = glossary.find(g => g.source.trim() === trimmed);
       if (match && match.target.trim()) {
         token.translated = match.target.trim();
+        writeDebugLog(`[surgicalTranslate] Resolved locally via Glossary: "${trimmed}" -> "${token.translated}"`);
         continue;
       }
     }
@@ -222,6 +228,7 @@ export async function surgicalTranslate(
   }
 
   console.log(`[surgicalTranslate] Extracted ${tokens.length} tokens (${uniquePendingTokens.length} unique pending, ${tokens.length - pendingTokens.length} local-resolved), ${tokenBatches.length} batches × ${BATCH_SIZE} planned`);
+  writeDebugLog(`[surgicalTranslate] Unique pending tokens: ${uniquePendingTokens.length}, Batches: ${tokenBatches.length}, Batch Size: ${BATCH_SIZE}`);
   
   let glossaryPrompt = '';
   if (glossary && glossary.length > 0) {
@@ -279,19 +286,25 @@ ${langRules}${glossaryPrompt}${mvuPrompt}`;
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
+          writeDebugLog(`[surgicalTranslate] Sending ${label} (attempt ${attempt + 1}/${MAX_RETRIES + 1})...`);
           const rawResult = await callProvider(config, systemPrompt, payload, signal);
+          writeDebugLog(`[surgicalTranslate] Received ${label} raw response of length ${rawResult.length}`);
           const parsedTranslations = parseBatchResponse(rawResult);
           matched = applyBatchTranslations(batch, parsedTranslations);
+          writeDebugLog(`[surgicalTranslate] Matched ${matched}/${batch.length} for ${label}`);
 
           if (matched >= batch.length * 0.5) {
             console.log(`[surgicalTranslate] ${label}: ${matched}/${batch.length} tokens matched${attempt > 0 ? ` (retry ${attempt})` : ''}`);
             break;
           } else if (attempt < MAX_RETRIES) {
             console.warn(`[surgicalTranslate] ${label}: only ${matched}/${batch.length} matched, retrying (${attempt + 1}/${MAX_RETRIES})...`);
+            writeDebugLog(`[surgicalTranslate] Low match rate (${matched}/${batch.length}) for ${label}, retrying...`);
           } else {
             console.warn(`[surgicalTranslate] ${label}: ${matched}/${batch.length} matched after ${MAX_RETRIES} retries`);
+            writeDebugLog(`[surgicalTranslate] Low match rate (${matched}/${batch.length}) for ${label} after all retries`);
           }
-        } catch (err) {
+        } catch (err: any) {
+          writeDebugLog(`[surgicalTranslate] Error in ${label} attempt ${attempt + 1}: ${err.message || String(err)}`);
           if (attempt < MAX_RETRIES) {
             console.warn(`[surgicalTranslate] ${label}: error on attempt ${attempt + 1}, retrying...`, err);
           } else {
@@ -342,22 +355,27 @@ ${langRules}${glossaryPrompt}${mvuPrompt}`;
     const translatedCount = tokens.filter(t => t.translated !== t.text).length;
     const missedCount = tokens.filter(t => t.translated === t.text).length;
     console.log(`[surgicalTranslate] Complete: ${translatedCount}/${tokens.length} tokens translated, ${missedCount} remained original, verification=${isValid ? 'PASS' : 'FAIL'}`);
+    writeDebugLog(`[surgicalTranslate] Complete: translated=${translatedCount}, missed=${missedCount}, verification=${isValid ? 'PASS' : 'FAIL'}`);
 
     if (isValid) {
       if (missedCount > 0) {
         console.warn(`[surgicalTranslate] ${missedCount} tokens could not be translated:`, tokens.filter(t => t.translated === t.text).map(m => m.text).slice(0, 20));
       }
+      writeDebugLog(`[surgicalTranslate] Verification PASSED. Returning translated text.`);
       return { translated: reinserted, success: true, fallbackTriggered: false };
     } else if (!strictVerification) {
       // Lenient mode: accept the result even if verification fails (for replaceString with no fallback)
       console.warn(`[surgicalTranslate] Verification failed but strictVerification=false, accepting result with ${translatedCount} translations applied`);
+      writeDebugLog(`[surgicalTranslate] Verification FAILED but strictVerification=false (lenient). Accepting result anyway.`);
       return { translated: reinserted, success: true, fallbackTriggered: false };
     } else {
       console.warn('[surgicalTranslate] Verification FAILED (strict mode). Falling back to normal translation.');
+      writeDebugLog(`[surgicalTranslate] Verification FAILED (strict mode). Returning original text.`);
       return { translated: text, success: false, fallbackTriggered: true };
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('[surgicalTranslate] Fatal error:', err);
+    writeDebugLog(`[surgicalTranslate] Fatal error: ${err.message || String(err)}`);
     return { translated: text, success: false, fallbackTriggered: true };
   }
 }
