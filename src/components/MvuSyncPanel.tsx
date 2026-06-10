@@ -9,7 +9,8 @@ import {
   extractMappingFromTranslatedSchemas, 
   type MvuKeyInfo,
   enforceExactConsistency,
-  validateDictionaryConflicts
+  validateDictionaryConflicts,
+  aiResolveMvuConflicts
 } from '../utils/mvuSync';
 import { isMvuCard, getMvuZodSummary } from '../utils/mvuDetector';
 import { 
@@ -53,6 +54,7 @@ export default function MvuSyncPanel() {
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
   const [isAutoTranslating, setIsAutoTranslating] = useState(false);
+  const [isResolvingConflicts, setIsResolvingConflicts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showStats, setShowStats] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -316,6 +318,67 @@ export default function MvuSyncPanel() {
       );
     } finally {
       setIsAutoTranslating(false);
+    }
+  };
+
+  const handleResolveConflicts = async () => {
+    if (conflicts.length === 0) return;
+    setIsResolvingConflicts(true);
+    try {
+      let schemaContext = translationConfig.customSchema || '';
+      if (!schemaContext.trim()) {
+        schemaContext = extractSchemaContextFromCard(card);
+      }
+      let keyDescriptions: Record<string, string> = {};
+      if (schemaContext) {
+        keyDescriptions = extractZodDescriptions(schemaContext);
+      }
+
+      addToast('info', isVi ? 'Đang gọi AI giải quyết xung đột bản dịch...' : 'Calling AI to resolve translation conflicts...');
+
+      const { fixedDict, fixedCount } = await aiResolveMvuConflicts(
+        mvuDictionary,
+        translationConfig.targetLanguage,
+        proxy,
+        undefined,
+        schemaContext,
+        keyDescriptions
+      );
+
+      if (fixedCount > 0) {
+        pushDictionaryHistory(mvuDictionary);
+        
+        // Update metadata for fixed keys
+        const nextMetadata = { ...mvuKeyMetadata };
+        const conflictedKeys = Array.from(new Set(conflicts.flatMap(c => [c.key1, c.key2])));
+        for (const k of conflictedKeys) {
+          if (fixedDict[k] && fixedDict[k] !== mvuDictionary[k]) {
+            nextMetadata[k] = {
+              ...nextMetadata[k],
+              confidence: 'ai'
+            };
+          }
+        }
+        
+        setMvuKeyMetadata(nextMetadata);
+        setTranslationConfig({ mvuDictionary: fixedDict });
+        addToast('success', isVi
+          ? `Đã giải quyết ${fixedCount} xung đột tên biến.`
+          : `Resolved ${fixedCount} variable conflicts.`
+        );
+      } else {
+        addToast('info', isVi
+          ? 'Không tìm thấy thay đổi nào mới hoặc không thể tự động giải quyết.'
+          : 'No changes found or could not resolve automatically.'
+        );
+      }
+    } catch (err) {
+      addToast('error', isVi
+        ? `Lỗi giải quyết xung đột: ${err instanceof Error ? err.message : String(err)}`
+        : `Conflict resolution error: ${err instanceof Error ? err.message : String(err)}`
+      );
+    } finally {
+      setIsResolvingConflicts(false);
     }
   };
 
@@ -675,6 +738,34 @@ export default function MvuSyncPanel() {
                   </div>
                 ))}
               </div>
+              <button
+                className="btn btn-secondary"
+                disabled={isResolvingConflicts || isAutoTranslating}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleResolveConflicts();
+                }}
+                style={{
+                  marginTop: '8px',
+                  padding: '4px 8px',
+                  fontSize: '0.7rem',
+                  alignSelf: 'flex-start',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#f87171',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                {isResolvingConflicts ? (
+                  <Loader2 size={12} className="spin" />
+                ) : (
+                  <Bot size={12} />
+                )}
+                {isVi ? 'Gọi AI dịch lại từ xung đột' : 'Call AI to re-translate conflicts'}
+              </button>
             </div>
           )}
 

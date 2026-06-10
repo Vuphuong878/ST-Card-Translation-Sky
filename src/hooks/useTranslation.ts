@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 import { useStore } from '../store';
 import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError } from '../utils/apiClient';
 import { extractTranslatableFields, applyTranslationsToCard, autoTranslateLorebookTriggerKeys, injectNewLorebookEntries } from '../utils/cardFields';
-import { syncMvuVariables, postProcessRegexHtml, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency, enforceVariableCasing, fixZodSyntaxErrors, enforceSchemaAuthoritative } from '../utils/mvuSync';
+import { syncMvuVariables, postProcessRegexHtml, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency, enforceVariableCasing, fixZodSyntaxErrors, validateDictionaryConflicts, aiResolveMvuConflicts } from '../utils/mvuSync';
 import { shouldSkipTranslation, detectLanguage } from '../utils/langDetect';
 import { clearRAGCache } from '../utils/ragContext';
 import { storeTranslation, lookupTranslationMemory } from '../utils/translationMemory';
@@ -238,28 +238,6 @@ export function useTranslation() {
       const freshFields = useStore.getState().fields;
       const entryNameDict = { ...buildEntryNameDictionary(freshFields), ...buildRegexTriggerDictionary(freshFields) };
 
-      // ═══ Collect translated schema content for fields that need variable covariance ═══
-      // When translating regex, tavern_helper, or lorebook logic entries,
-      // inject the FULL translated TavernHelper scripts so AI has complete context
-      // for variable names, types, enum values, default values, etc.
-      let translatedSchemaContent: string | undefined;
-      const needsSchema = 
-        field.entryType === 'initvar' || field.entryType === 'controller' || field.entryType === 'mvu_logic'
-        || field.group === 'regex'
-        || field.group === 'tavern_helper';
-      if (needsSchema && store.translationConfig.enableMvuSync) {
-        // IMPORTANT: Use fresh store fields (not stale `fields` snapshot) to find
-        // already-translated schema content — the snapshot only has pending/error fields.
-        const schemaFields = freshFields.filter(f =>
-          f.group === 'tavern_helper' && f.status === 'done' && f.translated && f.translated.trim()
-        );
-        if (schemaFields.length > 0) {
-          translatedSchemaContent = schemaFields
-            .map(f => `// ─── ${f.label} ───\n${f.translated}`)
-            .join('\n\n');
-        }
-      }
-
       const promptResult = buildEffectivePrompt({
         translationPrompt: store.translationConfig.translationPrompt,
         enableJailbreak: store.translationConfig.enableJailbreak,
@@ -285,7 +263,6 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        translatedSchemaContent,
         // Translation Memory hits (cross-session)
         translationMemoryHits: store.translationConfig.enableTranslationMemory
           ? await lookupTranslationMemory(field).catch(() => [])
@@ -433,13 +410,6 @@ export function useTranslation() {
         // ─── COVARIANCE FIX: Enforce covariance across initvar, controller, mvu_logic, regex, and tavern_helper fields ───
         const isCodeOrLogic = field.entryType === 'initvar' || field.entryType === 'controller' || field.entryType === 'mvu_logic' || field.group === 'regex' || field.group === 'tavern_helper';
         if (isCodeOrLogic) {
-          if (translatedSchemaContent) {
-            const authoritative = enforceSchemaAuthoritative(translated, translatedSchemaContent);
-            if (authoritative !== translated) {
-              translated = authoritative;
-              store.addLog('info', `🔗 Schema-Authoritative: aligned keys with Zod schema in ${field.label}`);
-            }
-          }
 
           const covariance = enforceInitvarCovariance(translated, currentMvuDict);
           if (covariance.fixes.length > 0) {
@@ -461,6 +431,8 @@ export function useTranslation() {
               const updatedDict = { ...freshDict };
               let addedCount = 0;
               const currentMetadata = { ...useStore.getState().mvuKeyMetadata };
+              // Dedup check: skip entries whose translation already exists for a different source key
+              const existingVals = new Set(Object.values(freshDict).map(v => v?.trim()).filter(Boolean));
               for (const [k, v] of Object.entries(entryMappings)) {
                 if (v && v.trim()) {
                   const existingConf = currentMetadata[k]?.confidence;
@@ -468,7 +440,12 @@ export function useTranslation() {
                     continue; // Schema mapping overrides/takes priority
                   }
                   if (!(k in updatedDict)) {
+                    if (existingVals.has(v.trim())) {
+                      console.warn(`[MVU Progressive] Skipped duplicate: "${k}"→"${v}" (already exists for another key)`);
+                      continue;
+                    }
                     updatedDict[k] = v;
+                    existingVals.add(v.trim());
                     addedCount++;
                     
                     if (!currentMetadata[k]) {
@@ -711,26 +688,6 @@ export function useTranslation() {
       const batchFreshFields = useStore.getState().fields;
       const batchEntryNameDict = { ...buildEntryNameDictionary(batchFreshFields), ...buildRegexTriggerDictionary(batchFreshFields) };
 
-      // ═══ Collect translated schema content for fields that need variable covariance ═══
-      let batchSchemaContent: string | undefined;
-      const batchNeedsSchema = batchFields.some(f =>
-        f.entryType === 'initvar' || f.entryType === 'controller' || f.entryType === 'mvu_logic'
-        || f.group === 'regex'
-        || f.group === 'tavern_helper'
-      );
-      if (batchNeedsSchema && store.translationConfig.enableMvuSync) {
-        // IMPORTANT: Use fresh store fields (not stale closure) to find
-        // already-translated schema content for initvar covariance
-        const schemaFields = batchFreshFields.filter(f =>
-          f.group === 'tavern_helper' && f.status === 'done' && f.translated && f.translated.trim()
-        );
-        if (schemaFields.length > 0) {
-          batchSchemaContent = schemaFields
-            .map(f => `// ─── ${f.label} ───\n${f.translated}`)
-            .join('\n\n');
-        }
-      }
-
       const promptResult = buildEffectivePrompt({
         translationPrompt: store.translationConfig.translationPrompt,
         enableJailbreak: store.translationConfig.enableJailbreak,
@@ -757,7 +714,6 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        translatedSchemaContent: batchSchemaContent,
         // Translation Memory hits for batch (use first field as representative)
         translationMemoryHits: store.translationConfig.enableTranslationMemory
           ? await lookupTranslationMemory(batchFields[0]).catch(() => [])
@@ -844,14 +800,6 @@ export function useTranslation() {
           const bf = batchFields[j];
           const isBfCodeOrLogic = bf.entryType === 'initvar' || bf.entryType === 'controller' || bf.entryType === 'mvu_logic' || bf.group === 'regex' || bf.group === 'tavern_helper';
           if (isBfCodeOrLogic) {
-            if (batchSchemaContent) {
-              const authoritative = enforceSchemaAuthoritative(translated, batchSchemaContent);
-              if (authoritative !== translated) {
-                translated = authoritative;
-                autoFixCount++;
-                store.addLog('info', `🔗 Schema-Authoritative: aligned keys with Zod schema in ${bf.label}`);
-              }
-            }
 
             const covariance = enforceInitvarCovariance(translated, mvuDict);
             if (covariance.fixes.length > 0) {
@@ -871,9 +819,16 @@ export function useTranslation() {
                 const freshDict = useStore.getState().translationConfig.mvuDictionary;
                 const updatedDict = { ...freshDict };
                 let addedCount = 0;
+                // Dedup check: skip entries whose translation already exists for a different source key
+                const existingVals = new Set(Object.values(freshDict).map(v => v?.trim()).filter(Boolean));
                 for (const [k, v] of Object.entries(entryMappings)) {
                   if (v && v.trim() && !(k in updatedDict)) {
+                    if (existingVals.has(v.trim())) {
+                      console.warn(`[MVU Progressive Batch] Skipped duplicate: "${k}"→"${v}" (already exists for another key)`);
+                      continue;
+                    }
                     updatedDict[k] = v;
+                    existingVals.add(v.trim());
                     addedCount++;
                   }
                 }
@@ -1223,6 +1178,67 @@ export function useTranslation() {
       }
     }
 
+    // ═══ Strategy B: Auto-resolve conflicts before EJS/translation loop ═══
+    if (store.translationConfig.enableMvuSync && store.card) {
+      try {
+        const currentDict = useStore.getState().translationConfig.mvuDictionary;
+        const conflicts = validateDictionaryConflicts(currentDict);
+        if (conflicts.length > 0) {
+          if (checkAbort()) {
+            runningRef.current = false;
+            store.setPhase('cancelled');
+            return;
+          }
+          store.addLog('active', `⚠️ Strategy B: Detected ${conflicts.length} translation conflict(s). Calling AI to resolve conflicts before proceeding...`);
+          
+          let schemaContext = store.translationConfig.customSchema || '';
+          if (!schemaContext.trim()) {
+            schemaContext = extractSchemaContextFromCard(store.card!);
+          }
+          let keyDescriptions: Record<string, string> = {};
+          if (schemaContext) {
+            keyDescriptions = extractZodDescriptions(schemaContext);
+          }
+
+          const { fixedDict, fixedCount } = await aiResolveMvuConflicts(
+            currentDict,
+            store.translationConfig.targetLanguage,
+            store.proxy,
+            abortRef.current?.signal,
+            schemaContext,
+            keyDescriptions
+          );
+
+          if (fixedCount > 0) {
+            // Update metadata for fixed keys
+            const currentMetadata = { ...useStore.getState().mvuKeyMetadata };
+            const conflictedKeys = Array.from(new Set(conflicts.flatMap(c => [c.key1, c.key2])));
+            for (const k of conflictedKeys) {
+              if (fixedDict[k] && fixedDict[k] !== currentDict[k]) {
+                currentMetadata[k] = {
+                  ...currentMetadata[k],
+                  confidence: 'ai'
+                };
+              }
+            }
+            store.setMvuKeyMetadata(currentMetadata);
+            store.setTranslationConfig({ mvuDictionary: fixedDict });
+            store.addLog('success', `✅ Strategy B: Resolved ${fixedCount} translation conflicts`);
+          } else {
+            store.addLog('warning', `⚠️ Strategy B: Could not automatically resolve conflicts`);
+          }
+        }
+      } catch (conflictErr) {
+        const conflictMsg = conflictErr instanceof Error ? conflictErr.message : String(conflictErr);
+        if (conflictMsg === 'Cancelled' || checkAbort()) {
+          runningRef.current = false;
+          store.setPhase('cancelled');
+          return;
+        }
+        store.addLog('warning', `⚠️ MVU conflict resolution failed: ${conflictMsg}`);
+      }
+    }
+
     // ═══ Strategy C: Build EJS Dictionary BEFORE starting loop ═══
     if (store.translationConfig.enableEjsSync && store.card) {
       try {
@@ -1534,7 +1550,13 @@ export function useTranslation() {
                 const currentDict = useStore.getState().translationConfig.mvuDictionary;
                 const newEntries = Object.keys(earlyMappings).filter(k => !(k in currentDict));
                 if (newEntries.length > 0) {
-                  const mergedDict = { ...currentDict, ...earlyMappings };
+                  // Merge ALL new mappings into dictionary (including potential conflicts)
+                  const mergedDict = { ...currentDict };
+                  for (const [k, v] of Object.entries(earlyMappings)) {
+                    if (!(k in currentDict)) {
+                      mergedDict[k] = v as string;
+                    }
+                  }
                   
                   const currentMetadata = { ...useStore.getState().mvuKeyMetadata };
                   for (const k of Object.keys(earlyMappings)) {
@@ -1555,16 +1577,61 @@ export function useTranslation() {
 
                   // Enforce 100% exact consistency
                   const { fixedDict, fixes } = enforceExactConsistency(mergedDict, currentMetadata);
+                  const dictAfterConsistency = fixes.length > 0 ? fixedDict : mergedDict;
                   if (fixes.length > 0) {
-                    store.setTranslationConfig({ mvuDictionary: fixedDict });
                     store.addLog('info', `🔒 Exact consistency: fixed ${fixes.length} case/spelling variations: ${fixes.join(', ')}`);
-                  } else {
-                    store.setTranslationConfig({ mvuDictionary: mergedDict });
                   }
+                  store.setTranslationConfig({ mvuDictionary: dictAfterConsistency });
                   store.addLog('info', `🔗 Cross-Script Covariance: injected ${newEntries.length} key mapping(s) from translated schema → dictionary (total: ${earlyMappingCount})`);
+
+                  // ═══ Auto-resolve conflicts after injection ═══
+                  const postInjectConflicts = validateDictionaryConflicts(dictAfterConsistency);
+                  if (postInjectConflicts.length > 0) {
+                    store.addLog('active', `⚠️ Cross-Script Covariance: Detected ${postInjectConflicts.length} conflict(s) after schema injection. Calling AI to resolve...`);
+                    try {
+                      let schemaCtx = store.translationConfig.customSchema || '';
+                      if (!schemaCtx.trim()) {
+                        schemaCtx = extractSchemaContextFromCard(store.card!);
+                      }
+                      let keyDescs: Record<string, string> = {};
+                      if (schemaCtx) {
+                        keyDescs = extractZodDescriptions(schemaCtx);
+                      }
+
+                      const { fixedDict: resolvedDict, fixedCount } = await aiResolveMvuConflicts(
+                        dictAfterConsistency,
+                        store.translationConfig.targetLanguage,
+                        store.proxy,
+                        abortRef.current?.signal,
+                        schemaCtx,
+                        keyDescs
+                      );
+
+                      if (fixedCount > 0) {
+                        const updatedMeta = { ...useStore.getState().mvuKeyMetadata };
+                        const conflictedKeys = Array.from(new Set(postInjectConflicts.flatMap(c => [c.key1, c.key2])));
+                        for (const k of conflictedKeys) {
+                          if (resolvedDict[k] && resolvedDict[k] !== dictAfterConsistency[k]) {
+                            updatedMeta[k] = { ...updatedMeta[k], confidence: 'ai' };
+                          }
+                        }
+                        store.setMvuKeyMetadata(updatedMeta);
+                        store.setTranslationConfig({ mvuDictionary: resolvedDict });
+                        store.addLog('success', `✅ Cross-Script Covariance: AI resolved ${fixedCount} conflict(s)`);
+                      } else {
+                        store.addLog('warning', `⚠️ Cross-Script Covariance: AI could not auto-resolve conflicts`);
+                      }
+                    } catch (resolveErr) {
+                      const resolveMsg = resolveErr instanceof Error ? resolveErr.message : String(resolveErr);
+                      if (resolveMsg === 'Cancelled' || checkAbort()) throw resolveErr;
+                      store.addLog('warning', `⚠️ Cross-Script conflict resolution failed: ${resolveMsg}`);
+                    }
+                  }
                 }
               }
             } catch (err) {
+              const errMsg = err instanceof Error ? err.message : String(err);
+              if (errMsg === 'Cancelled' || checkAbort()) throw err;
               console.error('Failed to extract early key mappings:', err);
             }
           }
@@ -1830,22 +1897,6 @@ export function useTranslation() {
       // Build entry name dictionary from already-translated lorebook name fields
       const retranslateEntryNameDict = { ...buildEntryNameDictionary(retranslateFreshFields), ...buildRegexTriggerDictionary(retranslateFreshFields) };
 
-      // ═══ Collect translated schema content for covariance ═══
-      let retranslateSchemaContent: string | undefined;
-      const needsSchema = 
-        field.entryType === 'initvar' || field.entryType === 'controller' || field.entryType === 'mvu_logic'
-        || field.group === 'regex'
-        || field.group === 'tavern_helper';
-      if (needsSchema && store.translationConfig.enableMvuSync) {
-        const schemaFields = retranslateFreshFields.filter(f =>
-          f.group === 'tavern_helper' && f.status === 'done' && f.translated && f.translated.trim()
-        );
-        if (schemaFields.length > 0) {
-          retranslateSchemaContent = schemaFields
-            .map(f => `// ─── ${f.label} ───\n${f.translated}`)
-            .join('\n\n');
-        }
-      }
 
       const targetModel = store.translationConfig.enableModelRouting
         ? (store.translationConfig.entryModelRouting[field.path] || store.translationConfig.groupModelRouting[field.group] || store.proxy.model)
@@ -1877,7 +1928,6 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        translatedSchemaContent: retranslateSchemaContent,
       });
 
       const resolvedFieldType = fieldGroupToFieldType(field.group, field.entryType);
@@ -2382,7 +2432,6 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        translatedSchemaContent: effectiveCustomSchema || undefined,
       });
 
       const resolvedFieldType = fieldGroupToFieldType(field.group, field.entryType);
@@ -2461,7 +2510,6 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        translatedSchemaContent: effectiveCustomSchema || undefined,
       });
             result = await translateText(
               inputContent, field.label, effectiveProxy, effectiveLang, effectiveLang,
@@ -2801,7 +2849,6 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        translatedSchemaContent: effectiveCustomSchema || undefined,
       });
 
         const resolvedFieldType = fieldGroupToFieldType(field.group, field.entryType);
@@ -2876,7 +2923,6 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        translatedSchemaContent: effectiveCustomSchema || undefined,
       });
               result = await translateText(
                 inputContent, field.label, store.proxy, effectiveLang, effectiveLang,

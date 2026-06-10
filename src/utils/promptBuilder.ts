@@ -619,8 +619,6 @@ export interface PromptBuildOptions {
   ejsEntryNameDict?: Record<string, string>;
   ejsKeywordDict?: Record<string, string>;
   ejsDecoratorPreserve?: boolean;
-  /** Full translated TavernHelper/Schema content to inject when translating initvar/controller/mvu_logic */
-  translatedSchemaContent?: string;
   /** Translation Memory hits (from IDB lookup, optional) */
   translationMemoryHits?: TranslationMemoryHit[];
 }
@@ -719,7 +717,6 @@ function buildMvuDictInjection(
   mvuDictionary: Record<string, string>,
   isLogic: boolean,
   entryType?: string,
-  translatedSchemaContent?: string,
 ): string {
   const mvuEntries = Object.entries(mvuDictionary).filter(([k, v]) => k && v && k !== v);
   if (mvuEntries.length === 0) return '';
@@ -780,51 +777,6 @@ Rules:
    ═══════════════════════════════════════════════════════════════════ */
 
 /**
- * Check if a field (or any field in a batch) needs translated schema context.
- * Returns true for regex, tavern_helper, and lorebook logic fields.
- */
-function needsTranslatedSchemaContext(
-  field: TranslationField,
-  batchFields?: TranslationField[],
-): boolean {
-  const check = (f: TranslationField) =>
-    f.group === 'regex' ||
-    f.group === 'tavern_helper' ||
-    f.entryType === 'initvar' ||
-    f.entryType === 'controller' ||
-    f.entryType === 'mvu_logic';
-
-  if (batchFields && batchFields.length > 0) {
-    return batchFields.some(check);
-  }
-  return check(field);
-}
-
-/**
- * Build the translated schema injection block.
- * Sends the FULL translated TavernHelper scripts — no truncation.
- * Gemini 2.5 Pro: 1M input tokens, schema ~30K tokens = 3% budget.
- */
-function buildTranslatedSchemaBlock(translatedSchemaContent: string): string {
-  return `\n\n═══ TRANSLATED SCHEMA (FULL SOURCE CODE — AUTHORITATIVE REFERENCE) ═══
-Below is the ALREADY-TRANSLATED schema/TavernHelper script.
-Use it as THE authoritative reference for:
-- Exact variable names (z.object field names)
-- Enum values (z.enum options)
-- Default values (.prefault(), .default())
-- Variable types (z.string, z.number, z.boolean, z.enum)
-- Structural relationships (nested objects)
-
-Your translation MUST use the EXACT SAME variable names, enum values, and field names as this schema.
-Do NOT invent your own translations — copy names CHARACTER-FOR-CHARACTER from this schema.
-
-\`\`\`javascript
-${translatedSchemaContent}
-\`\`\`
-═══ END OF SCHEMA ═══`;
-}
-
-/**
  * Build the effective prompt for ANY translation code path.
  *
  * This is the SINGLE SOURCE OF TRUTH for prompt assembly.
@@ -853,7 +805,6 @@ export function buildEffectivePrompt(options: PromptBuildOptions): PromptBuildRe
     enableModMode = false,
     modInstructions = '',
     expertMode = false,
-    translatedSchemaContent,
   } = options;
 
   const modPreset = options.modPreset || 'none';
@@ -932,7 +883,7 @@ ${modInstructionsBlock}`;
       const dominantEntryType = isBatchMode
         ? (batchFields.find(f => f.entryType === 'initvar' || f.entryType === 'controller' || f.entryType === 'mvu_logic')?.entryType || field.entryType)
         : field.entryType;
-      modPrompt += buildMvuDictInjection(mvuDictionary, checkLogic, dominantEntryType, translatedSchemaContent);
+      modPrompt += buildMvuDictInjection(mvuDictionary, checkLogic, dominantEntryType);
     }
 
     // Inject EJS Sync prompt block (Strategy C)
@@ -1004,11 +955,7 @@ ${glossaryList}`;
       }
     }
 
-    // ─── FULL TRANSLATED SCHEMA INJECTION (mod mode) ───
-    // Same as step 4.5 in normal mode — inject independently of RAG
-    if (enableMvuSync && translatedSchemaContent?.trim() && needsTranslatedSchemaContext(field, batchFields)) {
-      modPrompt += buildTranslatedSchemaBlock(translatedSchemaContent);
-    }
+
 
     return {
       effectivePrompt: modPrompt,
@@ -1118,17 +1065,11 @@ ${modInstructionsBlock}`;
       const dominantEntryType = isBatchMode
         ? (batchFields.find(f => f.entryType === 'initvar' || f.entryType === 'controller' || f.entryType === 'mvu_logic')?.entryType || field.entryType)
         : field.entryType;
-      prompt = (prompt || '') + buildMvuDictInjection(mvuDictionary, checkLogic, dominantEntryType, translatedSchemaContent);
+      prompt = (prompt || '') + buildMvuDictInjection(mvuDictionary, checkLogic, dominantEntryType);
     }
   }
 
-  // ─── 4.5. FULL TRANSLATED SCHEMA INJECTION ───
-  // Inject INDEPENDENTLY of RAG/expertMode — this is ALWAYS needed for
-  // regex/lorebook fields that reference schema variables.
-  // Gemini 2.5 Pro: 1M input tokens. Schema ~30K tokens = 3% budget. No cap needed.
-  if (enableMvuSync && translatedSchemaContent?.trim() && needsTranslatedSchemaContext(field, batchFields)) {
-    prompt = (prompt || '') + buildTranslatedSchemaBlock(translatedSchemaContent);
-  }
+
 
   // ─── 5. EJS Sync prompt block (Strategy C) ───
   if (options.enableEjsSync) {

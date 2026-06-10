@@ -1688,6 +1688,69 @@ export function extractPotentialMvuKeyStrings(card: CharacterCard): string[] {
   return extractPotentialMvuKeys(card).map(k => k.key);
 }
 
+/* ═══ CJK Character Meaning Hints (prevent same-translation-for-different-keys) ═══ */
+
+/**
+ * Common CJK characters that LLMs frequently confuse when translating variable names.
+ * Each entry maps a character to its core meaning hint, helping the AI distinguish
+ * characters that look similar or share radicals but have completely different meanings.
+ *
+ * This is used when Zod .describe() is not available for a key, to auto-generate
+ * semantic hints that prevent 武力 and 魅力 from both being translated as "Võ Lực".
+ */
+const CJK_CHAR_HINTS: Record<string, string> = {
+  // ── Force/Power characters (commonly confused) ──
+  '武': 'martial/military', '魅': 'charm/charisma/attractiveness', '魔': 'magic/demonic',
+  '体': 'body/physical', '智': 'intelligence/wisdom', '敏': 'agility/speed',
+  '力': 'force/power/strength', '气': 'energy/qi/breath', '精': 'spirit/essence',
+  '耐': 'endurance/patience', '速': 'speed/velocity', '防': 'defense/protection',
+  '攻': 'attack/offense', '运': 'luck/fortune', '幸': 'fortune/happiness',
+  // ── Description/Explanation characters (commonly confused) ──
+  '描': 'depict/draw/describe', '述': 'narrate/state', '说': 'speak/explain',
+  '明': 'clear/bright/explain', '释': 'release/explain', '义': 'meaning/justice',
+  '注': 'note/annotate', '解': 'solve/explain/understand',
+  // ── Status/State characters ──
+  '状': 'shape/condition/status', '态': 'state/attitude', '情': 'emotion/feeling',
+  '感': 'feel/sense', '绪': 'thread/mood', '心': 'heart/mind',
+  '怒': 'anger', '喜': 'joy/happiness', '悲': 'sorrow/sadness', '恐': 'fear',
+  '爱': 'love', '恨': 'hate', '欲': 'desire/want',
+  // ── Appearance/Beauty characters ──
+  '容': 'appearance/face/tolerate', '貌': 'appearance/looks', '美': 'beauty/beautiful',
+  '丑': 'ugly', '颜': 'face/color', '色': 'color/lust',
+  // ── People/Family characters ──
+  '人': 'person/people', '员': 'member/staff', '族': 'clan/family/ethnic',
+  '家': 'family/home', '成': 'become/achieve', '动': 'move/action',
+  '友': 'friend', '敌': 'enemy', '侣': 'companion/partner',
+  // ── Time characters ──
+  '月': 'month/moon', '日': 'day/sun', '年': 'year', '时': 'time/hour',
+  '无': 'none/without/nothing', '有': 'have/exist',
+  // ── Stats/Numbers ──
+  '值': 'value/worth', '数': 'number/count', '量': 'measure/amount',
+  '率': 'rate/ratio', '度': 'degree/level', '级': 'level/grade/class',
+  '分': 'divide/score/minute', '点': 'point/dot',
+  // ── Actions ──
+  '统': 'govern/system/unified', '治': 'govern/cure', '政': 'politics/government',
+  '务': 'affairs/duty/task', '学': 'study/learn', '才': 'talent/ability',
+  '射': 'shoot/emit', '骑': 'ride/mount',
+};
+
+/**
+ * Generate a semantic hint for a CJK key using character-level analysis.
+ * Returns a brief English meaning hint like "martial + force" for "武力".
+ */
+function generateCjkHint(key: string): string | null {
+  const chars = key.split('').filter(ch => /[\u4e00-\u9fff\u3400-\u4dbf]/.test(ch));
+  if (chars.length === 0) return null;
+
+  const hints = chars.map(ch => CJK_CHAR_HINTS[ch]).filter(Boolean);
+  if (hints.length === 0) return null;
+
+  // Only generate hint if we know at least half the characters
+  if (hints.length < Math.ceil(chars.length / 2)) return null;
+
+  return hints.join(' + ');
+}
+
 /* ═══ AI Auto-translate MVU Keys ═══ */
 
 /**
@@ -1744,8 +1807,18 @@ STRICT RULES:
    - Use Title Case with diacritics: Hảo Cảm, Thể Lực, Trí Tuệ
    - Each word should be properly capitalized
    - Common patterns: 好感 → Hảo Cảm, 体力 → Thể Lực, 攻击 → Tấn Công
+   - Translate based on MEANING, not character-by-character. Examples:
+     武力 = Võ Lực (martial force), 魅力 = Sức Hút (charm/charisma), 体力 = Thể Lực (stamina)
+     描述 = Mô Tả (description), 说明 = Giải Thích (explanation)
 9. The translated names must be covariant with the Zod Schema — matching the field structure and semantics.
-10. COMPOUND ENUM VALUES: Some keys are compound enum values with structure like "Phase N_Name" (e.g. "阶段 1_静谧", "阶段 2_心动"). Translate the ENTIRE compound value as one unit: "阶段 1_静谧" → "Giai đoạn 1_Tĩnh lặng". Keep the separator character (underscore) and numbering intact. These values appear in z.enum([...]), .prefault('...'), .default('...'), and YAML values — they MUST all be the same translated string.${modBlock}
+10. COMPOUND ENUM VALUES: Some keys are compound enum values with structure like "Phase N_Name" (e.g. "阶段 1_静谧", "阶段 2_心动"). Translate the ENTIRE compound value as one unit: "阶段 1_静谧" → "Giai đoạn 1_Tĩnh lặng". Keep the separator character (underscore) and numbering intact. These values appear in z.enum([...]), .prefault('...'), .default('...'), and YAML values — they MUST all be the same translated string.
+11. ██ UNIQUE TRANSLATIONS — ABSOLUTELY CRITICAL ██
+   Every DIFFERENT source key MUST produce a DIFFERENT translated name. If two source keys have different Chinese characters, their translations MUST be different strings.
+   FORBIDDEN: 武力 → "Võ Lực" AND 魅力 → "Võ Lực" (WRONG! Same translation for different keys!)
+   CORRECT:   武力 → "Võ Lực" AND 魅力 → "Sức Hút" (Different translations for different keys)
+   FORBIDDEN: 描述 → "Mô Tả" AND 说明 → "Mô Tả" (WRONG!)
+   CORRECT:   描述 → "Mô Tả" AND 说明 → "Giải Thích" (Different!)
+   If you produce duplicate translations for different source keys, the card's variable system will CRASH because two different variables will share the same name.${modBlock}
 
 RESPOND in EXACT JSON format (no markdown): {"translations": {"original_key": "Translated Key", ...}}`;
 
@@ -1779,12 +1852,13 @@ RESPOND in EXACT JSON format (no markdown): {"translations": {"original_key": "T
       }
     }
 
-    // Build variable list with optional descriptions
+    // Build variable list with optional descriptions + auto CJK hints
     const varList = batch.map((k, i) => {
       const desc = keyDescriptions?.[k];
-      return desc
-        ? `${i + 1}. "${k}" — ${desc}`
-        : `${i + 1}. "${k}"`;
+      if (desc) return `${i + 1}. "${k}" — ${desc}`;
+      const hint = generateCjkHint(k);
+      if (hint) return `${i + 1}. "${k}" — [char meaning: ${hint}]`;
+      return `${i + 1}. "${k}"`;
     }).join('\n');
 
     let currentBatchKeys = [...batch];
@@ -1799,9 +1873,10 @@ RESPOND in EXACT JSON format (no markdown): {"translations": {"original_key": "T
         // Build variable list for current (possibly reduced) key set
         const currentVarList = currentBatchKeys.map((k, i) => {
           const desc = keyDescriptions?.[k];
-          return desc
-            ? `${i + 1}. "${k}" — ${desc}`
-            : `${i + 1}. "${k}"`;
+          if (desc) return `${i + 1}. "${k}" — ${desc}`;
+          const hint = generateCjkHint(k);
+          if (hint) return `${i + 1}. "${k}" — [char meaning: ${hint}]`;
+          return `${i + 1}. "${k}"`;
         }).join('\n');
 
         // On retry, escalate the prompt with explicit correction hints
@@ -1887,7 +1962,214 @@ ${currentVarList}${retryHint}`;
     }
   } // end batch loop
 
+  // ── POST-BATCH: Auto-dedup conflicting translations ──────────────────────
+  // Detect cases where different source keys got the SAME translated name
+  // (e.g. 武力 → "Võ Lực" AND 魅力 → "Võ Lực") and re-translate the conflicts.
+  const translationToSources = new Map<string, string[]>();
+  for (const [src, tgt] of Object.entries(result)) {
+    if (src === tgt) continue; // skip identity mappings
+    const existing = translationToSources.get(tgt);
+    if (existing) {
+      existing.push(src);
+    } else {
+      translationToSources.set(tgt, [src]);
+    }
+  }
+
+  const conflictGroups = [...translationToSources.entries()]
+    .filter(([, srcs]) => srcs.length > 1);
+
+  if (conflictGroups.length > 0 && !signal?.aborted) {
+    console.warn(
+      `[MVU Sync] Detected ${conflictGroups.length} duplicate translation group(s). Re-translating conflicts...`
+    );
+
+    // Collect all conflicting source keys
+    const conflictKeys: string[] = [];
+    for (const [dupTranslation, srcKeys] of conflictGroups) {
+      console.warn(`[MVU Sync] Conflict: ${srcKeys.map(k => `"${k}"`).join(' & ')} → "${dupTranslation}"`);
+      conflictKeys.push(...srcKeys);
+    }
+
+    // Build a disambiguation prompt with explicit "these are DIFFERENT" instructions
+    const disambiguationList = conflictGroups
+      .map(([dup, srcs]) =>
+        `  ⚠️ ${srcs.map(s => `"${s}"`).join(', ')} were ALL translated as "${dup}" — but they are DIFFERENT concepts! Give each a UNIQUE name.`
+      )
+      .join('\n');
+
+    const dedupPrompt = `You previously translated these variable names, but MULTIPLE different source keys got the SAME translation. This is WRONG — it will cause variable collisions and crash the system.
+
+CONFLICTS TO FIX:
+${disambiguationList}
+
+Translate these keys again. Each MUST have a UNIQUE, DIFFERENT translation. Pay attention to the actual MEANING of each Chinese character:
+${conflictKeys.map((k, i) => {
+  const desc = keyDescriptions?.[k];
+  return desc ? `${i + 1}. "${k}" — ${desc}` : `${i + 1}. "${k}"`;
+}).join('\n')}
+
+IMPORTANT: Do NOT repeat the same translation for different keys. If unsure, use the .describe() context or character meaning to differentiate.`;
+
+    try {
+      const requestTimeout = (proxy as any).requestTimeout || 300000;
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort('Dedup retry timeout'), requestTimeout * 2);
+      const fetchSignal = signal
+        ? AbortSignal.any([signal, timeoutController.signal])
+        : timeoutController.signal;
+
+      const responseText = await callProvider(proxy, systemPrompt, dedupPrompt, fetchSignal);
+      clearTimeout(timeoutId);
+
+      const parsed = parseJsonFromAi(responseText);
+      const fixedTranslations = parsed.translations || parsed;
+
+      // Apply fixed translations — verify they are actually unique now
+      const newValues = new Set<string>();
+      let fixedCount = 0;
+      for (const [k, v] of Object.entries(fixedTranslations)) {
+        if (typeof v !== 'string' || !v.trim()) continue;
+        const trimmed = v.trim();
+        if (!newValues.has(trimmed)) {
+          newValues.add(trimmed);
+          result[k] = trimmed;
+          fixedCount++;
+        } else {
+          // Still a duplicate — append source key hint to force uniqueness
+          const disambiguated = `${trimmed} (${k})`;
+          result[k] = disambiguated;
+          fixedCount++;
+          console.warn(`[MVU Sync] Still duplicate "${trimmed}" for "${k}" — appending hint: "${disambiguated}"`);
+        }
+      }
+      console.log(`[MVU Sync] Dedup retry fixed ${fixedCount}/${conflictKeys.length} conflicting keys`);
+    } catch (err: any) {
+      if (err.name === 'AbortError' || signal?.aborted) throw err;
+      console.error('[MVU Sync] Dedup retry failed:', err.message);
+    }
+  }
+
   return result;
+}
+
+/**
+ * Gọi AI để giải quyết xung đột dịch thuật tên biến MVU.
+ * Quét từ điển hiện tại để tìm các xung đột (các khóa CJK khác nhau cùng dịch sang 1 tên Latinh).
+ * Gọi AI để dịch lại các khóa này với hướng dẫn chọn tên độc bản và đúng nghĩa nhất.
+ */
+export async function aiResolveMvuConflicts(
+  mvuDictionary: Record<string, string>,
+  targetLang: string,
+  proxy: ProxySettings,
+  signal?: AbortSignal,
+  schemaContext?: string,
+  keyDescriptions?: Record<string, string>
+): Promise<{ fixedDict: Record<string, string>; fixedCount: number }> {
+  const conflicts = validateDictionaryConflicts(mvuDictionary);
+  if (conflicts.length === 0) {
+    return { fixedDict: mvuDictionary, fixedCount: 0 };
+  }
+
+  // Gom các xung đột theo giá trị dịch bị trùng lặp
+  const translationToSources = new Map<string, string[]>();
+  for (const [src, tgt] of Object.entries(mvuDictionary)) {
+    if (!tgt || src === tgt) continue;
+    const normalized = tgt.toLowerCase().trim();
+    if (!translationToSources.has(normalized)) {
+      translationToSources.set(normalized, []);
+    }
+    translationToSources.get(normalized)!.push(src);
+  }
+
+  const conflictGroups = [...translationToSources.entries()]
+    .filter(([, srcs]) => srcs.length > 1);
+
+  if (conflictGroups.length === 0) {
+    return { fixedDict: mvuDictionary, fixedCount: 0 };
+  }
+
+  const conflictKeys = Array.from(new Set(conflictGroups.flatMap(([, srcs]) => srcs)));
+  const disambiguationList = conflictGroups
+    .map(([dup, srcs]) => {
+      const originalVal = mvuDictionary[srcs[0]]; // Lấy lại casing gốc trong từ điển
+      return `  ⚠️ Các khóa: ${srcs.map(s => `"${s}"`).join(', ')} đều đang bị dịch trùng thành "${originalVal}" — Nhưng chúng mang ý nghĩa KHÁC NHAU! Hãy dịch mỗi khóa thành một tên duy nhất và phù hợp.`;
+    })
+    .join('\n');
+
+  const systemPrompt = `Translate CJK (Chinese/Japanese/Korean) variable names to ${targetLang}. Do NOT translate English or ASCII names. Chinese proper nouns → Sino-Vietnamese reading. Japanese proper nouns → Romaji. Keep consistency with MVU Schema.
+
+You are a variable name translator for SillyTavern character cards.
+Your job: translate variable names from the source language to ${targetLang}.
+
+STRICT RULES:
+1. Use natural, readable formatting with diacritics (e.g. Vietnamese: Độ Hảo Cảm, Sức Tấn Công). CONSISTENCY is the only formatting rule.
+2. Keep the names SHORT but meaningful (2-4 words max).
+3. If a key is already in Latin/ASCII or English, keep it AS IS.
+4. Chinese proper nouns should use Sino-Vietnamese reading for names only.
+5. Japanese proper nouns should use Romaji.
+6. Every DIFFERENT source key MUST produce a DIFFERENT translated name.
+7. Do NOT repeat the same translation. If you produce duplicate translations for different source keys, the system will crash.
+
+RESPOND in EXACT JSON format: {"translations": {"original_key": "Translated Key", ...}}`;
+
+  const contextBlock = schemaContext && schemaContext.trim()
+    ? `\nHere is the Zod schema or script context for context:\n\`\`\`javascript\n${schemaContext.slice(0, 3000)}\n\`\`\`\n\n`
+    : '';
+
+  const userPrompt = `You previously translated these variable names, but MULTIPLE different source keys got the SAME translation. This is WRONG — it will cause variable collisions.
+
+CONFLICTS TO FIX:
+${disambiguationList}
+
+Translate these keys again. Each MUST have a UNIQUE, DIFFERENT translation. Pay attention to the actual MEANING of each CJK character:
+${conflictKeys.map((k, i) => {
+  const desc = keyDescriptions?.[k];
+  if (desc) return `${i + 1}. "${k}" — ${desc}`;
+  const hint = generateCjkHint(k);
+  if (hint) return `${i + 1}. "${k}" — [char meaning: ${hint}]`;
+  return `${i + 1}. "${k}"`;
+}).join('\n')}
+
+IMPORTANT: Do NOT repeat the same translation for different keys. Resolve the conflicts and return unique, correct translations.`;
+
+  try {
+    const responseText = await callProvider(proxy, systemPrompt, userPrompt, signal);
+    const parsed = parseJsonFromAi(responseText);
+    const fixedTranslations = parsed.translations || parsed;
+
+    const result = { ...mvuDictionary };
+    const newValues = new Set<string>();
+    
+    // Thu thập toàn bộ giá trị không bị xung đột để tránh trùng lặp mới
+    for (const [k, v] of Object.entries(result)) {
+      if (!conflictKeys.includes(k) && v && v.trim()) {
+        newValues.add(v.toLowerCase().trim());
+      }
+    }
+
+    let fixedCount = 0;
+    for (const [k, v] of Object.entries(fixedTranslations)) {
+      if (typeof v !== 'string' || !v.trim() || !conflictKeys.includes(k)) continue;
+      const trimmed = v.trim();
+      const lowerTrimmed = trimmed.toLowerCase();
+      if (!newValues.has(lowerTrimmed)) {
+        newValues.add(lowerTrimmed);
+        result[k] = trimmed;
+        fixedCount++;
+      } else {
+        // Nếu AI vẫn trả về trùng, chèn thêm hậu tố để ép buộc độc bản
+        const disambiguated = `${trimmed} (${k})`;
+        result[k] = disambiguated;
+        fixedCount++;
+      }
+    }
+
+    return { fixedDict: result, fixedCount };
+  } catch (err) {
+    console.error('[MVU Sync] Failed to resolve MVU conflicts via AI:', err);
+    throw err;
+  }
 }
 
 /* ═══ AI Rename MVU Keys (Mod Mode) ═══ */
