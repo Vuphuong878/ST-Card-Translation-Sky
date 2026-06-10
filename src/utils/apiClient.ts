@@ -3274,6 +3274,15 @@ export async function translateText(
 }
 
 /* ─── Batch translate multiple fields in one API call ─── */
+/** Result of a batch translation including metadata for alignment validation */
+export interface BatchTranslationResult {
+  results: string[];
+  /** Which parse strategy was used (1=named delimiters, 2=numbered delimiters, 3=alt delimiters, 4=numbered lines, 5=double newline fallback) */
+  parseStrategy: number;
+  /** How many results were filled vs expected */
+  filledCount: number;
+}
+
 export async function translateBatch(
   items: { text: string; fieldName: string }[],
   config: ProxySettings,
@@ -3295,10 +3304,15 @@ export async function translateBatch(
     return [result];
   }
 
-  // Build combined prompt with numbered sections
+  // ═══ Build combined prompt with NAMED numbered sections ═══
+  // Format: ===1:Entry Name=== to help AI and parser match sections correctly
   const DELIMITER = '===';
   const combinedText = items
-    .map((item, i) => `${DELIMITER}${i + 1}${DELIMITER}\n${item.text}`)
+    .map((item, i) => {
+      // Sanitize fieldName: remove prefixes like "Lorebook: " and truncate to 60 chars
+      const shortName = item.fieldName.replace(/^Lorebook:\s*/i, '').slice(0, 60);
+      return `${DELIMITER}${i + 1}:${shortName}${DELIMITER}\n${item.text}`;
+    })
     .join('\n\n');
 
   const schemaInstructions = customSchema
@@ -3319,17 +3333,25 @@ export async function translateBatch(
     if (terms) glossaryBlock = `\n\nMANDATORY TERMINOLOGY:\n${terms}\n`;
   }
 
+  // Build section list for prompt clarity
+  const sectionList = items
+    .map((item, i) => `  ${DELIMITER}${i + 1}:${item.fieldName.replace(/^Lorebook:\s*/i, '').slice(0, 60)}${DELIMITER}`)
+    .join('\n');
+
   const system = `${systemPromptPrefix ? systemPromptPrefix + '\n\n' : ''}${basePrompt}
 
 BATCH FORMAT:
-- The input contains ${items.length} numbered sections, each starting with ${DELIMITER}N${DELIMITER} (e.g., ${DELIMITER}1${DELIMITER}, ${DELIMITER}2${DELIMITER}).
-- You MUST return the same numbered delimiters with the translated text for each section.
-- Do NOT merge or skip any sections. Every section must be present in your output.
+- The input contains ${items.length} NAMED numbered sections. Each section starts with a delimiter in the format ${DELIMITER}N:EntryName${DELIMITER} (e.g., ${DELIMITER}1:Character Bio${DELIMITER}, ${DELIMITER}2:Location${DELIMITER}).
+- You MUST return the EXACT SAME delimiters (including the entry name) with the translated text for each section.
+- The expected sections are:
+${sectionList}
+- CRITICAL: Do NOT merge, skip, reorder, or swap any sections. Section N's translation MUST correspond to section N's original text.
+- Each section's translation must ONLY contain translated content for THAT specific section. Do NOT mix content between sections.
 - CRITICAL: You MUST translate ALL Chinese/Japanese/Korean characters in EVERY section. Do NOT leave any CJK text untranslated. This includes section headers, YAML keys, annotations, labels, and text inside XML/HTML tags.
 - SELF-CHECK MANDATE: Before outputting EACH section, scan your translation for ANY remaining Chinese characters (Unicode \u4e00-\u9fff). If you find even ONE Chinese character that should be translated, fix it BEFORE outputting. Common mistake: leaving single CJK characters at word boundaries (e.g. "nhân际" should be "nhân tế", "关系" should be "quan hệ"). ZERO Chinese characters may remain in the output.${schemaInstructions}${glossaryBlock}`;
 
   const sourceHint = sourceLang && sourceLang !== 'auto' ? ` (from ${sourceLang})` : '';
-  const user = `Translate these ${items.length} sections${sourceHint} to ${targetLang}. Keep the ${DELIMITER}N${DELIMITER} delimiters. Return ONLY translations. IMPORTANT: Translate ALL Chinese text in every section — ZERO Chinese characters should remain in the output. Before outputting each section, re-scan for any remaining CJK and translate them:\n\n${combinedText}`;
+  const user = `Translate these ${items.length} sections${sourceHint} to ${targetLang}. Keep the ${DELIMITER}N:EntryName${DELIMITER} delimiters EXACTLY as provided. Return ONLY translations. IMPORTANT: Translate ALL Chinese text in every section — ZERO Chinese characters should remain in the output. Before outputting each section, re-scan for any remaining CJK and translate them:\n\n${combinedText}`;
 
   // Call provider
   let lastError: Error | null = null;
@@ -3348,12 +3370,32 @@ BATCH FORMAT:
       const rawResult = await callProvider(config, system, user, combinedSignal);
       clearTimeout(timeoutId);
 
-      // Parse response by delimiters
-      const results = parseBatchResponse(rawResult, items.length);
+      // Parse response by delimiters (with name-matching support)
+      const fieldNames = items.map(it => it.fieldName.replace(/^Lorebook:\s*/i, '').slice(0, 60));
+      const batchResult = parseBatchResponseEnhanced(rawResult, items.length, fieldNames);
+
+      // ═══ CROSS-VALIDATION: detect and fix swapped translations ═══
+      const alignment = validateBatchAlignment(items, batchResult.results);
+      if (alignment.swapCount > 0) {
+        console.log(`[BatchAlignment] Auto-corrected ${alignment.swapCount} swapped translations`);
+        // Apply the corrected results
+        for (let si = 0; si < alignment.results.length; si++) {
+          batchResult.results[si] = alignment.results[si];
+        }
+      }
+
+      // Mark suspicious indices (will be handled by caller — fallback to single)
+      if (alignment.suspiciousIndices.length > 0) {
+        console.warn(`[BatchAlignment] ${alignment.suspiciousIndices.length} suspicious entries: indices ${alignment.suspiciousIndices.join(', ')}`);
+        // Clear suspicious results so caller treats them as empty → fallback to single
+        for (const si of alignment.suspiciousIndices) {
+          batchResult.results[si] = '';
+        }
+      }
+
+      const results = batchResult.results;
 
       // ═══ RESIDUAL CJK CHECK for each batch result ═══
-      // Single-field translateText() always runs postTranslationResidualCheck(),
-      // but batch mode was missing this — causing residual Chinese in batch translations.
       const isTargetCJK = /chinese|japanese|korean/i.test(targetLang);
       if (!isTargetCJK) {
         for (let ri = 0; ri < results.length; ri++) {
@@ -3392,36 +3434,102 @@ BATCH FORMAT:
   return items.map(() => ''); // Fallback
 }
 
-/* ─── Parse batch response into individual translations ─── */
-function parseBatchResponse(response: string, expectedCount: number): string[] {
+/* ─── Enhanced batch response parser with name-matching and strategy tracking ─── */
+function parseBatchResponseEnhanced(
+  response: string,
+  expectedCount: number,
+  fieldNames: string[]
+): BatchTranslationResult {
   const results: string[] = new Array(expectedCount).fill('');
 
-  // Strategy 1: Split by ===N=== delimiters (exact or with spaces)
-  const sectionRegex = /===\s*(\d+)\s*===/g;
-  const matches: { index: number; num: number; fullMatch: string }[] = [];
-  let match;
+  // ═══ Strategy 1: Named delimiters ===N:EntryName=== (preferred — highest confidence) ═══
+  const namedRegex = /===\s*(\d+)\s*:\s*([^=]+?)\s*===/g;
+  const namedMatches: { index: number; num: number; name: string; fullMatch: string }[] = [];
+  let match: RegExpExecArray | null;
 
-  while ((match = sectionRegex.exec(response)) !== null) {
-    matches.push({ index: match.index, num: parseInt(match[1], 10), fullMatch: match[0] });
+  while ((match = namedRegex.exec(response)) !== null) {
+    namedMatches.push({
+      index: match.index,
+      num: parseInt(match[1], 10),
+      name: match[2].trim(),
+      fullMatch: match[0]
+    });
   }
 
-  if (matches.length >= Math.min(expectedCount, 2)) {
-    for (let i = 0; i < matches.length; i++) {
-      const num = matches[i].num;
+  if (namedMatches.length >= Math.min(expectedCount, 2)) {
+    for (let i = 0; i < namedMatches.length; i++) {
+      const { num, name } = namedMatches[i];
       if (num < 1 || num > expectedCount) continue;
 
-      const startIdx = matches[i].index + matches[i].fullMatch.length;
-      const endIdx = i + 1 < matches.length ? matches[i + 1].index : response.length;
+      const startIdx = namedMatches[i].index + namedMatches[i].fullMatch.length;
+      const endIdx = i + 1 < namedMatches.length ? namedMatches[i + 1].index : response.length;
       const text = response.slice(startIdx, endIdx).trim();
-      if (text) results[num - 1] = text;
+      if (!text) continue;
+
+      // Name-matching: check if AI returned the section in the correct position
+      // If name matches fieldNames[num-1], use num directly
+      // If name matches a DIFFERENT fieldName, swap to correct index
+      const expectedName = fieldNames[num - 1] || '';
+      const nameNorm = name.toLowerCase().replace(/\s+/g, '');
+      const expectedNorm = expectedName.toLowerCase().replace(/\s+/g, '');
+
+      if (nameNorm === expectedNorm || expectedNorm.includes(nameNorm) || nameNorm.includes(expectedNorm)) {
+        // Name matches expected position → direct assignment
+        results[num - 1] = text;
+      } else {
+        // Name doesn't match expected — find correct index by name
+        const correctIdx = fieldNames.findIndex(fn => {
+          const fnNorm = fn.toLowerCase().replace(/\s+/g, '');
+          return fnNorm === nameNorm || fnNorm.includes(nameNorm) || nameNorm.includes(fnNorm);
+        });
+        if (correctIdx >= 0 && !results[correctIdx]) {
+          // Swap to correct position based on name
+          console.log(`[BatchParse] Section ${num} name "${name}" matches field[${correctIdx}] "${fieldNames[correctIdx]}" — auto-correcting position`);
+          results[correctIdx] = text;
+        } else {
+          // Fallback: use the numeric index anyway
+          results[num - 1] = text;
+        }
+      }
     }
 
-    // Check if we got most results
     const filledCount = results.filter(r => r.trim()).length;
-    if (filledCount >= expectedCount * 0.5) return results;
+    if (filledCount >= expectedCount * 0.5) {
+      return { results, parseStrategy: 1, filledCount };
+    }
   }
 
-  // Strategy 2: Try ---N--- or [N] delimiters
+  // ═══ Strategy 2: Numbered delimiters ===N=== (without name) ═══
+  const numberedDelimRegex = /===\s*(\d+)\s*===/g;
+  const numberedMatches: { index: number; num: number; fullMatch: string }[] = [];
+
+  while ((match = numberedDelimRegex.exec(response)) !== null) {
+    // Skip if this was already matched as a named delimiter
+    const m = match; // capture non-null for closure
+    const possibleNamed = namedMatches.find(nm => nm.index === m.index);
+    if (!possibleNamed) {
+      numberedMatches.push({ index: m.index, num: parseInt(m[1], 10), fullMatch: m[0] });
+    }
+  }
+
+  if (numberedMatches.length >= Math.min(expectedCount, 2)) {
+    for (let i = 0; i < numberedMatches.length; i++) {
+      const num = numberedMatches[i].num;
+      if (num < 1 || num > expectedCount) continue;
+
+      const startIdx = numberedMatches[i].index + numberedMatches[i].fullMatch.length;
+      const endIdx = i + 1 < numberedMatches.length ? numberedMatches[i + 1].index : response.length;
+      const text = response.slice(startIdx, endIdx).trim();
+      if (text && !results[num - 1]) results[num - 1] = text;
+    }
+
+    const filledCount = results.filter(r => r.trim()).length;
+    if (filledCount >= expectedCount * 0.5) {
+      return { results, parseStrategy: 2, filledCount };
+    }
+  }
+
+  // ═══ Strategy 3: Try ---N--- or [N] delimiters ═══
   const altRegex = /(?:---\s*(\d+)\s*---|^\[(\d+)\]\s*)/gm;
   const altMatches: { index: number; num: number; fullMatch: string }[] = [];
 
@@ -3438,14 +3546,16 @@ function parseBatchResponse(response: string, expectedCount: number): string[] {
       const startIdx = altMatches[i].index + altMatches[i].fullMatch.length;
       const endIdx = i + 1 < altMatches.length ? altMatches[i + 1].index : response.length;
       const text = response.slice(startIdx, endIdx).trim();
-      if (text) results[num - 1] = text;
+      if (text && !results[num - 1]) results[num - 1] = text;
     }
 
     const filledCount = results.filter(r => r.trim()).length;
-    if (filledCount >= expectedCount * 0.5) return results;
+    if (filledCount >= expectedCount * 0.5) {
+      return { results, parseStrategy: 3, filledCount };
+    }
   }
 
-  // Strategy 3: Line-by-line numbered patterns like "1. text" or "1: text"
+  // ═══ Strategy 4: Line-by-line numbered patterns like "1. text" or "1: text" ═══
   const lines = response.split('\n');
   const numberedLine = /^(\d+)[.:)\]]\s+(.+)/;
   let foundNumbered = 0;
@@ -3459,17 +3569,141 @@ function parseBatchResponse(response: string, expectedCount: number): string[] {
       }
     }
   }
-  if (foundNumbered >= expectedCount * 0.5) return results;
+  if (foundNumbered >= expectedCount * 0.5) {
+    return { results, parseStrategy: 4, filledCount: foundNumbered };
+  }
 
-  // Strategy 4: Split by double newlines as last resort
+  // ═══ Strategy 5: Split by double newlines as last resort (LOWEST confidence) ═══
   const parts = response.split(/\n\n+/).filter(p => p.trim());
   for (let i = 0; i < Math.min(parts.length, expectedCount); i++) {
     if (!results[i]) {
-      results[i] = parts[i].replace(/===\s*\d+\s*===/g, '').replace(/---\s*\d+\s*---/g, '').trim();
+      results[i] = parts[i]
+        .replace(/===\s*\d+\s*(?::[^=]*)?===/g, '')
+        .replace(/---\s*\d+\s*---/g, '')
+        .trim();
     }
   }
 
-  return results;
+  const filledCount = results.filter(r => r.trim()).length;
+  return { results, parseStrategy: 5, filledCount };
+}
+
+/* ─── Cross-validation: detect and fix swapped translations between batch entries ─── */
+
+/** Extract fingerprint tokens from text: macros, HTML tags, proper nouns, unique keywords */
+function extractFingerprint(text: string): Set<string> {
+  const tokens = new Set<string>();
+  // {{macro}} patterns
+  const macros = text.match(/\{\{[^}]+\}\}/g);
+  if (macros) macros.forEach(m => tokens.add(m));
+  // HTML tag names
+  const tags = text.match(/<\/?[a-zA-Z][^>]*>/g);
+  if (tags) tags.forEach(t => tokens.add(t.replace(/\s.*/, '>')));
+  // data-var attributes
+  const dataVars = text.match(/data-var\s*=\s*["'][^"']+["']/g);
+  if (dataVars) dataVars.forEach(d => tokens.add(d));
+  // getvar/setvar patterns
+  const vars = text.match(/(?:getvar|setvar|addvar)\s*(?:::|\()\s*['"]?[^)'"\s}]+/g);
+  if (vars) vars.forEach(v => tokens.add(v));
+  // Capitalized proper nouns (2+ chars, not common words)
+  const properNouns = text.match(/\b[A-Z][a-zA-Z]{2,}\b/g);
+  if (properNouns) properNouns.forEach(n => {
+    if (!['The', 'You', 'And', 'For', 'Not', 'But', 'Are', 'Was', 'Has', 'Had', 'This', 'That', 'With', 'From'].includes(n)) {
+      tokens.add(n);
+    }
+  });
+  return tokens;
+}
+
+/** Calculate overlap score between two fingerprint sets (Jaccard-like) */
+function fingerprintOverlap(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 && b.size === 0) return 0;
+  let intersection = 0;
+  for (const token of a) {
+    if (b.has(token)) intersection++;
+  }
+  const union = a.size + b.size - intersection;
+  return union > 0 ? intersection / union : 0;
+}
+
+export interface BatchAlignmentResult {
+  results: string[];
+  swapCount: number;
+  suspiciousIndices: number[];
+}
+
+/**
+ * Validate batch alignment by comparing keyword/macro fingerprints
+ * between original[i] and translated[i].
+ * If result[i] matches better with original[j], auto-swap.
+ * If alignment is uncertain, mark as suspicious.
+ */
+export function validateBatchAlignment(
+  items: { text: string; fieldName: string }[],
+  results: string[]
+): BatchAlignmentResult {
+  const n = items.length;
+  if (n <= 1) return { results: [...results], swapCount: 0, suspiciousIndices: [] };
+
+  // Build fingerprints for originals
+  const origFingerprints = items.map(it => extractFingerprint(it.text));
+  const transFingerprints = results.map(r => extractFingerprint(r || ''));
+
+  const correctedResults = [...results];
+  let swapCount = 0;
+  const suspiciousIndices: number[] = [];
+  const swapped = new Set<number>(); // track which indices have been swapped already
+
+  for (let i = 0; i < n; i++) {
+    if (!results[i] || !results[i].trim()) continue;
+    if (origFingerprints[i].size < 2) continue; // not enough tokens to compare
+    if (swapped.has(i)) continue;
+
+    const selfScore = fingerprintOverlap(origFingerprints[i], transFingerprints[i]);
+
+    // Find best matching original for this translation
+    let bestIdx = i;
+    let bestScore = selfScore;
+    for (let j = 0; j < n; j++) {
+      if (j === i || swapped.has(j)) continue;
+      if (!results[j] || !results[j].trim()) continue;
+      const crossScore = fingerprintOverlap(origFingerprints[i], transFingerprints[j]);
+      if (crossScore > bestScore + 0.15) { // needs to be significantly better to justify swap
+        bestScore = crossScore;
+        bestIdx = j;
+      }
+    }
+
+    if (bestIdx !== i && bestScore > selfScore + 0.15) {
+      // Also verify the reverse: does original[bestIdx] match translated[i] better?
+      const reverseScore = fingerprintOverlap(origFingerprints[bestIdx], transFingerprints[i]);
+      const reverseSelfScore = fingerprintOverlap(origFingerprints[bestIdx], transFingerprints[bestIdx]);
+
+      if (reverseScore > reverseSelfScore + 0.1) {
+        // Confident swap: both directions agree
+        console.log(`[BatchAlignment] Swap detected: result[${i}] ↔ result[${bestIdx}] (scores: self=${selfScore.toFixed(2)}, cross=${bestScore.toFixed(2)}, reverse=${reverseScore.toFixed(2)})`);
+        const temp = correctedResults[i];
+        correctedResults[i] = correctedResults[bestIdx];
+        correctedResults[bestIdx] = temp;
+        swapped.add(i);
+        swapped.add(bestIdx);
+        swapCount++;
+      } else {
+        // Uncertain — mark as suspicious (caller will fallback to single)
+        suspiciousIndices.push(i);
+      }
+    }
+
+    // Length ratio check: if translated is way too short or long vs original, flag suspicious
+    if (!suspiciousIndices.includes(i) && results[i].trim()) {
+      const ratio = results[i].length / Math.max(items[i].text.length, 1);
+      if (ratio < 0.05 || ratio > 5.0) {
+        suspiciousIndices.push(i);
+      }
+    }
+  }
+
+  return { results: correctedResults, swapCount, suspiciousIndices };
 }
 
 /* ─── Test connection ─── */

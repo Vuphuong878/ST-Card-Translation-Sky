@@ -742,6 +742,12 @@ export function useTranslation() {
         : {};
       const hasMvuDict = Object.keys(mvuDict).filter(k => mvuDict[k] && k !== mvuDict[k]).length > 0;
 
+      // Count how many results are empty (cleared by cross-validation or failed parse)
+      const emptyResultCount = results.filter(r => !r || !r.trim()).length;
+      if (emptyResultCount > 0 && emptyResultCount < batchFields.length) {
+        store.addLog('info', `🔍 Batch cross-validation: ${emptyResultCount}/${batchFields.length} entries will be retranslated individually (suspicious alignment detected)`);
+      }
+
       for (let j = 0; j < batchFields.length; j++) {
         let translated = results[j] || '';
         if (!translated.trim()) {
@@ -1351,7 +1357,14 @@ export function useTranslation() {
       if (isBatchLorebook && lorebookGroups.includes(field.group)) {
         const concurrency = store.translationConfig.concurrentBatches || 1;
         const MAX_BATCH_CHARS = Math.max(store.proxy.maxTokens || 65536, 10000);
+        // ═══ SAFETY: Dynamic soft cap to prevent AI from losing track of sections ═══
+        const SOFT_CHAR_CAP = 30000; // If total chars > 30K, auto-reduce effective batch size
         const isMvuEnabled = store.translationConfig.enableMvuSync;
+
+        // Warn when batch size is large
+        if (batchSize > 10) {
+          store.addLog('warning', `⚠️ Batch size is ${batchSize} (>10). Large batches may cause AI to swap/mix translations between entries. Consider reducing to 5-10 for best accuracy.`);
+        }
 
         // Step 1: Collect ALL consecutive lorebook fields
         const allLorebookFields: TranslationField[] = [];
@@ -1439,7 +1452,10 @@ export function useTranslation() {
             let currentBatch: TranslationField[] = [];
             let currentChars = 0;
             for (const f of modelFields) {
-              if (currentBatch.length >= batchSize || (currentBatch.length > 0 && currentChars + f.original.length > MAX_BATCH_CHARS)) {
+              // Split when: count exceeds batchSize, OR char count exceeds soft cap
+              if (currentBatch.length >= batchSize || 
+                  (currentBatch.length > 0 && currentChars + f.original.length > MAX_BATCH_CHARS) ||
+                  (currentBatch.length > 0 && currentChars + f.original.length > SOFT_CHAR_CAP && currentBatch.length >= 3)) {
                 subBatches.push(currentBatch);
                 currentBatch = [];
                 currentChars = 0;
@@ -1449,7 +1465,9 @@ export function useTranslation() {
             }
             if (currentBatch.length > 0) subBatches.push(currentBatch);
           }
-          store.addLog('info', `${allLorebookFields.length} lorebook fields → ${subBatches.length} batch(es), concurrency: ${concurrency}`);
+          // Log with safety info
+          const avgBatchSize = subBatches.length > 0 ? Math.round(allLorebookFields.length / subBatches.length) : 0;
+          store.addLog('info', `${allLorebookFields.length} lorebook fields → ${subBatches.length} batch(es) (avg ${avgBatchSize}/batch), concurrency: ${concurrency}`);
         }
 
         store.setCurrentFieldIndex(i - 1);

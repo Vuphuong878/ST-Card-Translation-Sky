@@ -6,7 +6,7 @@ import {
   X, Send, Code2, Copy, Trash2, Upload, Loader2, Settings, Plus, FileText, 
   Sparkles, Check, Download, AlertCircle, RefreshCw, Eye, Flame, RotateCcw,
   Maximize, Minimize, Play, Languages, ChevronDown, ChevronRight, AlertTriangle, Regex,
-  ArrowRight, CheckCircle2
+  ArrowRight, CheckCircle2, Shield, Zap, Undo2
 } from 'lucide-react';
 import type { TranslationField, CharacterBookEntry, RegexScript, TavernHelperScript } from '../types/card';
 import { 
@@ -21,6 +21,8 @@ import {
 import { extractTranslatableFields } from '../utils/cardFields';
 import { MVU_SCHEMA_GENERATION_PROMPT, MVU_RULES_GENERATION_PROMPT } from '../utils/promptBuilder';
 import { MVU_KNOWLEDGE_BASE, type MvuDoc } from '../utils/mvuKnowledgeBase';
+import { parseAiActions, executeAction, describeAction, type AiAction, type ActionResult } from '../utils/aiActions';
+import { analyzeReplaceString, getStructureSummary } from '../utils/regexInjector';
 
 /* ════════════════════════════════════════════════════════════════════
    TYPES
@@ -29,6 +31,10 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   isCommand?: boolean;
+  /** Pending actions awaiting user confirmation */
+  pendingActions?: AiAction[];
+  /** Action execution results */
+  actionResults?: { action: AiAction; result: ActionResult }[];
 }
 
 interface AttachedFile {
@@ -36,6 +42,13 @@ interface AttachedFile {
   size: number;
   content: string;
   isImage?: boolean;
+}
+
+/** Pending script awaiting user confirmation */
+interface PendingScript {
+  code: string;
+  language: string;
+  description: string;
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -258,8 +271,60 @@ VĂN PHONG & QUY TẮC ỨNG XỬ:
 
 NGỮ CẢNH:
 - Bạn sẽ nhận được thông tin chi tiết về thẻ nhân vật đang mở trong ứng dụng dưới dạng văn bản JSON để làm ngữ cảnh trả lời.
+- Thông tin bao gồm danh sách REGEX SCRIPTS đầy đủ (tên, findRegex, replaceString preview) và LOREBOOK ENTRIES (keys, comment, content preview).
 - Bạn cũng có thể nhận được thêm nội dung từ các tệp đính kèm do người dùng tải lên bổ sung.
+
+HỆ THỐNG HÀNH ĐỘNG (ACTIONS):
+Bạn có khả năng TÁC ĐỘNG TRỰC TIẾP vào thẻ nhân vật đang mở. Để thực hiện, nhúng block <AI_ACTION>...</AI_ACTION> trong phản hồi.
+Người dùng sẽ thấy preview và xác nhận trước khi action được thực thi.
+
+CÁC ACTION HIỆN CÓ:
+1. CREATE_REGEX — Tạo regex script mới
+   Params: { scriptName, findRegex, replaceString, placement?, disabled? }
+2. EDIT_REGEX — Sửa một trường của regex script theo index
+   Params: { scriptIndex, field, newValue }
+   field: "scriptName" | "findRegex" | "replaceString" | "disabled" | "placement" | etc.
+3. PATCH_REGEX_REPLACE — Tìm/thay thế trong replaceString của regex
+   Params: { scriptIndex, find, replace } hoặc { scriptIndex, appendToEnd } hoặc { scriptIndex, prependToStart }
+4. INJECT_FUNCTION — Thêm hàm JS mới vào replaceString (hệ thống tự tìm chỗ an toàn)
+   Params: { scriptIndex, functionCode, insertPosition?: "auto" | "before_script_end" | "new_script_block" }
+5. DELETE_REGEX — Xóa regex script
+   Params: { scriptIndex }
+6. CREATE_ENTRY — Tạo lorebook entry mới
+   Params: { keys, comment, content, name?, position?, constant?, enabled? }
+7. EDIT_ENTRY — Sửa lorebook entry
+   Params: { entryIndex, field, newValue }
+8. DELETE_ENTRY — Xóa lorebook entry
+   Params: { entryIndex }
+9. CREATE_TAVERN_HELPER — Tạo TavernHelper script
+   Params: { name, content, info? }
+10. VIEW_FULL_REGEX — Xem full nội dung regex (khi context bị truncate)
+    Params: { scriptIndex }
+11. RUN_SCRIPT — Chạy script (sẽ hỏi user xác nhận trước khi thực thi)
+    Params: { code, language?, description }
+
+QUY TẮC QUAN TRỌNG KHI DÙNG ACTIONS:
+- Luôn kiểm tra danh sách regex_scripts trong ngữ cảnh để xác định đúng scriptIndex trước khi sửa.
+- Khi thêm hàm vào replaceString, ưu tiên dùng INJECT_FUNCTION (hệ thống tự tìm vị trí an toàn: trước </script>, trong <script> block, hoặc tạo block mới).
+- Giải thích bằng text TRƯỚC khi đưa action block.
+- Có thể đưa NHIỀU actions trong 1 response.
+- Luôn thêm "reasoning" vào action block để giải thích tại sao chọn action này.
+- Nếu cần xem toàn bộ replaceString (bị truncate trong context), dùng VIEW_FULL_REGEX trước.
+
+VÍ DỤ FORMAT:
+User: "Thêm hàm hiển thị thanh HP cho regex 'Tô màu hội thoại'"
+Response:
+Tôi tìm thấy regex "Tô màu hội thoại" ở index 0. Tôi sẽ thêm hàm hiển thị thanh HP vào replaceString của nó.
+
+<AI_ACTION>
+{"action":"INJECT_FUNCTION","params":{"scriptIndex":0,"functionCode":"function renderHPBar(hp,maxHp){...}"},"reasoning":"Thêm hàm renderHPBar vào script đã có sẵn"}
+</AI_ACTION>
 `;
+
+/** Max chars for regex replaceString preview in context (full content via VIEW_FULL_REGEX) */
+const REGEX_CONTEXT_MAX_CHARS = 4000;
+/** Max chars for lorebook content preview */
+const LOREBOOK_CONTEXT_MAX_CHARS = 500;
 
 /* ════════════════════════════════════════════════════════════════════
    SIMPLE MARKDOWN & CODE HIGHLIGHT PARSER
@@ -935,12 +1000,24 @@ const MessageList = memo(({
   messages,
   isGenerating,
   retryText,
-  messagesEndRef
+  messagesEndRef,
+  handleConfirmActions,
+  handleRejectActions,
+  pendingScript,
+  handleRunPendingScript,
+  handleRejectScript,
+  scriptOutput,
 }: {
   messages: Message[];
   isGenerating: boolean;
   retryText: string;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  handleConfirmActions: (actions: AiAction[]) => void;
+  handleRejectActions: () => void;
+  pendingScript: PendingScript | null;
+  handleRunPendingScript: () => void;
+  handleRejectScript: () => void;
+  scriptOutput: string;
 }) => {
   return (
     <div className="companion-chat-messages custom-scrollbar">
@@ -972,9 +1049,258 @@ const MessageList = memo(({
             </div>
             <div className="companion-message-bubble">
               <MessageContentRenderer content={msg.content} />
+              
+              {/* ═══ Pending Action Cards ═══ */}
+              {msg.pendingActions && msg.pendingActions.length > 0 && (
+                <div style={{
+                  marginTop: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}>
+                  <div style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    color: '#a855f7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 0',
+                  }}>
+                    <Zap size={12} />
+                    {msg.pendingActions.length} ACTION(S) CHỜ XÁC NHẬN
+                  </div>
+                  {msg.pendingActions.map((action, aIdx) => {
+                    const desc = describeAction(action);
+                    return (
+                      <div key={aIdx} style={{
+                        padding: '10px 12px',
+                        background: 'rgba(168, 85, 247, 0.06)',
+                        border: `1px solid ${desc.color}33`,
+                        borderRadius: '8px',
+                        fontSize: '0.78rem',
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          marginBottom: '6px',
+                        }}>
+                          <span style={{ fontSize: '1rem' }}>{desc.icon}</span>
+                          <span style={{ fontWeight: 700, color: desc.color }}>{desc.title}</span>
+                          <span style={{
+                            fontSize: '0.55rem',
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            background: `${desc.color}15`,
+                            color: desc.color,
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                          }}>{desc.type}</span>
+                        </div>
+                        {desc.details.length > 0 && (
+                          <div style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--text-secondary)',
+                            marginBottom: '6px',
+                            fontFamily: 'var(--font-mono)',
+                          }}>
+                            {desc.details.map((d, di) => (
+                              <div key={di} style={{ marginBottom: '2px' }}>{d}</div>
+                            ))}
+                          </div>
+                        )}
+                        {action.reasoning && (
+                          <div style={{
+                            fontSize: '0.65rem',
+                            color: 'var(--text-muted)',
+                            fontStyle: 'italic',
+                            marginBottom: '4px',
+                          }}>
+                            💭 {action.reasoning}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                    <button
+                      onClick={() => handleConfirmActions(msg.pendingActions!)}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        background: 'rgba(34, 197, 94, 0.15)',
+                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                        borderRadius: '6px',
+                        color: '#22c55e',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(34, 197, 94, 0.25)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)'; }}
+                    >
+                      <CheckCircle2 size={14} /> Xác nhận tất cả
+                    </button>
+                    <button
+                      onClick={handleRejectActions}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        borderRadius: '6px',
+                        color: '#ef4444',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                    >
+                      <X size={14} /> Từ chối
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ═══ Action Results Badge ═══ */}
+              {msg.actionResults && msg.actionResults.length > 0 && (
+                <div style={{
+                  marginTop: '8px',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '4px',
+                }}>
+                  {msg.actionResults.map((r, ri) => {
+                    const desc = describeAction(r.action);
+                    return (
+                      <span key={ri} style={{
+                        fontSize: '0.6rem',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: r.result.success ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: r.result.success ? '#22c55e' : '#ef4444',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}>
+                        {desc.icon} {r.result.success ? '✓' : '✗'} {desc.title}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         ))
+      )}
+      
+      {/* ═══ Pending Script Confirmation ═══ */}
+      {pendingScript && (
+        <div style={{
+          margin: '8px 0',
+          padding: '12px',
+          background: 'rgba(239, 68, 68, 0.06)',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
+          borderRadius: '10px',
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '8px',
+            color: '#f59e0b',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+          }}>
+            <Shield size={14} />
+            Script yêu cầu xác nhận trước khi chạy
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+            {pendingScript.description}
+          </div>
+          <pre style={{
+            padding: '8px',
+            background: 'rgba(0,0,0,0.3)',
+            borderRadius: '6px',
+            fontSize: '0.72rem',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--text-secondary)',
+            maxHeight: '200px',
+            overflowY: 'auto',
+            whiteSpace: 'pre-wrap',
+            margin: '0 0 8px',
+          }}>
+            {pendingScript.code}
+          </pre>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleRunPendingScript}
+              style={{
+                flex: 1,
+                padding: '8px',
+                background: 'rgba(34, 197, 94, 0.15)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '6px',
+                color: '#22c55e',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+            >
+              <Play size={12} /> Chạy Script
+            </button>
+            <button
+              onClick={handleRejectScript}
+              style={{
+                flex: 1,
+                padding: '8px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: '6px',
+                color: '#ef4444',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+            >
+              <X size={12} /> Hủy
+            </button>
+          </div>
+          {scriptOutput && (
+            <div style={{
+              marginTop: '8px',
+              padding: '6px 8px',
+              background: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+              fontSize: '0.68rem',
+              fontFamily: 'var(--font-mono)',
+              color: scriptOutput.startsWith('ERROR') ? '#ef4444' : '#22c55e',
+            }}>
+              Output: {scriptOutput}
+            </div>
+          )}
+        </div>
       )}
       
       {/* Thinking Loader */}
@@ -1132,20 +1458,123 @@ export default function AiCompanionPanel({ onClose }: { onClose: () => void }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isGenerating]);
 
-  // ─── Context Compilation ───
+  // ─── Card History for Undo ───
+  const [cardHistory, setCardHistory] = useState<string[]>([]);
+  const MAX_HISTORY = 5;
+
+  const pushCardHistory = useCallback((cardSnapshot: any) => {
+    setCardHistory(prev => {
+      const serialized = JSON.stringify(cardSnapshot);
+      const next = [...prev, serialized];
+      if (next.length > MAX_HISTORY) next.shift();
+      return next;
+    });
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (cardHistory.length === 0) {
+      addToast('info', 'Không có thao tác nào để hoàn tác');
+      return;
+    }
+    const lastSnapshot = cardHistory[cardHistory.length - 1];
+    try {
+      const restoredCard = JSON.parse(lastSnapshot);
+      updateCard(restoredCard);
+      setCardHistory(prev => prev.slice(0, -1));
+      addToast('success', 'Đã hoàn tác thao tác cuối');
+    } catch (err) {
+      addToast('error', 'Lỗi khi hoàn tác');
+    }
+  }, [cardHistory, updateCard, addToast]);
+
+  // ─── Auto-execute toggle ───
+  const [autoExecute, setAutoExecute] = useState(() => {
+    return localStorage.getItem('ai_assistant_auto_execute') === 'true';
+  });
+  useEffect(() => {
+    localStorage.setItem('ai_assistant_auto_execute', String(autoExecute));
+  }, [autoExecute]);
+
+  // ─── Pending actions awaiting confirmation ───
+  const [pendingActions, setPendingActions] = useState<{ actions: AiAction[]; msgIndex: number } | null>(null);
+
+  // ─── Pending script awaiting confirmation ───
+  const [pendingScript, setPendingScript] = useState<PendingScript | null>(null);
+  const [scriptOutput, setScriptOutput] = useState<string>('');
+
+  // ─── Context Compilation (Full Detail) ───
   const contextBlock = useMemo(() => {
     let context = '';
     
-    // 1. Auto-loaded active card context
+    // 1. Full card context with regex + lorebook details
     if (card) {
-      const summary = {
-        name: card.name || card.data?.name || 'Unknown',
-        description: card.data?.description ? (card.data.description.length > 500 ? card.data.description.slice(0, 500) + '...' : card.data.description) : '',
-        lorebookEntries: card.data?.character_book?.entries?.length || 0,
-        regexCount: card.data?.extensions?.regex_scripts?.length || 0,
-        tavernHelperScripts: card.data?.extensions?.tavern_helper?.scripts?.length || 0,
-      };
-      context += `[NGỮ CẢNH CARD ĐANG MỞ]:\n${JSON.stringify(summary, null, 2)}\n\n`;
+      const cardName = card.name || card.data?.name || 'Unknown';
+      const desc = card.data?.description || '';
+      context += `[NGỮ CẢNH CARD ĐANG MỞ — "${cardName}"]\n`;
+      context += `Mô tả: ${desc.length > 600 ? desc.slice(0, 600) + '...' : desc}\n\n`;
+
+      // ── Regex Scripts (full detail) ──
+      const regexScripts = card.data?.extensions?.regex_scripts || [];
+      if (regexScripts.length > 0) {
+        context += `[REGEX SCRIPTS (${regexScripts.length} scripts)]:\n`;
+        regexScripts.forEach((s: any, i: number) => {
+          const replacePreview = (s.replaceString || '').length > REGEX_CONTEXT_MAX_CHARS
+            ? s.replaceString.slice(0, REGEX_CONTEXT_MAX_CHARS) + `\n... (TRUNCATED — dùng VIEW_FULL_REGEX với scriptIndex=${i} để xem full ${s.replaceString.length} chars)`
+            : (s.replaceString || '(trống)');
+          
+          // Analyze structure for summary
+          let structSummary = '';
+          try {
+            const structure = analyzeReplaceString(s.replaceString || '');
+            structSummary = getStructureSummary(structure);
+          } catch { /* ignore */ }
+
+          context += `  #${i}: "${s.scriptName || 'Unnamed'}"\n`;
+          context += `    findRegex: ${s.findRegex || '(trống)'}\n`;
+          context += `    disabled: ${s.disabled || false}\n`;
+          context += `    placement: ${JSON.stringify(s.placement || [])}\n`;
+          if (structSummary) context += `    structure: ${structSummary}\n`;
+          context += `    replaceString (${(s.replaceString || '').length} chars): ${replacePreview}\n\n`;
+        });
+      }
+
+      // ── Lorebook Entries ──
+      const entries = card.data?.character_book?.entries || [];
+      if (entries.length > 0) {
+        context += `[LOREBOOK ENTRIES (${entries.length} entries)]:\n`;
+        entries.forEach((e: any, i: number) => {
+          const keys = Array.isArray(e.keys) ? e.keys.join(', ') : '';
+          const contentPreview = (e.content || '').length > LOREBOOK_CONTEXT_MAX_CHARS
+            ? e.content.slice(0, LOREBOOK_CONTEXT_MAX_CHARS) + '... (truncated)'
+            : (e.content || '(trống)');
+          context += `  #${i}: keys=[${keys}] comment="${e.comment || ''}" enabled=${e.enabled !== false}\n`;
+          context += `    content: ${contentPreview}\n\n`;
+        });
+      }
+
+      // ── TavernHelper Scripts ──
+      const thScripts: any[] = [];
+      const possibleKeys = ['tavern_helper', 'TavernHelper', 'TavernHelper_scripts'];
+      for (const key of possibleKeys) {
+        const ext = card.data?.extensions?.[key] as any;
+        if (Array.isArray(ext)) {
+          const tupleEntry = ext.find((item: any) => Array.isArray(item) && item[0] === 'scripts' && Array.isArray(item[1]));
+          if (tupleEntry) {
+            tupleEntry[1].forEach((s: any) => thScripts.push(s));
+          } else {
+            ext.forEach((s: any) => { if (s && typeof s === 'object' && !Array.isArray(s)) thScripts.push(s); });
+          }
+        } else if (ext?.scripts) {
+          (ext.scripts as any[]).forEach((s: any) => thScripts.push(s));
+        }
+      }
+      if (thScripts.length > 0) {
+        context += `[TAVERN HELPER SCRIPTS (${thScripts.length} scripts)]:\n`;
+        thScripts.forEach((s: any, i: number) => {
+          context += `  #${i}: "${s.name || 'Unnamed'}" — ${s.info || '(no info)'}\n`;
+        });
+        context += '\n';
+      }
     }
     
     // 2. Extra attached files
@@ -1227,7 +1656,74 @@ ${contextBlock ? `\n[DANH SÁCH TÀI LIỆU NGỮ CẢNH HIỆN TẠI]:\n${conte
     }
 
     if (success) {
-      setMessages([...nextMessages, { role: 'assistant', content: finalResult }]);
+      // ─── Parse AI Actions from response ───
+      const { textContent, actions: parsedActions } = parseAiActions(finalResult);
+
+      if (parsedActions.length > 0 && card) {
+        // Handle VIEW_FULL_REGEX immediately (auto-execute, feed back to AI)
+        const viewActions = parsedActions.filter(a => a.action === 'VIEW_FULL_REGEX');
+        const otherActions = parsedActions.filter(a => a.action !== 'VIEW_FULL_REGEX');
+
+        let viewFeedback = '';
+        for (const va of viewActions) {
+          const result = executeAction(va, card);
+          if (result.viewContent) {
+            viewFeedback += `\n\n${result.viewContent}`;
+          }
+        }
+
+        // If there are view results, send them back as context for AI to continue
+        if (viewFeedback && otherActions.length === 0) {
+          const msgWithView: Message = { role: 'assistant', content: textContent };
+          setMessages([...nextMessages, msgWithView]);
+          setIsGenerating(false);
+          setRetryText('');
+          // Auto-send the view content back to AI as follow-up
+          setTimeout(() => {
+            handleSend(`[VIEW_FULL_REGEX KẾT QUẢ]:\n${viewFeedback}\n\nDựa trên nội dung đầy đủ ở trên, hãy tiếp tục xử lý yêu cầu trước đó của tôi.`);
+          }, 500);
+          return;
+        }
+
+        if (otherActions.length > 0) {
+          if (autoExecute) {
+            // Auto-execute mode: execute all actions immediately
+            pushCardHistory(card);
+            let currentCard = card;
+            const results: { action: AiAction; result: ActionResult }[] = [];
+            for (const action of otherActions) {
+              const result = executeAction(action, currentCard);
+              results.push({ action, result });
+              if (result.success && result.newCard) {
+                currentCard = result.newCard;
+                updateCard(currentCard);
+              }
+              if (result.pendingScript) {
+                setPendingScript(result.pendingScript);
+              }
+            }
+            const resultSummary = results.map(r => 
+              `${r.result.success ? '✅' : '❌'} **${r.action.action}**: ${r.result.message}`
+            ).join('\n');
+            const msgContent = textContent + (viewFeedback ? `\n\n---\n${viewFeedback}` : '') + `\n\n---\n**Kết quả thực thi (${results.filter(r => r.result.success).length}/${results.length} thành công):**\n${resultSummary}`;
+            setMessages([...nextMessages, { role: 'assistant', content: msgContent, actionResults: results }]);
+          } else {
+            // Manual confirm mode: show action cards for user to confirm
+            const msgContent = textContent + (viewFeedback ? `\n\n---\n${viewFeedback}` : '');
+            const newMsg: Message = { 
+              role: 'assistant', 
+              content: msgContent,
+              pendingActions: otherActions,
+            };
+            setMessages([...nextMessages, newMsg]);
+            setPendingActions({ actions: otherActions, msgIndex: nextMessages.length });
+          }
+        } else {
+          setMessages([...nextMessages, { role: 'assistant', content: textContent }]);
+        }
+      } else {
+        setMessages([...nextMessages, { role: 'assistant', content: finalResult }]);
+      }
     } else {
       const errMsg = lastError?.message || 'Không có phản hồi từ máy chủ API.';
       setMessages([...nextMessages, { 
@@ -1239,6 +1735,120 @@ ${contextBlock ? `\n[DANH SÁCH TÀI LIỆU NGỮ CẢNH HIỆN TẠI]:\n${conte
     setIsGenerating(false);
     setRetryText('');
   };
+
+  // ─── Confirm pending actions ───
+  const handleConfirmActions = useCallback((actions: AiAction[]) => {
+    if (!card) return;
+    pushCardHistory(card);
+    let currentCard = card;
+    const results: { action: AiAction; result: ActionResult }[] = [];
+    
+    for (const action of actions) {
+      const result = executeAction(action, currentCard);
+      results.push({ action, result });
+      if (result.success && result.newCard) {
+        currentCard = result.newCard;
+        updateCard(currentCard);
+      }
+      if (result.pendingScript) {
+        setPendingScript(result.pendingScript);
+      }
+      addToast(result.success ? 'success' : 'error', result.message);
+    }
+
+    // Update message to show results
+    if (pendingActions) {
+      setMessages(prev => prev.map((msg, idx) => {
+        if (idx === pendingActions.msgIndex && msg.pendingActions) {
+          const resultSummary = results.map(r => 
+            `${r.result.success ? '✅' : '❌'} **${r.action.action}**: ${r.result.message}`
+          ).join('\n');
+          return {
+            ...msg,
+            pendingActions: undefined,
+            actionResults: results,
+            content: msg.content + `\n\n---\n**Đã thực thi (${results.filter(r => r.result.success).length}/${results.length}):**\n${resultSummary}`,
+          };
+        }
+        return msg;
+      }));
+    }
+    setPendingActions(null);
+  }, [card, updateCard, addToast, pendingActions, pushCardHistory]);
+
+  const handleRejectActions = useCallback(() => {
+    if (pendingActions) {
+      setMessages(prev => prev.map((msg, idx) => {
+        if (idx === pendingActions.msgIndex && msg.pendingActions) {
+          return {
+            ...msg,
+            pendingActions: undefined,
+            content: msg.content + '\n\n---\n❌ **Actions đã bị từ chối bởi người dùng.**',
+          };
+        }
+        return msg;
+      }));
+    }
+    setPendingActions(null);
+    addToast('info', 'Đã từ chối tất cả actions');
+  }, [pendingActions, addToast]);
+
+  // ─── Execute pending script (sandboxed) ───
+  const handleRunPendingScript = useCallback(() => {
+    if (!pendingScript) return;
+    try {
+      // Run in sandboxed iframe
+      const iframe = document.createElement('iframe');
+      iframe.sandbox.add('allow-scripts');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+
+      const scriptCode = pendingScript.code;
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (iframeDoc) {
+        iframeDoc.open();
+        iframeDoc.write(`<script>
+try {
+  const __output = [];
+  const console = { log: (...args) => __output.push(args.join(' ')), error: (...args) => __output.push('ERROR: ' + args.join(' ')) };
+  ${scriptCode}
+  parent.postMessage({ type: 'script-result', output: __output.join('\\n') }, '*');
+} catch(e) {
+  parent.postMessage({ type: 'script-result', output: 'ERROR: ' + e.message }, '*');
+}
+</script>`);
+        iframeDoc.close();
+      }
+
+      const handler = (event: MessageEvent) => {
+        if (event.data?.type === 'script-result') {
+          setScriptOutput(event.data.output || '(no output)');
+          window.removeEventListener('message', handler);
+          document.body.removeChild(iframe);
+        }
+      };
+      window.addEventListener('message', handler);
+
+      // Timeout safety
+      setTimeout(() => {
+        window.removeEventListener('message', handler);
+        if (iframe.parentNode) {
+          document.body.removeChild(iframe);
+          setScriptOutput('⏱️ Script timed out after 10s');
+        }
+      }, 10000);
+
+      addToast('success', 'Đang chạy script...');
+    } catch (err: any) {
+      setScriptOutput(`ERROR: ${err.message}`);
+    }
+    setPendingScript(null);
+  }, [pendingScript, addToast]);
+
+  const handleRejectScript = useCallback(() => {
+    setPendingScript(null);
+    addToast('info', 'Đã hủy chạy script');
+  }, [addToast]);
 
   // Quick Action Commands
   const handleCommand = () => {
@@ -1406,7 +2016,13 @@ ${contextBlock ? `\n[DANH SÁCH TÀI LIỆU NGỮ CẢNH HIỆN TẠI]:\n${conte
                 messages={messages} 
                 isGenerating={isGenerating} 
                 retryText={retryText} 
-                messagesEndRef={messagesEndRef} 
+                messagesEndRef={messagesEndRef}
+                handleConfirmActions={handleConfirmActions}
+                handleRejectActions={handleRejectActions}
+                pendingScript={pendingScript}
+                handleRunPendingScript={handleRunPendingScript}
+                handleRejectScript={handleRejectScript}
+                scriptOutput={scriptOutput}
               />
 
               {/* Chat Input Container */}
@@ -1606,6 +2222,46 @@ ${contextBlock ? `\n[DANH SÁCH TÀI LIỆU NGỮ CẢNH HIỆN TẠI]:\n${conte
                   </label>
                   <div className="text-[9px] text-slate-500 leading-relaxed">
                     Tự động thử lại cuộc gọi API khi xảy ra lỗi mạng hoặc quá tải (Tối đa 3 lần).
+                  </div>
+                </div>
+
+                {/* Auto-execute Actions */}
+                <div className="flex flex-col gap-1">
+                  <label className="group flex items-center justify-between gap-2 cursor-pointer">
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300">
+                      <Zap size={12} className="opacity-70 group-hover:opacity-100 text-purple-400" />
+                      Tự động thực thi Actions
+                    </span>
+                    <input 
+                      type="checkbox" 
+                      checked={autoExecute}
+                      onChange={e => setAutoExecute(e.target.checked)}
+                      className="accent-purple-500 w-3.5 h-3.5 cursor-pointer"
+                    />
+                  </label>
+                  <div className="text-[9px] text-slate-500 leading-relaxed">
+                    Khi bật, AI actions sẽ được thực thi ngay lập tức không cần xác nhận. Tắt = yêu cầu xác nhận mỗi lần.
+                  </div>
+                </div>
+
+                {/* Undo Button */}
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={handleUndo}
+                    disabled={cardHistory.length === 0}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold transition-all"
+                    style={{
+                      background: cardHistory.length > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${cardHistory.length > 0 ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255,255,255,0.05)'}`,
+                      color: cardHistory.length > 0 ? '#818cf8' : '#475569',
+                      cursor: cardHistory.length > 0 ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    <Undo2 size={12} />
+                    Hoàn tác ({cardHistory.length}/{MAX_HISTORY})
+                  </button>
+                  <div className="text-[9px] text-slate-500 leading-relaxed">
+                    Hoàn tác thay đổi card gần nhất do AI thực hiện (lưu tối đa {MAX_HISTORY} bước).
                   </div>
                 </div>
               </div>
