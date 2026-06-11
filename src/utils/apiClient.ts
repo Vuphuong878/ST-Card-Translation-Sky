@@ -2712,7 +2712,8 @@ async function maskCodeBlocks(
   mvuDictionary?: Record<string, string>,
   cssCjkHandling?: 'preserve' | 'translate',
   customSchema?: string,
-  customPrompt?: string
+  customPrompt?: string,
+  fieldName?: string
 ): Promise<{ maskedText: string; map: CodeBlockMaskMap }> {
   const map: CodeBlockMaskMap = {};
   let maskedText = text;
@@ -2770,7 +2771,8 @@ async function maskCodeBlocks(
         undefined,
         cssCjkHandling || 'preserve',
         customSchema,
-        customPrompt
+        customPrompt,
+        fieldName ? `${fieldName} (${m.type} block)` : undefined
       );
       translatedContent = result.translated;
     } catch (err) {
@@ -2834,7 +2836,7 @@ export async function translateText(
     console.log(`[translateText] Field "${fieldName}" is a replaceString. Performing surgical translation (lenient verification)...`);
     try {
       // Use lenient verification directly — replaceString with <script> blocks will never pass strict char-count verification
-      const result = await surgicalTranslate(text, config, targetLang, signal, glossary, mvuDictionary, false, undefined, cssCjkHandling || 'preserve', customSchema, customPrompt);
+      const result = await surgicalTranslate(text, config, targetLang, signal, glossary, mvuDictionary, false, undefined, cssCjkHandling || 'preserve', customSchema, customPrompt, fieldName);
       return result.translated;
     } catch (err) {
       console.error(`[translateText] Error during surgical translation for "${fieldName}":`, err);
@@ -2853,7 +2855,8 @@ export async function translateText(
     mvuDictionary,
     cssCjkHandling,
     customSchema,
-    customPrompt
+    customPrompt,
+    fieldName
   );
   // 0.5. Mask CJK characters inside CSS values to prevent them from being translated
   // e.g. drop-shadow(商 10px ...) → drop-shadow(__CSS_CJK_0__ 10px ...)

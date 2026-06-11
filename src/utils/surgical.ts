@@ -756,7 +756,13 @@ ${langRules}${surgicalUserPrompt ? `\n\nUSER SURGICAL INSTRUCTIONS (HIGHEST PRIO
   let tokenBatches: CJKToken[][] = [];
   let usedMegaBatch = false;
 
-  if (uniqueTokens.length <= MEGA_BATCH_MAX) {
+  const isRegex = fieldLabel && (
+    fieldLabel.toLowerCase().includes('regex') ||
+    fieldLabel.toLowerCase().includes('replacestring') ||
+    fieldLabel.toLowerCase().includes('trimstrings')
+  );
+
+  if (uniqueTokens.length <= MEGA_BATCH_MAX && !isRegex) {
     tokenBatches  = [uniqueTokens];
     usedMegaBatch = true;
     console.log(`[surgicalTranslate] ${uniqueTokens.length} unique tokens — single mega-batch`);
@@ -766,6 +772,7 @@ ${langRules}${surgicalUserPrompt ? `\n\nUSER SURGICAL INSTRUCTIONS (HIGHEST PRIO
     }
     console.log(
       `[surgicalTranslate] ${uniqueTokens.length} tokens — ` +
+      (isRegex ? `regex mode (mega-batch bypassed) — ` : '') +
       `${tokenBatches.length} × ${FALLBACK_BATCH} batches, ${PARALLEL_CONCUR} parallel`
     );
   }
