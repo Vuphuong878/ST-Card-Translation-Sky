@@ -443,7 +443,12 @@ export function reinsertTranslations(original: string, tokens: CJKToken[]): stri
           const dotIndex = original.lastIndexOf('.', replaceStart);
           if (dotIndex !== -1 && !original.substring(dotIndex + 1, replaceStart).includes('\n')) {
             replaceStart = dotIndex;
-            finalTranslation = `['${finalTranslation}']`;
+            const isOptionalChaining = (dotIndex > 0 && original.charAt(dotIndex - 1) === '?');
+            if (isOptionalChaining) {
+              finalTranslation = `.['${finalTranslation}']`;
+            } else {
+              finalTranslation = `['${finalTranslation}']`;
+            }
           }
         }
       } else if (token.isObjectKey && (finalTranslation.includes(' ') || /[À-ỹ]/.test(finalTranslation))) {
