@@ -1,0 +1,816 @@
+```html
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&display=swap');
+
+    :root {
+      /* 秦汉玄赤与竹简风格配色 */
+      --bamboo-bg: #e4d5b7;
+      --ink-dark: #1f1b18;
+      --qin-red: #721c1c;
+      --bronze-gold: #8b795e;
+      --border-dark: #3a2e26;
+
+      --profit-color: #2e7d32;
+      --loss-color: #c62828;
+      --wavering-color: #c67c00;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Noto Serif SC', 'KaiTi', '楷体', serif;
+      background-color: transparent;
+      color: var(--ink-dark);
+      font-size: 14px;
+      user-select: none;
+      overflow-x: hidden;
+      box-sizing: border-box;
+    }
+
+    .memorial-container {
+      width: 100%;
+      max-width: 420px;
+      margin: 10px auto;
+      padding: 0 10px 10px 10px;
+      background-color: var(--bamboo-bg);
+      background-image:
+        linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px, transparent 29px, rgba(0,0,0,0.02) 30px),
+        linear-gradient(90deg, rgba(139,121,94,0.1) 0px, rgba(139,121,94,0.1) 2px, transparent 3px);
+      background-size: 30px 100%, 30px 100%;
+      border: 6px solid var(--border-dark);
+      border-image: repeating-linear-gradient(45deg, #3a2e26, #3a2e26 10px, #1f1b18 10px, #1f1b18 20px) 6;
+      border-radius: 4px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.6), inset 0 0 40px rgba(0,0,0,0.1);
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    .memorial-header {
+      background: var(--ink-dark);
+      color: var(--bamboo-bg);
+      padding: 15px;
+      text-align: center;
+      border-bottom: 4px solid var(--qin-red);
+      position: relative;
+      margin: 0 -10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .header-title {
+      font-family: 'Ma Shan Zheng', cursive;
+      font-size: 28px;
+      letter-spacing: 8px;
+      color: #d4af37;
+      text-shadow: 2px 2px 2px rgba(0,0,0,0.8);
+    }
+
+    .header-subtitle {
+      font-size: 13px;
+      color: #b0a088;
+      margin-top: 6px;
+    }
+
+    .header-quote {
+      font-size: 12px;
+      color: #cfb53b;
+      margin-top: 8px;
+      font-style: italic;
+      padding: 0 10px;
+      line-height: 1.4;
+      opacity: 0.9;
+    }
+
+    .section {
+      margin-top: 12px;
+      border: 1px solid var(--bronze-gold);
+      background: rgba(255, 255, 255, 0.35);
+      border-radius: 2px;
+    }
+
+    .section-header {
+      background: linear-gradient(to right, var(--border-dark), var(--ink-dark));
+      color: #e8e0d0;
+      padding: 8px 12px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      border-left: 4px solid var(--qin-red);
+      transition: all 0.3s;
+    }
+
+    .section-header:hover { background: var(--ink-dark); }
+    .section-header::after { content: '▼'; font-size: 10px; color: var(--bronze-gold); transition: transform 0.3s; }
+    .section-header.collapsed::after { transform: rotate(-90deg); }
+
+    .section-content { padding: 12px; display: block; }
+    .section-content.hidden { display: none; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .info-item { display: flex; flex-direction: column; border-bottom: 1px dashed var(--bronze-gold); padding-bottom: 4px; }
+    .info-label { font-size: 12px; color: #5a4b3d; font-weight: normal; }
+    .info-value { font-size: 14px; font-weight: bold; color: var(--qin-red); }
+
+    .scroll-list { list-style: none; padding: 0; margin: 0; max-height: 180px; overflow-y: auto; }
+    .scroll-list::-webkit-scrollbar { width: 4px; }
+    .scroll-list::-webkit-scrollbar-thumb { background: var(--bronze-gold); border-radius: 2px; }
+
+    .list-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted var(--bronze-gold); font-size: 13px; align-items: center; }
+    .list-item:last-child { border-bottom: none; }
+
+    .clickable-item { cursor: pointer; transition: background 0.2s; }
+    .clickable-item:hover { background: rgba(114, 28, 28, 0.08); }
+
+    .narrative-box { font-size: 13px; line-height: 1.6; text-align: justify; padding: 8px 10px; background: rgba(139,121,94,0.1); border-left: 3px solid var(--qin-red); margin-top: 10px; }
+    .narrative-box-title { font-weight: bold; margin-bottom: 4px; color: var(--ink-dark); font-family: 'Ma Shan Zheng', cursive; font-size: 16px; }
+
+    .badge { font-size: 10px; padding: 1px 4px; border-radius: 2px; margin-left: 5px; font-weight: normal; border: 1px solid; }
+    .badge-neutral { background: #e0d8c8; color: #4a4a4a; border-color: #b0a088; }
+    .badge-good { background: #dcedc8; color: var(--profit-color); border-color: #aed581; }
+    .badge-bad { background: #ffcdd2; color: var(--loss-color); border-color: #ef9a9a; }
+    .badge-warn { background: #ffecb3; color: var(--wavering-color); border-color: #ffd54f; }
+
+    .divider { height: 1px; background: var(--bronze-gold); margin: 12px 0; opacity: 0.6; }
+
+    .ability-bar-container { width: 100%; height: 6px; background-color: #cfc2a9; border-radius: 1px; margin-top: 4px; border: 1px solid #b0a088; }
+    .ability-bar { height: 100%; background-color: var(--qin-red); transition: width 0.5s ease-in-out; }
+
+    /* 弹窗 */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 10, 5, 0.85); z-index: 999; display: none;
+      justify-content: center; align-items: center; backdrop-filter: blur(2px);
+    }
+    .modal-content {
+      background: #efe4ce; width: 88%; max-width: 320px; max-height: 85%; overflow-y: auto;
+      border: 3px double var(--border-dark); padding: 25px 20px;
+      position: relative; box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 0 20px rgba(139,121,94,0.3);
+      border-radius: 2px;
+    }
+    .modal-content::-webkit-scrollbar { width: 4px; }
+    .modal-content::-webkit-scrollbar-thumb { background: var(--bronze-gold); border-radius: 2px; }
+
+    .modal-close {
+      position: absolute; top: 10px; right: 12px; font-size: 24px;
+      cursor: pointer; color: var(--border-dark); line-height: 1; font-family: sans-serif;
+    }
+    .modal-close:hover { color: var(--qin-red); }
+
+    .portrait-img {
+      width: 100%;
+      height: auto;
+      border-radius: 4px;
+      border: 2px solid var(--bronze-gold);
+      margin-top: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      display: none;
+      transition: opacity 0.3s;
+    }
+    .portrait-tip {
+      font-size: 11px;
+      color: var(--qin-red);
+      text-align: center;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .sub-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; font-size: 11px; margin-top: 4px; color: #5a4b3d; }
+  </style>
+  <script type="module">
+    /* 佳人立绘内置数据 (支持多图配置) */
+    const portraitsData = {
+        '虞姬': {
+            normal: ['https://i.meee.com.tw/tlpqWay.png'],
+            nsfw: ['https://i.meee.com.tw/Bil7wDj.png']
+        },
+        '薄姬': {
+            normal: ['https://i.meee.com.tw/NDyoAT8.png'],
+            nsfw: ['https://i.meee.com.tw/aodDxjP.png']
+        },
+        '吕雉': {
+            normal: ['https://i.meee.com.tw/iPAyezr.png'],
+            nsfw: ['https://i.meee.com.tw/2aukiDb.png']
+        },
+        '戚姬': {
+            normal: ['https://i.meee.com.tw/bs6WlAd.png'],
+            nsfw: ['https://i.meee.com.tw/Add7Qb5.png']
+        },
+        '赵飞燕': {
+            normal: ['https://i.meee.com.tw/Zbno7GS.png'],
+            nsfw: ['https://i.meee.com.tw/6usUNnE.png']
+        },
+        '王昭君': {
+            normal: ['https://i.meee.com.tw/o4GWP5q.png', 'https://i.meee.com.tw/XmgTruW.png'],
+            nsfw: ['https://i.meee.com.tw/ZgkHvfC.png']
+        },
+        '阴丽华': {
+            normal: ['https://i.meee.com.tw/BiPJS2J.png'],
+            nsfw: ['https://i.meee.com.tw/OCsSCai.jpg', 'https://i.meee.com.tw/bTtJgSb.png']
+        },
+        '卫子夫': {
+            normal: ['https://i.meee.com.tw/OeNcaKN.png'],
+            nsfw: ['https://i.meee.com.tw/5qOfjf1.png']
+        }
+    };
+
+    function formatNum(num) {
+        if (num === null || num === undefined || num === '') return '0';
+        const parsed = parseInt(num, 10);
+        return isNaN(parsed) ? '0' : parsed.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    function getHistoryQuote(year) {
+      if (typeof year !== 'number' || isNaN(year)) return '“天下未定，群雄并起。”';
+
+      const quotes = {
+        qin: [
+          '“器械一量，同书文字。” ——《会稽刻石》'
+        ],
+        qin2: [
+          '“且天下非小弱也，雍州之地，崤函之固自若也。” ——贾谊《过秦论》',
+          '“戍卒叫，函谷举” ——杜牧《阿房宫赋》'
+        ],
+        hanGao: [
+          '“天下大定。高祖都洛阳，诸侯皆臣属。” ——《史记·叔孙通列传》'
+        ],
+        hanHui: [
+          '“君臣俱欲休息乎无为，故惠帝垂拱，高后女主称制。” ——《汉书·高后纪》'
+        ],
+        lvHou: [
+          '“太后临朝，称制，下令如皇帝。” ——《汉书·高后纪》'
+        ],
+        hanWen: [
+          '“夫农，天下之本也，其开藉田，朕亲率耕。” ——《史记·孝文本纪》'
+        ],
+        hanJing: [
+          '“削诸侯，损其权，以遵汉法。” ——《汉书·景帝纪》'
+        ],
+        hanWu: [
+          '“汉兴六十余载，海内艾安，府库充实，而四夷未宾，制度多阙。” ——《汉书·公孙弘卜式儿宽传》'
+        ],
+        hanZhao: [
+          '“流民稍还，田野益辟，颇有畜积。” ——《汉书·昭帝纪》'
+        ],
+        hanXuan: [
+          '“吏称其职，民安其业。” ——《汉书·宣帝纪》'
+        ],
+        hanYuan: [
+          '“汉家自有制度，本以霸王道杂之。” ——《汉书·元帝纪》'
+        ],
+        hanCheng: [
+          '“王氏世擅权柄，骄奢僭上。” ——《汉书·外戚传》'
+        ],
+        hanAi: [
+          '“汉历中衰，当更受命。” ——《汉书·李寻传》'
+        ],
+        wangMang: [
+          '“（王莽）遂据国柄，群盗并起。” ——《后汉书·刘玄刘盆子列传》',
+          '“其时，山东豪杰并起，天下不知几人称王称帝。” ——《史记·项羽本纪》'
+        ],
+        gengShi: [
+          '“更始既至，居长乐宫，升前殿，郎吏以次列庭中。更始羞怍，俯首刮席不敢视。” ——《后汉书·刘玄传》'
+        ],
+        hanGuangWu: [
+          '“退功臣而进文吏，戢弓矢而散牛马，虽道未方古，斯亦止戈之武焉。” ——《后汉书·光武帝纪》',
+          '“得陇望蜀” ——《后汉书·岑彭传》'
+        ],
+        hanMing: [
+          '“帝善刑名，尤尚吏职。” ——《后汉书·明帝纪》'
+        ],
+        hanHe: [
+          '“帝乃诛宪……自窦宪诛后，帝躬亲万机。每朝会，与公卿共决政事。” ——《后汉书·和帝纪》',
+          '“宦官用权，自此始矣” ——《后汉书·宦者列传》'
+        ]
+      };
+
+      let arr = [];
+      if (year >= -221 && year <= -210) arr = quotes.qin;
+      else if (year >= -209 && year <= -207) arr = quotes.qin2;
+      else if (year >= -206 && year <= -195) arr = quotes.hanGao;
+      else if (year >= -194 && year <= -188) arr = quotes.hanHui;
+      else if (year >= -187 && year <= -180) arr = quotes.lvHou;
+      else if (year >= -179 && year <= -157) arr = quotes.hanWen;
+      else if (year >= -156 && year <= -141) arr = quotes.hanJing;
+      else if (year >= -140 && year <= -87) arr = quotes.hanWu;
+      else if (year >= -86 && year <= -74) arr = quotes.hanZhao;
+      else if (year >= -73 && year <= -49) arr = quotes.hanXuan;
+      else if (year >= -48 && year <= -33) arr = quotes.hanYuan;
+      else if (year >= -32 && year <= -7) arr = quotes.hanCheng;
+      else if (year >= -6 && year <= -1) arr = quotes.hanAi;
+      else if (year >= 1 && year <= 22) arr = quotes.wangMang;
+      else if (year >= 23 && year <= 25) arr = quotes.gengShi;
+      else if (year >= 26 && year <= 57) arr = quotes.hanGuangWu;
+      else if (year >= 58 && year <= 75) arr = quotes.hanMing;
+      else if (year >= 76 && year <= 105) arr = quotes.hanHe;
+      else arr = ['“天下大势，浩浩汤汤。”'];
+
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function populateCharacterData() {
+      const all_vars = getAllVariables();
+      const sd = _.get(all_vars, 'stat_data', {});
+
+      const setText = (id, val, def = '无') => $(id).text(val !== undefined && val !== null && val !== '' ? val : def);
+      const setHtml = (id, html) => $(id).html(html);
+
+      /* --- 1. 世界时局 --- */
+      const wd = _.get(sd, '世界概况', {});
+      const timeData = wd.时间 || {};
+
+      /* 获取底层数字年份并翻译成好看的文字 */
+      let displayYear = '未知年份';
+      if (timeData.年份 !== undefined && timeData.年份 !== null) {
+          if (timeData.年份 < 0) {
+              displayYear = '公元前' + Math.abs(timeData.年份) + '年';
+          } else {
+              displayYear = '公元' + timeData.年份 + '年';
+          }
+      }
+
+      const timeStr = timeData.年份 ? `${displayYear} ${timeData.月份||1}月${timeData.日期||1}日` : '未知时岁';
+
+      const eraData = wd.年号 || {};
+      const eraStr = eraData.名称 ? `${eraData.名称 && eraData.名称 !== '无' ? eraData.名称 : '无纪元'} ${eraData.年份 || 1}年` : '无纪元';
+
+      setText('#sys-era', eraStr);
+      setText('#sys-time', timeStr);
+      setText('#sys-quote', getHistoryQuote(timeData.年份));
+
+      setText('#world-title', wd.时势?.标题 || '天下未定');
+      setText('#world-desc', wd.时势?.具体描述 || '各方势力暗流涌动。');
+      setText('#world-view', wd.观测史观 || '无');
+      setText('#world-prophecy', wd.谶纬 || '暂无流言');
+
+      /* --- 2. 身份档案 --- */
+      const char = _.get(sd, '角色档案', {});
+      const info = char.身份信息 || {};
+      const soc = char.社会状态 || {};
+
+      setText('#char-name', info.姓名 || '未知');
+      setText('#char-zi', info.表字 && info.表字 !== '无' ? `字${info.表字}` : '');
+      setText('#char-age', `${info.年龄 || '?'}岁 | ${soc.所处阶层 || '平民'}`);
+      setText('#char-loc', soc.所在地点 || '未知');
+      setText('#char-job', soc.职位 || '白身');
+      setText('#char-event', soc.当前事件 || '平安无事');
+
+      setText('#char-fame', char.名望?.称号 || '无');
+      setText('#char-fame-desc', char.名望?.具体描述 || '无');
+
+      const attrs = char.属性?.数值 || {};
+      setText('#attr-title', char.属性?.称号 || '无');
+      const renderAttr = (id, val) => {
+          setText(`#attr-${id}-val`, val);
+          $(`#attr-${id}-bar`).css('width', `${_.clamp((val + 100) / 2, 0, 100)}%`);
+      };
+      renderAttr('pol', attrs.政治 || 0);
+      renderAttr('ldr', attrs.统领 || 0);
+      renderAttr('knw', attrs.学识 || 0);
+      renderAttr('hp', attrs.健康 || 50);
+      renderAttr('chm', attrs.风采 || 0);
+      renderAttr('mrt', attrs.武艺 || 0);
+
+      /* --- 3. 经济声誉 --- */
+      const eco = char.经济状况 || {};
+      const assetHtml = Object.entries(eco.资产列表 || {}).map(([k, v]) =>
+        `<li class="list-item" style="flex-direction:column; align-items:flex-start;">
+          <div><span style="font-weight:bold; color:var(--ink-dark);">${k}</span></div>
+          <div style="font-size:12px; color:#5a4b3d; margin-top:2px;">入: ${v.收入} | 出: ${v.支出}</div>
+          <div style="font-size:11px; color:#721c1c; margin-top:2px;">说明: ${v.说明}</div>
+        </li>`
+      ).join('');
+      setHtml('#asset-list', assetHtml || '<li class="list-item" style="justify-content:center;">暂无资产</li>');
+
+      const reserveHtml = Object.entries(eco.储备列表 || {}).map(([k, v]) =>
+        `<div class="info-item"><span class="info-label">${k}</span><span class="info-value" style="color:var(--ink-dark);">${formatNum(v)}</span></div>`
+      ).join('');
+      setHtml('#reserve-grid', reserveHtml || '<div class="info-item">暂无储备</div>');
+
+      const evalHtml = Object.entries(char.阶级评价 || {}).map(([k, v]) =>
+        `<li class="list-item" style="flex-direction:column; align-items:flex-start;">
+          <div>${k} <span class="badge badge-neutral">${v.态度}</span></div>
+          <div style="font-size:12px; color:#5a4b3d; margin-top:2px;">${v.具体描述}</div>
+        </li>`
+      ).join('');
+      setHtml('#eval-list', evalHtml || '<li class="list-item" style="justify-content:center;">无评价</li>');
+
+      const histHtml = Object.entries(char.过往履历 || {}).map(([k, v]) =>
+        `<li class="list-item" style="flex-direction:column; align-items:flex-start;">
+          <div style="font-weight:bold; color:var(--qin-red);">${k}</div>
+          <div style="font-size:12px; line-height:1.5; margin-top:4px; color:var(--ink-dark);">${v}</div>
+        </li>`
+      ).join('');
+      setHtml('#hist-list', histHtml || '<li class="list-item" style="justify-content:center;">暂无履历</li>');
+
+      /* --- 4. 天下势力 (独立) --- */
+      const mil = _.get(sd, '军事政治', {});
+      const net = _.get(sd, '人际网络', {});
+
+      const facHtml = Object.entries(mil.势力列表 || {}).map(([k, v]) => {
+        let otherEvalHtml = Object.entries(v.其他势力评价 || {}).map(([ok, ov]) =>
+          `<div><span style="color:var(--ink-dark);">${ok}</span>: ${ov.态度} <span style="font-size:10px;">(${ov.具体描述})</span></div>`
+        ).join('');
+        if (!otherEvalHtml) otherEvalHtml = '<div>无其他评价</div>';
+
+        return `<li class="list-item" style="flex-direction:column; align-items:flex-start;">
+          <div style="width:100%; border-bottom: 1px solid var(--bronze-gold); padding-bottom:4px;">
+            <span style="font-weight:bold; font-size:15px; color:var(--qin-red);">${k}</span>
+            <span class="badge badge-neutral">${v.类型}</span>
+          </div>
+          <div class="sub-grid" style="width:100%; margin-top:6px;">
+            <span>领袖: ${v.势力领袖}</span>
+            <span style="grid-column: span 2;">朝廷态度: ${v.朝廷评价?.态度 || '未知'}</span>
+          </div>
+          <div style="font-size:12px; color:#5a4b3d; margin-top:4px; width:100%;">
+            <div style="font-weight:bold;">势力动态:</div>
+            <div>${v.势力动态}</div>
+          </div>
+          <div style="font-size:11px; color:#8b795e; margin-top:4px; width:100%; background:rgba(0,0,0,0.03); padding:4px;">
+            <div style="font-weight:bold;">其他势力评价:</div>
+            ${otherEvalHtml}
+          </div>
+        </li>`;
+      }).join('');
+      setHtml('#fac-list', facHtml || '<li class="list-item" style="justify-content:center;">暂无势力</li>');
+
+      /* --- 5. 麾下兵将 (部曲与下属) --- */
+      const armyHtml = Object.entries(mil.部队列表 || {}).map(([k, v]) => {
+        let loyClass = v.忠心状况 === '叛乱' ? 'badge-bad' : (v.忠心状况 === '摇摆' ? 'badge-warn' : 'badge-good');
+        let supClass = v.后勤状况 === '缺粮' ? 'badge-bad' : (v.后勤状况 === '补给示警' ? 'badge-warn' : 'badge-good');
+        return `<li class="list-item" style="flex-direction:column; align-items:flex-start;">
+          <div style="width:100%; display:flex; justify-content:space-between; font-weight:bold; color:var(--ink-dark);">
+            <span>${k} <span class="badge ${loyClass}">${v.忠心状况}</span></span>
+            <span style="color:var(--qin-red);">${formatNum(v.数量)} 人</span>
+          </div>
+          <div style="width:100%; display:grid; grid-template-columns:1fr 1fr; font-size:12px; margin-top:6px; color:#5a4b3d; gap:4px;">
+            <span>统领: ${v.统领}</span><span>驻地: ${v.驻地}</span>
+            <span>士气: ${v.士气}</span><span>补给: <span class="${supClass}" style="padding:1px 4px;border-radius:2px;font-size:10px;">${v.后勤状况}</span></span>
+            <span>训练: ${v.训练}</span><span>装备: ${v.装备}</span>
+          </div>
+          <div style="font-size:12px; color:var(--qin-red); margin-top:4px; font-weight:bold;">动向: ${v.动向}</div>
+          <div style="font-size:11px; color:#8b795e; margin-top:2px;">说明: ${v.说明}</div>
+        </li>`;
+      }).join('');
+      setHtml('#army-list', armyHtml || '<li class="list-item" style="justify-content:center;">暂无部队</li>');
+
+      const subHtml = Object.entries(net.下属列表 || {}).map(([k, v]) =>
+        `<li class="list-item" style="flex-direction:column; align-items:flex-start;">
+           <div style="width:100%; display:flex; justify-content:space-between;">
+             <span>${k} <span style="font-size:11px; color:#5a4b3d;">(${v.官职})</span></span>
+             <span style="font-size:12px; color:var(--qin-red);">好感: ${v.好感}</span>
+           </div>
+           <div style="font-size:11px; color:#8b795e; margin-top:2px;">评价: ${v.评价}</div>
+         </li>`
+      ).join('');
+      setHtml('#sub-list', subHtml || '<li class="list-item" style="justify-content:center;">暂无下属</li>');
+
+      /* --- 6. 宗族与交游 --- */
+      const relHtml = Object.entries(net.人际交往 || {}).map(([k, v]) =>
+        `<li class="list-item" style="flex-direction:column; align-items:flex-start;">
+           <div style="width:100%; display:flex; justify-content:space-between;">
+             <span>${k} <span style="font-size:11px; color:#5a4b3d;">(${v.官职})</span></span>
+             <span style="font-size:12px;">好感: ${v.好感}</span>
+           </div>
+           <div style="font-size:11px; color:#8b795e; margin-top:2px;">评价: ${v.评价}</div>
+         </li>`
+      ).join('');
+      setHtml('#rel-list', relHtml || '<li class="list-item" style="justify-content:center;">暂无交往</li>');
+
+      const fam = net.家族信息 || {};
+      setText('#fam-name', fam.家族名 || '未知');
+      setText('#fam-leader', fam.家族领袖 || '无');
+      setText('#fam-lvl', fam.家族等级 || '寒门');
+      setText('#fam-dyn', fam.家族动向 || '无');
+
+      const famMemHtml = Object.entries(fam.家族子弟 || {}).map(([k, v]) =>
+        `<li class="list-item" style="flex-direction:column; align-items:flex-start;">
+           <div style="width:100%; display:flex; justify-content:space-between;">
+             <span>${k} <span style="font-size:11px; color:#5a4b3d;">(${v.年龄}岁 | ${v.表字!== '无'? v.表字: '无字'} | ${v.官职})</span></span>
+             <span style="font-size:12px; color:var(--qin-red);">好感: ${v.好感}</span>
+           </div>
+           <div style="font-size:11px; color:#8b795e; margin-top:2px;">评价: ${v.评价}</div>
+         </li>`
+      ).join('');
+      setHtml('#fam-mem-list', famMemHtml || '<li class="list-item" style="justify-content:center;">暂无子弟</li>');
+
+      /* --- 7. 内闱与子嗣 --- */
+      const harem = net.后宫信息 || {};
+      setText('#harem-dyn', harem.后宫动态 || '无');
+      const hmHtml = Object.entries(harem.嫔妃列表 || {}).map(([k, v]) => {
+          const details = encodeURIComponent(JSON.stringify(v));
+          return `<li class="list-item clickable-item hm-item" data-name="${k}" data-details="${details}">
+            <div style="width:100%;display:flex;justify-content:space-between;align-items:center;">
+              <span>${k} <span style="font-size:11px;color:var(--qin-red);">[${v.位份}]</span></span>
+              <span style="font-size:12px;color:#5a4b3d;">年龄: ${v.年龄}岁 | 好感: <span style="color:var(--qin-red);font-weight:bold;">${v.好感}</span></span>
+            </div>
+          </li>`;
+      }).join('');
+      setHtml('#harem-list', hmHtml || '<li class="list-item" style="justify-content:center;">暂无后宫</li>');
+
+      const childInfo = net.子嗣信息 || {};
+      setText('#child-dyn', childInfo.子嗣动态 || '暂无');
+      const childHtml = Object.entries(childInfo.子嗣列表 || {}).map(([k, v]) =>
+        `<li class="list-item" style="flex-direction:column; align-items:flex-start;">
+          <div style="width:100%; display:flex; justify-content:space-between;">
+            <span>${k} <span style="font-size:11px; color:#5a4b3d;">(${v.年龄}岁)</span></span>
+            <span style="font-size:12px; color:var(--qin-red);">好感: ${v.好感}</span>
+          </div>
+          <div style="font-size:11px; color:#8b795e; margin-top:2px;">${v.职位} | ${v.评价}</div>
+          <div style="font-size:10px; color:#5a4b3d; margin-top:2px;">说明: ${v.说明}</div>
+        </li>`
+      ).join('');
+      setHtml('#child-list', childHtml || '<li class="list-item" style="justify-content:center;">暂无子嗣</li>');
+
+      bindEvents();
+    }
+
+    /* 弹窗立绘状态变量 */
+    let currentImageGallery = [];
+    let currentImageIndex = 0;
+    let canToggleImage = false;
+
+    function bindEvents() {
+      $('.section-header').off('click').on('click', function() {
+        $(this).toggleClass('collapsed').next('.section-content').toggleClass('hidden');
+      });
+
+      $('.hm-item').off('click').on('click', function() {
+        const name = $(this).data('name');
+        const data = JSON.parse(decodeURIComponent($(this).data('details')));
+
+        $('#m-name').text(name);
+        $('#m-title').text(data.位份 || '无');
+        $('#m-age').text(`年龄: ${data.年龄}岁`);
+        $('#m-fav').text(data.好感 || 0);
+        $('#m-sex').text(data.性爱次数 || 0);
+        $('#m-eval').text(data.评价 || '无');
+        $('#m-desc').text(data.说明 || '无说明');
+
+        /* 立绘处理逻辑 (多图轮播) */
+        const fav = parseInt(data.好感) || 0;
+        const pData = portraitsData[name];
+
+        if (pData) {
+            let normalList = pData.normal || [];
+            let nsfwList = pData.nsfw || [];
+
+            if (fav >= 61) {
+                currentImageGallery = normalList.concat(nsfwList);
+            } else {
+                currentImageGallery = normalList;
+            }
+
+            currentImageIndex = 0;
+
+            if (currentImageGallery.length > 0) {
+                $('#m-portrait').attr('src', currentImageGallery[0]).show();
+                $('#m-portrait-tip').show();
+
+                canToggleImage = currentImageGallery.length > 1;
+
+                if (canToggleImage) {
+                    if (fav >= 61 && nsfwList.length > 0) {
+                        $('#m-portrait-tip').text('✦ 点击画卷可更衣 ✦');
+                    } else {
+                        $('#m-portrait-tip').text('✦ 点击画卷查看更多 ✦ (好感61可更衣)');
+                    }
+                    $('#m-portrait').css('cursor', 'pointer');
+                } else {
+                    $('#m-portrait-tip').text('✦ 佳人画卷 ✦ (好感61可更衣)');
+                    $('#m-portrait').css('cursor', 'default');
+                }
+            } else {
+                $('#m-portrait').hide();
+                $('#m-portrait-tip').hide();
+            }
+        } else {
+            $('#m-portrait').hide();
+            $('#m-portrait-tip').hide();
+        }
+
+        $('#harem-modal').fadeIn(200).css('display', 'flex');
+      });
+
+      /* 立绘点击循环切换事件 */
+      $('#m-portrait').off('click').on('click', function() {
+          if (canToggleImage && currentImageGallery.length > 1) {
+              currentImageIndex = (currentImageIndex + 1) % currentImageGallery.length;
+              /* 切换透明度动画避免生硬闪烁 */
+              $(this).css('opacity', 0.5);
+              setTimeout(() => {
+                  $(this).attr('src', currentImageGallery[currentImageIndex]).css('opacity', 1);
+              }, 150);
+          }
+      });
+
+      $('.modal-close, .modal-overlay').off('click').on('click', function(e) {
+        if (e.target === this) $('#harem-modal').fadeOut(200);
+      });
+    }
+
+    async function init() {
+      await waitGlobalInitialized('Mvu');
+      populateCharacterData();
+      eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, populateCharacterData);
+    }
+
+    $(errorCatched(init));
+  </script>
+</head>
+<body>
+  <div class="memorial-container">
+    <div class="memorial-header">
+      <div class="header-title">人 物 志</div>
+      <div class="header-subtitle">
+        <span id="sys-era"></span> | <span id="sys-time"></span>
+      </div>
+      <div class="header-quote" id="sys-quote"></div>
+    </div>
+
+    <!-- 1. 身份档案 -->
+    <div class="section">
+      <div class="section-header collapsed"><span>◆ 身份档案</span></div>
+      <div class="section-content hidden">
+        <div class="info-item" style="border:none;">
+          <div>
+            <span id="char-name" style="font-size:22px; font-weight:bold; font-family:'Ma Shan Zheng', cursive; color:var(--qin-red);"></span>
+            <span id="char-zi" style="font-size:16px; font-family:'Ma Shan Zheng', cursive; margin-left:6px; color:var(--ink-dark);"></span>
+          </div>
+          <span id="char-age" style="font-size:13px; color:#5a4b3d; margin-top:2px;"></span>
+        </div>
+
+        <div class="info-grid" style="margin-top:12px;">
+          <div class="info-item"><span class="info-label">所在地点</span><span id="char-loc" class="info-value"></span></div>
+          <div class="info-item"><span class="info-label">职位</span><span id="char-job" class="info-value"></span></div>
+          <div class="info-item"><span class="info-label">名望称号</span><span id="char-fame" class="info-value" style="color:var(--qin-red);"></span></div>
+          <div class="info-item"><span class="info-label">属性天资</span><span id="attr-title" class="info-value" style="color:var(--ink-dark);"></span></div>
+        </div>
+
+        <div class="narrative-box"><div class="narrative-box-title">当前事件</div><span id="char-event"></span></div>
+        <div class="narrative-box"><div class="narrative-box-title">名望描述</div><span id="char-fame-desc"></span></div>
+
+        <div class="divider"></div>
+        <div class="narrative-box-title" style="text-align:center;">个人属性</div>
+        <div class="info-grid" style="gap:10px; margin-top:8px;">
+          <div class="info-item" style="border:none;">
+            <div style="display:flex; justify-content:space-between;"><span class="info-label">政治</span><span id="attr-pol-val" style="font-size:13px;font-weight:bold;color:var(--ink-dark);"></span></div>
+            <div class="ability-bar-container"><div id="attr-pol-bar" class="ability-bar"></div></div>
+          </div>
+          <div class="info-item" style="border:none;">
+            <div style="display:flex; justify-content:space-between;"><span class="info-label">统领</span><span id="attr-ldr-val" style="font-size:13px;font-weight:bold;color:var(--ink-dark);"></span></div>
+            <div class="ability-bar-container"><div id="attr-ldr-bar" class="ability-bar"></div></div>
+          </div>
+          <div class="info-item" style="border:none;">
+            <div style="display:flex; justify-content:space-between;"><span class="info-label">学识</span><span id="attr-knw-val" style="font-size:13px;font-weight:bold;color:var(--ink-dark);"></span></div>
+            <div class="ability-bar-container"><div id="attr-knw-bar" class="ability-bar"></div></div>
+          </div>
+          <div class="info-item" style="border:none;">
+            <div style="display:flex; justify-content:space-between;"><span class="info-label">健康</span><span id="attr-hp-val" style="font-size:13px;font-weight:bold;color:var(--qin-red);"></span></div>
+            <div class="ability-bar-container" style="background:#e8dcc4; border-color:var(--qin-red);"><div id="attr-hp-bar" class="ability-bar" style="background:var(--qin-red);"></div></div>
+          </div>
+          <div class="info-item" style="border:none;">
+            <div style="display:flex; justify-content:space-between;"><span class="info-label">风采</span><span id="attr-chm-val" style="font-size:13px;font-weight:bold;color:var(--ink-dark);"></span></div>
+            <div class="ability-bar-container"><div id="attr-chm-bar" class="ability-bar"></div></div>
+          </div>
+          <div class="info-item" style="border:none;">
+            <div style="display:flex; justify-content:space-between;"><span class="info-label">武艺</span><span id="attr-mrt-val" style="font-size:13px;font-weight:bold;color:var(--ink-dark);"></span></div>
+            <div class="ability-bar-container"><div id="attr-mrt-bar" class="ability-bar"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 世界时局 -->
+    <div class="section">
+      <div class="section-header collapsed"><span>◆ 世界时局</span></div>
+      <div class="section-content hidden">
+        <div class="info-grid">
+          <div class="info-item" style="grid-column: span 2; border:none;"><span class="info-label">时势: <span id="world-title" style="font-weight:bold;color:var(--qin-red);"></span></span><span id="world-desc" style="font-size:13px; margin-top:4px; line-height:1.4;"></span></div>
+          <div class="info-item" style="margin-top:8px;"><span class="info-label">观测史观</span><span id="world-view" class="info-value" style="color:var(--ink-dark);"></span></div>
+        </div>
+        <div class="narrative-box"><div class="narrative-box-title">谶纬流传</div><span id="world-prophecy"></span></div>
+      </div>
+    </div>
+
+    <!-- 3. 经济声誉 -->
+    <div class="section">
+      <div class="section-header collapsed"><span>◆ 经济声誉</span></div>
+      <div class="section-content hidden">
+        <div class="narrative-box-title">储备列表</div>
+        <div class="info-grid" id="reserve-grid" style="margin-bottom:10px;"></div>
+        <div class="divider"></div>
+        <div class="narrative-box-title">资产列表</div>
+        <ul class="scroll-list" id="asset-list"></ul>
+        <div class="divider"></div>
+        <div class="narrative-box-title">阶级评价</div>
+        <ul class="scroll-list" id="eval-list"></ul>
+        <div class="divider"></div>
+        <div class="narrative-box-title">过往履历</div>
+        <ul class="scroll-list" id="hist-list"></ul>
+      </div>
+    </div>
+
+    <!-- 4. 天下势力 (独立) -->
+    <div class="section">
+      <div class="section-header collapsed"><span>◆ 天下势力</span></div>
+      <div class="section-content hidden">
+        <ul class="scroll-list" id="fac-list"></ul>
+      </div>
+    </div>
+
+    <!-- 5. 麾下兵将 (部曲+下属) -->
+    <div class="section">
+      <div class="section-header collapsed"><span>◆ 麾下兵将</span></div>
+      <div class="section-content hidden">
+        <div class="narrative-box-title">麾下部曲</div>
+        <ul class="scroll-list" id="army-list"></ul>
+        <div class="divider"></div>
+        <div class="narrative-box-title">直属下属</div>
+        <ul class="scroll-list" id="sub-list"></ul>
+      </div>
+    </div>
+
+    <!-- 6. 宗族与交游 -->
+    <div class="section">
+      <div class="section-header collapsed"><span>◆ 宗族与交游</span></div>
+      <div class="section-content hidden">
+        <div class="info-grid">
+          <div class="info-item"><span class="info-label">家族名</span><span id="fam-name" class="info-value"></span></div>
+          <div class="info-item"><span class="info-label">家族等级</span><span id="fam-lvl" class="info-value" style="color:var(--ink-dark);"></span></div>
+          <div class="info-item" style="grid-column: span 2;"><span class="info-label">家族领袖</span><span id="fam-leader" class="info-value"></span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="narrative-box-title">家族子弟</div>
+        <ul class="scroll-list" id="fam-mem-list"></ul>
+        <div class="narrative-box" style="margin-top:4px;"><div class="narrative-box-title">家族动向</div><span id="fam-dyn"></span></div>
+        <div class="divider"></div>
+        <div class="narrative-box-title">人际交往</div>
+        <ul class="scroll-list" id="rel-list"></ul>
+      </div>
+    </div>
+
+    <!-- 7. 内闱与子嗣 -->
+    <div class="section">
+      <div class="section-header collapsed"><span>◆ 内闱与子嗣</span></div>
+      <div class="section-content hidden">
+        <div class="narrative-box-title" style="color:var(--qin-red);">内闱妻妾 <span style="font-size:10px;font-weight:normal;color:#8b795e;">(点击查看详情)</span></div>
+        <ul class="scroll-list" id="harem-list" style="margin-top:8px;"></ul>
+        <div class="narrative-box" style="margin-top:4px;"><div class="narrative-box-title">后宫动态</div><span id="harem-dyn"></span></div>
+
+        <div class="divider"></div>
+
+        <div class="narrative-box-title">膝下子嗣</div>
+        <ul class="scroll-list" id="child-list" style="margin-top:8px;"></ul>
+        <div class="narrative-box" style="margin-top:4px;"><div class="narrative-box-title">子嗣动态</div><span id="child-dyn"></span></div>
+      </div>
+    </div>
+
+    <!-- 佳人玉册弹窗 -->
+    <div id="harem-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-close">×</div>
+        <div style="text-align: center; color: var(--qin-red); font-size: 20px; font-family:'Ma Shan Zheng', cursive; margin-bottom: 12px; border-bottom:1px solid var(--bronze-gold); padding-bottom:6px;">✦ 佳人玉册 ✦</div>
+
+        <div style="text-align:center;">
+          <div id="m-name" style="font-family:'Ma Shan Zheng', cursive; font-size:28px; color:var(--ink-dark);"></div>
+          <div id="m-title" style="display:inline-block; font-size:12px; background:var(--ink-dark); color:var(--bamboo-bg); padding:2px 10px; border-radius:2px; margin-top:6px; border:1px solid var(--bronze-gold);"></div>
+        </div>
+
+        <!-- 立绘展示区域 -->
+        <div style="text-align:center;">
+          <img id="m-portrait" class="portrait-img" src="" alt="佳人画卷">
+          <div id="m-portrait-tip" class="portrait-tip"></div>
+        </div>
+
+        <div style="height:1px; background:var(--bronze-gold); margin:15px 0; opacity:0.6;"></div>
+
+        <div style="display:flex; justify-content:space-around; text-align:center;">
+          <div>
+            <div id="m-fav" style="font-size:18px; font-weight:bold; color:var(--ink-dark);"></div>
+            <div style="font-size:11px; color:#5a4b3d; margin-top:2px;">倾心好感</div>
+          </div>
+          <div>
+            <div id="m-sex" style="font-size:18px; font-weight:bold; color:var(--qin-red);"></div>
+            <div style="font-size:11px; color:#5a4b3d; margin-top:2px;">承欢次数</div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px; padding:12px; background:rgba(139,121,94,0.1); border:1px dashed var(--bronze-gold);">
+          <div style="font-size:13px; font-weight:bold; color:var(--qin-red); margin-bottom:6px;">评语与小记</div>
+          <div id="m-eval" style="font-size:13px; line-height:1.5; color:var(--ink-dark);"></div>
+          <div id="m-desc" style="font-size:12px; color:#5a4b3d; margin-top:8px; border-top:1px dotted var(--bronze-gold); padding-top:6px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
+```
