@@ -287,7 +287,7 @@ export function useTranslation() {
         translationMemoryHits: store.translationConfig.enableTranslationMemory
           ? await lookupTranslationMemory(field).catch(() => [])
           : undefined,
-        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset),
+        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset, store.card?.data?.name || store.card?.name),
       });
 
       // ═══ Determine field type for Master Prompt (expert mode) ═══
@@ -856,7 +856,7 @@ export function useTranslation() {
         translationMemoryHits: store.translationConfig.enableTranslationMemory
           ? await lookupTranslationMemory(batchFields[0]).catch(() => [])
           : undefined,
-        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset),
+        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset, store.card?.data?.name || store.card?.name),
       });
 
       const results = await translateBatch(
@@ -1840,7 +1840,7 @@ export function useTranslation() {
               ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
               ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
               ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-              presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset),
+              presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset, store.card?.data?.name || store.card?.name),
             });
 
             const regexFieldType = fieldGroupToFieldType(rf.group, rf.entryType);
@@ -2431,7 +2431,7 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset),
+        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset, store.card?.data?.name || store.card?.name),
       });
 
       const resolvedFieldType = fieldGroupToFieldType(field.group, field.entryType);
@@ -2936,7 +2936,7 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset),
+        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset, store.card?.data?.name || store.card?.name),
       });
 
       const resolvedFieldType = fieldGroupToFieldType(field.group, field.entryType);
@@ -3015,7 +3015,7 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset),
+        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset, store.card?.data?.name || store.card?.name),
       });
             result = await translateText(
               inputContent, field.label, effectiveProxy, effectiveLang, effectiveLang,
@@ -3355,7 +3355,7 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset),
+        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset, store.card?.data?.name || store.card?.name),
       });
 
         const resolvedFieldType = fieldGroupToFieldType(field.group, field.entryType);
@@ -3430,7 +3430,7 @@ export function useTranslation() {
         ejsEntryNameDict: useStore.getState().translationConfig.ejsEntryNameDict,
         ejsKeywordDict: useStore.getState().translationConfig.ejsKeywordDict,
         ejsDecoratorPreserve: store.translationConfig.ejsDecoratorPreserve,
-        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset),
+        presetPromptContent: getActivePresetPromptContent(store.activePreset?.preset, store.card?.data?.name || store.card?.name),
       });
               result = await translateText(
                 inputContent, field.label, store.proxy, effectiveLang, effectiveLang,

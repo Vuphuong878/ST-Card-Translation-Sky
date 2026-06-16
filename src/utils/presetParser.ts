@@ -1,5 +1,6 @@
 /* ─── Preset Parser Utility ─── */
 import type { STPreset, PresetPromptEntry, ProxySettings } from '../types/card';
+import { resolveMacros } from './macroResolver';
 
 /**
  * Validate and parse raw JSON into STPreset.
@@ -153,12 +154,20 @@ export function getPresetSummary(preset: STPreset): PresetSummary {
 
 /**
  * Build the combined content of all enabled prompts from an active preset.
+ * Resolves SillyTavern macros ({{setvar::}}, {{getvar::}}, {{char}}, etc.)
  * Returns undefined if no content to inject (no preset, no enabled prompts, or all empty).
  */
-export function getActivePresetPromptContent(preset: STPreset | undefined | null): string | undefined {
+export function getActivePresetPromptContent(
+  preset: STPreset | undefined | null,
+  charName?: string
+): string | undefined {
   if (!preset) return undefined;
   const enabled = getEnabledPrompts(preset);
   if (enabled.length === 0) return undefined;
-  const content = buildInjectionContent(enabled);
-  return content.trim() || undefined;
+  const raw = buildInjectionContent(enabled);
+  if (!raw.trim()) return undefined;
+
+  // Resolve SillyTavern macros
+  const resolved = resolveMacros(raw, { charName });
+  return resolved.trim() || undefined;
 }
