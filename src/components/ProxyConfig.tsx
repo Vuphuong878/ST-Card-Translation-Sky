@@ -538,6 +538,102 @@ export default function ProxyConfig() {
                 />
               </div>
 
+              {/* Top P */}
+              <div>
+                <label className="label">
+                  {t.topP}: {proxy.topP.toFixed(2)}
+                  {proxy.topP !== 1 && <span style={{ fontSize: '0.55rem', color: 'var(--accent-primary)', marginLeft: '6px' }}>🎯 {t.presetOverride}</span>}
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={proxy.topP}
+                  onChange={(e) => setProxy({ topP: parseFloat(e.target.value) })}
+                />
+              </div>
+
+              {/* Top K */}
+              <div>
+                <label className="label">
+                  {t.topK}: {proxy.topK}
+                  {proxy.topK !== 0 && <span style={{ fontSize: '0.55rem', color: 'var(--accent-primary)', marginLeft: '6px' }}>🎯 {t.presetOverride}</span>}
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  max={500}
+                  value={proxy.topK}
+                  onChange={(e) => setProxy({ topK: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+
+              {/* Min P */}
+              <div>
+                <label className="label">
+                  {t.minP}: {proxy.minP.toFixed(2)}
+                  {proxy.minP !== 0 && <span style={{ fontSize: '0.55rem', color: 'var(--accent-primary)', marginLeft: '6px' }}>🎯 {t.presetOverride}</span>}
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={proxy.minP}
+                  onChange={(e) => setProxy({ minP: parseFloat(e.target.value) })}
+                />
+              </div>
+
+              {/* Frequency Penalty */}
+              <div>
+                <label className="label">
+                  {t.frequencyPenalty}: {proxy.frequencyPenalty.toFixed(2)}
+                  {proxy.frequencyPenalty !== 0 && <span style={{ fontSize: '0.55rem', color: 'var(--accent-primary)', marginLeft: '6px' }}>🎯 {t.presetOverride}</span>}
+                </label>
+                <input
+                  type="range"
+                  min={-2}
+                  max={2}
+                  step={0.01}
+                  value={proxy.frequencyPenalty}
+                  onChange={(e) => setProxy({ frequencyPenalty: parseFloat(e.target.value) })}
+                />
+              </div>
+
+              {/* Presence Penalty */}
+              <div>
+                <label className="label">
+                  {t.presencePenalty}: {proxy.presencePenalty.toFixed(2)}
+                  {proxy.presencePenalty !== 0 && <span style={{ fontSize: '0.55rem', color: 'var(--accent-primary)', marginLeft: '6px' }}>🎯 {t.presetOverride}</span>}
+                </label>
+                <input
+                  type="range"
+                  min={-2}
+                  max={2}
+                  step={0.01}
+                  value={proxy.presencePenalty}
+                  onChange={(e) => setProxy({ presencePenalty: parseFloat(e.target.value) })}
+                />
+              </div>
+
+              {/* Repetition Penalty */}
+              <div>
+                <label className="label">
+                  {t.repetitionPenalty}: {proxy.repetitionPenalty.toFixed(2)}
+                  {proxy.repetitionPenalty !== 1 && <span style={{ fontSize: '0.55rem', color: 'var(--accent-primary)', marginLeft: '6px' }}>🎯 {t.presetOverride}</span>}
+                </label>
+                <input
+                  type="range"
+                  min={1}
+                  max={2}
+                  step={0.01}
+                  value={proxy.repetitionPenalty}
+                  onChange={(e) => setProxy({ repetitionPenalty: parseFloat(e.target.value) })}
+                />
+              </div>
+
               {/* Request Delay */}
               <div>
                 <label className="label">{t.delayBetweenRequests}</label>
@@ -671,6 +767,12 @@ export default function ProxyConfig() {
                   setProxy({
                     maxTokens: 65536,
                     temperature: 0.3,
+                    topP: 1,
+                    topK: 0,
+                    minP: 0,
+                    frequencyPenalty: 0,
+                    presencePenalty: 0,
+                    repetitionPenalty: 1,
                     requestDelay: 500,
                     retryDelay: 1000,
                     requestTimeout: 600000,

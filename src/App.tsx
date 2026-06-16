@@ -9,6 +9,7 @@ import { useStore } from './store';
 import { useT } from './i18n/useLocale';
 import type { Locale } from './i18n/translations';
 import { Languages, X, Globe } from 'lucide-react';
+import PresetImportPanel from './components/PresetImportPanel';
 
 // Lazy-load heavy components — only loaded after card is imported
 const FieldEditor = lazy(() => import('./components/FieldEditor'));
@@ -18,6 +19,7 @@ const CustomTranslatePanel = lazy(() => import('./components/CustomTranslatePane
 const EjsCreatorPanel = lazy(() => import('./components/EjsCreatorPanel'));
 const RegexManagerPanel = lazy(() => import('./components/RegexManagerPanel'));
 const AiCompanionPanel = lazy(() => import('./components/AiCompanionPanel'));
+const PresetPromptViewer = lazy(() => import('./components/PresetPromptViewer'));
 
 export default function App() {
   const { toasts, removeToast, card, locale, setLocale, loadStateFromIDB } = useStore();
@@ -25,6 +27,7 @@ export default function App() {
   const [showEjsCreator, setShowEjsCreator] = useState(false);
   const [showRegexManager, setShowRegexManager] = useState(false);
   const [showAiCompanion, setShowAiCompanion] = useState(false);
+  const [showPresetViewer, setShowPresetViewer] = useState(false);
 
   useEffect(() => {
     loadStateFromIDB();
@@ -108,6 +111,7 @@ export default function App() {
         {/* Sidebar sections */}
         <ProxyConfig />
         <FileUpload />
+        <PresetImportPanel onOpenPromptViewer={() => setShowPresetViewer(true)} />
         <TranslateConfig />
         
         {/* Nút mở EJS Creator Modal */}
@@ -266,6 +270,13 @@ export default function App() {
         {showAiCompanion && (
           <Suspense fallback={<LazyFallback />}>
             <AiCompanionPanel onClose={() => setShowAiCompanion(false)} />
+          </Suspense>
+        )}
+
+        {/* Preset Prompt Viewer Modal */}
+        {showPresetViewer && (
+          <Suspense fallback={<LazyFallback />}>
+            <PresetPromptViewer onClose={() => setShowPresetViewer(false)} />
           </Suspense>
         )}
 

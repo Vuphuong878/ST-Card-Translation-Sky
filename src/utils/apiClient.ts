@@ -1083,7 +1083,7 @@ async function callOpenAICompatible(
     });
   }
 
-  const body = {
+  const body: Record<string, any> = {
     model: config.model,
     messages: [
       { role: 'system', content: system },
@@ -1093,6 +1093,13 @@ async function callOpenAICompatible(
     temperature: config.temperature,
     stream: useStream,
   };
+  // Append optional AI sampling params from preset (only when non-default)
+  if (config.topP !== undefined && config.topP !== 1) body.top_p = config.topP;
+  if (config.topK !== undefined && config.topK > 0) body.top_k = config.topK;
+  if (config.minP !== undefined && config.minP > 0) body.min_p = config.minP;
+  if (config.frequencyPenalty !== undefined && config.frequencyPenalty !== 0) body.frequency_penalty = config.frequencyPenalty;
+  if (config.presencePenalty !== undefined && config.presencePenalty !== 0) body.presence_penalty = config.presencePenalty;
+  if (config.repetitionPenalty !== undefined && config.repetitionPenalty !== 1) body.repetition_penalty = config.repetitionPenalty;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -1211,7 +1218,7 @@ async function callAnthropic(
     });
   }
 
-  const body = {
+  const body: Record<string, any> = {
     model: config.model,
     max_tokens: getMaxOutputTokens(config.model, config.maxTokens),
     system,
@@ -1219,6 +1226,11 @@ async function callAnthropic(
     temperature: config.temperature,
     stream: useStream,
   };
+  // Append optional AI sampling params from preset (only when non-default)
+  if (config.topP !== undefined && config.topP !== 1) body.top_p = config.topP;
+  if (config.topK !== undefined && config.topK > 0) body.top_k = config.topK;
+  if (config.frequencyPenalty !== undefined && config.frequencyPenalty !== 0) body.frequency_penalty = config.frequencyPenalty;
+  if (config.presencePenalty !== undefined && config.presencePenalty !== 0) body.presence_penalty = config.presencePenalty;
 
   // When using the CORS proxy, we don't need the dangerous-direct-browser-access header
   // because the request goes through the Vite server (not from browser to Anthropic)
@@ -1342,13 +1354,20 @@ async function callGemini(
     });
   }
 
+  const generationConfig: Record<string, any> = {
+    maxOutputTokens: getMaxOutputTokens(config.model, config.maxTokens),
+    temperature: config.temperature,
+  };
+  // Append optional AI sampling params from preset (only when non-default)
+  if (config.topP !== undefined && config.topP !== 1) generationConfig.topP = config.topP;
+  if (config.topK !== undefined && config.topK > 0) generationConfig.topK = config.topK;
+  if (config.presencePenalty !== undefined && config.presencePenalty !== 0) generationConfig.presencePenalty = config.presencePenalty;
+  if (config.frequencyPenalty !== undefined && config.frequencyPenalty !== 0) generationConfig.frequencyPenalty = config.frequencyPenalty;
+
   const body = {
     system_instruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: parts }],
-    generationConfig: {
-      maxOutputTokens: getMaxOutputTokens(config.model, config.maxTokens),
-      temperature: config.temperature,
-    },
+    generationConfig,
     safetySettings: [
       { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },

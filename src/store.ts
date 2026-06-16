@@ -13,6 +13,7 @@ import type {
   ExportKeyMode,
   GlossaryEntry,
   ModPreset,
+  SavedPreset,
 } from './types/card';
 import type { Worldbook } from './utils/worldbookParser';
 import { DEFAULT_FIELD_GROUPS, extractTranslatableFields } from './utils/cardFields';
@@ -20,6 +21,7 @@ import { IDB } from './utils/idb';
 import { clearRAGCache } from './utils/ragContext';
 import { clearTranslationMemory } from './utils/translationMemory';
 import type { MvuKeyMetadata } from './utils/mvuSync';
+import { extractAIParams } from './utils/presetParser';
 
 /* ─── localStorage helpers ─── */
 const LS = {
@@ -116,6 +118,11 @@ interface AppState {
   setMvuKeyMetadata: (m: Record<string, MvuKeyMetadata>) => void;
   mvuDictionaryHistory: Record<string, string>[];
   pushDictionaryHistory: (dict: Record<string, string>) => void;
+
+  // Preset Management
+  activePreset: SavedPreset | null;
+  setActivePreset: (preset: SavedPreset | null) => void;
+  applyPresetAIParams: () => void;
 
   // Per-file translation cache
   saveTranslationCache: () => void;
@@ -273,6 +280,12 @@ export const useStore = create<AppState>((set) => ({
     model: LS.get('st-translator-model', 'gpt-4o-mini'),
     maxTokens: LS.get('st-translator-advanced-settings', { maxTokens: 65536 }).maxTokens ?? 65536,
     temperature: LS.get('st-translator-advanced-settings', { temperature: 0.3 }).temperature ?? 0.3,
+    topP: LS.get('st-translator-advanced-settings', { topP: 1 }).topP ?? 1,
+    topK: LS.get('st-translator-advanced-settings', { topK: 0 }).topK ?? 0,
+    minP: LS.get('st-translator-advanced-settings', { minP: 0 }).minP ?? 0,
+    frequencyPenalty: LS.get('st-translator-advanced-settings', { frequencyPenalty: 0 }).frequencyPenalty ?? 0,
+    presencePenalty: LS.get('st-translator-advanced-settings', { presencePenalty: 0 }).presencePenalty ?? 0,
+    repetitionPenalty: LS.get('st-translator-advanced-settings', { repetitionPenalty: 1 }).repetitionPenalty ?? 1,
     requestDelay: LS.get('st-translator-advanced-settings', { requestDelay: 500 }).requestDelay ?? 500,
     retryDelay: LS.get('st-translator-advanced-settings', { retryDelay: 1000 }).retryDelay ?? 1000,
     requestTimeout: LS.get('st-translator-advanced-settings', { requestTimeout: 600000 }).requestTimeout ?? 600000,
@@ -297,6 +310,12 @@ export const useStore = create<AppState>((set) => ({
       LS.set('st-translator-advanced-settings', {
         maxTokens: next.maxTokens,
         temperature: next.temperature,
+        topP: next.topP,
+        topK: next.topK,
+        minP: next.minP,
+        frequencyPenalty: next.frequencyPenalty,
+        presencePenalty: next.presencePenalty,
+        repetitionPenalty: next.repetitionPenalty,
         requestDelay: next.requestDelay,
         retryDelay: next.retryDelay,
         requestTimeout: next.requestTimeout,
@@ -317,6 +336,12 @@ export const useStore = create<AppState>((set) => ({
       model: 'gpt-4o-mini',
       maxTokens: 65536,
       temperature: 0.3,
+      topP: 1,
+      topK: 0,
+      minP: 0,
+      frequencyPenalty: 0,
+      presencePenalty: 0,
+      repetitionPenalty: 1,
       requestDelay: 500,
       retryDelay: 1000,
       requestTimeout: 600000,
@@ -337,6 +362,12 @@ export const useStore = create<AppState>((set) => ({
     LS.set('st-translator-advanced-settings', {
       maxTokens: defaultProxy.maxTokens,
       temperature: defaultProxy.temperature,
+      topP: defaultProxy.topP,
+      topK: defaultProxy.topK,
+      minP: defaultProxy.minP,
+      frequencyPenalty: defaultProxy.frequencyPenalty,
+      presencePenalty: defaultProxy.presencePenalty,
+      repetitionPenalty: defaultProxy.repetitionPenalty,
       requestDelay: defaultProxy.requestDelay,
       retryDelay: defaultProxy.retryDelay,
       requestTimeout: defaultProxy.requestTimeout,
@@ -787,6 +818,21 @@ export const useStore = create<AppState>((set) => ({
     // Keep max 10 history entries
     mvuDictionaryHistory: [...s.mvuDictionaryHistory.slice(-9), { ...dict }],
   })),
+
+  // ─── Preset Management ───
+  activePreset: LS.get<SavedPreset | null>('st-translator-active-preset', null),
+  setActivePreset: (preset) => {
+    LS.set('st-translator-active-preset', preset);
+    set({ activePreset: preset });
+  },
+  applyPresetAIParams: () => {
+    const s = useStore.getState();
+    if (!s.activePreset) return;
+    const params = extractAIParams(s.activePreset.preset);
+    if (Object.keys(params).length > 0) {
+      s.setProxy(params);
+    }
+  },
 
   // ─── Per-file Translation Cache ───
   saveTranslationCache: () => {

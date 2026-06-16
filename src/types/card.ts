@@ -175,6 +175,63 @@ export interface FieldGroupConfig {
   enabled: boolean;
 }
 
+/* ─── SillyTavern Preset Types ─── */
+
+export interface PresetPromptEntry {
+  identifier: string;
+  name: string;
+  enabled: boolean;
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+  injection_position?: number;
+  injection_depth?: number;
+  injection_order?: number;
+  system_prompt?: boolean;
+  marker?: boolean;
+  forbid_overrides?: boolean;
+}
+
+export interface STPreset {
+  // AI Parameters
+  temperature?: number;
+  top_p?: number;
+  top_k?: number;
+  min_p?: number;
+  top_a?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
+  repetition_penalty?: number;
+  openai_max_tokens?: number;
+  openai_max_context?: number;
+  max_context_unlocked?: boolean;
+  stream_openai?: boolean;
+  // Prompt chain
+  prompts?: PresetPromptEntry[];
+  prompt_order?: Array<{ identifier: string; enabled: boolean }>;
+  // System prompts
+  impersonation_prompt?: string;
+  new_chat_prompt?: string;
+  new_example_chat_prompt?: string;
+  continue_nudge_prompt?: string;
+  group_nudge_prompt?: string;
+  // Other settings
+  names_behavior?: number;
+  wi_format?: string;
+  personality_format?: string;
+  scenario_format?: string;
+  // Catch-all
+  [key: string]: unknown;
+}
+
+export interface SavedPreset {
+  id: string;
+  name: string;
+  fileName: string;
+  preset: STPreset;
+  importedAt: number;
+  lastUsedAt?: number;
+}
+
 /* ─── Provider / Proxy Types ─── */
 
 export type AIProvider = 'openai' | 'anthropic' | 'google' | 'custom';
@@ -187,6 +244,18 @@ export interface ProxySettings {
   model: string;
   maxTokens: number;
   temperature: number;
+  /** Top P (nucleus sampling) — from preset */
+  topP: number;
+  /** Top K sampling — from preset */
+  topK: number;
+  /** Min P sampling — from preset */
+  minP: number;
+  /** Frequency penalty — from preset */
+  frequencyPenalty: number;
+  /** Presence penalty — from preset */
+  presencePenalty: number;
+  /** Repetition penalty — from preset */
+  repetitionPenalty: number;
   requestDelay: number;
   retryDelay: number;
   requestTimeout: number;
