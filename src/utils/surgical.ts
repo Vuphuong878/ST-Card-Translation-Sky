@@ -386,8 +386,16 @@ export function extractCJKTokens(
                         !/^['"]?\s*:\/\//.test(contextAfter);
 
     // 2. JS Dot Notation vs CSS Class
-    // JS dot notation usually follows a variable name (alphanumeric, _, $, or closing bracket, optionally with ?. for optional chaining)
-    const isJsDotNotation = /[a-zA-Z0-9_$\])}]\s*\??\s*\.\s*$/.test(contextBefore);
+    // JS dot notation usually follows a variable name (alphanumeric, _, $, or closing bracket/quote, optionally with ?. for optional chaining)
+    // Also includes CJK ranges (\u4e00-\u9fff, \u3400-\u4dbf) because in source Chinese code, CJK identifiers appear before ?.
+    // e.g. wd.时势?.标题 — the char before ?. is 势 (CJK), which must be matched
+    let isJsDotNotation = /[a-zA-Z0-9_$\])}'"\u4e00-\u9fff\u3400-\u4dbf]\s*\??\s*\.\s*$/.test(contextBefore);
+
+    // Exclude dot notation detection inside comments (HTML/CSS/JS)
+    // e.g. <!-- 1. 身份档案 --> or /* 1. 世界时局 */ — the "1." is NOT real dot notation
+    if (isJsDotNotation && /(?:\/\*|<!--)[^]*$/.test(contextBefore) && !/(?:\*\/|-->)[^]*$/.test(contextBefore)) {
+      isJsDotNotation = false;
+    }
 
     // CSS class usually follows whitespace, quotes, tag names, or structural combinators
     const isCssClass = !isJsDotNotation && /(?:^|['"\s,>+~{(])[a-zA-Z0-9-]*\.\s*$/.test(contextBefore);
@@ -444,8 +452,9 @@ export function reinsertTranslations(original: string, tokens: CJKToken[]): stri
           if (dotIndex !== -1 && !original.substring(dotIndex + 1, replaceStart).includes('\n')) {
             const isOptionalChain = dotIndex > 0 && original.charAt(dotIndex - 1) === '?';
             if (isOptionalChain) {
-              // For optional chain obj?.prop, keep ?. and replace "prop" with "['prop']" to get obj?.['prop']
-              finalTranslation = `['${finalTranslation}']`;
+              // For optional chain obj?.prop, eat the "." and replace with ".['prop']" to get obj?.['prop']
+              replaceStart = dotIndex;
+              finalTranslation = `.['${finalTranslation}']`;
             } else {
               // For normal dot notation obj.prop, replace ".prop" with "['prop']" to get obj['prop']
               replaceStart = dotIndex;

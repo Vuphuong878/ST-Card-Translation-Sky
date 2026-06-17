@@ -429,14 +429,19 @@ export function useTranslation() {
         }
 
         // ─── COVARIANCE FIX: Enforce covariance across initvar, controller, mvu_logic, regex, tavern_helper, AND lorebook fields ───
-        const isCodeOrLogic = field.entryType === 'initvar' || field.entryType === 'controller' || field.entryType === 'mvu_logic' || field.group === 'regex' || field.group === 'tavern_helper' || field.group === 'lorebook';
+        // Code-like entries: full fuzzy matching (typos in variable names cause real bugs)
+        // Lorebook narrative entries: STRICT exact-only matching (prevents false positives
+        // where Vietnamese proper nouns like dynasty/place names get fuzzy-matched to MVU vars)
+        const isCodeLike = field.entryType === 'initvar' || field.entryType === 'controller' || field.entryType === 'mvu_logic' || field.group === 'regex' || field.group === 'tavern_helper';
+        const isLorebookNarrative = field.group === 'lorebook' && !isCodeLike;
+        const isCodeOrLogic = isCodeLike || isLorebookNarrative;
         if (isCodeOrLogic) {
 
-          const covariance = enforceInitvarCovariance(translated, currentMvuDict);
+          const covariance = enforceInitvarCovariance(translated, currentMvuDict, isLorebookNarrative);
           if (covariance.fixes.length > 0) {
             translated = covariance.text;
             const fixSummary = covariance.fixes.map(f => `"${f.found}"→"${f.replaced}"`).join(', ');
-            store.addLog('info', `🔗 Covariance: fixed ${covariance.fixes.length} key(s) in ${field.label}: ${fixSummary}`);
+            store.addLog('info', `🔗 Covariance${isLorebookNarrative ? ' (strict)' : ''}: fixed ${covariance.fixes.length} key(s) in ${field.label}: ${fixSummary}`);
           }
 
           // ═══ PROGRESSIVE DICT: Extract new variable mappings from this just-translated entry ═══
@@ -943,17 +948,20 @@ export function useTranslation() {
             }
           }
 
-          // ─── COVARIANCE FIX: Enforce covariance across initvar, controller, mvu_logic, regex, tavern_helper, AND lorebook fields ───
+          // ─── COVARIANCE FIX: Enforce covariance across all code-like AND lorebook fields ───
+          // Lorebook narrative: strict exact-only matching to prevent false positives
           const bf = batchFields[j];
-          const isBfCodeOrLogic = bf.entryType === 'initvar' || bf.entryType === 'controller' || bf.entryType === 'mvu_logic' || bf.group === 'regex' || bf.group === 'tavern_helper' || bf.group === 'lorebook';
+          const isBfCodeLike = bf.entryType === 'initvar' || bf.entryType === 'controller' || bf.entryType === 'mvu_logic' || bf.group === 'regex' || bf.group === 'tavern_helper';
+          const isBfLorebookNarrative = bf.group === 'lorebook' && !isBfCodeLike;
+          const isBfCodeOrLogic = isBfCodeLike || isBfLorebookNarrative;
           if (isBfCodeOrLogic) {
 
-            const covariance = enforceInitvarCovariance(translated, mvuDict);
+            const covariance = enforceInitvarCovariance(translated, mvuDict, isBfLorebookNarrative);
             if (covariance.fixes.length > 0) {
               translated = covariance.text;
               autoFixCount += covariance.fixes.length;
               const fixSummary = covariance.fixes.map(f => `"${f.found}"→"${f.replaced}"`).join(', ');
-              store.addLog('info', `🔗 Covariance: fixed ${covariance.fixes.length} key(s) in ${bf.label}: ${fixSummary}`);
+              store.addLog('info', `🔗 Covariance${isBfLorebookNarrative ? ' (strict)' : ''}: fixed ${covariance.fixes.length} key(s) in ${bf.label}: ${fixSummary}`);
             }
 
             // ═══ PROGRESSIVE DICT: Extract new variable mappings from batch-translated entry ═══

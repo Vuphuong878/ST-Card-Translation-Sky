@@ -321,7 +321,8 @@ export function syncMvuVariables(
  */
 export function enforceInitvarCovariance(
   translatedText: string,
-  mvuDictionary: Record<string, string>
+  mvuDictionary: Record<string, string>,
+  strict = false
 ): { text: string; fixes: { found: string; replaced: string }[] } {
   if (!translatedText || typeof translatedText !== 'string') {
     return { text: translatedText, fixes: [] };
@@ -364,7 +365,7 @@ export function enforceInitvarCovariance(
     // This key is NOT in the dictionary — it might be a mismatched translation
     // Try to find the correct translation by checking if any dictionary value
     // is "close" to this key (fuzzy match)
-    const correctValue = findClosestDictValue(yamlKey, mvuDictionary);
+    const correctValue = findClosestDictValue(yamlKey, mvuDictionary, strict);
     if (correctValue && correctValue !== yamlKey) {
       // Build a regex that replaces this specific YAML key occurrence
       const escaped = yamlKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -394,7 +395,7 @@ export function enforceInitvarCovariance(
     // Skip if it's still a CJK original
     if (originalToTranslated.has(varName)) continue;
 
-    const correctValue = findClosestDictValue(varName, mvuDictionary);
+    const correctValue = findClosestDictValue(varName, mvuDictionary, strict);
     if (correctValue && correctValue !== varName) {
       macroFixes.push({ from: varName, to: correctValue });
     }
@@ -426,7 +427,7 @@ export function enforceInitvarCovariance(
     if (translatedToOriginal.has(varName.toLowerCase())) continue;
     if (originalToTranslated.has(varName)) continue;
 
-    const correctValue = findClosestDictValue(varName, mvuDictionary);
+    const correctValue = findClosestDictValue(varName, mvuDictionary, strict);
     if (correctValue && correctValue !== varName) {
       bracketFixes.push({ from: varName, to: correctValue });
     }
@@ -459,7 +460,7 @@ export function enforceInitvarCovariance(
       if (translatedToOriginal.has(seg.toLowerCase())) return seg;
       if (originalToTranslated.has(seg)) return seg;
 
-      const correctValue = findClosestDictValue(seg, mvuDictionary);
+      const correctValue = findClosestDictValue(seg, mvuDictionary, strict);
       if (correctValue && correctValue !== seg) {
         changed = true;
         if (!fixes.some(f => f.found === seg)) {
@@ -480,7 +481,7 @@ export function enforceInitvarCovariance(
     if (translatedToOriginal.has(inner.toLowerCase())) return match;
     if (originalToTranslated.has(inner)) return match;
 
-    const correctValue = findClosestDictValue(inner, mvuDictionary);
+    const correctValue = findClosestDictValue(inner, mvuDictionary, strict);
     if (correctValue && correctValue !== inner) {
       if (!fixes.some(f => f.found === inner)) {
         fixes.push({ found: inner, replaced: correctValue });
@@ -502,7 +503,7 @@ export function enforceInitvarCovariance(
       if (translatedToOriginal.has(seg.toLowerCase())) return seg;
       if (originalToTranslated.has(seg)) return seg;
 
-      const correctValue = findClosestDictValue(seg, mvuDictionary);
+      const correctValue = findClosestDictValue(seg, mvuDictionary, strict);
       if (correctValue && correctValue !== seg) {
         changed = true;
         if (!fixes.some(f => f.found === seg)) {
@@ -532,7 +533,7 @@ export function enforceInitvarCovariance(
       if (translatedToOriginal.has(val.toLowerCase())) return item;
       if (originalToTranslated.has(val)) return item;
 
-      const correctValue = findClosestDictValue(val, mvuDictionary);
+      const correctValue = findClosestDictValue(val, mvuDictionary, strict);
       if (correctValue && correctValue !== val) {
         changed = true;
         if (!fixes.some(f => f.found === val)) {
@@ -783,7 +784,8 @@ const PROTECTED_CODE_KEYWORDS = new Set([
  */
 function findClosestDictValue(
   yamlKey: string,
-  mvuDictionary: Record<string, string>
+  mvuDictionary: Record<string, string>,
+  strict = false
 ): string | null {
   const normalize = (s: string) => s.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
   const normalizedKey = normalize(yamlKey);
@@ -801,9 +803,16 @@ function findClosestDictValue(
     }
   }
 
+  // In strict mode, ONLY use exact normalized match — no fuzzy matching.
+  // This prevents false positives when running on narrative lorebook content
+  // where Vietnamese proper nouns (dynasty names, place names) can be
+  // fuzzy-matched to completely different MVU variable names.
+  if (strict) return null;
+
   // Pass 2: Substring containment: "Độ Hảo Cảm" contains "Hảo Cảm"
   // Only match if the dict value is a significant portion of the key
-  // Skip very short keys (≤ 3 chars) to avoid false positives
+  // CRITICAL: Use high ratio (0.85) to prevent false positives with Vietnamese diacritics
+  // e.g. "Hương tần" vs "Dương Thị" have similar lengths but completely different meanings
   if (normalizedKey.length > 3) {
     for (const [, trans] of Object.entries(mvuDictionary)) {
       if (!trans || trans.length < 2) continue;
@@ -812,7 +821,7 @@ function findClosestDictValue(
       if (normalizedKey.includes(normalizedTrans) || normalizedTrans.includes(normalizedKey)) {
         const ratio = Math.min(normalizedKey.length, normalizedTrans.length) /
                       Math.max(normalizedKey.length, normalizedTrans.length);
-        if (ratio > 0.6) {
+        if (ratio > 0.85) {
           return trans;
         }
       }
@@ -821,9 +830,13 @@ function findClosestDictValue(
 
   // Pass 3: Levenshtein distance fallback — catch typos and diacritics
   // e.g. "Hảo Câm" (typo) → "Hảo Cảm" (distance = 1)
-  // CRITICAL: Use PROPORTIONAL threshold to prevent short-string false positives.
-  // For "top" (len 3) vs "Tay" (len 3): distance 2 / length 3 = 0.67 → rejected.
-  // For "Hảo Câm" (len 7) vs "Hảo Cảm" (len 7): distance 1 / length 7 = 0.14 → accepted.
+  // CRITICAL: Use STRICT PROPORTIONAL threshold to prevent short-string false positives.
+  // Vietnamese diacritics create many near-misses between completely different words:
+  //   "Thanh Hà" vs "Thành Hán" (distance=2, completely different place names!)
+  //   "Hồ Hạ" vs "Bộ Hạ" (distance=2, completely different dynasty names!)
+  // Short strings (≤ 6 chars): allow max distance 1 (only single typo/diacritic)
+  // Medium strings (7-10 chars): allow max distance 2
+  // Long strings (≥ 11 chars): allow max distance 3
   let bestMatch: string | null = null;
   let bestDist = Infinity;
   for (const [, trans] of Object.entries(mvuDictionary)) {
@@ -831,12 +844,8 @@ function findClosestDictValue(
     const normalizedTrans = normalize(trans);
     const dist = levenshteinDistance(normalizedKey, normalizedTrans);
     
-    // Proportional threshold: max edit distance depends on string length
-    // Short strings (≤ 4 chars): allow max distance 1 (only diacritics/typos)
-    // Medium strings (5-8 chars): allow max distance 2
-    // Long strings (≥ 9 chars): allow max distance 3
     const maxLen = Math.max(normalizedKey.length, normalizedTrans.length);
-    const maxDist = maxLen <= 4 ? 1 : maxLen <= 8 ? 2 : 3;
+    const maxDist = maxLen <= 6 ? 1 : maxLen <= 10 ? 2 : 3;
     
     if (dist <= maxDist && dist < bestDist) {
       bestDist = dist;
@@ -2600,9 +2609,37 @@ export function fixDotNotationPaths(text: string): string {
 }
 
 /**
+ * Fix broken optional chaining patterns where translated multi-word identifiers
+ * were not converted to bracket notation.
+ * 
+ * e.g. wd['Thời Thế']?.Tiêu Đề  → wd['Thời Thế']?.['Tiêu Đề']
+ * 
+ * This is a safety net for cases where the surgical translation engine
+ * failed to detect the dot notation context (e.g. CJK char before ?.).
+ */
+export function fixBrokenOptionalChaining(text: string): string {
+  if (!text || typeof text !== 'string') return text;
+
+  // Pattern: ?. followed by a multi-word Vietnamese/diacritics identifier
+  // that is NOT already in bracket notation ['...']
+  // Match context: ?.WordA WordB (followed by typical JS terminators)
+  // The identifier must:
+  //   - Start with a letter (including Vietnamese diacritics)
+  //   - Contain at least one space (making it invalid for dot notation)
+  //   - End before a JS operator/delimiter
+  return text.replace(
+    /\?\.\s*([A-ZÀ-Ỹa-zà-ỹĐđ][A-ZÀ-Ỹa-zà-ỹĐđ\w]*(?:\s+[A-ZÀ-Ỹa-zà-ỹĐđ][A-ZÀ-Ỹa-zà-ỹĐđ\w]*)+)(?=\s*[|&)?\]:;,}\n\r]|\s*$|\s*\|\|)/g,
+    (_match, prop: string) => {
+      return `?.['${prop.trim()}']`;
+    }
+  );
+}
+
+/**
  * Hậu xử lý HTML trong regex replaceString sau khi dịch:
  * 1. Thay font chữ Trung/Nhật → font tương thích tiếng Việt
  * 2. Sửa đường dẫn _.get() bị ngắt dòng hoặc dùng dot notation sai cú pháp
+ * 3. Sửa optional chaining bị lỗi bracket notation
  */
 export function postProcessRegexHtml(html: string): string {
   if (!html || typeof html !== 'string') return html;
@@ -2619,6 +2656,9 @@ export function postProcessRegexHtml(html: string): string {
 
   // Chuyển dot notation có khoảng trắng sang bracket notation
   result = fixDotNotationPaths(result);
+
+  // Sửa optional chaining bị lỗi: ?.Tiêu Đề → ?.['Tiêu Đề']
+  result = fixBrokenOptionalChaining(result);
 
   return result;
 }
@@ -2889,7 +2929,7 @@ export function enforceSchemaAuthoritative(
         if (normalizedKey.includes(normalizedSk) || normalizedSk.includes(normalizedKey)) {
           const ratio = Math.min(normalizedKey.length, normalizedSk.length) /
                         Math.max(normalizedKey.length, normalizedSk.length);
-          if (ratio > 0.6) {
+          if (ratio > 0.85) {
             bestMatch = sk;
             break;
           }
@@ -2897,17 +2937,17 @@ export function enforceSchemaAuthoritative(
       }
     }
 
-    // Pass 3: Levenshtein distance fallback with PROPORTIONAL threshold
-    // Short strings (≤ 4 chars): max distance 1 to avoid false positives like top→Tay
-    // Medium strings (5-8 chars): max distance 2
-    // Long strings (≥ 9 chars): max distance 3
+    // Pass 3: Levenshtein distance fallback with STRICT PROPORTIONAL threshold
+    // Short strings (≤ 6 chars): max distance 1 to avoid false positives with Vietnamese diacritics
+    // Medium strings (7-10 chars): max distance 2
+    // Long strings (≥ 11 chars): max distance 3
     if (!bestMatch) {
       let bestDist = Infinity;
       for (const sk of schemaKeys) {
         const normalizedSk = normalize(sk);
         const dist = levenshteinDistance(normalizedKey, normalizedSk);
         const maxLen = Math.max(normalizedKey.length, normalizedSk.length);
-        const maxDist = maxLen <= 4 ? 1 : maxLen <= 8 ? 2 : 3;
+        const maxDist = maxLen <= 6 ? 1 : maxLen <= 10 ? 2 : 3;
         if (dist <= maxDist && dist < bestDist) {
           bestDist = dist;
           bestMatch = sk;
