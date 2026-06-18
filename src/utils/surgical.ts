@@ -797,9 +797,31 @@ export async function surgicalTranslate(
   }
 
   // ── Step 3: Deduplicate pending tokens ────────────────────────────────────
-  // User explicitly requested to NOT deduplicate ("không sợ tốn token... 1 dịch lại")
-  // so that repeated words get translated differently based on their unique contexts.
-  const uniqueTokens = pendingTokens;
+  const isLogicField = fieldLabel && (
+    fieldLabel.toLowerCase().includes('regex') ||
+    fieldLabel.toLowerCase().includes('replacestring') ||
+    fieldLabel.toLowerCase().includes('trimstrings') ||
+    fieldLabel.toLowerCase().includes('helper') ||
+    fieldLabel.toLowerCase().includes('script')
+  );
+
+  const uniqueTokens: CJKToken[] = [];
+  const textToRepToken = new Map<string, CJKToken>();
+
+  for (const token of pendingTokens) {
+    const trimmed = token.text.trim();
+    const needsConsistency = isLogicField || token.isIdentifier || token.isObjectKey || token.isDotNotation || token.isCssClass || token.isHtmlAttr;
+
+    if (needsConsistency) {
+      if (!textToRepToken.has(trimmed)) {
+        textToRepToken.set(trimmed, token);
+        uniqueTokens.push(token);
+      }
+    } else {
+      // Prose tokens: never deduplicate, always add as unique token
+      uniqueTokens.push(token);
+    }
+  }
 
   // ── Step 4: Build LLM prompt ───────────────────────────────────────────────
   const glossaryPrompt = glossary?.length
@@ -1157,9 +1179,25 @@ CRITICAL RULES:
       }
     }
 
-    // ── Step 9: Fill untranslated tokens with original text (no dedup propagation) ──
-    // Each token keeps its own individual translation. If a token was not
-    // translated by the LLM (missed in the response), fall back to original text.
+    // ── Step 9: Propagate deduplicated translations and fill untranslated tokens ──
+    const translationMap = new Map<string, string>();
+    for (const t of tokens) {
+      if (t.translated?.trim()) {
+        translationMap.set(t.text.trim(), t.translated.trim());
+      }
+    }
+
+    for (const t of tokens) {
+      const trimmed = t.text.trim();
+      const needsConsistency = isLogicField || t.isIdentifier || t.isObjectKey || t.isDotNotation || t.isCssClass || t.isHtmlAttr;
+      if (!t.translated?.trim() && needsConsistency) {
+        if (translationMap.has(trimmed)) {
+          t.translated = translationMap.get(trimmed);
+          writeDebugLog(`[surgicalTranslate] Propagated translation for: "${trimmed}" → "${t.translated}"`);
+        }
+      }
+    }
+
     for (const t of tokens) {
       if (!t.translated?.trim()) {
         t.translated = t.text; // keep original CJK if LLM missed it

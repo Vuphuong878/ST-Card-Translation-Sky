@@ -277,7 +277,7 @@ export function quickVerify(
 
 export interface FieldIssue extends VerifyIssue {
   fieldPath: string;
-  category: 'residual_source' | 'html_broken' | 'bracket_mismatch' | 'macro_damaged' | 'json_broken' | 'mvu_inconsistent' | 'length_anomaly' | 'empty_translation' | 'regex_broken' | 'code_splice' | 'structural_truncation' | 'css_class_sync' | 'function_signature' | 'template_literal_content';
+  category: 'residual_source' | 'html_broken' | 'bracket_mismatch' | 'macro_damaged' | 'json_broken' | 'mvu_inconsistent' | 'length_anomaly' | 'empty_translation' | 'regex_broken' | 'code_splice' | 'structural_truncation' | 'css_class_sync' | 'function_signature' | 'template_literal_content' | 'key_collision';
 }
 
 /** Count CJK characters in text */
@@ -1174,6 +1174,69 @@ export function verifyFields(
         }
       }
     }
+
+    // ─── 14. JavaScript/JSON Object Key Collision check ───
+    if (field.group === 'regex' || field.group === 'tavern_helper') {
+      const extractObjectKeys = (text: string): string[] => {
+        const keys: string[] = [];
+        // Matches quoted keys like 'key': or "key": or `key`:
+        const regex = /(['"`])(.*?)\1\s*:/g;
+        let m;
+        while ((m = regex.exec(text)) !== null) {
+          keys.push(m[2].trim());
+        }
+        return keys;
+      };
+
+      const origKeys = extractObjectKeys(orig);
+      const transKeys = extractObjectKeys(currentAutoFix);
+
+      if (origKeys.length > 0 && origKeys.length === transKeys.length) {
+        const keyMap = new Map<string, string>(); // origKey -> transKey
+        const reverseKeyMap = new Map<string, string>(); // transKey -> origKey
+        let collisionFound = false;
+        let duplicateOrigKey: string | null = null;
+        let duplicateTransKey: string | null = null;
+        let originalCollidingKey: string | null = null;
+
+        for (let i = 0; i < origKeys.length; i++) {
+          const ok = origKeys[i];
+          const tk = transKeys[i];
+          
+          if (keyMap.has(ok)) {
+            // Original key already mapped
+            continue;
+          } else {
+            keyMap.set(ok, tk);
+            if (reverseKeyMap.has(tk)) {
+              // COLLISION! Different original keys map to the same translated key!
+              collisionFound = true;
+              duplicateOrigKey = ok;
+              originalCollidingKey = reverseKeyMap.get(tk)!;
+              duplicateTransKey = tk;
+              break;
+            } else {
+              reverseKeyMap.set(tk, ok);
+            }
+          }
+        }
+
+        if (collisionFound) {
+          issues.push({
+            id: crypto.randomUUID(),
+            fieldPath: field.path,
+            severity: 'error',
+            category: 'key_collision',
+            location: field.label,
+            description: `Object key collision in JavaScript: Both original keys "${originalCollidingKey}" and "${duplicateOrigKey}" were translated to the same key "${duplicateTransKey}". This will overwrite properties and corrupt card logic.`,
+            original: `Keys: "${originalCollidingKey}", "${duplicateOrigKey}"`,
+            current: `Key: "${duplicateTransKey}"`,
+            suggestion: `Ensure different original keys translate to unique Vietnamese keys (e.g., "${originalCollidingKey}" -> "Tiền Tần" and "${duplicateOrigKey}" -> "Tiền Yên").`,
+            autoFixable: false,
+          });
+        }
+      }
+    }
   }
 
   return issues;
@@ -1213,6 +1276,11 @@ function locationToFieldPath(location: string, fields: TranslationField[]): stri
 /* ═══ Category-specific fix hints for AI prompts ═══ */
 
 const CATEGORY_FIX_HINTS: Record<string, string> = {
+  key_collision: `KEY COLLISION FIX RULES:
+- Identify the colliding keys mentioned in the issue.
+- Assign UNIQUE translated names to each original key (e.g. if both "前秦" and "前燕" were translated to "Tiền Yên", change one of them to "Tiền Tần" and the other to "Tiền Yên").
+- Never map two different CJK keys to the same translated key inside the same JS object.`,
+
   macro_damaged: `MACRO FIX RULES:
 - Restore missing {{macros}} EXACTLY as they appear in the ORIGINAL text
 - Do NOT translate macro content (e.g. {{getvar::好感度}} must stay as-is or use MVU dictionary mapping)

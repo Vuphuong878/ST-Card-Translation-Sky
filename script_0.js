@@ -1,0 +1,3736 @@
+
+// ==================== Phần dữ liệu ====================
+const scriptData = {
+    'Diễn Nghĩa': [
+        { year: 184, title: 'Thái Bình Đạo Khởi', desc:'Trương Giác dấy lên biến loạn Hoàng Cân, Lưu Quan Trương kết nghĩa vườn đào, anh hùng từ đây xuất thế.', factions: ['Đại Hán triều đình', 'Hoàng Cân quân', 'Địa phương hào cường', 'Tại dã/Du hiệp'] },
+        { year: 189, title: 'Đế Đô Kinh Biến', desc:'Hà Tiến gọi Đổng Trác vào kinh lại bị giết, hoạn quan cướp vua bỏ trốn. Đổng Trác thu nhận Lữ Bố, phế Thiếu Đế, Lạc Dương chấn động.', factions: ['Đổng Trác quân', 'Đinh Nguyên quân', 'Triều đình bách quan', 'Tại dã/Du hiệp'] },
+        { year: 189, title: 'Mạnh Đức Hiến Đao', desc:'Tào Tháo mượn Thất Tinh bảo đao của Vương Doãn định đâm Đổng Trác, việc bại lộ lấy cớ thử ngựa trốn khỏi Lạc Dương, giết cả nhà Lữ Bá Xa nói "Thà ta phụ người trong thiên hạ”.', factions: ['Đổng Trác quân', 'Tào Tháo đào vong giả', 'Lạc Dương triều thần'] },
+        { year: 190, title: 'Chư Hầu Hội Minh', desc:'Tào Tháo phát hịch, mười bảy trấn chư hầu tôn Viên Thiệu làm minh chủ cùng đánh Đổng Trác. Ôn tửu trảm Hoa Hùng, tam anh chiến Lữ Bố dưới ải Hổ Lao.', factions: ['Quan Đông liên quân', 'Đổng Trác quân', 'Triều đình bách quan', 'Tại dã/Du hiệp'] },
+        { year: 191, title: 'Giới Kiều Chi Chiến', desc:'Viên Thiệu và Công Tôn Toản tranh Ký Châu. Toản lấy Bạch Mã Nghĩa Tòng làm tiên phong, bị tám trăm lính Tiên Đăng của Khúc Nghĩa dùng nỏ mạnh đánh tan, Hà Bắc định đỉnh.', factions: ['Viên Thiệu quân', 'Công Tôn Toản quân', 'Ký Châu hào cường'] },
+        { year: 192, title: 'Phụng Nghi Đình Kế', desc:'Vương Doãn định liên hoàn kế, Lữ Bố lén gặp Điêu Thuyền ở Phụng Nghi đình, Đổng Trác tức giận ném họa kích, cha con phản mục.', factions: ['Trường An triều đình', 'Đổng Trác thân vệ', 'Tịnh Châu cựu tướng'] },
+        { year: 192, title: 'Liên Hoàn Tru Tặc', desc:'Điêu Thuyền khích Lữ Bố giết Đổng Trác. Lý Thôi Quách Dĩ nghe kế Giả Hủ phản công Trường An, Lữ Bố bại tẩu, Vương Doãn tử tiết.', factions: ['Trường An triều đình', 'Lương Châu quân', 'Quan Đông chư hầu', 'Tại dã/Du hiệp'] },
+        { year: 194, title: 'Tam Nhượng Từ Châu', desc:'Tào Tháo vì cha báo thù tắm máu Từ Châu. Đào Khiêm ba lần nhường Từ Châu, Lưu Bị nhận chức Từ Châu mục.', factions: ['Từ Châu trận doanh', 'Duyện Châu Tào Tháo', 'Lữ Bố quân'] },
+        { year: 195, title: 'Tịch Quyển Giang Đông', desc:'Tôn Sách lấy ngọc tỷ mượn binh qua sông, đại phá Lưu Do, Nghiêm Bạch Hổ, Vương Lãng lần lượt bại vong, Tiểu Bá Vương uy chấn Giang Đông.', factions: ['Tôn Sách quân', 'Lưu Do quân', 'Giang Đông hào cường'] },
+        { year: 196, title: 'Hiệp Đế Lệnh Hầu', desc:'Tào Tháo đón Hiến Đế dời đô về Hứa Xương. Lưu Bị mất Từ Châu theo Tào Tháo, thanh mai chử tửu luận anh hùng.', factions: ['Hứa Đô triều đình', 'Lưu Bị trận doanh', 'Lữ Bố quân', 'Ký Châu Viên Thiệu'] },
+        { year: 196, title: 'Viên Môn Xạ Kích', desc:'Viên Thuật sai Kỷ Linh đánh Lưu Bị, Lữ Bố lấy việc bắn kích cửa viên giải vây, tên trúng ngạnh kích, hai bên bãi binh.', factions: ['Lữ Bố quân', 'Lưu Bị quân', 'Viên Thuật quân'] },
+        { year: 197, title: 'Hoài Nam Xưng Đế', desc:'Viên Thuật được ngọc tỷ truyền quốc tự xưng Trọng Gia hoàng đế. Khởi đầu của kiêu cuồng, mầm mống của chúng phán thân ly.', factions: ['Trọng Gia ngụy triều', 'Giang Đông Tôn Sách', 'Tào Ngụy trận doanh'] },
+        { year: 197, title: 'Uyển Thành Chiết Tướng', desc:'Tào Tháo đánh Trương Tú, một đêm phong lưu ở Uyển Thành chọc giận Trương Tú. Điển Vi chiến tử cửa viên, Tào Ngang bị giết, Tào Tháo hoảng hốt chạy trối chết.', factions: ['Tào Tháo quân', 'Trương Tú quân', 'Kinh Châu Lưu Biểu'] },
+        { year: 198, title: 'Bạch Môn Vẫn Mệnh', desc:'Tào Tháo đánh Từ Châu, dâng nước ngập Hạ Phì. Lữ Bố bị bắt giết ở lầu Bạch Môn, Tào Tháo thu nhận Trương Liêu.', factions: ['Tào Tháo quân', 'Lữ Bố quân', 'Lưu Bị quân'] },
+        { year: 199, title: 'Y Đái Mật Chiếu', desc:'Đổng Thừa nhận y đái chiếu của Hiến Đế liên kết Lưu Bị mưu đồ Tào Tháo. Lưu Bị mượn cớ bỏ trốn chém Xa Trụ chiếm lại Từ Châu.', factions: ['Hứa Đô triều đình', 'Bảo hoàng đảng', 'Lưu Bị trận doanh', 'Hà Bắc Viên Thiệu'] },
+        { year: 199, title: 'Trủng Trung Khô Cốt', desc:'Viên Thuật xưng đế xong chúng phán thân ly, bị vây đánh định theo Viên Thiệu, giữa đường gặp Lưu Bị chặn đánh, lùi về Thọ Xuân thổ huyết mà chết.', factions: ['Trọng Gia ngụy triều', 'Lưu Bị quân', 'Tào Tháo quân', 'Giang Đông Tôn Sách'] },
+        { year: 200, title: 'Thiên Lý Tầm Huynh', desc:'Tào Tháo đông chinh phá Lưu Bị. Quan Vũ chém Nhan Lương giết Văn Xú báo ân xong, nghìn dặm đi một mình qua năm ải chém sáu tướng, Cổ Thành hội Trương Phi.', factions: ['Tào Tháo quân', 'Viên Thiệu quân', 'Quan Vũ nhất hành', 'Giang Đông Tôn Quyền'] },
+        { year: 200, title: 'Quan Độ Liệt Hỏa', desc:'Viên Thiệu và Tào Tháo đối đầu tại Quan Độ. Hứa Du đầu hàng Tào hiến kế, Tào Tháo hỏa thiêu Ô Sào đại phá Viên Thiệu..', factions: ['Tào Tháo quân', 'Viên Thiệu quân', 'Giang Đông Tôn Quyền', 'Kinh Châu Lưu Biểu'] },
+        { year: 202, title: 'Nhương Sơn Huyết Chiến', desc:'Lưu Bị liên hợp Lưu Tích chống Tào, trận Nhương Sơn Triệu Vân giết Cao Lãm đánh bại Trương Cáp yểm trợ đột phá vòng vây, Lưu Bị chạy theo Lưu Biểu.', factions: ['Lưu Bị tàn quân', 'Tào Tháo quân', 'Nhữ Nam Hoàng Cân'] },
+        { year: 207, title: 'Tẩu Mã Tiến Hiền', desc:'Tào Tháo giam mẹ Từ thứ ép Từ Thứ về. Từ Thứ từ biệt Lưu Bị tẩu mã tiến cử Gia Cát Lượng, thề cả đời không bày một mưu kế nào cho Tào Tháo.', factions: ['Lưu Bị trận doanh', 'Tào Tháo quân', 'Thủy Kính môn sinh'] },
+        { year: 207, title: 'Tam Cố Mao Lư', desc:'Lưu Bị ba lần đến Long Trung mời Gia Cát Lượng xuất sơn. Long Trung đối định kế chia ba thiên hạ.', factions: ['Lưu Bị trận doanh', 'Hứa Đô Tào Tháo', 'Giang Đông Tôn Quyền', 'Kinh Châu Lưu Biểu'] },
+        { year: 208, title: 'Hỏa Thiêu Bác Vọng', desc:'Hạ Hầu Đôn dẫn quân nam chinh, Gia Cát Lượng lần đầu dụng binh hỏa thiêu gò Bác Vọng, đại phá Tào quân.', factions: ['Lưu Bị quân', 'Tào Tháo quân', 'Kinh Châu Lưu Biểu'] },
+        { year: 208, title: 'Huyết Chiến Trường Bản', desc:'Tào Tháo xuôi nam, Lưu Tông hàng. Lưu Bị dắt dân qua sông, Triệu Vân bảy lần ra vào Trường Bản cứu A Đẩu, Trương Phi quát gãy cầu Đương Dương.', factions: ['Lưu Bị quân', 'Tào Tháo quân', 'Giang Đông Tôn Quyền'] },
+        { year: 208, title: 'Thiệt Chiến Quần Nho', desc:'Gia Cát Lượng phụng mệnh đi sứ Đông Ngô, trên triều đường bác bỏ quần nho, định quyết tâm chống Tào của Tôn Quyền.', factions: ['Tôn Lưu liên quân', 'Chủ hàng văn quan', 'Tào Tháo quân'] },
+        { year: 208, title: 'Thảo Thuyền Tá Tiễn', desc:'Chu Du hạn kỳ tạo tên, Gia Cát Lượng mượn sương mù dẫn thuyền cỏ đến gần Tào doanh đánh trống, được hơn mười vạn mũi tên.', factions: ['Đông Ngô thủy quân', 'Tào Tháo thủy quân', 'Thục Hán sứ đoàn'] },
+        { year: 208, title: 'Khổ Nhục Liên Hoàn', desc:'Bàng Thống hiến liên hoàn kế, Hoàng Cái thi hành khổ nhục kế, Hám Trạch dâng thư trá hàng.', factions: ['Đông Ngô trận doanh', 'Tào Tháo quân'] },
+        { year: 208, title: 'Xích Bích Áo Binh', desc:'Chu Du làm đại đô đốc, Gia Cát Lượng mượn gió đông, hỏa thiêu Xích Bích. Tào Tháo bại tẩu đường Hoa Dung, được Quan Vũ nghĩa thích.', factions: ['Tôn Lưu liên quân', 'Tào Tháo quân', 'Ích Châu Lưu Chương'] },
+        { year: 210, title: 'Tam Khí Chu Du', desc:'Chu Du đánh Nam Quận trúng tên, Gia Cát Lượng thừa cơ lấy Kinh Châu. Chu Du thi triển mỹ nhân kế, giả đồ diệt Quắc kế đều thất bại, lâm chung than trời sinh Du sao còn sinh Lượng.', factions: ['Lưu Bị quân', 'Đông Ngô trận doanh', 'Tào Tháo quân'] },
+        { year: 211, title: 'Tây Xuyên Đồ Nghiệp', desc:'Mã Siêu khởi binh phản Tào, Tào Tháo cắt râu vứt áo bào. Lưu Bị nhận lời mời vào Thục, Trương Tùng dâng bản đồ, Bàng Thống làm quân sư.', factions: ['Lưu Bị quân', 'Tây Lương quân', 'Tào Tháo quân', 'Ích Châu Lưu Chương'] },
+        { year: 214, title: 'Lạc Phượng Thùy Tinh', desc:'Lưu Bị và Lưu Chương phản mục, Bàng Thống chết ở gò Lạc Phượng. Gia Cát Lượng, Trương Phi, Triệu Vân vào Xuyên chi viện.', factions: ['Lưu Bị quân', 'Ích Châu Lưu Chương', 'Tào Tháo quân'] },
+        { year: 214, title: 'Nghĩa Thích Nghiêm Nhan', desc:'Trương Phi nghĩa thích Nghiêm Nhan, Lưu Bị vây Thành Đô, Lưu Chương đầu hàng, Lưu Bị nhận chức Ích Châu mục.', factions: ['Lưu Bị quân', 'Ích Châu quân', 'Đông Ngô trận doanh'] },
+        { year: 214, title: 'Tây Lương Quy Hàng', desc:'Tào Tháo tây chinh Trương Lỗ, Mã Siêu lưu lạc Hán Trung sau đó theo Lưu Bị, binh lâm Thành Đô, trở thành một trong ngũ hổ thượng tướng.', factions: ['Thục Hán quân', 'Ích Châu Lưu Chương', 'Hán Trung Trương Lỗ'] },
+        { year: 215, title: 'Tiêu Dao Chiết Kích', desc:'Tôn Quyền đánh Hợp Phì, Trương Liêu dẫn tám trăm người đột kích giết đến mức người Giang Nam ai nấy đều sợ hãi. Tôn Quyền suýt bị bắt sống.', factions: ['Đông Ngô trận doanh', 'Tào Ngụy thủ quân', 'Thục Hán trận doanh'] },
+        { year: 215, title: 'Đơn Đao Phó Hội', desc:'Tôn Quyền đòi Kinh Châu, Quan Vũ và Lỗ Túc trước trận đơn đao hội diện, Quan Vũ uy hiếp Lỗ Túc toàn thân rút lui.', factions: ['Thục Hán Kinh Châu quân', 'Đông Ngô thủy quân'] },
+        { year: 219, title: 'Định Quân Trảm Tướng', desc:'Lưu Bị Tào Tháo tranh Hán Trung, Hoàng Trung ở núi Định Quân chém Hạ Hầu Uyên. Lưu Bị giữ chỗ hiểm không đánh.', factions: ['Thục Hán quân', 'Tào Ngụy quân', 'Đông Ngô trận doanh'] },
+        { year: 219, title: 'Thủy Yêm Thất Quân', desc:'Quan Vũ bắc phạt Tương Phàn, dâng nước ngập bảy đạo quân của Vu Cấm, bắt Vu Cấm chém Bàng Đức, uy chấn Hoa Hạ.', factions: ['Thục Hán quân', 'Tào Ngụy quân', 'Đông Ngô trận doanh'] },
+        { year: 219, title: 'Bạch Y Độ Giang', desc:'Lữ Mông áo trắng qua sông đánh úp Kinh Châu, Quan Vũ bại tẩu Mạch Thành bị bắt giết. Tôn Lưu liên minh tan vỡ.', factions: ['Đông Ngô quân', 'Thục Hán tàn quân', 'Tào Ngụy quân'] },
+        { year: 221, title: 'Phạt Ngô Tuyết Hận', desc:'Lưu Bị xưng đế vì Quan Vũ báo thù, Trương Phi bị ám sát. Tôn Quyền cầu hòa không thành bái Lục Tốn làm đại đô đốc.', factions: ['Thục Hán quân', 'Đông Ngô quân', 'Tào Ngụy trận doanh'] },
+        { year: 222, title: 'Hỏa Thiêu Liên Doanh', desc:'Lục Tốn kiên thủ đến giữa hè, hỏa thiêu liên doanh bảy trăm dặm, Lưu Bị bại thoái thành Bạch Đế.', factions: ['Thục Hán quân', 'Đông Ngô quân', 'Tào Ngụy trận doanh'] },
+        { year: 223, title: 'Bạch Đế Thác Cô', desc:'Lưu Bị bệnh mất ở thành Bạch Đế, gọi Khổng Minh thác cô nói "Nếu nó bất tài, ông có thể tự thay". Lưu Thiện kế vị.', factions: ['Thục Hán triều đình', 'Đông Ngô trận doanh', 'Tào Ngụy trận doanh'] },
+        { year: 225, title: 'Thất Cầm Mạnh Hoạch', desc:'Gia Cát Lượng nam chinh, đối với Mạnh Hoạch bảy lần bắt bảy lần thả công tâm làm thượng sách, bình định Nam Trung.', factions: ['Thục Hán nam chinh quân', 'Nam Man trận doanh', 'Đông Ngô trận doanh'] },
+        { year: 227, title: 'Xuất Sư Thượng Biểu', desc:'Gia Cát Lượng dâng "Xuất Sư Biểu" đóng quân Hán Trung, chuẩn bị bắc phạt lần thứ nhất.', factions: ['Thục Hán quân', 'Tào Ngụy quân', 'Đông Ngô trận doanh'] },
+        { year: 228, title: 'Lệ Trảm Mã Tốc', desc:'Gia Cát Lượng lần đầu ra Kỳ Sơn. Mã Tốc trái lệnh mất Nhai Đình bị đánh bại, Gia Cát Lượng gạt lệ chém Mã Tốc.', factions: ['Thục Hán quân', 'Tào Ngụy quân'] },
+        { year: 228, title: 'Không Thành Chi Kế', desc:'Tư Mã Ý đuổi đến Tây Thành, Gia Cát Lượng mở toang cổng thành gảy đàn. Tư Mã Ý nghi có phục binh rút lui.', factions: ['Thục Hán triệt thoái quân', 'Tào Ngụy truy kích quân'] },
+        { year: 229, title: 'Trần Thương Công Thủ', desc:'Gia Cát Lượng hai lần ra Kỳ Sơn vây Trần Thương không hạ được, hết lương lui binh, chém tướng truy kích Vương Song.', factions: ['Thục Hán quân', 'Tào Ngụy quân'] },
+        { year: 230, title: 'Vũ Đô Âm Bình', desc:'Gia Cát Lượng ba lần ra Kỳ Sơn lấy hai quận, đánh lui Quách Hoài, đóng quân đồn điền.', factions: ['Thục Hán quân', 'Tào Ngụy quân'] },
+        { year: 231, title: 'Mộc Môn Phục Kích', desc:'Gia Cát Lượng bốn lần ra Kỳ Sơn dùng trâu gỗ ngựa máy. Lý Nghiêm vận lương không kịp, lúc lui binh bắn chết Trương Cáp ở đường Mộc Môn.', factions: ['Thục Hán quân', 'Tào Ngụy quân'] },
+        { year: 234, title: 'Thượng Phương Cốc Kế', desc:'Gia Cát Lượng dụ Tư Mã Ý vào Thượng Phương Cốc hỏa công, lúc sắp thành công, trời đổ mưa lớn cứu sống.', factions: ['Thục Hán quân', 'Tào Ngụy quân'] },
+        { year: 234, title: 'Tinh Lạc Thu Phong', desc:'Gia Cát Lượng năm lần ra Kỳ Sơn bệnh mất ở gò Ngũ Trượng, Gia Cát chết dọa Trọng Đạt sống. Ngụy Diên nội đấu bị giết.', factions: ['Thục Hán quân', 'Tào Ngụy quân', 'Đông Ngô trận doanh'] },
+        { year: 238, title: 'Đạp Tuyết Bình Liêu', desc:'Tư Mã Ý viễn chinh Liêu Đông bình định Công Tôn Uyên. Chém cha con Uyên, Liêu Đông sáp nhập Tào Ngụy.', factions: ['Tào Ngụy viễn chinh quân', 'Liêu Đông trận doanh'] },
+        { year: 239, title: 'Thác Cô Tư Mã', desc:'Ngụy Minh Đế bệnh mất, thác cô Tư Mã Ý và Tào Sảng phụ tá Tào Phương. Tào Sảng chuyên quyền.', factions: ['Tào Ngụy trận doanh', 'Thục Hán trận doanh', 'Đông Ngô trận doanh'] },
+        { year: 241, title: 'Tái Chiến Hợp Phì', desc:'Đông Ngô Gia Cát Khác đánh Ngụy, hai bên giằng co lặp đi lặp lại ở Hoài Nam.', factions: ['Đông Ngô quân', 'Tào Ngụy quân'] },
+        { year: 249, title: 'Lạc Thủy Bội Thệ', desc:'Tư Mã Ý phát động sự biến Cao Bình Lăng chỉ Lạc Thủy thề lừa hàng Tào Sảng. Tào Sảng bị tru di.', factions: ['Tư Mã thị trận doanh', 'Tào Sảng dư đảng', 'Thục Hán quân'] },
+        { year: 251, title: 'Hoài Nam Thủ Phản', desc:'Vương Lăng khởi binh ở Hoài Nam phản Tư Mã Ý việc bại tự sát. Tư Mã Ý bệnh mất.', factions: ['Tào Ngụy triều đình', 'Hoài Nam phản quân', 'Đông Ngô trận doanh'] },
+        { year: 253, title: 'Tân Thành Huyết Chiến', desc:'Gia Cát Khác dấy binh phạt Ngụy vây Tân Thành Hợp Phì, tướng Ngụy Trương Đặc tử thủ, Ngô quân dịch bệnh lớn phải rút lui.', factions: ['Đông Ngô đại quân', 'Tào Ngụy thủ quân'] },
+        { year: 255, title: 'Hoài Nam Tái Phản', desc:'Vô Khâu Kiệm Văn Khâm khởi binh ở Thọ Xuân thảo phạt Tư Mã Sư. Văn Khâm chạy sang Ngô, Vô Khâu Kiệm bị giết.', factions: ['Tào Ngụy quân', 'Hoài Nam phản quân', 'Đông Ngô quân'] },
+        { year: 255, title: 'Thao Tây Đại Tiệp', desc:'Khương Duy bắc phạt, đại phá tướng Ngụy Vương Kinh ở Thao Tây, tiêu diệt mấy vạn quân Ngụy.', factions: ['Thục Hán quân', 'Tào Ngụy quân'] },
+        { year: 256, title: 'Đoạn Cốc Chi Bại', desc:'Khương Duy lại ra bắc phạt, Hồ Tế thất ước, bị Đặng Ngải đánh bại ở Đoạn Cốc lui về Hán Trung.', factions: ['Thục Hán quân', 'Tào Ngụy quân'] },
+        { year: 257, title: 'Hoài Nam Tam Phản', desc:'Gia Cát Đản chiếm Thọ Xuân phản Ngụy hàng Ngô, Tư Mã Chiêu dẫn quân vây thành, Thọ Xuân vỡ Đản bị giết.', factions: ['Tào Ngụy quân', 'Hoài Nam phản quân', 'Đông Ngô quân'] },
+        { year: 260, title: 'Lộ Nhân Giai Chi', desc:'Tào Mao bất mãn Tư Mã Chiêu chuyên quyền dẫn thân vệ thảo phạt bị giết. Tư Mã Chiêu lập Tào Hoán.', factions: ['Tư Mã thị trận doanh', 'Bảo hoàng đảng', 'Thục Hán quân'] },
+        { year: 262, title: 'Hầu Hòa Bại Thoái', desc:'Khương Duy bắc phạt lần cuối binh bại ở Hầu Hòa, lui về Đạp Trung đồn điền lánh nạn.', factions: ['Thục Hán quân', 'Tào Ngụy quân'] },
+        { year: 263, title: 'Thâu Độ Âm Bình', desc:'Đặng Ngải lén vượt đường nhỏ Âm Bình đánh thẳng Thành Đô. Gia Cát Chiêm chiến tử, Lưu Thiện đầu hàng.', factions: ['Tào Ngụy phạt Thục quân', 'Thục Hán phòng ngự quân', 'Đông Ngô viện quân'] },
+        { year: 264, title: 'Nhị Sĩ Tranh Công', desc:'Chung Hội Đặng Ngải tranh công. Chung Hội vu hãm Đặng Ngải sau đó mưu phản việc bại bị giết, Khương Duy trá hàng kế bại tự vẫn.', factions: ['Tào Ngụy quân', 'Chung Hội phản quân', 'Thục Hán tàn quân'] },
+        { year: 264, title: 'Nhạc bất tư Thục', desc:'Lưu Thiện bị đưa đến Lạc Dương, Tư Mã Chiêu mở tiệc dò xét. Lưu Thiện đáp ở đây rất vui không nhớ Thục.', factions: ['Tây Tấn triều đình', 'Thục Hán vong thần'] },
+        { year: 264, title: 'Lục Kháng trấn biên', desc:'Tôn Hạo của Đông Ngô kế vị dần trở nên tàn bạo. Lục Kháng trấn thủ Tây Lăng duy trì phòng tuyến.', factions: ['Tào Ngụy trận doanh', 'Đông Ngô trận doanh'] },
+        { year: 272, title: 'Tây Lăng phá Tấn', desc:'Lục Kháng đại phá quân Tấn ở Tây Lăng, đánh lui Dương Hỗ.', factions: ['Tây Tấn quân', 'Đông Ngô quân'] },
+        { year: 279, title: 'Lâu thuyền phá Ngô', desc:'Tấn Vũ Đế chia sáu đường phạt Ngô, Vương Tuấn đem lâu thuyền từ Ích Châu xuôi dòng đánh thẳng vào Kiến Nghiệp. Tôn Hạo đầu hàng.', factions: ['Tây Tấn phạt Ngô quân', 'Đông Ngô phòng ngự quân'] },
+        { year: 280, title: 'Tam phân quy nhất', desc:'Thiên hạ thống nhất, Tây Tấn định đô ở Lạc Dương. Thời kỳ Tam Quốc khép lại.', factions: ['Tây Tấn triều đình', 'Tại dã/Ẩn sĩ'] }
+    ],
+    'Chính Sử': [
+        { year: 159, title: 'Hoàn Linh Chi Tế', desc:'Bọn hoạn quan Đơn Siêu tiêu diệt Lương Ký, thế lực hoạn quan hoàn toàn nắm giữ triều chính.', factions: ['Đông Hán triều đình', 'Ngoại thích thế lực', 'Thế lực hoạn quan', 'Sĩ tộc thanh lưu', 'Địa phương châu quận'] },
+        { year: 168, title: 'Họa đảng cố', desc:'Trần Phồn, Đậu Vũ mưu giết hoạn quan thất bại bị giết, bọn sĩ nhân Lý Ưng bị tống giam.', factions: ['Tập đoàn hoạn quan', 'Ngoại thích sĩ tộc', 'Triều thần quan vọng', 'Địa phương sĩ nhân'] },
+        { year: 184, title: '184 Hoàng Cân khởi nghĩa', desc:'Trương Giác dẫn chúng phản Hán, châu quận thất thủ, triều đình phái Hoàng Phủ Tung đi dẹp loạn.', factions: ['Đại Hán triều đình', 'Hoàng Cân quân', 'Triều đình thảo phạt quân', 'Địa phương hào cường'] },
+        { year: 189, title: 'Đổng Trác nhập kinh', desc:'Hà Tiến bị giết, Đổng Trác dẫn quân vào kinh, phế Thiếu Đế lập Hiến Đế.', factions: ['Đổng Trác quân', 'Quan Đông liên quân', 'Đông Hán triều đình', 'Quan vọng phái'] },
+        { year: 192, title: 'Lý Quách chi loạn', desc:'Vương Doãn giết Đổng Trác, Lý Thôi, Quách Dĩ công hãm Trường An, Vương Doãn tử tiết.', factions: ['Lương Châu phản quân', 'Tào Tháo quân', 'Viên Thiệu quân', 'Viên Thuật quân', 'Lưu Bị quân', 'Lưu Biểu quân', 'Tôn Sách quân', 'Lữ Bố quân'] },
+        { year: 195, title: 'Độ giang lập nghiệp', desc:'Tôn Sách qua sông đánh Lưu Do, Lưu Do thua chạy về Dự Chương, cục diện Giang Đông thay đổi lớn.', factions: ['Lưu Do quân', 'Tôn Sách quân', 'Viên Thuật quân', 'Địa phương hào cường'] },
+        { year: 196, title: 'Dĩ lệnh bất thần', desc:'Tào Tháo đón Hiến Đế dời đô về Hứa Xương, phụng mệnh thảo phạt kẻ có tội.', factions: ['Tào Ngụy chính quyền', 'Viên Thiệu quân', 'Viên Thuật quân', 'Lưu Bị quân', 'Lữ Bố quân', 'Kinh Châu Lưu Biểu', 'Giang Đông Tôn Sách', 'Ích Châu Lưu Chương', 'Tây Lương Mã Đằng', 'Hán Trung Trương Lỗ'] },
+        { year: 200, title: 'Quan Độ chi chiến', desc:'Tào Tháo và Viên Thiệu giằng co ở Quan Độ, đốt lương thảo Ô Sào phá quân Viên.', factions: ['Tào Tháo quân', 'Viên Thiệu quân', 'Lưu Bị quân', 'Giang Đông Tôn thị', 'Kinh Châu Lưu Biểu', 'Ích Châu Lưu Chương', 'Tây Lương Mã Đằng', 'Hán Trung Trương Lỗ'] },
+        { year: 202, title: 'Kế nghiệp lập cơ', desc:'Viên Thiệu bệnh mất, Tào Tháo kinh lược Hà Bắc; Tôn Quyền kế vị, bình định Giang Đông.', factions: ['Giang Đông Tôn thị', 'Giang Đông phản đảng', 'Tào Tháo quân', 'Lưu Bị quân', 'Kinh Châu Lưu Biểu', 'Ích Châu Lưu Chương'] },
+        { year: 208, title: 'Xích Bích chi chiến', desc:'Tào Tháo nam chinh Kinh Châu, Tôn Lưu liên quân đánh ngược quân Tào ở Ô Lâm.', factions: ['Tào Tháo quân', 'Tôn Quyền quân', 'Lưu Bị quân', 'Kinh Châu quân', 'Ích Châu Lưu Chương', 'Hán Trung Trương Lỗ', 'Tây Lương Mã Đằng'] },
+        { year: 211, title: 'Tây Xuyên định đỉnh', desc:'Lưu Bị được mời vào Thục, chuyển sang đánh Lưu Chương, mất ba năm chiếm cứ Ích Châu.', factions: ['Lưu Bị quân', 'Lưu Chương quân', 'Tào Tháo quân', 'Tây Lương quân', 'Hán Trung Trương Lỗ', 'Tôn Quyền quân'] },
+        { year: 215, title: 'Hợp Phì chi dịch', desc:'Tôn Quyền dẫn mười vạn quân vây Hợp Phì, Trương Liêu dẫn tám trăm bộ tốt đánh tan quân Ngô.', factions: ['Hợp Phì thủ quân', 'Đông Ngô đại quân', 'Tào Ngụy viện quân', 'Lưu Bị quân'] },
+        { year: 219, title: 'Định Quân dương uy', desc:'Lưu Bị tiến binh Hán Trung, Hoàng Trung chém Hạ Hầu Uyên ở núi Định Quân.', factions: ['Thục Hán quân', 'Tào Ngụy quân', 'Tôn Quyền quân'] },
+        { year: 219, title: 'Kinh Châu chi tranh', desc:'Quan Vũ chặn đường bắc thủy yêm thất quân, Lữ Mông áo trắng qua sông đánh úp Giang Lăng.', factions: ['Quan Vũ bắc phạt quân', 'Phàn Thành thủ quân', 'Đông Ngô thâu tập quân', 'Thượng Dung thủ quân'] },
+        { year: 221, title: 'Di Lăng chi chiến', desc:'Lưu Bị đông chinh nước Ngô, Lục Tốn chống cự ở Di Lăng, đại phá quân Thục.', factions: ['Thục Hán đông chinh quân', 'Đông Ngô phòng ngự quân', 'Tào Ngụy quan chiến quân'] },
+        { year: 225, title: 'Nam Trung chi dịch', desc:'Gia Cát Lượng nam chinh bốn quận, bình định Ung Khải, Mạnh Hoạch làm phản.', factions: ['Thục Hán nam chinh quân', 'Nam Trung phản quân', 'Mạnh Hoạch bộ chúng'] },
+        { year: 228, title: 'Sơ xuất Kỳ Sơn', desc:'Gia Cát Lượng lần đầu phạt Tào Ngụy, ba quận Lũng Hữu hưởng ứng, Mã Tốc bại trận ở Nhai Đình.', factions: ['Thục Hán bắc phạt quân', 'Tào Ngụy tây tuyến quân'] },
+        { year: 234, title: 'Lục xuất Kỳ Sơn', desc:'Gia Cát Lượng và Tư Mã Ý giằng co ở Ngũ Trượng Nguyên, Lượng mất trong quân, quân Thục rút lui.', factions: ['Thục Hán bắc phạt quân', 'Tào Ngụy tây tuyến quân', 'Thục Hán nội đấu phái'] },
+        { year: 238, title: 'Thừa chí khởi phạt', desc:'Tư Mã Ý chinh phạt Liêu Đông diệt Công Tôn Uyên; Tưởng Uyển dẫn quân Thục đóng quân ở Hán Trung.', factions: ['Thục Hán quân', 'Tào Ngụy tây tuyến quân', 'Tào Ngụy viễn chinh quân'] },
+        { year: 249, title: 'Bội thệ Lạc Thủy', desc:'Tư Mã Ý phát động sự biến Cao Bình Lăng, tru sát Tào Sảng, nắm giữ triều chính nước Ngụy.', factions: ['Tư Mã thị', 'Tào Sảng đảng vũ', 'Tào Ngụy tông thất', 'Quan vọng trung lập phái'] },
+        { year: 251, title: 'Hoài Nam thủ phản', desc:'Vương Lăng khởi binh ở Hoài Nam chống Tư Mã Ý thất bại tự sát. Tư Mã Ý bệnh mất.', factions: ['Tào Ngụy triều đình', 'Hoài Nam phản quân', 'Đông Ngô trận doanh'] },
+        { year: 252, title: 'Đông Hưng đại tiệp', desc:'Tôn Lượng kế vị, Gia Cát Khác đại bại quân Ngụy ở Đông Hưng, nước Ngụy chấn động.', factions: ['Đông Ngô quân', 'Tào Ngụy quân', 'Thục Hán quân'] },
+        { year: 253, title: 'Chỉ bộ Hợp Phì', desc:'Gia Cát Khác mượn chiến thắng Đông Hưng đại cử phạt Ngụy, vây Tân Thành Hợp Phì đánh lâu không hạ được, đại quân mệt mỏi.', factions: ['Đông Ngô quân', 'Tào Ngụy quân'] },
+        { year: 255, title: 'Hoài Nam tái phản', desc:'Vô Khâu Kiệm, Văn Khâm khởi binh chống Tư Mã Sư, bại trận ở Hạng.', factions: ['Tào Ngụy triều đình quân', 'Hoài Nam phản quân', 'Đông Ngô viện quân', 'Thục Hán quân'] },
+        { year: 255, title: 'Cửu phạt Trung Nguyên', desc:'Khương Duy đại phá Vương Kinh ở Thao Tây, quân Ngụy thương vong mấy vạn.', factions: ['Thục Hán bắc phạt quân', 'Tào Ngụy tây tuyến quân', 'Đông Ngô trận doanh'] },
+        { year: 257, title: 'Hoài Nam tam phản', desc:'Gia Cát Đản chiếm Thọ Xuân phản Ngụy hàng Ngô, Tư Mã Chiêu dẫn quân vây thành, Thọ Xuân vỡ Đản bị giết.', factions: ['Tào Ngụy triều đình quân', 'Hoài Nam phản quân', 'Đông Ngô viện quân'] },
+        { year: 263, title: 'Kiếm Các lạc nhật', desc:'Ngụy chia ba đường phạt Thục, Đặng Ngải qua Âm Bình đến Thành Đô, Lưu Thiện ra hàng.', factions: ['Tào Ngụy phạt Thục quân', 'Thục Hán phòng ngự quân', 'Đông Ngô viện quân'] },
+        { year: 264, title: 'Cô giang tỏa dược', desc:'Chung Hội Đặng Ngải chết trong loạn quân; Tôn Hạo kế vị, Lục Kháng trấn thủ Tây Lăng.', factions: ['Đông Ngô triều đình', 'Tây Tấn sơ lập', 'Thục Hán tàn thần'] },
+        { year: 280, title: 'Tam phân quy Tấn', desc:'Tấn Vũ Đế chia sáu đường phạt Ngô, Vương Tuấn dẫn thủy quân hạ Kiến Nghiệp, Ngô mất.', factions: ['Tây Tấn diệt Ngô quân', 'Đông Ngô mạt lộ quân', 'Tam phương dư thần'] },
+        { year: 290, title: 'Thái Khang chi mạt', desc:'Tấn Vũ Đế mất, Huệ Đế kế vị, Dương Tuấn phụ chính, triều cục sóng ngầm cuộn trào.', factions: ['Tây Tấn triều đình', 'Ngoại trấn đô đốc'] }
+    ]
+};
+
+const lordData = {
+    'Lưu Biện': {
+        zi: 'Không Có',
+        scripts: {
+            'Diễn Nghĩa': ['189 Đế Đô Kinh Biến'],
+            'Chính Sử': ['189 Đổng Trác Nhập Kinh']
+        },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                return { faction: 'Hán thất trung khu(Bị khống chế)', classLevel: 'Hoàng tử', position: 'Thiếu Đế', age: 13, children: 'Không Có', region: 'Lạc Dương Nam Cung', power: 'Binh mã thiên hạ trên danh nghĩa', subordinates: 'Không có thực quyền(Bị Hà Thái hậu và Đổng Trác khống chế)', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Đại Hán quốc khố(Bị khống chế)', income: 0, expense: 5000, food: 100000, gold: 50000 }, attributes: { 'Dũng Vũ': 20, 'Thao Lược': 30, 'Nội Chính': 30, 'Thống Ngự': 20, 'Khí Độ': 40, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Thiếu Đế', effects: 'Khí Độ-20' }], crisis: 'Đổng Trác trên điện chống kiếm ép ngươi thiền nhượng, ngươi cùng Hà Thái hậu ôm nhau khóc, hơi có ý không theo liền bị giết ngay.' };
+            } else {
+                return { faction: 'Hán thất trung khu(Bị khống chế)', classLevel: 'Hoàng tử', position: 'Thiếu Đế', age: 13, children: 'Không Có', region: 'Lạc Dương Cung', power: 'Bắc quân ngũ hiệu trên danh nghĩa', subordinates: 'Không có thực quyền(Bị Đổng Trác khống chế)', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Đại Hán quốc khố(Bị khống chế)', income: 0, expense: 5000, food: 100000, gold: 50000 }, attributes: { 'Dũng Vũ': 20, 'Thao Lược': 35, 'Nội Chính': 35, 'Thống Ngự': 25, 'Khí Độ': 45, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Biện hoàng tử', effects: 'Khí Độ-10' }], crisis: 'Đổng Trác triệu tập bá quan tuyên bố phế lập, ngươi với tư cách là Hoằng Nông Vương bị giam lỏng, rượu độc đã ở trên đường.' };
+            }
+        }
+    },
+    'Lưu Hiệp': {
+        zi: 'Bá Hòa',
+        scripts: {
+            'Diễn Nghĩa': ['189 Đế Đô kinh biến', '192 Liên hoàn tru tặc', '196 Hiệp đế lệnh hầu', '199 Y đái mật chiếu'],
+            'Chính Sử': ['189 Đổng Trác nhập kinh', '192 Lý Quách chi loạn', '196 Dĩ lệnh bất thần']
+        },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '189 Đế Đô Kinh Biến') return { faction: 'Hán thất trung khu(Bị khống chế)', classLevel: 'Hoàng tử', position: 'Trần Lưu Vương', age: 8, children: 'Không Có', region: 'Lạc Dương', power: 'Không Có', subordinates: 'Vương Doãn', reputation: 'Lý Lư Xưng Thiện', assets: { name: 'Không Có', income: 0, expense: 0, food: 0, gold: 0 }, attributes: { 'Dũng Vũ': 10, 'Thao Lược': 40, 'Nội Chính': 40, 'Thống Ngự': 30, 'Khí Độ': 70, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Thông tuệ tảo thục', effects: 'Thao Lược+10' }], crisis: 'Đổng Trác phế Thiếu Đế lập ngươi làm hoàng đế, ngươi bị cưỡng ép ấn lên long kỷ, đối mặt với đám Tây Lương binh hung thần ác sát dưới điện.' };
+                if (scriptName === '192 Liên Hoàn Tru Tặc') return { faction: 'Hán thất trung khu(Bị khống chế)', classLevel: 'Hoàng tử', position: 'Hán Hiến Đế', age: 11, children: 'Không Có', region: 'Trường An', power: 'Binh mã thiên hạ trên danh nghĩa', subordinates: 'Vương Doãn, Dương Bưu, Hoàng Phủ Tung', reputation: 'Lý Lư Xưng Thiện', assets: { name: 'Trường An phủ khố(Bị khống chế)', income: 0, expense: 2000, food: 5000, gold: 1000 }, attributes: { 'Dũng Vũ': 15, 'Thao Lược': 45, 'Nội Chính': 45, 'Thống Ngự': 35, 'Khí Độ': 65, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Khôi lỗi thiên tử', effects: 'Thống Ngự-20' }], crisis: 'Đổng Trác vừa chết, mười vạn đại quân Lý Thôi Quách Dĩ phản công Trường An, trong thành binh lực trống rỗng, ngươi lại một lần nữa trở thành cá nằm trên thớt.' };
+                if (scriptName === '196 Hiệp Đế Lệnh Hầu') return { faction: 'Hứa Đô triều đình(Bị khống chế)', classLevel: 'Hoàng tử', position: 'Hán Hiến Đế', age: 15, children: 'Không Có', region: 'Hứa Đô', power: 'Vài trăm túc vệ', subordinates: 'Đổng Thừa, Phục Hoàn, Phục Hoàng hậu', reputation: 'Lý Lư Xưng Thiện', assets: { name: 'Hứa Đô hoàng cung(Bị khống chế)', income: 0, expense: 1000, food: 2000, gold: 500 }, attributes: { 'Dũng Vũ': 20, 'Thao Lược': 50, 'Nội Chính': 50, 'Thống Ngự': 40, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Ký nhân ly hạ', effects: 'Khí Độ-10' }], crisis: 'Vừa thoát hang hùm lại vào hang sói, Tào Tháo mang danh Hán tướng thực chất là Hán tặc, mọi hành động của ngươi đều bị giám sát chặt chẽ.' };
+                if (scriptName === '199 Y Đái Mật Chiếu') return { faction: 'Hứa Đô triều đình(Bị khống chế)', classLevel: 'Hoàng tử', position: 'Hán Hiến Đế', age: 18, children: 'Không Có', region: 'Hứa Đô', power: 'Vài chục nội thị', subordinates: 'Đổng Thừa, Cát Bình, Chủng Tập', reputation: 'Châu Quận Trì Danh', assets: { name: 'Hứa Đô hoàng cung(Bị khống chế)', income: 0, expense: 1000, food: 1000, gold: 200 }, attributes: { 'Dũng Vũ': 20, 'Thao Lược': 55, 'Nội Chính': 55, 'Thống Ngự': 45, 'Khí Độ': 55, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Tâm hoài Hán thất', effects: 'Khí Độ+20' }], crisis: 'Ngươi cắn nát ngón tay viết huyết chiếu giấu trong đai áo, giao cho Đổng Thừa, nếu sự việc bại lộ, ngươi và tất cả tông thân sẽ bị diệt tộc.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Hán thất trung khu(Bị khống chế)', classLevel: 'Hoàng tử', position: 'Trần Lưu Vương', age: 8, children: 'Không Có', region: 'Lạc Dương Bắc Mang Sơn', power: 'Không Có', subordinates: 'Không Có', reputation: 'Lý Lư Xưng Thiện', assets: { name: 'Không Có', income: 0, expense: 0, food: 0, gold: 0 }, attributes: { 'Dũng Vũ': 10, 'Thao Lược': 40, 'Nội Chính': 40, 'Thống Ngự': 30, 'Khí Độ': 70, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Thông tuệ tảo thục', effects: 'Thao Lược+10' }], crisis: 'Trên đường bị loạn binh truy sát đối đáp trôi chảy, được Đổng Trác để mắt tới, sắp trở thành con rối mới.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { faction: 'Hán thất trung khu(Bị khống chế)', classLevel: 'Hoàng tử', position: 'Hán Hiến Đế', age: 11, children: 'Không Có', region: 'Trường An', power: 'Không có thực quyền', subordinates: 'Vương Doãn, Sĩ Tôn Thụy', reputation: 'Lý Lư Xưng Thiện', assets: { name: 'Trường An phủ khố(Bị khống chế)', income: 0, expense: 2000, food: 5000, gold: 1000 }, attributes: { 'Dũng Vũ': 15, 'Thao Lược': 45, 'Nội Chính': 45, 'Thống Ngự': 35, 'Khí Độ': 65, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Khôi lỗi thiên tử', effects: 'Thống Ngự-20' }], crisis: 'Vương Doãn không tha cho dư đảng Đổng Trác, dẫn đến Lý Quách đem quân vây Trường An, ngươi tận mắt chứng kiến địa ngục trần gian sau khi thành vỡ.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { faction: 'Hứa Đô triều đình(Bị khống chế)', classLevel: 'Hoàng tử', position: 'Hán Hiến Đế', age: 15, children: 'Không Có', region: 'Hứa Đô', power: 'Vài trăm túc vệ', subordinates: 'Đổng Thừa, Khổng Dung', reputation: 'Lý Lư Xưng Thiện', assets: { name: 'Hứa Đô hoàng cung(Bị khống chế)', income: 0, expense: 1000, food: 2000, gold: 500 }, attributes: { 'Dũng Vũ': 20, 'Thao Lược': 50, 'Nội Chính': 50, 'Thống Ngự': 40, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Ký nhân ly hạ', effects: 'Khí Độ-10' }], crisis: 'Tào Tháo "phụng thiên tử dĩ lệnh bất thần", nhất cử nhất động của ngươi đều trở thành công cụ chính trị để hắn phát hiệu thi lệnh.' };
+            }
+        }
+    },
+    'Đổng Trác': {
+        zi: 'Trọng Dĩnh',
+        scripts: {
+            'Diễn Nghĩa': ['189 Đế Đô kinh biến', '189 Mạnh Đức hiến đao', '190 Chư hầu hội minh', '192 Phụng Nghi Đình kế', '192 Liên hoàn tru tặc'],
+            'Chính Sử': ['189 Đổng Trác nhập kinh', '192 Lý Quách chi loạn']
+        },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '189 Đế Đô Kinh Biến') return { faction: 'Hán thất trung khu(Chuyên quyền)', classLevel: 'Lương Châu quân phiệt', position: 'Tướng quốc', age: 57, children: 'Đổng Bạch', region: 'Lạc Dương', power: 'Mười lăm vạn hãn tốt', subordinates: 'Lữ Bố, Lý Nho, Hoa Hùng, Lý Thôi, Quách Dĩ, Phàn Trù, Trương Tế', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Lạc Dương nội khố', income: 50000, expense: 30000, food: 100000, gold: 80000 }, attributes: { 'Dũng Vũ': 85, 'Thao Lược': 60, 'Nội Chính': 20, 'Thống Ngự': 80, 'Khí Độ': -30, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Quyền khuynh triều dã', effects: 'Thống Ngự+20' }], crisis: 'Đinh Nguyên đại quân áp sát, Lữ Bố liên tiếp chém mấy tướng, ngươi cấp bách cần dùng ngựa Xích Thố để thu mua hắn.' };
+                if (scriptName === '189 Mạnh Đức Hiến Đao') return { faction: 'Hán thất trung khu(Chuyên quyền)', classLevel: 'Lương Châu quân phiệt', position: 'Tướng quốc', age: 57, children: 'Đổng Bạch', region: 'Tướng phủ', power: 'Mười lăm vạn hãn tốt', subordinates: 'Lữ Bố, Lý Nho', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Tướng phủ kim khố', income: 50000, expense: 30000, food: 100000, gold: 80000 }, attributes: { 'Dũng Vũ': 85, 'Thao Lược': 60, 'Nội Chính': 20, 'Thống Ngự': 80, 'Khí Độ': -30, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Tàn bạo đa nghi', effects: 'Khí Độ-20' }], crisis: 'Ngươi xoay người quay mặt vào tường, chợt từ trong gương đồng liếc thấy Tào Tháo rút ra bảo đao.' };
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Hán thất trung khu(Chuyên quyền)', classLevel: 'Lương Châu quân phiệt', position: 'Tướng quốc', age: 58, children: 'Đổng Bạch', region: 'Hổ Lao Quan', power: 'Mười tám vạn tinh nhuệ', subordinates: 'Lữ Bố, Lý Nho, Hoa Hùng, Lý Thôi, Quách Dĩ', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Lịch đại đế lăng', income: 80000, expense: 50000, food: 200000, gold: 150000 }, attributes: { 'Dũng Vũ': 80, 'Thao Lược': 55, 'Nội Chính': -10, 'Thống Ngự': 85, 'Khí Độ': -50, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Phần hủy Lạc Dương', effects: 'Khí Độ-40' }], crisis: 'Hoa Hùng tử chiến, Lữ Bố bại lui, mười tám lộ chư hầu ép sát, ngươi chuẩn bị đốt hủy Lạc Dương dời về Trường An.' };
+                if (scriptName === '192 Phụng Nghi Đình Kế') return { force: 'Thái sư phủ', classLevel: 'Lương Châu quân phiệt', position: 'Thái sư', age: 60, children: 'Không Có', region: 'Mi Ổ', power: 'Mười hai vạn Phi Hùng quân', subordinates: 'Lữ Bố, Lý Nho, Vương Doãn(Ngụy hàng), Điêu Thuyền(Tế tác)', reputation: 'Di Xú Phủ Việt', assets: { name: 'Mi Ổ kim sơn', income: 100000, expense: 80000, food: 500000, gold: 300000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 40, 'Nội Chính': -30, 'Thống Ngự': 70, 'Khí Độ': -80, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Tửu sắc đào không', effects: 'Sức Khỏe-30' }], crisis: 'Bắt gặp Lữ Bố và Điêu Thuyền lén lút hẹn hò, ngươi giận dữ ném họa kích, cha con sinh hiềm khích.' };
+                if (scriptName === '192 Liên Hoàn Tru Tặc') return { force: 'Thái sư phủ', classLevel: 'Lương Châu quân phiệt', position: 'Thái sư', age: 60, children: 'Không Có', region: 'Vị Ương Cung', power: 'Vài ngàn thân vệ', subordinates: 'Lữ Bố(Sắp phản), Lý Nho, Vương Doãn(Địch)', reputation: 'Di Xú Phủ Việt', assets: { name: 'Mi Ổ kim sơn', income: 100000, expense: 80000, food: 500000, gold: 300000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 40, 'Nội Chính': -30, 'Thống Ngự': 70, 'Khí Độ': -80, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Thập nhật bất đắc sinh', effects: 'Sức Khỏe-30' }], crisis: 'Bánh xe gãy nát cuồng phong nổi lên, ngươi không hề hay biết đã bước vào tử cục của Vương Doãn, Lữ Bố đang giương kích chĩa vào.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Hán thất trung khu(Khống chế)', classLevel: 'Lương Châu biên tướng', position: 'Tư Không', age: 57, children: 'Không Có', region: 'Lạc Dương', power: 'Ba vạn bộ kỵ', subordinates: 'Lý Nho, Ngưu Phụ, Đoạn Ôi, Đổng Mân, Hoa Hùng, Từ Vinh', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Kinh kỳ tịch thu', income: 30000, expense: 20000, food: 80000, gold: 40000 }, attributes: { 'Dũng Vũ': 80, 'Thao Lược': 70, 'Nội Chính': 40, 'Thống Ngự': 85, 'Khí Độ': 10, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Thô mãnh hữu mưu', effects: 'Thống Ngự+30' }], crisis: 'Vừa thu biên bộ khúc của Hà Tiến, sĩ tộc Quan Đông cực độ bài xích, Viên Thiệu bỏ trốn đến Bột Hải ấp ủ khởi binh.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Tướng quốc phủ', classLevel: 'Lương Châu quân phiệt', position: 'Tướng quốc', age: 60, children: 'Đổng Hoàng', region: 'Trường An', power: 'Năm vạn Lương Châu binh', subordinates: 'Lữ Bố, Lý Nho, Ngưu Phụ, Đổng Mân', reputation: 'Di Xú Phủ Việt', assets: { name: 'Tam Phụ cưỡng chinh', income: 40000, expense: 35000, food: 120000, gold: 50000 }, attributes: { 'Dũng Vũ': 75, 'Thao Lược': 60, 'Nội Chính': 10, 'Thống Ngự': 75, 'Khí Độ': -40, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Cương phúc bạo lệ', effects: 'Khí Độ-50' }], crisis: 'Vương Doãn từng bước ép sát, hệ Tịnh Châu và đích hệ Lương Châu phân chia lợi ích không đều, ngươi vì chuyện nhỏ rút kích ném Lữ Bố, đại nạn ập xuống đầu.' };
+            }
+            return {};
+        }
+    },
+    'Công Tôn Toản': {
+        zi: 'Bá Khuê',
+        scripts: {
+            'Diễn Nghĩa': ['190 Chư hầu hội minh', '191 Giới Kiều chi chiến', '194 Tam nhượng Từ Châu', '199 Trủng trung khô cốt'],
+            'Chính Sử': ['189 Đổng Trác nhập kinh', '192 Lý Quách chi loạn', '196 Dĩ lệnh bất thần']
+        },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Quan Đông liên quân', classLevel: 'Liêu Tây hào tộc', position: 'Phấn Vũ tướng quân', age: 37, children: 'Công Tôn Tục', region: 'Toan Táo', power: 'Một vạn năm ngàn U Châu binh', subordinates: 'Lưu Bị, Quan Vũ, Trương Phi, Nghiêm Cương, Điền Khải', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Bắc Bình đại doanh', income: 15000, expense: 12000, food: 45000, gold: 20000 }, attributes: { 'Dũng Vũ': 85, 'Thao Lược': 55, 'Nội Chính': 30, 'Thống Ngự': 80, 'Khí Độ': 60, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Hào mại trung nghĩa', effects: 'Khí Độ+20' }], crisis: 'Trước Hổ Lao Quan đơn đả độc đấu Lữ Bố bại lui, Viên Thuật ngầm giữ lại quân nhu, ngươi muốn lui binh mưu đồ Ký Châu.' };
+                if (scriptName === '191 Giới Kiều Chi Chiến') return { force: 'Bắc Bình quân', classLevel: 'U Châu quân phiệt', position: 'Phấn Vũ tướng quân', age: 38, children: 'Công Tôn Tục', region: 'Giới Kiều', power: 'Ba vạn đại quân', subordinates: 'Triệu Vân, Nghiêm Cương, Điền Khải, Lưu Bị, Quan Vũ, Trương Phi', reputation: 'Châu Quận Trì Danh', assets: { name: 'U Châu quân nhu', income: 20000, expense: 20000, food: 80000, gold: 30000 }, attributes: { 'Dũng Vũ': 84, 'Thao Lược': 54, 'Nội Chính': 35, 'Thống Ngự': 78, 'Khí Độ': 55, 'Sức Khỏe': 72 }, selectedTraits: [{ name: 'Bạch Mã trưởng sử', effects: 'Dũng Vũ+15' }], crisis: 'Quân Viên Thiệu bày trận ở Giới Kiều, Văn Xú vác súng phi ngựa đánh thẳng vào trung quân, nếu không có Triệu Vân cứu giúp ngươi đã mất mạng suối vàng.' };
+                if (scriptName === '194 Tam Nhượng Từ Châu') return { force: 'U Châu quân', classLevel: 'U Châu quân phiệt', position: 'Tiền tướng quân', age: 41, children: 'Công Tôn Tục', region: 'Bắc Bình', power: 'Bốn vạn binh mã', subordinates: 'Triệu Vân, Điền Khải, Trâu Đan, Quan Tĩnh', reputation: 'Châu Quận Trì Danh', assets: { name: 'U Châu lương khố', income: 25000, expense: 30000, food: 150000, gold: 40000 }, attributes: { 'Dũng Vũ': 80, 'Thao Lược': 50, 'Nội Chính': 40, 'Thống Ngự': 75, 'Khí Độ': 50, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Cương liệt mãnh tướng', effects: 'Dũng Vũ+10' }], crisis: 'Lưu Bị đến mượn binh cứu Từ Châu, ngươi chỉ chịu cho mượn Triệu Vân và một ít binh mã, áp lực từ Viên Thiệu vẫn vô cùng lớn.' };
+                if (scriptName === '199 Trủng Trung Khô Cốt') return { force: 'Dịch Kinh tàn quân', classLevel: 'Lạc phách quân phiệt', position: 'Tiền tướng quân', age: 46, children: 'Công Tôn Tục', region: 'Dịch Kinh cao lâu', power: 'Ba ngàn tàn tốt', subordinates: 'Quan Tĩnh, Trâu Đan', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Lương thực tích trữ ở Dịch Kinh', income: 0, expense: 5000, food: 200000, gold: 100000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 40, 'Nội Chính': -20, 'Thống Ngự': 40, 'Khí Độ': -50, 'Sức Khỏe': 55 }, selectedTraits: [{ name: 'Chúng bạn xa lánh', effects: 'Khí Độ-50' }], crisis: 'Đại quân Viên Thiệu đào địa đạo thẳng đến dưới lầu rồi phóng hỏa, ngươi bị chúng bạn xa lánh, chuẩn bị giết vợ con rồi tự thiêu.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { force: 'Bạch Mã Nghĩa Tòng', classLevel: 'Võ tướng biên địa', position: 'Trung lang tướng', age: 36, children: 'Công Tôn Tục', region: 'Quản Tử Thành', power: 'Hai vạn kỵ binh đột kích', subordinates: 'Nghiêm Cương, Điền Khải, Đơn Kinh', reputation: 'Châu Quận Trì Danh', assets: { name: 'Chợ ngựa Liêu Tây', income: 20000, expense: 18000, food: 50000, gold: 30000 }, attributes: { 'Dũng Vũ': 88, 'Thao Lược': 60, 'Nội Chính': 20, 'Thống Ngự': 78, 'Khí Độ': 30, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Uy chấn tái ngoại', effects: 'Dũng Vũ+20' }], crisis: 'Chủ trương dùng vũ lực tiễu trừ người Hồ nên bị Lưu Ngu cắt lương, tiến sâu vào Quản Tử Thành bị vây khốn hai trăm ngày, binh sĩ đã bắt đầu giết ngựa bệnh để chống đói.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'U Châu bá phủ', classLevel: 'Quân phiệt U Châu', position: 'U Châu mục(Tự phong)', age: 39, children: 'Công Tôn Tục', region: 'Giới Kiều', power: 'Ba vạn năm ngàn giáp sĩ', subordinates: 'Điền Khải, Đơn Kinh, Nghiêm Cương, Triệu Vân', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Muối sắt U Châu', income: 28000, expense: 30000, food: 70000, gold: 22000 }, attributes: { 'Dũng Vũ': 80, 'Thao Lược': 50, 'Nội Chính': -10, 'Thống Ngự': 65, 'Khí Độ': -30, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Cùng binh độc vũ', effects: 'Thống Ngự-20' }], crisis: 'Vừa chém chết Lưu Ngu gây nên phẫn nộ trong dân chúng. Trận Giới Kiều, Bạch Mã Nghĩa Tòng bị trọng giáp và nỏ cứng của Khúc Nghĩa tàn sát, nhuệ khí hoàn toàn suy sụp.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { force: 'Cô quân Dịch Kinh', classLevel: 'Quân phiệt sa sút', position: 'Tiền tướng quân', age: 43, children: 'Công Tôn Tục', region: 'Dịch Kinh', power: 'Hai vạn tàn binh', subordinates: 'Quan Tĩnh', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Lũy Dịch Kinh', income: 10000, expense: 15000, food: 300000, gold: 120000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 45, 'Nội Chính': -20, 'Thống Ngự': 50, 'Khí Độ': -40, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Đa nghi tự bế', effects: 'Thống Ngự-40' }], crisis: 'Bị Viên Thiệu và bộ hạ cũ của Lưu Ngu giáp công, ngươi đào mười tầng chiến hào lui vào lầu cao, thấy bộ hạ chết mà không cứu.' };
+            }
+            return {};
+        }
+    },
+    'Lưu Bị': {
+        zi: 'Huyền Đức',
+        scripts: {
+            'Diễn Nghĩa': ['184 Thái Bình Đạo Khởi', '190 Chư Hầu Hội Minh', '194 Tam Nhượng Từ Châu', '196 Hiệp Đế Lệnh Hầu', '196 Viên Môn Xạ Kích', '198 Bạch Môn Vẫn Mệnh', '199 Y Đái Mật Chiếu', '200 Thiên Lý Tầm Huynh', '202 Nhương Sơn Huyết Chiến', '207 Tam Cố Mao Lư', '208 Huyết Chiến Trường Bản', '208 Thiệt Chiến Quần Nho', '210 Tam Khí Chu Du', '211 Tây Xuyên Đồ Nghiệp', '214 Lạc Phượng Thùy Tinh', '215 Đơn Đao Phó Hội', '219 Định Quân Trảm Tướng', '219 Bạch Y Độ Giang', '221 Phạt Ngô Tuyết Hận', '222 Hỏa Thiêu Liên Doanh', '223 Bạch Đế Thác Cô'],
+            'Chính Sử': ['184 Hoàng Cân Khởi Nghĩa', '192 Lý Quách Chi Loạn', '196 Dĩ Lệnh Bất Thần', '200 Quan Độ Chi Chiến', '202 Kế Nghiệp Lập Cơ', '208 Xích Bích Chi Chiến', '211 Tây Xuyên Định Đỉnh', '215 Hợp Phì Chi Dịch', '219 Định Quân Dương Uy', '219 Kinh Châu Chi Tranh', '221 Di Lăng Chi Chiến']
+        },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '184 Thái Bình Đạo Khởi') return { force: 'Nghĩa quân Trác Quận', classLevel: 'Tông thân sa sút', position: 'Bạch thân', age: 23, children: 'Không Có', region: 'Đại Hưng Sơn', power: 'Năm trăm hương dũng', subordinates: 'Quan Vũ, Trương Phi', reputation: 'Lý Lư Xưng Thiện', assets: { name: 'Tiền tiết kiệm bán giày', income: 50, expense: 100, food: 200, gold: 100 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 60, 'Nội Chính': 70, 'Thống Ngự': 80, 'Khí Độ': 100, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Nhân nghĩa chi sơ', effects: 'Khí Độ+30' }], crisis: 'Tướng Hoàng Cân là Trình Viễn Chí áp sát, trang bị của ngươi cực kém, cần Quan Trương ra trận chém tướng địch.' };
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Quan Đông liên quân', classLevel: 'Hán thất tông thân', position: 'Bình Nguyên tướng', age: 29, children: 'Không Có', region: 'Hổ Lao Quan', power: 'Ba ngàn binh mã', subordinates: 'Quan Vũ, Trương Phi, Giản Ung', reputation: 'Châu Quận Trì Danh', assets: { name: 'Lương thảo Bình Nguyên', income: 1500, expense: 2000, food: 4000, gold: 600 }, attributes: { 'Dũng Vũ': 68, 'Thao Lược': 62, 'Nội Chính': 75, 'Thống Ngự': 82, 'Khí Độ': 95, 'Sức Khỏe': 78 }, selectedTraits: [{ name: 'Khoan nhân đãi hạ', effects: 'Khí Độ+10' }], crisis: 'Tam anh chiến Lữ Bố tuy vang danh, nhưng Viên Thiệu khinh thường xuất thân của ngươi nên từ chối phát lương thảo.' };
+                if (scriptName === '194 Tam Nhượng Từ Châu') return { force: 'Từ Châu quân', classLevel: 'Hán thất tông thân', position: 'Từ Châu mục', age: 33, children: 'Không Có', region: 'Từ Châu', power: 'Hai vạn binh mã', subordinates: 'Quan Vũ, Trương Phi, Mi Trúc, Tôn Càn, Triệu Vân(Mượn)', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Phủ khố Từ Châu', income: 18000, expense: 15000, food: 85000, gold: 32000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 65, 'Nội Chính': 80, 'Thống Ngự': 85, 'Khí Độ': 100, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Nhân đức hoàn nhân', effects: 'Khí Độ+40' }], crisis: 'Đào Khiêm ba lần nhường Từ Châu vừa mới mất, Tào quân đã áp sát biên giới để báo thù.' };
+                if (scriptName === '196 Hiệp Đế Lệnh Hầu') return { faction: 'Hứa Đô triều đình(Nương tựa)', classLevel: 'Hoàng thúc', position: 'Dự Châu thứ sử', age: 35, children: 'Không Có', region: 'Hứa Đô', power: 'Năm ngàn binh mã', subordinates: 'Quan Vũ, Trương Phi, Tôn Càn', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Triều đình cấp phát', income: 1000, expense: 1500, food: 3000, gold: 500 }, attributes: { 'Dũng Vũ': 66, 'Thao Lược': 66, 'Nội Chính': 79, 'Thống Ngự': 86, 'Khí Độ': 100, 'Sức Khỏe': 76 }, selectedTraits: [{ name: 'Thao quang dưỡng hối', effects: 'Thao Lược+5' }], crisis: 'Thanh mai chử tửu luận anh hùng, Tào Tháo dò xét ngươi, ngươi giật mình đánh rơi đũa, sinh tử trong gang tấc.' };
+                if (scriptName === '196 Viên Môn Xạ Kích') return { faction: 'Từ Châu Lữ thị(Nương tựa)', classLevel: 'Hoàng thúc', position: 'Dự Châu thứ sử', age: 35, children: 'Không Có', region: 'Tiểu Bái', power: 'Ba ngàn binh mã', subordinates: 'Quan Vũ, Trương Phi, Tôn Càn, Giản Ung', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Lương tàn Tiểu Bái', income: 500, expense: 1000, food: 2000, gold: 200 }, attributes: { 'Dũng Vũ': 66, 'Thao Lược': 65, 'Nội Chính': 75, 'Thống Ngự': 85, 'Khí Độ': 100, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Lũ bại lũ chiến', effects: 'Sức Khỏe+5' }], crisis: 'Đại tướng của Viên Thuật là Kỷ Linh vây thành, ngươi chỉ có thể nhìn sắc mặt Lữ Bố mà hành sự.' };
+                if (scriptName === '198 Bạch Môn Vẫn Mệnh') return { faction: 'Tào Ngụy quân(Nương tựa)', classLevel: 'Hoàng thúc', position: 'Tả tướng quân', age: 37, children: 'Không Có', region: 'Dưới thành Hạ Phì', power: 'Vài ngàn tàn binh', subordinates: 'Quan Vũ, Trương Phi, Tôn Càn, Mi Trúc', reputation: 'Quan Miện Quần Luân', assets: { name: 'Tào quân tiếp tế', income: 800, expense: 1000, food: 2500, gold: 600 }, attributes: { 'Dũng Vũ': 63, 'Thao Lược': 65, 'Nội Chính': 75, 'Thống Ngự': 80, 'Khí Độ': 100, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Phao thê khí tử', effects: 'Khí Độ-5' }], crisis: 'Hạ Phì bị đánh lén, gia quyến rơi vào tay giặc, ngươi binh bại nương tựa Tào Tháo, trơ mắt nhìn Lữ Bố bị xử tử.' };
+                if (scriptName === '199 Y Đái Mật Chiếu') return { force: 'Từ Châu nghĩa quân', classLevel: 'Hoàng thúc', position: 'Tả tướng quân', age: 38, children: 'Không Có', region: 'Từ Châu', power: 'Bốn vạn binh mã', subordinates: 'Quan Vũ, Trương Phi, Tôn Càn, Giản Ung, Mi Trúc', reputation: 'Quan Miện Quần Luân', assets: { name: 'Lương thực Từ Châu', income: 22000, expense: 20000, food: 95000, gold: 40000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 68, 'Nội Chính': 78, 'Thống Ngự': 88, 'Khí Độ': 100, 'Sức Khỏe': 72 }, selectedTraits: [{ name: 'Hán thất chính thống', effects: 'Khí Độ+50' }], crisis: 'Y đái chiếu bị lộ, Tào Tháo đích thân dẫn hai mươi vạn đại quân đông chinh, Từ Châu sắp vỡ.' };
+                if (scriptName === '200 Thiên Lý Tầm Huynh') return { faction: 'Viên Thiệu quân(Nương tựa)', classLevel: 'Hoàng thúc', position: 'Tả tướng quân', age: 39, children: 'Không Có', region: 'Nhữ Nam', power: 'Ba ngàn tàn bộ', subordinates: 'Triệu Vân, Trương Phi, Quan Vũ, Giản Ung', reputation: 'Quan Miện Quần Luân', assets: { name: 'Viên Thiệu cấp phát', income: 800, expense: 1200, food: 2000, gold: 400 }, attributes: { 'Dũng Vũ': 64, 'Thao Lược': 69, 'Nội Chính': 77, 'Thống Ngự': 87, 'Khí Độ': 100, 'Sức Khỏe': 71 }, selectedTraits: [{ name: 'Cổ thành tụ nghĩa', effects: 'Thống Ngự+5' }], crisis: 'Vừa thu thập tàn quân tụ nghĩa ở Cổ Thành, truy binh Tào quân sắp đến.' };
+                if (scriptName === '202 Nhương Sơn Huyết Chiến') return { faction: 'Kinh Châu Lưu Biểu(Nương tựa)', classLevel: 'Hoàng thúc', position: 'Tả tướng quân', age: 41, children: 'Lưu Phong', region: 'Tân Dã', power: 'Một vạn binh mã', subordinates: 'Quan Vũ, Trương Phi, Triệu Vân, Mi Phương, Tôn Càn', reputation: 'Quan Miện Quần Luân', assets: { name: 'Lưu Biểu cấp phát', income: 2000, expense: 5000, food: 15000, gold: 3000 }, attributes: { 'Dũng Vũ': 62, 'Thao Lược': 70, 'Nội Chính': 78, 'Thống Ngự': 88, 'Khí Độ': 100, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Bách chiết bất hồi', effects: 'Sức Khỏe+5' }], crisis: 'Sau khi phá vây ở Nhương Sơn liền nương tựa Lưu Biểu, đóng quân ở Tân Dã, bị bọn Thái Mạo xem là tâm phúc đại hoạn.' };
+                if (scriptName === '207 Tam Cố Mao Lư') return {faction: 'Kinh Châu Lưu Biểu(Nương tựa)',classLevel: 'Hoàng thúc', position: 'Tả tướng quân',age: 46, children: 'Lưu Phong, Lưu Thiện',region: 'Tân Dã',power: 'Sáu ngàn binh mã',subordinates: 'Gia Cát Lượng, Quan Vũ, Trương Phi, Triệu Vân, Mi Trúc, Mi Phương, Tôn Càn, Giản Ung',reputation: 'Quan Miện Quần Luân',assets: { name: 'Huyện khố Tân Dã', income: 3000, expense: 3500, food: 8000, gold: 2000 },attributes: { 'Dũng Vũ': 61, 'Thao Lược': 72, 'Nội Chính': 82, 'Thống Ngự': 89, 'Khí Độ': 100, 'Sức Khỏe': 69 },selectedTraits: [{ name: 'Cầu hiền nhược khát', effects: 'Khí Độ+10' }],crisis: 'Đội gió tuyết ba lần đến thăm mới mời được Khổng Minh, Quan Trương cực kỳ không phục, đại quân Hạ Hầu Đôn đã áp sát.'};
+                if (scriptName === '208 Huyết Chiến Trường Bản') return { force: 'Hán quân đào vong', classLevel: 'Hoàng thúc', position: 'Tả tướng quân', age: 47, children: 'Lưu Phong, Lưu Thiện', region: 'Đương Dương Kiều', power: 'Hai ngàn bại quân', subordinates: 'Gia Cát Lượng, Trương Phi, Triệu Vân, Quan Vũ(Chia quân)', reputation: 'Quan Miện Quần Luân', assets: { name: 'Mang theo dân chúng và truy trọng', income: 0, expense: 2000, food: 800, gold: 150 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 75, 'Nội Chính': 85, 'Thống Ngự': 90, 'Khí Độ': 100, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Ái dân như tử', effects: 'Khí Độ+40' }], crisis: 'Mười vạn nạn dân làm chậm trễ hành quân, Tào quân xông tới phá vỡ đội hình, ngươi chỉ có thể ném A Đẩu để thu phục lòng Triệu Vân.' };
+                if (scriptName === '208 Thiệt Chiến Quần Nho') return { faction: 'Tôn Lưu liên quân', classLevel: 'Hoàng thúc', position: 'Tả tướng quân', age: 47, children: 'Lưu Phong, Lưu Thiện', region: 'Hạ Khẩu', power: 'Một vạn thủy quân', subordinates: 'Gia Cát Lượng, Quan Vũ, Trương Phi, Triệu Vân', reputation: 'Quan Miện Quần Luân', assets: { name: 'Quân tư Lưu Kỳ', income: 2000, expense: 3000, food: 10000, gold: 2000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 76, 'Nội Chính': 85, 'Thống Ngự': 90, 'Khí Độ': 100, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Ngưỡng trượng Khổng Minh', effects: 'Khí Độ+10' }], crisis: 'Cử Khổng Minh sang Giang Đông cầu viện, sinh tử tồn vong toàn bộ dựa vào việc hắn có thể bác bỏ quần nho Giang Đông hay không.' };
+                if (scriptName === '210 Tam Khí Chu Du') return { force: 'Kinh Châu quân', classLevel: 'Kinh Châu mục', position: 'Kinh Châu mục', age: 49, children: 'Lưu Phong, Lưu Thiện', region: 'Kinh Châu', power: 'Năm vạn binh mã', subordinates: 'Gia Cát Lượng, Quan Vũ, Trương Phi, Triệu Vân, Hoàng Trung, Ngụy Diên', reputation: 'Quan Miện Quần Luân', assets: { name: 'Thuế má Kinh Châu', income: 20000, expense: 15000, food: 150000, gold: 50000 }, attributes: { 'Dũng Vũ': 59, 'Thao Lược': 76, 'Nội Chính': 86, 'Thống Ngự': 91, 'Khí Độ': 100, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Long phượng trình tường', effects: 'Khí Độ+5' }], crisis: 'Chu Du dùng kế mượn đường diệt Quắc hòng đoạt Kinh Châu, ngươi hoàn toàn nhờ cẩm nang diệu kế của Khổng Minh mới hóa hiểm thành an.' };
+                if (scriptName === '211 Tây Xuyên Đồ Nghiệp') return { force: 'Đại quân vào Thục', classLevel: 'Quân phiệt Kinh Châu', position: 'Kinh Châu mục', age: 50, children: 'Lưu Phong, Lưu Thiện', region: 'Gia Manh Quan', power: 'Hai vạn binh mã', subordinates: 'Bàng Thống, Hoàng Trung, Ngụy Diên, Quan Bình', reputation: 'Quan Miện Quần Luân', assets: { name: 'Quân nhu Lưu Chương', income: 5000, expense: 8000, food: 30000, gold: 10000 }, attributes: { 'Dũng Vũ': 58, 'Thao Lược': 77, 'Nội Chính': 87, 'Thống Ngự': 92, 'Khí Độ': 100, 'Sức Khỏe': 67 }, selectedTraits: [{ name: 'Giả nhân giả nghĩa', effects: 'Khí Độ-5' }], crisis: 'Lưu Chương cắt lương, Bàng Thống nhiều lần hối thúc ngươi nhân lúc yến tiệc ám sát Lưu Chương, ngươi bận tâm nhân nghĩa nên chần chừ không chịu.' };
+                if (scriptName === '214 Lạc Phượng Thùy Tinh') return { force: 'Đại quân đánh Thục', classLevel: 'Quân phiệt Kinh Châu', position: 'Kinh Châu mục', age: 53, children: 'Lưu Phong, Lưu Thiện', region: 'Ngoài Lạc Thành', power: 'Bốn vạn binh mã', subordinates: 'Hoàng Trung, Ngụy Diên, Gia Cát Lượng(Đến viện trợ), Trương Phi, Triệu Vân', reputation: 'Quan Miện Quần Luân', assets: { name: 'Cướp đoạt quân nhu', income: 10000, expense: 15000, food: 40000, gold: 15000 }, attributes: { 'Dũng Vũ': 56, 'Thao Lược': 78, 'Nội Chính': 88, 'Thống Ngự': 93, 'Khí Độ': 100, 'Sức Khỏe': 66 }, selectedTraits: [{ name: 'Chiết tổn quân sư', effects: 'Thao Lược-10' }], crisis: 'Bàng Thống trúng tên bỏ mạng ở gò Lạc Phượng, ngươi khóc lóc thảm thiết, đại quân chịu tổn thất, gấp rút điều Khổng Minh vào Xuyên.' };
+                if (scriptName === '215 Đơn Đao Phó Hội') return { force: 'Thục Hán', classLevel: 'Một phương chư hầu', position: 'Ích Châu mục', age: 54, children: 'Lưu Thiện', region: 'Thành Đô', power: 'Mười vạn binh mã', subordinates: 'Gia Cát Lượng, Quan Vũ, Trương Phi, Mã Siêu, Pháp Chính', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Thuế má trong Thục', income: 50000, expense: 45000, food: 250000, gold: 80000 }, attributes: { 'Dũng Vũ': 54, 'Thao Lược': 81, 'Nội Chính': 91, 'Thống Ngự': 96, 'Khí Độ': 100, 'Sức Khỏe': 64 }, selectedTraits: [{ name: 'Huynh đệ tình thâm', effects: 'Khí Độ+10' }], crisis: 'Lỗ Túc thiết yến mời Quan Vũ, ngươi ở xa tại Thành Đô lo lắng cho sự an nguy của nhị đệ.' };
+                if (scriptName === '219 Định Quân Trảm Tướng') return { force: 'Thục Hán', classLevel: 'Hán Vương', position: 'Hán Trung Vương', age: 58, children: 'Lưu Thiện', region: 'Định Quân Sơn', power: 'Mười vạn đại quân', subordinates: 'Gia Cát Lượng, Pháp Chính, Hoàng Trung, Triệu Vân, Ngụy Diên', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Dốc toàn bộ quân lương Thục', income: 40000, expense: 60000, food: 300000, gold: 100000 }, attributes: { 'Dũng Vũ': 53, 'Thao Lược': 82, 'Nội Chính': 90, 'Thống Ngự': 95, 'Khí Độ': 100, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Ngũ hổ thượng tướng', effects: 'Thống Ngự+10' }], crisis: 'Hoàng Trung chém chết Hạ Hầu Uyên tại trận, Tào Tháo đích thân dẫn đại quân áp sát, quyết chiến sắp nổ ra.' };
+                if (scriptName === '219 Bạch Y Độ Giang') return { force: 'Thục Hán', classLevel: 'Hán Vương', position: 'Hán Trung Vương', age: 58, children: 'Lưu Thiện', region: 'Thành Đô', power: 'Mười hai vạn binh mã', subordinates: 'Gia Cát Lượng, Trương Phi, Triệu Vân, Mã Siêu', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Quốc khố Tây Thục', income: 80000, expense: 50000, food: 400000, gold: 150000 }, attributes: { 'Dũng Vũ': 52, 'Thao Lược': 80, 'Nội Chính': 90, 'Thống Ngự': 95, 'Khí Độ': 95, 'Sức Khỏe': 55 }, selectedTraits: [{ name: 'Thống thất tí bàng', effects: 'Sức Khỏe-5' }], crisis: 'Kinh hãi nghe tin Lữ Mông áo trắng qua sông, Quan Vũ bại tẩu Mạch Thành, ngươi ngất đi mấy lần.' };
+                if (scriptName === '221 Phạt Ngô Tuyết Hận') return { force: 'Thục Hán', classLevel: 'Đại Hán thiên tử', position: 'Hán Chiêu Liệt Đế', age: 60, children: 'Lưu Thiện', region: 'Bạch Đế Thành', power: 'Bảy mươi vạn đại quân(Gọi là)', subordinates: 'Gia Cát Lượng, Triệu Vân, Mã Lương, Hoàng Quyền, Ngô Ban', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Dốc toàn quốc xuất chinh', income: 25000, expense: 120000, food: 600000, gold: 90000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 70, 'Nội Chính': 80, 'Thống Ngự': 85, 'Khí Độ': 90, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Phục cừu mông tâm', effects: 'Thao Lược-30' }], crisis: 'Trương Phi bị ám sát, ngươi triệt để mất đi lý trí, rút kiếm không nghe Khổng Minh và Triệu Vân khổ sở khuyên can, dốc toàn quốc đánh Ngô.' };
+                if (scriptName === '222 Hỏa Thiêu Liên Doanh') return { force: 'Thục Hán', classLevel: 'Đại Hán thiên tử', position: 'Hán Chiêu Liệt Đế', age: 61, children: 'Lưu Thiện', region: 'Hào Đình', power: 'Tàn dư bại quân', subordinates: 'Triệu Vân, Phó Đồng', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Dốc toàn quốc xuất chinh', income: 10000, expense: 150000, food: 200000, gold: 40000 }, attributes: { 'Dũng Vũ': 48, 'Thao Lược': 65, 'Nội Chính': 75, 'Thống Ngự': 80, 'Khí Độ': 85, 'Sức Khỏe': 35 }, selectedTraits: [{ name: 'Bất thức binh pháp', effects: 'Thống Ngự-20' }], crisis: 'Liên doanh bảy trăm dặm bị Lục Tốn một mồi lửa thiêu rụi, xác chết nghẽn sông, ngươi chật vật chạy trối chết.' };
+                if (scriptName === '223 Bạch Đế Thác Cô') return { force: 'Thục Hán', classLevel: 'Đại Hán thiên tử', position: 'Hán Chiêu Liệt Đế', age: 62, children: 'Lưu Thiện', region: 'Bạch Đế Thành', power: 'Vài ngàn túc vệ', subordinates: 'Gia Cát Lượng, Lý Nghiêm, Triệu Vân', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Đại Hán quốc tộ', income: 0, expense: 0, food: 0, gold: 0 }, attributes: { 'Dũng Vũ': 10, 'Thao Lược': 60, 'Nội Chính': 70, 'Thống Ngự': 75, 'Khí Độ': 85, 'Sức Khỏe': 5 }, selectedTraits: [{ name: 'Di lưu chi tế', effects: 'Sức Khỏe-20' }], crisis: 'Nhìn A Đẩu yếu đuối, rơi nước mắt nói với Khổng Minh di ngôn "Nếu nó không có tài, ngài có thể tự mình thay thế.' };
+            } else {
+                if (scriptName === '184 Hoàng Cân Khởi Nghĩa') return { faction: 'Đại Hán triều đình(Quan quân)', classLevel: 'Tông thân tầng chót', position: 'An Hỷ úy', age: 23, children: 'Không Có', region: 'Tiền tuyến', power: 'Ba trăm nghĩa binh', subordinates: 'Quan Vũ, Trương Phi, Giản Ung', reputation: 'Lý Lư Xưng Thiện', assets: { name: 'Tô Song tài trợ', income: 80, expense: 120, food: 250, gold: 400 }, attributes: { 'Dũng Vũ': 75, 'Thao Lược': 70, 'Nội Chính': 60, 'Thống Ngự': 80, 'Khí Độ': 75, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Hoằng nghị khoan hậu', effects: 'Thống Ngự+20' }], crisis: 'Trang bị tồi tàn, thái thú lại đẩy các ngươi ra tiền tuyến để cản bước xung kích trực diện của lưu dân Hoàng Cân.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { faction: 'Công Tôn Toản quân(Nương tựa)', classLevel: 'Tông thân tầng chót', position: 'Bình Nguyên tướng', age: 31, children: 'Không Có', region: 'Bình Nguyên quận', power: 'Hai ngàn binh mã', subordinates: 'Quan Vũ, Trương Phi, Giản Ung, Tôn Càn', reputation: 'Châu Quận Trì Danh', assets: { name: 'Thuế má Bình Nguyên tàn tạ', income: 800, expense: 1000, food: 2000, gold: 300 }, attributes: { 'Dũng Vũ': 77, 'Thao Lược': 73, 'Nội Chính': 63, 'Thống Ngự': 81, 'Khí Độ': 78, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Thiện đãi hạ sĩ', effects: 'Khí Độ+5' }], crisis: 'Bị kẹp giữa chiến trường của Công Tôn Toản và Viên Thiệu, thích khách Lưu Bình đã lẻn vào phòng ngủ của ngươi chuẩn bị ám sát.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { faction: 'Tào Tháo quân(Nương tựa)', classLevel: 'Hán thất tông thân', position: 'Dự Châu mục', age: 35, children: 'Không Có', region: 'Quảng Lăng Hải Tây', power: 'Bốn ngàn lính đói', subordinates: 'Quan Vũ, Trương Phi, Tôn Càn, Mi Trúc', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Lương tàn Quảng Lăng', income: 400, expense: 1800, food: 900, gold: 180 }, attributes: { 'Dũng Vũ': 78, 'Thao Lược': 75, 'Nội Chính': 65, 'Thống Ngự': 82, 'Khí Độ': 80, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Bách chiết bất nạo', effects: 'Sức Khỏe+20' }], crisis: 'Tiền tuyến khổ chiến với Viên Thuật, hậu phương bị Lữ Bố đánh lén, đại quân hết lương ngươi chuẩn bị cúi đầu cầu hòa với Lữ Bố.' };
+                if (scriptName === '200 Quan Độ Chi Chiến') return { faction: 'Viên Thiệu quân(Nương tựa)', classLevel: 'Hán thất tông thân', position: 'Tả tướng quân', age: 39, children: 'Không Có', region: 'Thôn hoang Nhữ Nam', power: 'Một ngàn tàn bộ', subordinates: 'Trương Phi, Giản Ung, Tôn Càn, Triệu Vân', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Dọc đường cướp bóc', income: 500, expense: 800, food: 1200, gold: 300 }, attributes: { 'Dũng Vũ': 76, 'Thao Lược': 78, 'Nội Chính': 68, 'Thống Ngự': 84, 'Khí Độ': 82, 'Sức Khỏe': 72 }, selectedTraits: [{ name: 'Kiêu hùng bản sắc', effects: 'Thao Lược+15' }], crisis: 'Từ Châu binh bại Quan Vũ bị bắt, ở Nhữ Nam vừa thu thập tàn đảng Hoàng Cân, Hổ Báo Kỵ của Tào Nhân đột nhiên xông tới phá nát doanh trại.' };
+                if (scriptName === '202 Kế Nghiệp Lập Cơ') return { faction: 'Kinh Châu Lưu Biểu(Nương tựa)', classLevel: 'Hán thất tông thân', position: 'Tả tướng quân', age: 41, children: 'Lưu Phong', region: 'Tân Dã', power: 'Ba ngàn binh mã', subordinates: 'Quan Vũ, Trương Phi, Triệu Vân, Mi Trúc, Mi Phương ', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Lưu Biểu cấp phát', income: 1500, expense: 2000, food: 5000, gold: 1000 }, attributes: { 'Dũng Vũ': 75, 'Thao Lược': 80, 'Nội Chính': 70, 'Thống Ngự': 85, 'Khí Độ': 83, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Bễ nhục phục sinh', effects: 'Sức Khỏe-5' }], crisis: 'Đóng quân ở Tân Dã làm vùng đệm, Lưu Biểu cực độ nghi kỵ ngầm cắt giảm lương thảo, ngươi cảm thán "Bễ nhục phục sinh”.' };
+                if (scriptName === '208 Xích Bích Chi Chiến') return { faction: 'Tôn Lưu liên quân', classLevel: 'Hán thất tông thân', position: 'Tả tướng quân', age: 47, children: 'Lưu Thiện', region: 'Hạ Khẩu', power: 'Hai vạn thủy lục quân', subordinates: 'Gia Cát Lượng, Quan Vũ, Trương Phi, Triệu Vân, Mi Phương', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đồn điền Giang Hạ', income: 8000, expense: 12000, food: 35000, gold: 8000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 85, 'Nội Chính': 75, 'Thống Ngự': 88, 'Khí Độ': 85, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Tri nhân đãi sĩ', effects: 'Thống Ngự+25' }], crisis: 'Đương Dương thảm bại lui về giữ Hạ Khẩu, nếu không thể thuyết phục Tôn Quyền kết minh, Tào quân xuôi dòng mà xuống ngươi sẽ bị diệt vong.' };
+                if (scriptName === '211 Tây Xuyên Định Đỉnh') return { force: 'Đại quân vào Thục', classLevel: 'Cát cứ chư hầu', position: 'Tả tướng quân', age: 50, children: 'Lưu Thiện', region: 'Gia Manh Quan', power: 'Ba vạn khách quân', subordinates: 'Bàng Thống, Pháp Chính, Hoàng Trung, Ngụy Diên, Lưu Phong', reputation: 'Quan Miện Quần Luân', assets: { name: 'Lương thảo Lưu Chương', income: 12000, expense: 15000, food: 65000, gold: 22000 }, attributes: { 'Dũng Vũ': 68, 'Thao Lược': 88, 'Nội Chính': 78, 'Thống Ngự': 90, 'Khí Độ': 88, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Cơ quyền cán lược', effects: 'Thao Lược+20' }], crisis: 'Tuyến tiếp tế bị Lưu Chương khống chế, ngươi phải nắm chắc thời cơ chính trị để trở mặt.' };
+                if (scriptName === '215 Hợp Phì Chi Dịch') return { force: 'Thục Hán', classLevel: 'Một phương bá chủ', position: 'Ích Châu mục', age: 54, children: 'Lưu Thiện', region: 'Công An', power: 'Bốn vạn binh mã', subordinates: 'Gia Cát Lượng, Quan Vũ, Trương Phi, Pháp Chính, Triệu Vân', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Quân phú Ích Châu', income: 40000, expense: 35000, food: 200000, gold: 60000 }, attributes: { 'Dũng Vũ': 66, 'Thao Lược': 89, 'Nội Chính': 82, 'Thống Ngự': 91, 'Khí Độ': 89, 'Sức Khỏe': 62 }, selectedTraits: [{ name: 'Kiêu hùng vãn thành', effects: 'Thống Ngự+10' }], crisis: 'Vừa chiếm Công An chuẩn bị dùng vũ lực cướp lại ba quận Kinh Nam, Tào Tháo lại lấy được Hán Trung, bụng lưng đều thọ địch bắt buộc phải cắt đất.' };
+                if (scriptName === '219 Định Quân Dương Uy') return { force: 'Thục Hán', classLevel: 'Hán Trung Vương', position: 'Hán Trung Vương', age: 58, children: 'Lưu Thiện', region: 'Hán Trung', power: 'Tám vạn tinh nhuệ', subordinates: 'Pháp Chính, Hoàng Trung, Ngụy Diên, Triệu Vân, Mã Siêu', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Quân nhu toàn Thục', income: 50000, expense: 60000, food: 300000, gold: 120000 }, attributes: { 'Dũng Vũ': 62, 'Thao Lược': 91, 'Nội Chính': 86, 'Thống Ngự': 93, 'Khí Độ': 92, 'Sức Khỏe': 58 }, selectedTraits: [{ name: 'Cứ hiểm cự Tào', effects: 'Thống Ngự+15' }], crisis: 'Sau khi chém Hạ Hầu Uyên, đại quân Tào Tháo đến chi viện, ngươi biết rõ liều mạng là không khôn ngoan, phải kiên bích thanh dã để tiêu hao Tào Tháo.' };
+                if (scriptName === '219 Kinh Châu Chi Tranh') return { force: 'Thục Hán', classLevel: 'Hán Trung Vương', position: 'Hán Trung Vương', age: 58, children: 'Lưu Thiện', region: 'Thành Đô', power: 'Mười vạn tinh binh', subordinates: 'Gia Cát Lượng, Trương Phi, Triệu Vân, Ngụy Diên, Mã Siêu', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Thuế má Thục Trung', income: 55000, expense: 42000, food: 320000, gold: 130000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 90, 'Nội Chính': 85, 'Thống Ngự': 92, 'Khí Độ': 90, 'Sức Khỏe': 55 }, selectedTraits: [{ name: 'Đế vương tâm thuật', effects: 'Nội Chính+20' }], crisis: 'Kinh Châu mất sạch, Quan Vũ tử chiến. Tào Phi soán Hán, Thục Trung xuất hiện phản loạn, ngươi phải nhanh chóng xưng đế để củng cố pháp lý.' };
+                if (scriptName === '221 Di Lăng Chi Chiến') return { force: 'Thục Hán', classLevel: 'Đại Hán thiên tử', position: 'Hoàng đế', age: 60, children: 'Lưu Thiện', region: 'Tiền tuyến Di Lăng', power: 'Hơn bốn vạn bộ kỵ', subordinates: 'Hoàng Quyền, Phùng Tập, Trương Nam, Ngô Ban, Triệu Vân(Hậu phương)', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Chiến bị toàn quốc', income: 18000, expense: 35000, food: 180000, gold: 45000 }, attributes: { 'Dũng Vũ': 55, 'Thao Lược': 82, 'Nội Chính': 80, 'Thống Ngự': 86, 'Khí Độ': 85, 'Sức Khỏe': 45 }, selectedTraits: [{ name: 'Chiến lược thất ngộ', effects: 'Thao Lược-10' }], crisis: 'Tuyến hậu cần cực kỳ mỏng manh do địa hình hẻm núi, Lục Tốn kiên bích thanh dã đã lộ sơ hở.' };
+                if (scriptName === '223 Bạch Đế Thác Cô') return { force: 'Thục Hán', classLevel: 'Đại Hán thiên tử', position: 'Hoàng đế', age: 62, children: 'Lưu Thiện', region: 'Vĩnh An Cung', power: 'Vài ngàn tàn binh', subordinates: 'Gia Cát Lượng, Lý Nghiêm, Triệu Vân', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Vĩnh An hành cung', income: 0, expense: 5000, food: 10000, gold: 5000 }, attributes: { 'Dũng Vũ': 20, 'Thao Lược': 75, 'Nội Chính': 70, 'Thống Ngự': 80, 'Khí Độ': 80, 'Sức Khỏe': 10 }, selectedTraits: [{ name: 'Bệnh cốt chi ly', effects: 'Sức Khỏe-30' }], crisis: 'Nam Trung phản loạn nổi lên bốn phía, ngươi bệnh nặng sắp chết, phải củng cố sự cân bằng quyền lực giữa Gia Cát Lượng và Lý Nghiêm.' };
+            }
+            return {};
+        }
+    },
+    'Tào Tháo': {
+        zi: 'Mạnh Đức',
+        scripts: {
+            'Diễn Nghĩa': ['184 Thái Bình Đạo Khởi', '189 Đế Đô Kinh Biến', '189 Mạnh Đức Hiến Đao', '190 Chư Hầu Hội Minh', '194 Tam Nhượng Từ Châu', '196 Hiệp Đế Lệnh Hầu', '197 Uyển Thành Chiết Tướng', '198 Bạch Môn Vẫn Mệnh', '199 Y Đái Mật Chiếu', '200 Quan Độ Liệt Hỏa', '207 Tẩu Mã Tiến Hiền', '208 Huyết Chiến Trường Bản', '208 Xích Bích Áo Binh', '210 Tam Khí Chu Du', '211 Tây Xuyên Đồ Nghiệp', '214 Tây Lương Quy Hàng', '215 Tiêu Dao Chiết Kích', '219 Định Quân Trảm Tướng'],
+            'Chính Sử': ['184 Hoàng Cân Khởi Nghĩa', '189 Đổng Trác Nhập Kinh', '192 Lý Quách Chi Loạn', '195 Bạch Mã Chi Minh', '196 Dĩ Lệnh Bất Thần', '200 Quan Độ Chi Chiến', '202 Kế Nghiệp Lập Cơ', '208 Xích Bích Chi Chiến', '211 Tây Xuyên Định Đỉnh', '215 Hợp Phì Chi Dịch', '219 Định Quân Dương Uy', '219 Kinh Châu Chi Tranh']
+        },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '184 Thái Bình Đạo Khởi') return { faction: 'Đại Hán triều đình(Quan quân)', classLevel: 'Hậu duệ hoạn quan', position: 'Kỵ đô úy', age: 29, children: 'Tào Ngang', region: 'Dĩnh Xuyên', power: 'Năm ngàn binh mã', subordinates: 'Hạ Hầu Đôn, Hạ Hầu Uyên, Tào Nhân, Tào Hồng', reputation: 'Châu Quận Trì Danh', assets: { name: 'Quân lương triều đình', income: 1000, expense: 1500, food: 5000, gold: 1000 }, attributes: { 'Dũng Vũ': 75, 'Thao Lược': 85, 'Nội Chính': 75, 'Thống Ngự': 88, 'Khí Độ': 10, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Loạn thế yêu tinh', effects: 'Thao Lược+40' }], crisis: 'Bị loạn quân Ba Tài bao vây, phải dùng kế hỏa công để mở đường máu.' };
+                if (scriptName === '189 Đế Đô Kinh Biến' || scriptName === '189 Mạnh Đức Hiến Đao') return { faction: 'Đổng Trác quân(Tiềm phục)', classLevel: 'Hậu duệ hoạn quan', position: 'Kiêu kỵ hiệu úy', age: 34, children: 'Tào Ngang', region: 'Trung Mâu', power: 'Hơn mười tùy tùng', subordinates: 'Không Có', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Thất tinh bảo đao', income: 0, expense: 50, food: 5, gold: 120 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 85, 'Nội Chính': 80, 'Thống Ngự': 85, 'Khí Độ': -10, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Gian hùng sơ lộ', effects: 'Thao Lược+20' }], crisis: 'Ám sát Đổng Trác thất bại, vừa giết cả nhà Lữ Bá Xa, đối mặt với sự cắn rứt lương tâm và quân truy kích.' };
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Quan Đông liên quân', classLevel: 'Hậu duệ hoạn quan', position: 'Phấn vũ tướng quân', age: 35, children: 'Tào Ngang', region: 'Huỳnh Dương', power: 'Năm ngàn binh mã', subordinates: 'Tào Nhân, Tào Hồng, Hạ Hầu Đôn, Hạ Hầu Uyên, Nhạc Tiến, Lý Điển', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Gia sản khởi binh', income: 500, expense: 2000, food: 3000, gold: 2000 }, attributes: { 'Dũng Vũ': 73, 'Thao Lược': 86, 'Nội Chính': 81, 'Thống Ngự': 86, 'Khí Độ': -5, 'Sức Khỏe': 78 }, selectedTraits: [{ name: 'Hùng tâm bột bột', effects: 'Thống Ngự+5' }], crisis: 'Một mình đuổi theo Đổng Trác bị Từ Vinh phục kích, chiến mã bị bắn gục, mạng sống ngàn cân treo sợi tóc.' };
+                if (scriptName === '194 Tam Nhượng Từ Châu') return { force: 'Duyện Châu Tào quân', classLevel: 'Duyện Châu quân phiệt', position: 'Duyện Châu mục', age: 39, children: 'Tào Ngang', region: 'Bộc Dương', power: 'Ba vạn binh mã', subordinates: 'Điển Vi, Tuân Úc, Trình Dục, Hạ Hầu Đôn, Tào Nhân', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Duyện Châu tàn tồn', income: 10000, expense: 15000, food: 20000, gold: 5000 }, attributes: { 'Dũng Vũ': 71, 'Thao Lược': 88, 'Nội Chính': 83, 'Thống Ngự': 89, 'Khí Độ': -15, 'Sức Khỏe': 76 }, selectedTraits: [{ name: 'Tàn nhẫn thị sát', effects: 'Khí Độ-10' }], crisis: 'Bị Lữ Bố dùng họa kích gõ vào mũ trụ hỏi "Tào Tháo ở đâu", hoàn toàn dựa vào việc che mặt để thoát thân.' };
+                if (scriptName === '196 Hiệp Đế Lệnh Hầu') return { force: 'Hứa Đô bá phủ', classLevel: 'Đương triều quyền thần', position: 'Tư không', age: 41, children: 'Tào Phi, Tào Ngang', region: 'Hứa Đô', power: 'Năm vạn binh mã', subordinates: 'Tuân Úc, Quách Gia, Điển Vi, Hứa Chử, Hạ Hầu Đôn, Tào Nhân', reputation: 'Quan Miện Quần Luân', assets: { name: 'Hứa Đô phủ khố', income: 45000, expense: 32000, food: 160000, gold: 65000 }, attributes: { 'Dũng Vũ': 72, 'Thao Lược': 90, 'Nội Chính': 88, 'Thống Ngự': 92, 'Khí Độ': -20, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Hiệp thiên tử', effects: 'Thống Ngự+10' }], crisis: 'Vừa nghênh phụng thiên tử, chư hầu nhìn chằm chằm, phải xác lập bá quyền.' };
+                if (scriptName === '197 Uyển Thành Chiết Tướng') return { force: 'Tào thị bá phủ', classLevel: 'Đương triều quyền thần', position: 'Thừa tướng', age: 42, children: 'Tào Phi', region: 'Uyển Thành', power: 'Năm vạn binh mã', subordinates: 'Điển Vi, Hứa Chử, Tào Ngang, Tào An Dân, Tuân Du', reputation: 'Quan Miện Quần Luân', assets: { name: 'Hứa Đô phủ khố', income: 45000, expense: 32000, food: 160000, gold: 65000 }, attributes: { 'Dũng Vũ': 72, 'Thao Lược': 90, 'Nội Chính': 88, 'Thống Ngự': 92, 'Khí Độ': -20, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Hảo sắc chi đồ', effects: 'Khí Độ-30' }], crisis: 'Cưỡng nạp Trâu thị chọc giận Trương Tú, đại doanh bị hỏa công, Điển Vi tử chiến, ngươi trúng một mũi tên ở vai.' };
+                if (scriptName === '198 Bạch Môn Vẫn Mệnh') return { force: 'Tào thị bá phủ', classLevel: 'Đương triều quyền thần', position: 'Thừa tướng', age: 43, children: 'Tào Phi', region: 'Hạ Phì', power: 'Tám vạn binh mã', subordinates: 'Quách Gia, Tuân Du, Hứa Chử, Hạ Hầu Đôn, Tào Nhân', reputation: 'Quan Miện Quần Luân', assets: { name: 'Lương thảo đông chinh', income: 20000, expense: 35000, food: 100000, gold: 40000 }, attributes: { 'Dũng Vũ': 71, 'Thao Lược': 91, 'Nội Chính': 89, 'Thống Ngự': 93, 'Khí Độ': -22, 'Sức Khỏe': 73 }, selectedTraits: [{ name: 'Thủy yêm Hạ Phì', effects: 'Nội Chính-5' }], crisis: 'Vây lâu không hạ được, đối mặt với lựa chọn phá đê ngập thành mang tiếng xấu.' };
+                if (scriptName === '199 Y Đái Mật Chiếu') return { force: 'Tào thị bá phủ', classLevel: 'Đương triều quyền thần', position: 'Thừa tướng', age: 44, children: 'Tào Phi', region: 'Hứa Đô', power: 'Mười vạn binh mã', subordinates: 'Tuân Úc, Trình Dục, Quách Gia, Hứa Chử, Trương Liêu', reputation: 'Di Xú Phủ Việt', assets: { name: 'Hứa Đô quốc khố', income: 50000, expense: 40000, food: 200000, gold: 80000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 92, 'Nội Chính': 90, 'Thống Ngự': 94, 'Khí Độ': -24, 'Sức Khỏe': 71 }, selectedTraits: [{ name: 'Hiệp thiên tử', effects: 'Thống Ngự+5' }], crisis: 'Y đái chiếu bị lộ, treo cổ Đổng quý phi, Lưu Bị phản phán, Viên Thiệu xuôi nam, chịu cảnh thù trong giặc ngoài.' };
+                if (scriptName === '200 Quan Độ Liệt Hỏa') return { force: 'Tào thị bá phủ', classLevel: 'Đương triều quyền thần', position: 'Thừa tướng', age: 45, children: 'Tào Phi', region: 'Quan Độ', power: 'Bảy vạn binh mã', subordinates: 'Quách Gia, Tuân Du, Hứa Du, Trương Liêu, Từ Hoảng, Hứa Chử', reputation: 'Quan Miện Quần Luân', assets: { name: 'Lương thực Quan Độ', income: 12000, expense: 35000, food: 22000, gold: 12000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 92, 'Nội Chính': 90, 'Thống Ngự': 95, 'Khí Độ': -25, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Toán vô di sách', effects: 'Thao Lược+30' }], crisis: 'Lương thảo đã cạn, Hứa Du đến đầu quân, ngươi đi chân trần ra đón, chuẩn bị kỳ tập Ô Sào.' };
+                if (scriptName === '207 Tẩu Mã Tiến Hiền') return { force: 'Tào thị bá phủ', classLevel: 'Đương triều quyền thần', position: 'Thừa tướng', age: 52, children: 'Tào Phi', region: 'Hứa Đô', power: 'Hai mươi vạn binh mã', subordinates: 'Trình Dục, Tuân Úc, Hứa Chử, Trương Liêu, Tào Nhân', reputation: 'Quan Miện Quần Luân', assets: { name: 'Quân nhu viễn chinh', income: 5000, expense: 40000, food: 30000, gold: 20000 }, attributes: { 'Dũng Vũ': 67, 'Thao Lược': 94, 'Nội Chính': 91, 'Thống Ngự': 96, 'Khí Độ': -28, 'Sức Khỏe': 64 }, selectedTraits: [{ name: 'Bình định bắc phương', effects: 'Thống Ngự+5' }], crisis: 'Dùng thư giả lừa Từ Thứ khiến mẹ hắn thắt cổ tự tử, mang tiếng ác bức tử bà lão.' };
+                if (scriptName === '208 Huyết Chiến Trường Bản' || scriptName === '208 Xích Bích Áo Binh') return { force: 'Nam chinh đại quân', classLevel: 'Đương triều quyền thần', position: 'Thừa tướng', age: 53, children: 'Tào Phi', region: 'Hoa Dung Đạo', power: 'Hai mươi vạn tàn binh', subordinates: 'Trương Liêu, Hứa Chử, Trình Dục, Từ Hoảng, Tào Nhân', reputation: 'Quan Miện Quần Luân', assets: { name: 'Vật tư Giang Lăng', income: 65000, expense: 85000, food: 420000, gold: 160000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 95, 'Nội Chính': 92, 'Thống Ngự': 98, 'Khí Độ': -30, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Đa nghi tàn nhẫn', effects: 'Khí Độ-40' }], crisis: 'Xích Bích đại bại trốn vào Hoa Dung Đạo, phía trước Quan Vũ đang xách đao chặn đường.' };
+                if (scriptName === '210 Tam Khí Chu Du') return { force: 'Tào thị bá phủ', classLevel: 'Đương triều quyền thần', position: 'Thừa tướng', age: 55, children: 'Tào Phi', region: 'Đồng Tước Đài', power: 'Ba mươi vạn binh mã', subordinates: 'Tuân Úc, Giả Hủ, Trình Dục, Trương Liêu, Hứa Chử', reputation: 'Quan Miện Quần Luân', assets: { name: 'Thuế má phương bắc', income: 80000, expense: 60000, food: 500000, gold: 200000 }, attributes: { 'Dũng Vũ': 63, 'Thao Lược': 96, 'Nội Chính': 93, 'Thống Ngự': 98, 'Khí Độ': -32, 'Sức Khỏe': 55 }, selectedTraits: [{ name: 'Đầu phong phát tác', effects: 'Sức Khỏe-10' }], crisis: 'Đầu phong tái phát đau đớn không muốn sống, phía tây Mã Đằng Hàn Toại nhìn chằm chằm.' };
+                if (scriptName === '211 Tây Xuyên Đồ Nghiệp' || scriptName === '214 Tây Lương Quy Hàng') return { force: 'Tây chinh đại quân', classLevel: 'Đương triều quyền thần', position: 'Thừa tướng', age: 56, children: 'Tào Phi', region: 'Vị Thủy', power: 'Ba mươi hai vạn binh mã', subordinates: 'Hứa Chử, Giả Hủ, Trương Liêu, Từ Hoảng', reputation: 'Quan Miện Quần Luân', assets: { name: 'Chiến bị Quan Trung', income: 40000, expense: 50000, food: 200000, gold: 80000 }, attributes: { 'Dũng Vũ': 62, 'Thao Lược': 97, 'Nội Chính': 94, 'Thống Ngự': 99, 'Khí Độ': -33, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Cát tu khí bào', effects: 'Khí Độ-5' }], crisis: 'Bị Mã Siêu giết đến mức cắt râu vứt áo, phải dùng kế bôi thư của Giả Hủ để phân hóa quân địch.' };
+                if (scriptName === '215 Tiêu Dao Chiết Kích') return { force: 'Ngụy công bá phủ', classLevel: 'Thụ phong chư hầu', position: 'Ngụy công', age: 60, children: 'Tào Phi', region: 'Hán Trung', power: 'Ba mươi tám vạn binh mã', subordinates: 'Trương Liêu, Hạ Hầu Uyên, Tư Mã Ý, Hứa Chử, Trương Cáp', reputation: 'Quan Miện Quần Luân', assets: { name: 'Chiến lợi phẩm Hán Trung', income: 50000, expense: 60000, food: 250000, gold: 100000 }, attributes: { 'Dũng Vũ': 56, 'Thao Lược': 98, 'Nội Chính': 97, 'Thống Ngự': 99, 'Khí Độ': -36, 'Sức Khỏe': 35 }, selectedTraits: [{ name: 'Nam tuyến cáo cấp', effects: 'Thống Ngự-5' }], crisis: 'Vừa bình định Hán Trung, Tôn Quyền mười vạn đại quân vây Hợp Phì, ngươi không thể phân binh.' };
+                if (scriptName === '219 Định Quân Trảm Tướng') return { force: 'Ngụy vương bá phủ', classLevel: 'Thụ phong vương hầu', position: 'Ngụy vương', age: 64, children: 'Tào Phi', region: 'Lạc Dương', power: 'Năm mươi vạn binh mã', subordinates: 'Tư Mã Ý, Giả Hủ, Tưởng Tế, Hứa Chử, Từ Hoảng', reputation: 'Quan Miện Quần Luân', assets: { name: 'Ngụy vương nội khố', income: 160000, expense: 110000, food: 850000, gold: 420000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 96, 'Nội Chính': 95, 'Thống Ngự': 95, 'Khí Độ': -35, 'Sức Khỏe': 20 }, selectedTraits: [{ name: 'Đầu phong ngoan tật', effects: 'Sức Khỏe-50' }], crisis: 'Quan Vũ thủy yêm thất quân, ngươi đau đầu phát tác giết Hoa Đà xong kinh hãi muốn dời đô.' };
+            } else {
+                if (scriptName === '184 Hoàng Cân Khởi Nghĩa') return { faction: 'Đại Hán triều đình(Quan quân)', classLevel: 'Quan hoạn tử đệ', position: 'Kỵ đô úy', age: 29, children: 'Tào Ngang', region: 'Dĩnh Xuyên', power: 'Hai ngàn binh mã', subordinates: 'Hạ Hầu Đôn, Tào Nhân', reputation: 'Châu Quận Trì Danh', assets: { name: 'Quân tư ít ỏi', income: 500, expense: 800, food: 2000, gold: 500 }, attributes: { 'Dũng Vũ': 75, 'Thao Lược': 85, 'Nội Chính': 80, 'Thống Ngự': 85, 'Khí Độ': 60, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Trị thế năng thần', effects: 'Nội Chính+30' }], crisis: 'Bám sát chủ lực Hoàng Phủ Tung, nếu không sẽ bị lưu dân Hoàng Cân nhấn chìm bất cứ lúc nào.' };
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Quan Đông liên quân', classLevel: 'Quan hoạn tử đệ', position: 'Kiêu kỵ hiệu úy', age: 34, children: 'Tào Ngang', region: 'Trần Lưu', power: 'Năm ngàn binh mã', subordinates: 'Hạ Hầu Đôn, Tào Nhân, Hạ Hầu Uyên, Tào Hồng, Nhạc Tiến, Lý Điển', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Gia sản bán đi', income: 1000, expense: 3000, food: 5000, gold: 2000 }, attributes: { 'Dũng Vũ': 77, 'Thao Lược': 88, 'Nội Chính': 82, 'Thống Ngự': 87, 'Khí Độ': 65, 'Sức Khỏe': 82 }, selectedTraits: [{ name: 'Hủy gia trữ nạn', effects: 'Khí Độ+5' }], crisis: 'Tán tận gia tài chiêu mộ nghĩa quân, nhưng trong hương đảng có nhiều kẻ đứng nhìn.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Duyện Châu mục phủ', classLevel: 'Duyện Châu mục', position: 'Duyện Châu mục', age: 37, children: 'Tào Phi', region: 'Duyện Châu', power: 'Ba vạn Thanh Châu binh', subordinates: 'Tuân Úc, Trình Dục, Điển Vi, Hạ Hầu Đôn, Tào Nhân', reputation: 'Châu Quận Trì Danh', assets: { name: 'Ruộng thuế Duyện Châu', income: 9000, expense: 13000, food: 22000, gold: 4500 }, attributes: { 'Dũng Vũ': 78, 'Thao Lược': 90, 'Nội Chính': 85, 'Thống Ngự': 90, 'Khí Độ': 70, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Thu biên hàng tốt', effects: 'Thống Ngự+5' }], crisis: 'Gặp nạn châu chấu nghiêm trọng đại quân cạn lương, quân đội sắp sửa xôn xao binh biến.' };
+                if (scriptName === '195 Bạch Mã Chi Minh') return { force: 'Duyện Châu mục phủ', classLevel: 'Duyện Châu mục', position: 'Duyện Châu mục', age: 40, children: 'Tào Phi', region: 'Quyên Thành', power: 'Bốn vạn binh mã', subordinates: 'Tuân Úc, Trình Dục, Điển Vi, Tào Nhân', reputation: 'Châu Quận Trì Danh', assets: { name: 'Đồn điền Duyện Châu', income: 15000, expense: 12000, food: 60000, gold: 12000 }, attributes: { 'Dũng Vũ': 76, 'Thao Lược': 92, 'Nội Chính': 88, 'Thống Ngự': 91, 'Khí Độ': 72, 'Sức Khỏe': 74 }, selectedTraits: [{ name: 'Duy tài thị cử', effects: 'Nội Chính+10' }], crisis: 'Lữ Bố tuy bại nhưng dư nghiệt vẫn còn, Từ Châu Lưu Bị và Viên Thuật dây dưa, ngươi đang chờ thời cơ khuếch trương.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { force: 'Hứa Đô bá phủ', classLevel: 'Đương triều tư không', position: 'Tư không', age: 41, children: 'Tào Phi', region: 'Hứa Xương', power: 'Năm vạn tinh nhuệ', subordinates: 'Tuân Úc, Quách Gia, Tuân Du, Trình Dục, Hứa Chử, Trương Liêu', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Đồn điền Hứa Hạ', income: 32000, expense: 26000, food: 110000, gold: 32000 }, attributes: { 'Dũng Vũ': 75, 'Thao Lược': 94, 'Nội Chính': 95, 'Thống Ngự': 92, 'Khí Độ': 75, 'Sức Khỏe': 72 }, selectedTraits: [{ name: 'Thâm mưu viễn lự', effects: 'Thao Lược+25' }], crisis: 'Đẩy mạnh chế độ đồn điền, Viên Thiệu chê quan nhỏ muốn ép ngươi nhường chức đại tướng quân.' };
+                if (scriptName === '200 Quan Độ Chi Chiến') return { force: 'Tào thị bá phủ', classLevel: 'Đương triều tư không', position: 'Tư không', age: 45, children: 'Tào Phi', region: 'Tiền tuyến Quan Độ', power: 'Hơn ba vạn binh mã', subordinates: 'Quách Gia, Tuân Du, Trương Liêu, Từ Hoảng, Hứa Chử, Tào Nhân', reputation: 'Quan Miện Quần Luân', assets: { name: 'Kho lương Quan Độ', income: 11000, expense: 36000, food: 16000, gold: 11000 }, attributes: { 'Dũng Vũ': 72, 'Thao Lược': 96, 'Nội Chính': 96, 'Thống Ngự': 96, 'Khí Độ': 80, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Duy tài thị cử', effects: 'Nội Chính+20' }], crisis: 'Lương thảo trong quân chỉ còn vài ngày, Hứa Du đến hàng ngươi quyết định kỳ tập Ô Sào.' };
+                if (scriptName === '202 Kế Nghiệp Lập Cơ') return { force: 'Tào thị bá phủ', classLevel: 'Đương triều tư không', position: 'Tư không', age: 47, children: 'Tào Phi', region: 'Tiền tuyến Lê Dương', power: 'Mười vạn binh mã', subordinates: 'Quách Gia, Trình Dục, Tuân Úc, Trương Liêu, Trương Cáp', reputation: 'Quan Miện Quần Luân', assets: { name: 'Chiến lợi phẩm Hà Bắc', income: 50000, expense: 45000, food: 200000, gold: 60000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 96, 'Nội Chính': 97, 'Thống Ngự': 97, 'Khí Độ': 82, 'Sức Khỏe': 66 }, selectedTraits: [{ name: 'Tọa thu ngư lợi', effects: 'Thao Lược+5' }], crisis: 'Ở Lê Dương cường công không hạ được, đành phải giả vờ lui binh dụ Viên thị nội đấu.' };
+                if (scriptName === '208 Xích Bích Chi Chiến') return { force: 'Nam chinh đại quân', classLevel: 'Đương triều thừa tướng', position: 'Thừa tướng', age: 53, children: 'Tào Phi', region: 'Đại doanh Ô Lâm', power: 'Mười lăm vạn quân xuôi nam', subordinates: 'Giả Hủ, Trình Dục, Trương Liêu, Trương Cáp, Hứa Chử', reputation: 'Quan Miện Quần Luân', assets: { name: 'Thủy sư tiếp quản Kinh Châu', income: 85000, expense: 105000, food: 520000, gold: 125000 }, attributes: { 'Dũng Vũ': 68, 'Thao Lược': 95, 'Nội Chính': 98, 'Thống Ngự': 97, 'Khí Độ': 85, 'Sức Khỏe': 62 }, selectedTraits: [{ name: 'Hùng tài đại lược', effects: 'Khí Độ+25' }], crisis: 'Binh sĩ phương bắc nghiêm trọng không quen thủy thổ dịch bệnh hoành hành, Chu Du mượn gió phóng hỏa thủy quân của ngươi bị tiêu diệt.' };
+                if (scriptName === '211 Tây Xuyên Định Đỉnh') return { force: 'Tây chinh đại quân', classLevel: 'Đương triều thừa tướng', position: 'Thừa tướng', age: 56, children: 'Tào Phi', region: 'Quan Trung', power: 'Mười hai vạn binh mã', subordinates: 'Giả Hủ, Hứa Chử, Trương Liêu, Từ Hoảng', reputation: 'Quan Miện Quần Luân', assets: { name: 'Thuế má Quan Trung', income: 20000, expense: 60000, food: 150000, gold: 50000 }, attributes: { 'Dũng Vũ': 66, 'Thao Lược': 97, 'Nội Chính': 98, 'Thống Ngự': 98, 'Khí Độ': 86, 'Sức Khỏe': 58 }, selectedTraits: [{ name: 'Mạt thư gián tướng', effects: 'Thao Lược+5' }], crisis: 'Khi qua sông bị kẹp đánh, đại quân khó triển khai đội hình có thể bị tiêu diệt bất cứ lúc nào.' };
+                if (scriptName === '215 Hợp Phì Chi Dịch') return { force: 'Ngụy công bá phủ', classLevel: 'Thụ phong công tước', position: 'Ngụy công', age: 60, children: 'Tào Phi', region: 'Hán Trung', power: 'Mười lăm vạn đại quân', subordinates: 'Trương Cáp, Quách Hoài, Tư Mã Ý, Trương Liêu(Thủ Hợp Phì)', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đồn điền Hán Trung', income: 32000, expense: 52000, food: 130000, gold: 42000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 98, 'Nội Chính': 99, 'Thống Ngự': 98, 'Khí Độ': 88, 'Sức Khỏe': 55 }, selectedTraits: [{ name: 'Lão ký phục lịch', effects: 'Thống Ngự+15' }], crisis: 'Chinh phạt Trương Lỗ đường sá hiểm trở, Tôn Quyền mười vạn đại quân vây Hợp Phì ngươi không thể phân binh.' };
+                if (scriptName === '219 Định Quân Dương Uy' || scriptName === '219 Kinh Châu Chi Tranh') return { force: 'Ngụy vương bá phủ', classLevel: 'Thụ phong vương tước', position: 'Ngụy vương', age: 64, children: 'Tào Phi', region: 'Lạc Dương', power: 'Mười sáu vạn binh mã', subordinates: 'Tư Mã Ý, Giả Hủ, Tưởng Tế, Hứa Chử, Từ Hoảng', reputation: 'Quan Miện Quần Luân', assets: { name: 'Thuế má thiên hạ', income: 150000, expense: 120000, food: 800000, gold: 300000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 99, 'Nội Chính': 100, 'Thống Ngự': 100, 'Khí Độ': 90, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Phong chúc tàn niên', effects: 'Sức Khỏe-10' }], crisis: 'Quan Vũ thủy yêm thất quân uy chấn Hoa Hạ, ngươi phải dựa vào thủ đoạn ngoại giao để giải vây Phàn Thành.' };
+            }
+            return {};
+        }
+    },
+    'Ôn Uyển': {
+        zi: 'Trọng Mưu',
+        scripts: {
+            'Diễn Nghĩa': ['200 Thiên Lý Tầm Huynh', '207 Tam Cố Mao Lư', '208 Thiệt Chiến Quần Nho', '208 Xích Bích Áo Binh', '210 Tam Khí Chu Du', '211 Tây Xuyên Đồ Nghiệp', '214 Tây Lương Quy Hàng', '215 Đơn Đao Phó Hội', '215 Tiêu Dao Chiết Kích', '219 Bạch Y Độ Giang', '221 Phạt Ngô Tuyết Hận', '222 Hỏa Thiêu Liên Doanh', '223 Bạch Đế Thác Cô', '225 Thất Cầm Mạnh Hoạch', '227 Xuất Sư Thượng Biểu', '228 Không Thành Chi Kế', '229 Trần Thương Công Thủ', '230 Vũ Đô Âm Bình', '231 Mộc Môn Phục Kích', '234 Thượng Phương Cốc Kế', '238 Đạp Tuyết Bình Liêu', '239 Thác Cô Tư Mã', '241 Tái Chiến Hợp Phì', '249 Lạc Thủy Bội Thệ', '251 Hoài Nam Thủ Phản'],
+            'Chính Sử': ['200 Quan Độ Chi Chiến', '202 Kế Nghiệp Lập Cơ', '208 Xích Bích Chi Chiến', '211 Tây Xuyên Định Đỉnh', '215 Hợp Phì Chi Dịch', '219 Kinh Châu Chi Tranh', '221 Di Lăng Chi Chiến', '225 Nam Trung Chi Dịch', '228 Sơ Xuất Kỳ Sơn', '234 Lục Xuất Kỳ Sơn', '238 Thừa Chí Khởi Phạt', '249 Bội Thệ Lạc Thủy', '251 Hoài Nam Thủ Phản']
+        },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName.startsWith('200') || scriptName.startsWith('207')) return { force: 'Giang Đông Tôn thị', classLevel: 'Tướng môn chi hậu', position: 'Ngô Hầu', age: 25, children: 'Không Có', region: 'Ngô Quận', power: 'Sáu vạn binh mã', subordinates: 'Trương Chiêu, Chu Du, Trình Phổ, Hoàng Cái, Hàn Đương, Lỗ Túc', reputation: 'Châu Quận Trì Danh', assets: { name: 'Giang Đông phú thuế', income: 40000, expense: 30000, food: 200000, gold: 80000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 75, 'Nội Chính': 85, 'Thống Ngự': 85, 'Khí Độ': 70, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Bích nhãn tử nhiêm', effects: 'Khí Độ+20' }], crisis: 'Huynh trưởng bị ám sát, Sơn Việt nổi loạn, đám văn quan Trương Chiêu chủ trương hàng Tào Tháo.' };
+                if (scriptName.startsWith('208')) return { force: 'Đông Ngô', classLevel: 'Giang Đông bá chủ', position: 'Ngô Hầu', age: 26, children: 'Không Có', region: 'Kiến Nghiệp', power: 'Tám vạn binh mã', subordinates: 'Chu Du, Lỗ Túc, Hoàng Cái, Lữ Mông, Cam Ninh', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Quân nhu bị chiến', income: 50000, expense: 80000, food: 300000, gold: 100000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 76, 'Nội Chính': 86, 'Thống Ngự': 86, 'Khí Độ': 72, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Bạt kiếm khảm án', effects: 'Khí Độ+5' }], crisis: 'Đại quân Tào Tháo áp sát biên giới, Gia Cát Lượng khẩu chiến quần nho khích ngươi chống Tào, ngươi rút kiếm chém bàn định quân tâm.' };
+                if (scriptName.startsWith('210') || scriptName.startsWith('211') || scriptName.startsWith('214')) return { force: 'Đông Ngô', classLevel: 'Giang Đông bá chủ', position: 'Ngô Hầu', age: 28, children: 'Không Có', region: 'Kiến Nghiệp', power: 'Chín vạn binh mã', subordinates: 'Chu Du, Lỗ Túc, Lữ Mông, Cam Ninh, Lăng Thống', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Giang Đông cơ nghiệp', income: 55000, expense: 40000, food: 350000, gold: 120000 }, attributes: { 'Dũng Vũ': 61, 'Thao Lược': 77, 'Nội Chính': 87, 'Thống Ngự': 87, 'Khí Độ': 73, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Bồi liễu phu nhân', effects: 'Khí Độ-5' }], crisis: 'Lưu Bị mượn Kinh Châu không trả, kế giả đồ diệt Quắc của Chu Du lại bị nhìn thấu.' };
+                if (scriptName.startsWith('215')) return { force: 'Đông Ngô', classLevel: 'Giang Đông bá chủ', position: 'Ngô Hầu', age: 33, children: 'Tôn Đăng', region: 'Tiêu Dao Tân', power: 'Mười vạn binh mã', subordinates: 'Lữ Mông, Cam Ninh, Lăng Thống, Chu Thái, Từ Thịnh', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Quân lương viễn chinh', income: 30000, expense: 60000, food: 150000, gold: 50000 }, attributes: { 'Dũng Vũ': 62, 'Thao Lược': 78, 'Nội Chính': 88, 'Thống Ngự': 88, 'Khí Độ': 74, 'Sức Khỏe': 79 }, selectedTraits: [{ name: 'Tiêu Dao nhất dược', effects: 'Dũng Vũ+5' }], crisis: 'Vây đánh Hợp Phì bị Trương Liêu đánh bại, tại Tiêu Dao Tân đối mặt với tuyệt cảnh bị bắt sống.' };
+                if (scriptName.startsWith('219')) return { force: 'Đông Ngô', classLevel: 'Giang Đông bá chủ', position: 'Ngô Hầu', age: 37, children: 'Tôn Đăng', region: 'Kiến Nghiệp', power: 'Mười hai vạn binh mã', subordinates: 'Lữ Mông, Lục Tốn, Lỗ Túc(Đã mất), Từ Thịnh', reputation: 'Quan Miện Quần Luân', assets: { name: 'Kinh Châu phú thuế', income: 80000, expense: 50000, food: 400000, gold: 150000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 80, 'Nội Chính': 89, 'Thống Ngự': 89, 'Khí Độ': 75, 'Sức Khỏe': 78 }, selectedTraits: [{ name: 'Bạch Y Độ Giang', effects: 'Thao Lược+5' }], crisis: 'Đoạt lại Kinh Châu nhưng Lữ Mông đột phát bạo bệnh chết, Lưu Bị tất sẽ dấy binh báo thù.' };
+                if (scriptName === '221 Phạt Ngô Tuyết Hận') return { force: 'Đông Ngô', classLevel: 'Giang Đông chi chủ', position: 'Ngô Vương', age: 39, children: 'Tôn Đăng', region: 'Vũ Xương', power: 'Mười lăm vạn binh mã', subordinates: 'Lục Tốn, Gia Cát Cẩn, Hàn Đương, Chu Thái', reputation: 'Quan Miện Quần Luân', assets: { name: 'Chiến bị kháng Thục', income: 60000, expense: 80000, food: 350000, gold: 120000 }, attributes: { 'Dũng Vũ': 59, 'Thao Lược': 81, 'Nội Chính': 90, 'Thống Ngự': 90, 'Khí Độ': 76, 'Sức Khỏe': 77 }, selectedTraits: [{ name: 'Khởi dụng thư sinh', effects: 'Thống Ngự+5' }], crisis: 'Ngươi gạt bỏ mọi ý kiến phản đối để trọng dụng Lục Tốn, nhưng các lão tướng phần nhiều không phục.' };
+                if (scriptName === '222 Hỏa Thiêu Liên Doanh') return { force: 'Đông Ngô', classLevel: 'Giang Đông chi chủ', position: 'Ngô Vương', age: 40, children: 'Tôn Đăng', region: 'Kiến Nghiệp', power: 'Mười sáu vạn binh mã', subordinates: 'Lục Tốn, Từ Thịnh, Phan Chương', reputation: 'Quan Miện Quần Luân', assets: { name: 'Giang Đông phủ khố', income: 80000, expense: 60000, food: 400000, gold: 150000 }, attributes: { 'Dũng Vũ': 58, 'Thao Lược': 82, 'Nội Chính': 91, 'Thống Ngự': 91, 'Khí Độ': 77, 'Sức Khỏe': 76 }, selectedTraits: [{ name: 'Tam lộ ngự Ngụy', effects: 'Nội Chính+5' }], crisis: 'Tào Phi nhân cơ hội chia ba đường phạt Ngô, bắt buộc phải ra lệnh Lục Tốn rút về chống đỡ.' };
+                if (scriptName.startsWith('223') || scriptName.startsWith('225') || scriptName.startsWith('227') || scriptName.startsWith('228') || scriptName.startsWith('229') || scriptName.startsWith('230') || scriptName.startsWith('231')) return { force: 'Đại Ngô', classLevel: 'Ngô Đại Đế', position: 'Hoàng đế', age: 41, children: 'Tôn Đăng', region: 'Kiến Nghiệp', power: 'Mười tám vạn binh mã', subordinates: 'Lục Tốn, Cố Ung, Gia Cát Cẩn', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đông Ngô quốc khố', income: 90000, expense: 70000, food: 500000, gold: 200000 }, attributes: { 'Dũng Vũ': 57, 'Thao Lược': 83, 'Nội Chính': 92, 'Thống Ngự': 92, 'Khí Độ': 78, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Liên Thục kháng Ngụy', effects: 'Khí Độ+5' }], crisis: 'Thục Hán nhiều lần bắc phạt, ngươi cần phối hợp xuất binh.' };
+                if (scriptName.startsWith('234') || scriptName.startsWith('238') || scriptName.startsWith('239') || scriptName.startsWith('241') || scriptName.startsWith('249') || scriptName.startsWith('251')) return { force: 'Đại Ngô', classLevel: 'Ngô Đại Đế', position: 'Hoàng đế', age: 67, children: 'Tôn Lượng, Tôn Hòa', region: 'Kiến Nghiệp', power: 'Hai mươi vạn binh mã', subordinates: 'Gia Cát Khác, Lục Tốn, Bộ Chất', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Đông Ngô quốc khố', income: 100000, expense: 80000, food: 600000, gold: 300000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 85, 'Nội Chính': 95, 'Thống Ngự': 90, 'Khí Độ': 60, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Vãn tiết bất bảo', effects: 'Khí Độ-20' }], crisis: 'Tuổi già nghi kỵ công thần, nhị cung chi tranh bùng nổ.' };
+            } else {
+                if (scriptName === '200 Quan Độ Chi Chiến' || scriptName === '202 Kế Nghiệp Lập Cơ') return { force: 'Giang Đông Tôn thị', classLevel: 'Tướng môn chi hậu', position: 'Thảo Lỗ tướng quân', age: 18, children: 'Không Có', region: 'Ngô Quận', power: 'Bốn vạn bộ khúc', subordinates: 'Trương Chiêu, Chu Du, Trình Phổ, Hoàng Cái', reputation: 'Châu Quận Trì Danh', assets: { name: 'Giang Đông phú thuế', income: 30000, expense: 25000, food: 150000, gold: 50000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 80, 'Nội Chính': 85, 'Thống Ngự': 88, 'Khí Độ': 80, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Chế hành chi thuật', effects: 'Nội Chính+30' }], crisis: 'Tôn Sách bạo tễ, Lý Thuật làm phản, bốn đại gia tộc Giang Đông đối với ngươi giữ thái độ quan vọng.' };
+                if (scriptName === '208 Xích Bích Chi Chiến') return { force: 'Giang Đông chính quyền', classLevel: 'Giang Đông bá chủ', position: 'Thảo Lỗ tướng quân', age: 26, children: 'Không Có', region: 'Sài Tang', power: 'Năm vạn thủy sư', subordinates: 'Chu Du, Lỗ Túc, Trình Phổ, Lữ Mông', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Vật tư bị chiến', income: 40000, expense: 50000, food: 200000, gold: 80000 }, attributes: { 'Dũng Vũ': 63, 'Thao Lược': 82, 'Nội Chính': 87, 'Thống Ngự': 90, 'Khí Độ': 82, 'Sức Khỏe': 83 }, selectedTraits: [{ name: 'Liên Lưu kháng Tào', effects: 'Thao Lược+5' }], crisis: 'Đại quân Tào Tháo áp sát biên giới, sĩ tộc Giang Đông đều chủ trương đầu hàng, ngươi bắt buộc phải cùng Chu Du đánh thắng trận chiến quốc vận này.' };
+                if (scriptName === '211 Tây Xuyên Định Đỉnh') return { force: 'Giang Đông chính quyền', classLevel: 'Giang Đông bá chủ', position: 'Thảo Lỗ tướng quân', age: 29, children: 'Tôn Đăng', region: 'Kinh Khẩu', power: 'Sáu vạn binh mã', subordinates: 'Lỗ Túc, Lữ Mông, Bộ Chất', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Giang Đông phú thuế', income: 45000, expense: 35000, food: 220000, gold: 90000 }, attributes: { 'Dũng Vũ': 62, 'Thao Lược': 83, 'Nội Chính': 88, 'Thống Ngự': 91, 'Khí Độ': 83, 'Sức Khỏe': 82 }, selectedTraits: [{ name: 'Tá định Kinh Châu', effects: 'Thao Lược+10' }], crisis: 'Chu Du bệnh mất, Lỗ Túc khuyên ngươi cho Lưu Bị mượn Kinh Châu để chống Tào Tháo.' };
+                if (scriptName === '215 Hợp Phì Chi Dịch') return { force: 'Đông Ngô', classLevel: 'Giang Đông bá chủ', position: 'Xa Kỵ tướng quân', age: 33, children: 'Tôn Đăng', region: 'Dưới thành Hợp Phì', power: 'Mười vạn binh mã', subordinates: 'Lữ Mông, Cam Ninh, Lăng Thống, Trần Vũ', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Lương thảo viễn chinh', income: 20000, expense: 70000, food: 100000, gold: 30000 }, attributes: { 'Dũng Vũ': 61, 'Thao Lược': 84, 'Nội Chính': 89, 'Thống Ngự': 92, 'Khí Độ': 84, 'Sức Khỏe': 81 }, selectedTraits: [{ name: 'Khinh địch mạo tiến', effects: 'Thống Ngự-5' }], crisis: 'Khinh địch mạo tiến bị tám trăm đội cảm tử của Trương Liêu đâm thủng trung quân, tại Tiêu Dao Tân suýt bị bắt sống.' };
+                if (scriptName === '219 Kinh Châu Chi Tranh') return { force: 'Đông Ngô', classLevel: 'Phiêu Kỵ tướng quân', position: 'Phiêu Kỵ tướng quân', age: 37, children: 'Tôn Đăng', region: 'Kiến Nghiệp', power: 'Mười vạn binh mã', subordinates: 'Lữ Mông, Lục Tốn, Gia Cát Cẩn', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Quân tư đột kích', income: 50000, expense: 60000, food: 250000, gold: 100000 }, attributes: { 'Dũng Vũ': 59, 'Thao Lược': 86, 'Nội Chính': 91, 'Thống Ngự': 94, 'Khí Độ': 86, 'Sức Khỏe': 79 }, selectedTraits: [{ name: 'Duy lợi thị đồ', effects: 'Khí Độ-5' }], crisis: 'Quyết định bội ước liên minh xưng thần với Tào Tháo đổi lấy yểm trợ, phái Lữ Mông đánh lén Kinh Châu.' };
+                if (scriptName === '221 Di Lăng Chi Chiến') return { faction: 'Tào Ngụy(Xưng thần)', classLevel: 'Ngô Vương(Ngụy phong)', position: 'Ngô Vương', age: 39, children: 'Tôn Đăng', region: 'Vũ Xương', power: 'Mười một vạn binh mã', subordinates: 'Lục Tốn, Từ Thịnh, Phan Chương, Gia Cát Cẩn', reputation: 'Quan Miện Quần Luân', assets: { name: 'Quân nhu kháng Thục', income: 60000, expense: 70000, food: 300000, gold: 90000 }, attributes: { 'Dũng Vũ': 57, 'Thao Lược': 88, 'Nội Chính': 93, 'Thống Ngự': 96, 'Khí Độ': 88, 'Sức Khỏe': 77 }, selectedTraits: [{ name: 'Năng khuất năng thân', effects: 'Khí Độ+5' }], crisis: 'Lưu Bị dốc toàn quốc phạt Ngô, hướng Tào Ngụy xưng thần bị ghẻ lạnh, Tào Phi đồn binh chuẩn bị ngư ông đắc lợi.' };
+                if (scriptName === '225 Nam Trung Chi Dịch' || scriptName === '228 Sơ Xuất Kỳ Sơn') return { force: 'Đông Ngô', classLevel: 'Giang Đông chi chủ', position: 'Ngô Vương', age: 43, children: 'Tôn Đăng', region: 'Kiến Nghiệp', power: 'Mười hai vạn binh mã', subordinates: 'Lục Tốn, Gia Cát Cẩn, Bộ Chất', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đông Ngô quốc khố', income: 70000, expense: 60000, food: 400000, gold: 120000 }, attributes: { 'Dũng Vũ': 56, 'Thao Lược': 89, 'Nội Chính': 94, 'Thống Ngự': 97, 'Khí Độ': 89, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Lưỡng diện phùng nguyên', effects: 'Thao Lược+10' }], crisis: 'Cùng Thục Hán phục minh, đại quân Tào Phi áp sát Trường Giang, ngươi bắt buộc phải củng cố phòng tuyến Trường Giang.' };
+                if (scriptName === '234 Lục Xuất Kỳ Sơn' || scriptName === '238 Thừa Chí Khởi Phạt') return { force: 'Đại Ngô', classLevel: 'Ngô Đại Đế', position: 'Hoàng đế', age: 52, children: 'Tôn Hòa, Tôn Bá', region: 'Kiến Nghiệp', power: 'Mười lăm vạn binh mã', subordinates: 'Lục Tốn, Cố Ung, Gia Cát Khác', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Đông Ngô quốc khố', income: 90000, expense: 80000, food: 600000, gold: 200000 }, attributes: { 'Dũng Vũ': 54, 'Thao Lược': 90, 'Nội Chính': 95, 'Thống Ngự': 98, 'Khí Độ': 90, 'Sức Khỏe': 72 }, selectedTraits: [{ name: 'Xưng đế kiến Ngô', effects: 'Khí Độ+10' }], crisis: 'Phối hợp Gia Cát Lượng bắc phạt, ngươi đích thân dẫn đại quân đánh Hợp Phì tân thành, lại bị Mãn Sủng đánh lui.' };
+                if (scriptName === '249 Bội Thệ Lạc Thủy' || scriptName === '251 Hoài Nam Thủ Phản') return { force: 'Đại Ngô', classLevel: 'Ngô Đại Đế', position: 'Hoàng đế', age: 67, children: 'Tôn Lượng, Tôn Hưu', region: 'Kiến Nghiệp', power: 'Mười tám vạn binh mã', subordinates: 'Gia Cát Khác, Đằng Dận, Lữ Đại', reputation: 'Quận Vọng Mông Tu', assets: { name: 'Đông Ngô quốc khố', income: 100000, expense: 90000, food: 600000, gold: 350000 }, attributes: { 'Dũng Vũ': 40, 'Thao Lược': 85, 'Nội Chính': 90, 'Thống Ngự': 85, 'Khí Độ': 50, 'Sức Khỏe': 45 }, selectedTraits: [{ name: 'Lạm sát công thần', effects: 'Khí Độ-30' }], crisis: 'Lún sâu vào nhị cung chi tranh ép chết Lục Tốn, hệ sinh thái chính trị Giang Đông gặp phải đả kích mang tính hủy diệt.' };
+            }
+            return {};
+        }
+    },
+    'Tôn Kiên': {
+        zi: 'Văn Đài',
+        scripts: { 'Diễn Nghĩa': ['184 Thái Bình Đạo Khởi', '190 Chư Hầu Hội Minh'], 'Chính Sử': ['184 Hoàng Cân Khởi Nghĩa', '189 Đổng Trác Nhập Kinh'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '184 Thái Bình Đạo Khởi') return { faction: 'Đại Hán triều đình(Quan quân)', classLevel: 'Tướng môn chi hậu', position: 'Tá quân tư mã', age: 29, children: 'Tôn Sách', region: 'Trường Xã', power: 'Một vạn năm ngàn binh mã', subordinates: 'Trình Phổ, Hoàng Cái, Hàn Đương, Tổ Mậu', reputation: 'Châu Quận Trì Danh', assets: { name: 'Lương thảo mộ binh', income: 3000, expense: 5000, food: 10000, gold: 2000 }, attributes: { 'Dũng Vũ': 90, 'Thao Lược': 60, 'Nội Chính': 40, 'Thống Ngự': 80, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Giang Đông mãnh hổ', effects: 'Dũng Vũ+40' }], crisis: 'Bị vây khốn ngoài thành Trường Xã, cấp bách cần quan quân Hoàng Phủ Tung tiếp ứng.' };
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Quan Đông liên quân', classLevel: 'Tướng môn chi hậu', position: 'Ô Trình Hầu', age: 35, children: 'Tôn Sách, Tôn Quyền', region: 'Dĩ Thủy Quan', power: 'Hai vạn binh mã', subordinates: 'Trình Phổ, Hoàng Cái, Hàn Đương, Tổ Mậu', reputation: 'Châu Quận Trì Danh', assets: { name: 'Trường Sa quân tư', income: 5200, expense: 8200, food: 21000, gold: 5200 }, attributes: { 'Dũng Vũ': 92, 'Thao Lược': 58, 'Nội Chính': 38, 'Thống Ngự': 82, 'Khí Độ': 58, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Tư tàng ngọc tỷ', effects: 'Khí Độ-20' }], crisis: 'Viên Thuật ngấm ngầm giữ lại lương thảo, Hoa Hùng đang nhân đêm tối tập kích doanh trại.' };
+            } else {
+                if (scriptName === '184 Hoàng Cân Khởi Nghĩa') return { faction: 'Đại Hán triều đình(Quan quân)', classLevel: 'Tướng môn chi hậu', position: 'Tá quân tư mã', age: 29, children: 'Tôn Sách', region: 'Uyển Thành', power: 'Một vạn binh mã', subordinates: 'Trình Phổ, Hoàng Cái, Hàn Đương, Tổ Mậu', reputation: 'Châu Quận Trì Danh', assets: { name: 'Tiếp tế tùy quân', income: 2000, expense: 3000, food: 8000, gold: 1000 }, attributes: { 'Dũng Vũ': 92, 'Thao Lược': 65, 'Nội Chính': 45, 'Thống Ngự': 85, 'Khí Độ': 65, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Xung phong hãm trận', effects: 'Dũng Vũ+40' }], crisis: 'Bắt buộc phải trong loạn chiến Hoàng Cân liều mạng giành lấy chiến công.' };
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Viên Thuật quân(Y phụ)', classLevel: 'Tướng môn chi hậu', position: 'Dự Châu thứ sử', age: 34, children: 'Tôn Sách, Tôn Quyền', region: 'Nam Dương', power: 'Một vạn hai ngàn giáp sĩ', subordinates: 'Trình Phổ, Hoàng Cái, Hàn Đương, Tổ Mậu', reputation: 'Châu Quận Trì Danh', assets: { name: 'Quân tư cướp bóc', income: 3200, expense: 5200, food: 16000, gold: 4200 }, attributes: { 'Dũng Vũ': 94, 'Thao Lược': 68, 'Nội Chính': 42, 'Thống Ngự': 88, 'Khí Độ': 70, 'Sức Khỏe': 72 }, selectedTraits: [{ name: 'Dũng chí cương nghị', effects: 'Dũng Vũ+30' }], crisis: 'Chém giết Nam Dương thái thú đắc tội hào cường Kinh Châu, mệnh mạch lương thảo bị Viên Thuật nắm trong tay.' };
+            }
+            return {};
+        }
+    },
+    'Tôn Sách': {
+        zi: 'Bá Phù',
+        scripts: { 'Diễn Nghĩa': ['196 Hiệp Đế Lệnh Hầu', '198 Bạch Môn Vẫn Mệnh', '199 Trủng Trung Khô Cốt'], 'Chính Sử': ['192 Lý Quách Chi Loạn', '195 Bạch Mã Chi Minh', '196 Dĩ Lệnh Bất Thần'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '196 Hiệp Đế Lệnh Hầu') return { force: 'Giang Đông mãnh quân', classLevel: 'Tiểu bá vương', position: 'Thảo Nghịch tướng quân', age: 21, children: 'Không Có', region: 'Thần Đình Lĩnh', power: 'Bốn vạn binh mã', subordinates: 'Chu Du, Trình Phổ, Hoàng Cái, Thái Sử Từ(Sắp hàng)', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Giang Đông phủ khố', income: 20000, expense: 15000, food: 100000, gold: 30000 }, attributes: { 'Dũng Vũ': 96, 'Thao Lược': 70, 'Nội Chính': 40, 'Thống Ngự': 85, 'Khí Độ': 50, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Tiểu bá vương', effects: 'Dũng Vũ+50' }], crisis: 'Lấy ngọc tỷ hướng Viên Thuật mượn binh, tại Thần Đình Lĩnh cùng Thái Sử Từ sinh tử bác sát.' };
+                if (scriptName === '198 Bạch Môn Vẫn Mệnh' || scriptName === '199 Trủng Trung Khô Cốt') return { force: 'Giang Đông bá phủ', classLevel: 'Ngô Hầu', position: 'Ngô Hầu', age: 24, children: 'Tôn Thiệu', region: 'Đan Đồ Sơn', power: 'Năm vạn binh mã', subordinates: 'Trương Chiêu, Chu Du, Lỗ Túc, Trình Phổ, Thái Sử Từ', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Giang Đông cơ nghiệp', income: 31000, expense: 21000, food: 155000, gold: 52000 }, attributes: { 'Dũng Vũ': 95, 'Thao Lược': 72, 'Nội Chính': 42, 'Thống Ngự': 88, 'Khí Độ': 45, 'Sức Khỏe': 30 }, selectedTraits: [{ name: 'Bạo liệt như hỏa', effects: 'Khí Độ-30' }], crisis: 'Tức giận giết Vu Cát gặp phải ảo giác, lúc đi săn bị trúng tên vào mặt kim sang nứt toác.' };
+            } else {
+                if (scriptName === '192 Lý Quách Chi Loạn') return { faction: 'Viên Thuật quân(Y phụ)', classLevel: 'Tướng môn chi hậu', position: 'Hiệu úy', age: 17, children: 'Không Có', region: 'Thọ Xuân', power: 'Một ngàn năm trăm người', subordinates: 'Trình Phổ, Hoàng Cái, Hàn Đương', reputation: 'Châu Quận Trì Danh', assets: { name: 'Viên Thuật cấp cho', income: 500, expense: 800, food: 2000, gold: 500 }, attributes: { 'Dũng Vũ': 92, 'Thao Lược': 75, 'Nội Chính': 45, 'Thống Ngự': 82, 'Khí Độ': 60, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Anh khí kiệt tế', effects: 'Thống Ngự+30' }], crisis: 'Phụ thân chiến tử, chỉ có thể y phụ Viên Thuật nhẫn nhục chịu đựng chờ thời cơ đòi lại bộ hạ cũ.' };
+                if (scriptName === '195 Bạch Mã Chi Minh') return { faction: 'Viên Thuật quân(Danh nghĩa)', classLevel: 'Tướng môn chi hậu', position: 'Chiết Xung hiệu úy', age: 20, children: 'Không Có', region: 'Khúc A', power: 'Vài ngàn tinh nhuệ', subordinates: 'Chu Du, Trình Phổ, Hoàng Cái, Hàn Đương, Tưởng Khâm', reputation: 'Châu Quận Trì Danh', assets: { name: 'Lịch Dương quân tư', income: 15000, expense: 12000, food: 50000, gold: 20000 }, attributes: { 'Dũng Vũ': 93, 'Thao Lược': 76, 'Nội Chính': 48, 'Thống Ngự': 84, 'Khí Độ': 60, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Độ giang định Đông Ngô', effects: 'Thống Ngự+20' }], crisis: 'Vượt sông trận đầu đánh Lưu Do, binh lực chênh lệch, bắt buộc phải tốc chiến tốc quyết.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { force: 'Giang Đông bá phủ', classLevel: 'Giang Đông mãnh hổ', position: 'Ngô Hầu', age: 21, children: 'Tôn Thiệu', region: 'Rừng rậm Ngô Quận', power: 'Ba vạn tinh binh', subordinates: 'Chu Du, Trương Chiêu, Thái Sử Từ, Trình Phổ', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Chinh tiễu phú thuế', income: 26000, expense: 21000, food: 125000, gold: 42000 }, attributes: { 'Dũng Vũ': 94, 'Thao Lược': 78, 'Nội Chính': 50, 'Thống Ngự': 86, 'Khí Độ': 55, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Khinh nhi vô bị', effects: 'Thao Lược-20' }], crisis: 'Cưỡng ép bình định Giang Đông thủ đoạn đẫm máu, môn khách Hứa Cống đã giương sẵn nỏ mạnh ngươi lại đơn kỵ đi ra.' };
+            }
+            return {};
+        }
+    },
+    'Lưu Chương': {
+        zi: 'Quý Ngọc',
+        scripts: { 'Diễn Nghĩa': ['207 Tam Cố Mao Lư', '208 Xích Bích Áo Binh', '211 Tây Xuyên Đồ Nghiệp', '214 Lạc Phượng Thùy Tinh'], 'Chính Sử': ['192 Lý Quách Chi Loạn', '196 Dĩ Lệnh Bất Thần', '200 Quan Độ Chi Chiến', '202 Kế Nghiệp Lập Cơ', '208 Xích Bích Chi Chiến', '211 Tây Xuyên Định Đỉnh'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '207 Tam Cố Mao Lư' || scriptName === '208 Xích Bích Áo Binh' || scriptName === '211 Tây Xuyên Đồ Nghiệp') return { force: 'Tây Xuyên', classLevel: 'Hán thất tông thân', position: 'Ích Châu mục', age: 40, children: 'Lưu Tuần', region: 'Thành Đô', power: 'Mười vạn đại quân', subordinates: 'Trương Nhiệm, Hoàng Quyền, Pháp Chính(Dị tâm), Trương Tùng(Dị tâm)', reputation: 'Châu Quận Trì Danh', assets: { name: 'Thiên phủ phủ khố', income: 60000, expense: 30000, food: 500000, gold: 200000 }, attributes: { 'Dũng Vũ': 30, 'Thao Lược': 40, 'Nội Chính': 60, 'Thống Ngự': 50, 'Khí Độ': 70, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Ưu nhu quả đoán', effects: 'Thống Ngự-30' }], crisis: 'Hán Trung Trương Lỗ nhiều lần xâm phạm biên giới, Hoàng Quyền tử gián không thể đón Lưu Bị, ngươi do dự không quyết.' };
+                if (scriptName === '214 Lạc Phượng Thùy Tinh') return { force: 'Ích Châu', classLevel: 'Hán thất tông thân', position: 'Ích Châu mục', age: 44, children: 'Lưu Tuần', region: 'Thành Đô', power: 'Chín vạn binh mã', subordinates: 'Lý Nghiêm, Ngô Ý, Hoàng Quyền', reputation: 'Châu Quận Trì Danh', assets: { name: 'Tiêu hao phủ khố', income: 52000, expense: 42000, food: 410000, gold: 155000 }, attributes: { 'Dũng Vũ': 28, 'Thao Lược': 38, 'Nội Chính': 58, 'Thống Ngự': 45, 'Khí Độ': 75, 'Sức Khỏe': 55 }, selectedTraits: [{ name: 'Thủ hộ chi khuyển', effects: 'Dũng Vũ-20' }], crisis: 'Lưu Bị trở mặt tấn công Ích Châu, ngươi không nỡ để bách tính chịu khổ, quân tâm dao động.' };
+            } else {
+                if (scriptName === '192 Lý Quách Chi Loạn' || scriptName === '196 Dĩ Lệnh Bất Thần' || scriptName === '200 Quan Độ Chi Chiến' || scriptName === '202 Kế Nghiệp Lập Cơ' || scriptName === '208 Xích Bích Chi Chiến') return { force: 'Ích Châu mục phủ', classLevel: 'Hán thất tông thân', position: 'Ích Châu mục', age: 28, children: 'Lưu Tuần', region: 'Thành Đô', power: 'Năm vạn binh mã', subordinates: 'Triệu Vĩ, Trương Tùng, Hoàng Quyền, Pháp Chính', reputation: 'Châu Quận Trì Danh', assets: { name: 'Ích Châu thuế phú', income: 51000, expense: 36000, food: 410000, gold: 155000 }, attributes: { 'Dũng Vũ': 35, 'Thao Lược': 50, 'Nội Chính': 65, 'Thống Ngự': 55, 'Khí Độ': 65, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Ôn nhân ám nhược', effects: 'Thống Ngự-20' }], crisis: 'Dựa vào Đông Châu binh trấn áp bản thổ hào cường dẫn đến xung đột đổ máu, nội bộ Ích Châu xé rách nghiêm trọng.' };
+                if (scriptName === '211 Tây Xuyên Định Đỉnh') return { force: 'Ích Châu mục phủ', classLevel: 'Hán thất tông thân', position: 'Ích Châu mục', age: 43, children: 'Lưu Tuần', region: 'Thành Đô', power: 'Bốn vạn tàn binh', subordinates: 'Ngô Ý, Đổng Hòa, Hoàng Quyền', reputation: 'Châu Quận Trì Danh', assets: { name: 'Vật tư tàn tồn', income: 41000, expense: 41000, food: 310000, gold: 105000 }, attributes: { 'Dũng Vũ': 32, 'Thao Lược': 48, 'Nội Chính': 62, 'Thống Ngự': 50, 'Khí Độ': 75, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Tích dân thận sát', effects: 'Khí Độ+20' }], crisis: 'Lưu Bị hợp vây Thành Đô, các tướng phần nhiều đã ngấm ngầm thông đồng, ngươi đánh mất dũng khí liều chết một phen.' };
+            }
+            return {};
+        }
+    },
+    'Lưu Biểu': {
+        zi: 'Cảnh Thăng',
+        scripts: { 'Diễn Nghĩa': ['196 Hiệp Đế Lệnh Hầu', '200 Quan Độ Liệt Hỏa', '207 Tam Cố Mao Lư'], 'Chính Sử': ['189 Đổng Trác Nhập Kinh', '192 Lý Quách Chi Loạn', '196 Dĩ Lệnh Bất Thần', '200 Quan Độ Chi Chiến', '202 Kế Nghiệp Lập Cơ'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '196 Hiệp Đế Lệnh Hầu') return { force: 'Kinh Châu', classLevel: 'Hán thất tông thân', position: 'Kinh Châu mục', age: 54, children: 'Lưu Kỳ, Lưu Tông', region: 'Tương Dương', power: 'Mười hai vạn đại quân', subordinates: 'Thái Mạo, Hoàng Tổ, Văn Sính, Khoái Việt', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Kinh Châu phú thuế', income: 60000, expense: 30000, food: 400000, gold: 100000 }, attributes: { 'Dũng Vũ': 30, 'Thao Lược': 60, 'Nội Chính': 80, 'Thống Ngự': 70, 'Khí Độ': 80, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Tọa đàm khách', effects: 'Thống Ngự-20' }], crisis: 'Trương Tú tiếp quản bộ đội, bất cứ lúc nào cũng có thể cắn ngược Kinh Châu.' };
+                if (scriptName === '200 Quan Độ Liệt Hỏa') return { force: 'Kinh Châu', classLevel: 'Hán thất tông thân', position: 'Kinh Châu mục', age: 58, children: 'Lưu Kỳ, Lưu Tông', region: 'Tương Dương', power: 'Mười bốn vạn đại quân', subordinates: 'Thái Mạo, Trương Duẫn, Văn Sính, Khoái Việt', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Kinh Châu phủ khố', income: 70000, expense: 35000, food: 500000, gold: 150000 }, attributes: { 'Dũng Vũ': 28, 'Thao Lược': 58, 'Nội Chính': 78, 'Thống Ngự': 65, 'Khí Độ': 75, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Thủ thử lưỡng đoan', effects: 'Thao Lược-10' }], crisis: 'Quan Độ chi chiến bùng nổ, bạn khó lòng quyết đoán án binh bất động, bỏ lỡ thời cơ tranh bá.' };
+                if (scriptName === '207 Tam Cố Mao Lư') return { force: 'Kinh Châu', classLevel: 'Hán thất tông thân', position: 'Kinh Châu mục', age: 65, children: 'Lưu Kỳ, Lưu Tông', region: 'Tương Dương', power: 'Mười lăm vạn đại quân', subordinates: 'Thái Mạo, Trương Duẫn, Lưu Bị(Nương tựa)', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Cửu quận phú thuế', income: 82000, expense: 42000, food: 610000, gold: 185000 }, attributes: { 'Dũng Vũ': 25, 'Thao Lược': 55, 'Nội Chính': 75, 'Thống Ngự': 60, 'Khí Độ': 70, 'Sức Khỏe': 20 }, selectedTraits: [{ name: 'Bệnh nhập cao hoang', effects: 'Sức Khỏe-50' }], crisis: 'Bạn bệnh cốt chi ly, Thái thị muốn phế trưởng lập ấu, bạn đã bị tước quyền.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { force: 'Kinh Châu', classLevel: 'Hán thất tông thân', position: 'Kinh Châu thứ sử', age: 47, children: 'Lưu Kỳ, Lưu Tông', region: 'Nghi Thành', power: 'Vài ngàn hương dũng', subordinates: 'Khoái Lương, Khoái Việt, Thái Mạo, Hoàng Tổ', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Thế gia ủng hộ', income: 41000, expense: 21000, food: 310000, gold: 82000 }, attributes: { 'Dũng Vũ': 40, 'Thao Lược': 75, 'Nội Chính': 85, 'Thống Ngự': 75, 'Khí Độ': 85, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Bát tuấn chi nhất', effects: 'Nội Chính+30' }], crisis: 'Đơn thương độc mã vào Kinh Châu, nền tảng chính quyền cực kỳ phụ thuộc vào thế gia ủng hộ.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Kinh Châu', classLevel: 'Hán thất tông thân', position: 'Kinh Châu thứ sử', age: 50, children: 'Lưu Kỳ, Lưu Tông', region: 'Tương Dương', power: 'Mười vạn binh mã', subordinates: 'Hoàng Tổ, Thái Mạo, Khoái Việt', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Kinh Châu chiến bị', income: 50000, expense: 30000, food: 400000, gold: 100000 }, attributes: { 'Dũng Vũ': 38, 'Thao Lược': 73, 'Nội Chính': 86, 'Thống Ngự': 77, 'Khí Độ': 83, 'Sức Khỏe': 62 }, selectedTraits: [{ name: 'Bế thành tử thủ', effects: 'Dũng Vũ-5' }], crisis: 'Tôn Kiên đại phá Hoàng Tổ binh lâm thành hạ, bạn bị ép đóng cửa tử thủ.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { force: 'Kinh Châu', classLevel: 'Hán thất tông thân', position: 'Trấn Nam tướng quân', age: 54, children: 'Lưu Kỳ, Lưu Tông', region: 'Tương Dương', power: 'Mười một vạn binh mã', subordinates: 'Văn Sính, Thái Mạo, Khoái Việt', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Kinh Châu thuế thu', income: 60000, expense: 35000, food: 450000, gold: 120000 }, attributes: { 'Dũng Vũ': 37, 'Thao Lược': 72, 'Nội Chính': 87, 'Thống Ngự': 78, 'Khí Độ': 82, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Ngoại khoan nội kỵ', effects: 'Thao Lược-5' }], crisis: 'Tào Tháo đón thiên tử gây sức ép về phía nam, bạn phải đi trên dây giữa các quân phiệt phương bắc.' };
+                if (scriptName === '200 Quan Độ Chi Chiến') return { force: 'Kinh Châu', classLevel: 'Hán thất tông thân', position: 'Trấn Nam tướng quân', age: 58, children: 'Lưu Kỳ, Lưu Tông', region: 'Tương Dương', power: 'Mười hai vạn binh mã', subordinates: 'Khoái Việt, Thái Mạo, Văn Sính', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Kinh Sở lương thương', income: 65000, expense: 40000, food: 500000, gold: 140000 }, attributes: { 'Dũng Vũ': 36, 'Thao Lược': 71, 'Nội Chính': 87, 'Thống Ngự': 79, 'Khí Độ': 81, 'Sức Khỏe': 55 }, selectedTraits: [{ name: 'Hồ nghi bất quyết', effects: 'Khí Độ-5' }], crisis: 'Thủ thử lưỡng đoan giữa hai bên giao chiến, sĩ tộc nội bộ đã âm thầm đứng về phe Tào Tháo.' };
+                if (scriptName === '202 Kế Nghiệp Lập Cơ') return { force: 'Kinh Châu', classLevel: 'Hán thất tông thân', position: 'Trấn Nam tướng quân', age: 60, children: 'Lưu Kỳ, Lưu Tông', region: 'Tương Dương', power: 'Mười ba vạn tinh nhuệ', subordinates: 'Thái Mạo, Trương Duẫn, Lưu Bị(Nương tựa)', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Kinh Sở tích súc', income: 72000, expense: 47000, food: 560000, gold: 165000 }, attributes: { 'Dũng Vũ': 35, 'Thao Lược': 70, 'Nội Chính': 88, 'Thống Ngự': 80, 'Khí Độ': 80, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Ngoại khoan nội kỵ', effects: 'Thao Lược-10' }], crisis: 'Đại quân Tào Tháo áp sát, môn phiệt Kinh Châu âm thầm thông đồng với Tào Ngụy, đại hạ sắp đổ.' };
+            }
+            return {};
+        }
+    },
+    'Hàn Toại': {
+        zi: 'Văn Ước',
+        scripts: { 'Diễn Nghĩa': ['211 Tây Xuyên Đồ Nghiệp'], 'Chính Sử': ['189 Đổng Trác Nhập Kinh', '192 Lý Quách Chi Loạn', '211 Tây Xuyên Định Đỉnh'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '211 Tây Xuyên Đồ Nghiệp') return { faction: 'Tây Lương liên quân', classLevel: 'Lương Châu chư hầu', position: 'Trấn Tây tướng quân', age: 66, children: 'Không Có', region: 'Vị Thủy', power: 'Năm vạn binh mã', subordinates: 'Mã Siêu(Đồng minh), Bàng Đức, Thành Nghi, Hầu Tuyển', reputation: 'Châu Quận Trì Danh', assets: { name: 'Tây Lương mã trường', income: 15000, expense: 20000, food: 80000, gold: 30000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 65, 'Nội Chính': 50, 'Thống Ngự': 75, 'Khí Độ': 40, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Bát bộ cân ban', effects: 'Khí Độ-20' }], crisis: 'Tào Tháo trước trận giao ngựa gửi thư bị bôi xóa, ánh mắt của Mã Siêu nhìn bạn tràn ngập sát ý, đối mặt với tuyệt cảnh bị chém giết.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { force: 'Tây Lương phản quân', classLevel: 'Lương Châu biên phiệt', position: 'Loạn quân thủ lĩnh', age: 44, children: 'Không Có', region: 'Lũng Tây', power: 'Mười hai vạn binh mã', subordinates: 'Biên Chương, Bắc Cung Bá Ngọc, Diêm Hành', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Cướp bóc truy trọng', income: 8000, expense: 15000, food: 50000, gold: 20000 }, attributes: { 'Dũng Vũ': 73, 'Thao Lược': 76, 'Nội Chính': 61, 'Thống Ngự': 81, 'Khí Độ': 52, 'Sức Khỏe': 67 }, selectedTraits: [{ name: 'Bị bách tòng tặc', effects: 'Khí Độ-10' }], crisis: 'Bị bách tòng tặc, thủ lĩnh Khương Hồ nội bộ không phục tùng nhau, bất cứ lúc nào cũng có thể hỏa tịnh.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Kim Thành quân phiệt', classLevel: 'Lương Châu biên phiệt', position: 'Trấn Tây tướng quân', age: 47, children: 'Không Có', region: 'Kim Thành', power: 'Ba vạn binh mã', subordinates: 'Thành Công Anh, Diêm Hành', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Kim Thành sào huyệt', income: 11000, expense: 13000, food: 62000, gold: 26000 }, attributes: { 'Dũng Vũ': 72, 'Thao Lược': 78, 'Nội Chính': 62, 'Thống Ngự': 82, 'Khí Độ': 50, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Lão mưu thâm toán', effects: 'Thao Lược+20' }], crisis: 'Lương Châu đại hạn quân lương đã cạn, đang cân nhắc cướp bóc khu vực phòng thủ của anh em kết nghĩa Mã Đằng.' };
+                if (scriptName === '211 Tây Xuyên Định Đỉnh') return { faction: 'Quan Lũng liên quân', classLevel: 'Lương Châu biên phiệt', position: 'Đô đốc', age: 66, children: 'Không Có', region: 'Vị Nam', power: 'Năm vạn binh mã', subordinates: 'Diêm Hành, Dương Thu, Thành Công Anh', reputation: 'Châu Quận Trì Danh', assets: { name: 'Quan Trung lương thương', income: 21000, expense: 42000, food: 155000, gold: 42000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 75, 'Nội Chính': 60, 'Thống Ngự': 80, 'Khí Độ': 45, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Kiến phong sử đà', effects: 'Khí Độ-30' }], crisis: 'Trúng phản gián kế đại bại ở Vị Nam, lang bạt trốn về Kim Thành, nội bộ đã có người âm thầm thông đồng với Tào Ngụy.' };
+            }
+            return {};
+        }
+    },
+    'Mã Đằng': {
+        zi: 'Thọ Thành',
+        scripts: { 'Diễn Nghĩa': ['190 Chư Hầu Hội Minh', '196 Hiệp Đế Lệnh Hầu', '200 Thiên Lý Tầm Huynh', '207 Tẩu Mã Tiến Hiền'], 'Chính Sử': ['189 Đổng Trác Nhập Kinh', '192 Lý Quách Chi Loạn', '196 Dĩ Lệnh Bất Thần', '200 Quan Độ Chi Chiến', '202 Kế Nghiệp Lập Cơ'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Quan Đông liên quân', classLevel: 'Tướng môn chi hậu', position: 'Chinh Tây tướng quân', age: 34, children: 'Mã Siêu', region: 'Tây Lương', power: 'Một vạn binh mã', subordinates: 'Mã Siêu, Bàng Đức, Mã Đại', reputation: 'Châu Quận Trì Danh', assets: { name: 'Tây Lương biên mậu', income: 10000, expense: 8000, food: 50000, gold: 20000 }, attributes: { 'Dũng Vũ': 86, 'Thao Lược': 61, 'Nội Chính': 51, 'Thống Ngự': 81, 'Khí Độ': 91, 'Sức Khỏe': 76 }, selectedTraits: [{ name: 'Hưởng ứng kiều chiếu', effects: 'Khí Độ+10' }], crisis: 'Hưởng ứng kiều chiếu thảo phạt Đổng Trác, tuyến tiếp tế cực dài, Viên Thiệu đối với bạn có nhiều đề phòng.' };
+                if (scriptName === '196 Hiệp Đế Lệnh Hầu') return { force: 'Tây Lương Mã thị', classLevel: 'Tướng môn chi hậu', position: 'Chinh Tây tướng quân', age: 40, children: 'Mã Siêu', region: 'Tây Lương', power: 'Hai vạn binh mã', subordinates: 'Mã Siêu, Bàng Đức, Mã Đại', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Lương Châu phú thuế', income: 15000, expense: 18000, food: 80000, gold: 30000 }, attributes: { 'Dũng Vũ': 85, 'Thao Lược': 60, 'Nội Chính': 50, 'Thống Ngự': 80, 'Khí Độ': 90, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Hán thất trung thần', effects: 'Khí Độ+30' }], crisis: 'Lý Thôi Quách Dĩ làm loạn, Hàn Toại ở bên hổ thị đam đam, hành động thiếu suy nghĩ sào huyệt sẽ bị nuốt chửng.' };
+                if (scriptName === '200 Thiên Lý Tầm Huynh') return { faction: 'Hứa Đô triều đình(Ngoại nhậm)', classLevel: 'Tướng môn chi hậu', position: 'Chinh Tây tướng quân', age: 44, children: 'Mã Siêu', region: 'Tây Lương', power: 'Hai vạn hai ngàn binh mã', subordinates: 'Mã Siêu, Bàng Đức, Mã Đại, Mã Hưu, Mã Thiết', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Mã gia quân hướng', income: 18000, expense: 20000, food: 100000, gold: 35000 }, attributes: { 'Dũng Vũ': 84, 'Thao Lược': 59, 'Nội Chính': 49, 'Thống Ngự': 79, 'Khí Độ': 92, 'Sức Khỏe': 73 }, selectedTraits: [{ name: 'Huyết thư y đái', effects: 'Khí Độ+15' }], crisis: 'Y đái chiếu bại lộ Đổng Thừa bị tru di tam tộc, đồ đao của Tào Tháo bất cứ lúc nào cũng có thể vung về phía Quan Lũng.' };
+                if (scriptName === '207 Tẩu Mã Tiến Hiền') return { faction: 'Hứa Đô triều đình(Nhập chất)', classLevel: 'Tướng môn chi hậu', position: 'Vệ úy', age: 51, children: 'Mã Siêu(Lưu thủ), Mã Thiết, Mã Hưu', region: 'Hứa Đô quán dịch', power: 'Năm ngàn tư binh', subordinates: 'Mã Hưu, Mã Thiết', reputation: 'Quan Miện Quần Luân', assets: { name: 'Kinh thành ban thưởng', income: 2000, expense: 5000, food: 10000, gold: 8000 }, attributes: { 'Dũng Vũ': 82, 'Thao Lược': 55, 'Nội Chính': 45, 'Thống Ngự': 75, 'Khí Độ': 95, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Cương liệt bất khuất', effects: 'Dũng Vũ+10' }], crisis: 'Liên hợp Hoàng Khuê khởi sự bị Miêu Trạch tiết lộ, giáp sĩ Tào quân trùng trùng bao vây quán dịch.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { force: 'Lũng Tây hào cường', classLevel: 'Phục Ba chi hậu', position: 'Thiên tướng quân', age: 33, children: 'Mã Siêu', region: 'Lũng Tây', power: 'Ba vạn binh mã', subordinates: 'Bàng Đức', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Cướp bóc châu huyện', income: 5000, expense: 8000, food: 30000, gold: 15000 }, attributes: { 'Dũng Vũ': 83, 'Thao Lược': 57, 'Nội Chính': 41, 'Thống Ngự': 77, 'Khí Độ': 53, 'Sức Khỏe': 73 }, selectedTraits: [{ name: 'Thảo mãng khởi gia', effects: 'Dũng Vũ+10' }], crisis: 'Cùng Hàn Toại vì tranh đoạt địa bàn đã liên tục xảy ra xung đột đổ máu.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Lũng Hữu quân phiệt', classLevel: 'Phục Ba chi hậu', position: 'Chinh Tây tướng quân', age: 36, children: 'Mã Siêu', region: 'Trường Bình Quán', power: 'Bốn vạn binh mã', subordinates: 'Bàng Đức, Mã Đại', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Tây Lương cứ điểm', income: 8500, expense: 10500, food: 42000, gold: 18500 }, attributes: { 'Dũng Vũ': 82, 'Thao Lược': 58, 'Nội Chính': 42, 'Thống Ngự': 78, 'Khí Độ': 52, 'Sức Khỏe': 72 }, selectedTraits: [{ name: 'Biên địa thảo mãng', effects: 'Dũng Vũ+20' }], crisis: 'Khởi binh đánh Trường An nhưng bị Quách Dĩ đánh bại ở Trường Bình Quán, rút về Lương Châu.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần' || scriptName === '200 Quan Độ Chi Chiến' || scriptName === '202 Kế Nghiệp Lập Cơ') return { force: 'Tây Châu hùng trưởng', classLevel: 'Phục Ba chi hậu', position: 'Tiền tướng quân', age: 40, children: 'Mã Siêu', region: 'Hòe Lý', power: 'Hai vạn binh mã', subordinates: 'Bàng Đức, Mã Đại', reputation: 'Châu Quận Trì Danh', assets: { name: 'Hòe Lý đồn điền', income: 12000, expense: 15000, food: 70000, gold: 25000 }, attributes: { 'Dũng Vũ': 81, 'Thao Lược': 56, 'Nội Chính': 43, 'Thống Ngự': 77, 'Khí Độ': 51, 'Sức Khỏe': 71 }, selectedTraits: [{ name: 'Phản phúc vô thường', effects: 'Khí Độ-5' }], crisis: 'Cùng Hàn Toại triệt để tuyệt liệt vợ bị giết, bị ép đưa con làm con tin đổi lấy ủng hộ.' };
+            }
+            return {};
+        }
+    },
+    'Công Tôn Uyên': {
+        zi: 'Văn Ý',
+        scripts: { 'Diễn Nghĩa': ['238 Đạp Tuyết Bình Liêu'], 'Chính Sử': ['238 Thừa Chí Khởi Phạt'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '238 Đạp Tuyết Bình Liêu') return { force: 'Liêu Đông Yến Quốc', classLevel: 'Liêu Đông bá chủ', position: 'Yến Vương', age: 35, children: 'Công Tôn Tu', region: 'Tương Bình', power: 'Mười lăm vạn Liêu binh', subordinates: 'Ti Ty, Dương Tộ, Luân Trực', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Liêu Đông phủ khố', income: 30000, expense: 40000, food: 200000, gold: 100000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 40, 'Nội Chính': 50, 'Thống Ngự': 60, 'Khí Độ': 30, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Cuồng vọng tự đại', effects: 'Khí Độ-40' }], crisis: 'Giết gián thần cưỡng ép xưng vương, ngoài thành trời giáng sao băng, trong thành hết lương thực người ăn thịt người.' };
+            } else {
+                if (scriptName === '238 Thừa Chí Khởi Phạt') return { force: 'Liêu Đông quân phiệt', classLevel: 'Liêu Đông thế tộc', position: 'Yến Vương(Tiếm)', age: 35, children: 'Công Tôn Tu', region: 'Tương Bình', power: 'Bốn vạn bộ kỵ', subordinates: 'Dương Tộ, Ti Ty, Giả Phạm', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Vật tư phòng thủ', income: 21000, expense: 31000, food: 155000, gold: 82000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 50, 'Nội Chính': 55, 'Thống Ngự': 65, 'Khí Độ': 40, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Thủ thử lưỡng đoan', effects: 'Thao Lược-20' }], crisis: 'Giữa Ngụy Ngô phản phúc nhảy ngang chọc giận Ngụy đế, bộ đội đột phá vòng vây bị trọng giáp giảo sát thành sắp phá.' };
+            }
+            return {};
+        }
+    },
+    'Mạnh Hoạch': {
+        zi: 'Không Có',
+        scripts: { 'Diễn Nghĩa': ['225 Thất Cầm Mạnh Hoạch'], 'Chính Sử': ['225 Nam Trung Chi Dịch'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '225 Thất Cầm Mạnh Hoạch') return { force: 'Nam Man bộ lạc', classLevel: 'Nam Man đại vương', position: 'Nam Man Vương', age: 38, children: 'Không Có', region: 'Bàn Xà Cốc', power: 'Mười vạn Man binh', subordinates: 'Chúc Dung phu nhân, Mạnh Ưu, Đái Lai động chủ, Mộc Lộc đại vương, Ngột Đột Cốt', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Man hoang động phủ', income: 10000, expense: 5000, food: 100000, gold: 50000 }, attributes: { 'Dũng Vũ': 88, 'Thao Lược': 30, 'Nội Chính': 20, 'Thống Ngự': 75, 'Khí Độ': 50, 'Sức Khỏe': 90 }, selectedTraits: [{ name: 'Man hoang bá chủ', effects: 'Dũng Vũ+30' }], crisis: 'Đằng giáp binh bị thiêu thành tro than, bị bắt sống lần thứ bảy đối mặt với tuyệt cảnh nếu phản lại tất bị diệt tộc.' };
+            } else {
+                if (scriptName === '225 Nam Trung Chi Dịch') return { force: 'Nam Trung phản quân', classLevel: 'Di Hán đại tính', position: 'Hào soái', age: 38, children: 'Không Có', region: 'Kiến Ninh', power: 'Ba vạn bộ khúc', subordinates: 'Ung Khải, Cao Định, Chu Bao', reputation: 'Quận Vọng Mông Tu', assets: { name: 'Nam Trung ổ bảo', income: 16000, expense: 11000, food: 62000, gold: 21000 }, attributes: { 'Dũng Vũ': 72, 'Thao Lược': 55, 'Nội Chính': 45, 'Thống Ngự': 68, 'Khí Độ': 55, 'Sức Khỏe': 78 }, selectedTraits: [{ name: 'Địa phương hào kiệt', effects: 'Thống Ngự+10' }], crisis: 'Chiến bại bị bắt tham quan doanh trận Thục quân, trong lòng biết vũ lực chênh lệch chỉ có thể khuất phục bảo toàn tông tộc.' };
+            }
+            return {};
+        }
+    },
+    'Viên Huệ': {
+        zi: 'Công Lộ',
+        scripts: { 'Diễn Nghĩa': ['190 Chư Hầu Hội Minh', '194 Tam Nhượng Từ Châu', '196 Hiệp Đế Lệnh Hầu', '197 Hoài Nam Xưng Đế'], 'Chính Sử': ['189 Đổng Trác Nhập Kinh', '192 Lý Quách Chi Loạn', '195 Bạch Mã Chi Minh', '196 Dĩ Lệnh Bất Thần'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Quan Đông liên quân', classLevel: 'Tứ thế tam công', position: 'Hậu tướng quân', age: 35, children: 'Viên Diệu', region: 'Nam Dương', power: 'Ba vạn đại quân', subordinates: 'Kỷ Linh, Du Thiệp, Tôn Kiên(Nương tựa)', reputation: 'Châu Quận Trì Danh', assets: { name: 'Nam Dương cự phú', income: 42000, expense: 22000, food: 155000, gold: 82000 }, attributes: { 'Dũng Vũ': 40, 'Thao Lược': 30, 'Nội Chính': 40, 'Thống Ngự': 60, 'Khí Độ': 20, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Tâm hung hiệp ái', effects: 'Khí Độ-40' }], crisis: 'Vì ghen tị giữ lương thực khiến Tôn Kiên bại, Viên Thiệu đối với bạn cực độ bất mãn.' };
+                if (scriptName === '194 Tam Nhượng Từ Châu' || scriptName === '196 Hiệp Đế Lệnh Hầu') return { force: 'Hoài Nam Viên thị', classLevel: 'Tứ thế tam công', position: 'Tả tướng quân', age: 39, children: 'Viên Diệu', region: 'Thọ Xuân', power: 'Năm vạn binh mã', subordinates: 'Kỷ Linh, Trương Huân, Kiều Nhuy, Lôi Bạc', reputation: 'Châu Quận Trì Danh', assets: { name: 'Hoài Nam phú thuế', income: 50000, expense: 40000, food: 200000, gold: 100000 }, attributes: { 'Dũng Vũ': 38, 'Thao Lược': 28, 'Nội Chính': 38, 'Thống Ngự': 58, 'Khí Độ': 18, 'Sức Khỏe': 38 }, selectedTraits: [{ name: 'Dã tâm bột bột', effects: 'Khí Độ-10' }], crisis: 'Bị Tào Tháo giáp kích, Tôn Sách mượn binh mã thoát khỏi khống chế.' };
+                if (scriptName === '197 Hoài Nam Xưng Đế') return { force: 'Trọng thị ngụy triều', classLevel: 'Tứ thế tam công', position: 'Trọng Gia Đế', age: 41, children: 'Viên Diệu', region: 'Giang Đình', power: 'Một ngàn tàn binh', subordinates: 'Trương Huân, Kỷ Linh', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Trống rỗng', income: 0, expense: 1200, food: 5, gold: 20 }, attributes: { 'Dũng Vũ': 20, 'Thao Lược': 10, 'Nội Chính': 10, 'Thống Ngự': 20, 'Khí Độ': 5, 'Sức Khỏe': 5 }, selectedTraits: [{ name: 'Trủng trung khô cốt', effects: 'Sức Khỏe-40' }], crisis: 'Binh bại như núi lở, muốn cầu một bát nước mật không được, sắp sửa ẩu huyết mà chết.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Quan Đông liên quân', classLevel: 'Tứ thế tam công', position: 'Hậu tướng quân', age: 34, children: 'Viên Diệu', region: 'Nam Dương', power: 'Ba vạn năm ngàn binh mã', subordinates: 'Tôn Kiên(Nương tựa), Diêm Tượng, Viên Dận', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Hào cường cống nạp', income: 32000, expense: 22000, food: 105000, gold: 52000 }, attributes: { 'Dũng Vũ': 45, 'Thao Lược': 45, 'Nội Chính': 50, 'Thống Ngự': 65, 'Khí Độ': 30, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Đích tử ngạo mạn', effects: 'Khí Độ-20' }], crisis: 'Cùng huynh trưởng Viên Thiệu tranh đoạt gia tộc chính thống triệt để tuyệt liệt.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Cửu Giang quân phiệt', classLevel: 'Tứ thế tam công', position: 'Dương Châu mục', age: 37, children: 'Viên Diệu', region: 'Cửu Giang', power: 'Bốn vạn binh mã', subordinates: 'Kỷ Linh, Trương Huân, Kiều Nhuy, Diêm Tượng', reputation: 'Châu Quận Trì Danh', assets: { name: 'Dương Châu phú thuế', income: 40000, expense: 35000, food: 150000, gold: 60000 }, attributes: { 'Dũng Vũ': 44, 'Thao Lược': 43, 'Nội Chính': 48, 'Thống Ngự': 63, 'Khí Độ': 28, 'Sức Khỏe': 48 }, selectedTraits: [{ name: 'Hoành chinh bạo liễm', effects: 'Nội Chính-10' }], crisis: 'Bị Lưu Biểu cắt lương thực, lại bị Tào Tháo đại bại ở Phong Khâu, chỉ có thể lang bạt trốn về Cửu Giang.' };
+                if (scriptName === '195 Bạch Mã Chi Minh') return { force: 'Hoài Nam Viên thị', classLevel: 'Tứ thế tam công', position: 'Tả tướng quân', age: 40, children: 'Viên Diệu', region: 'Thọ Xuân', power: 'Mười vạn binh mã', subordinates: 'Kỷ Linh, Trương Huân, Kiều Nhuy, Tôn Sách(Tạm thuộc)', reputation: 'Châu Quận Trì Danh', assets: { name: 'Hoài Nam phú thuế', income: 45000, expense: 35000, food: 180000, gold: 80000 }, attributes: { 'Dũng Vũ': 43, 'Thao Lược': 42, 'Nội Chính': 45, 'Thống Ngự': 62, 'Khí Độ': 26, 'Sức Khỏe': 46 }, selectedTraits: [{ name: 'Cuồng vọng tiếm việt', effects: 'Thao Lược-10' }], crisis: 'Tôn Sách mượn binh qua sông, bạn lờ mờ cảm giác con mãnh hổ Giang Đông này sắp thoát khỏi khống chế.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { force: 'Trọng thị chính quyền', classLevel: 'Tứ thế tam công', position: 'Trọng thị Đế(Tiếm)', age: 41, children: 'Viên Diệu', region: 'Thọ Xuân', power: 'Tám vạn binh mã', subordinates: 'Trương Huân, Kiều Nhuy, Kỷ Linh, Lôi Bạc, Trần Lan', reputation: 'Di Xú Phủ Việt', assets: { name: 'Giang Hoài dân chi dân cao', income: 52000, expense: 82000, food: 55000, gold: 205000 }, attributes: { 'Dũng Vũ': 42, 'Thao Lược': 40, 'Nội Chính': 40, 'Thống Ngự': 60, 'Khí Độ': 25, 'Sức Khỏe': 45 }, selectedTraits: [{ name: 'Cuồng vọng tiếm việt', effects: 'Thao Lược-20' }], crisis: 'Cuồng vọng tiếm hiệu dẫn đến chúng phán thân ly, Tôn Sách thoát ly, Giang Hoài người ăn thịt người.' };
+            }
+            return {};
+        }
+    },
+    'Niên Hiệu': {
+        zi: 'Bản Sơ',
+        scripts: { 'Diễn Nghĩa': ['190 Chư Hầu Hội Minh', '191 Giới Kiều Chi Chiến', '194 Tam Nhượng Từ Châu', '196 Hiệp Đế Lệnh Hầu', '198 Bạch Môn Vẫn Mệnh', '199 Y Đái Mật Chiếu', '200 Quan Độ Liệt Hỏa'], 'Chính Sử': ['189 Đổng Trác Nhập Kinh', '192 Lý Quách Chi Loạn', '196 Dĩ Lệnh Bất Thần', '200 Quan Độ Chi Chiến'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Quan Đông liên quân', classLevel: 'Tứ thế tam công', position: 'Minh chủ', age: 36, children: 'Viên Đàm', region: 'Toan Táo', power: 'Ba vạn đại quân', subordinates: 'Nhan Lương, Văn Xú, Hứa Du, Phùng Kỷ', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Tứ thế tam công môn sinh cố lại', income: 42000, expense: 22000, food: 210000, gold: 105000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 50, 'Nội Chính': 60, 'Thống Ngự': 75, 'Khí Độ': 60, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Hảo mưu vô quyết', effects: 'Thao Lược-20' }], crisis: 'Liên quân danh tồn thực vong, Đổng Trác dời đô, bạn muốn mưu đoạt Ký Châu.' };
+                if (scriptName === '191 Giới Kiều Chi Chiến') return { force: 'Ký Châu Viên thị', classLevel: 'Tứ thế tam công', position: 'Ký Châu mục', age: 37, children: 'Viên Đàm', region: 'Giới Kiều', power: 'Sáu vạn binh mã', subordinates: 'Nhan Lương, Văn Xú, Khúc Nghĩa, Điền Phong, Thư Thụ', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Ký Châu phủ khố', income: 60000, expense: 40000, food: 300000, gold: 120000 }, attributes: { 'Dũng Vũ': 49, 'Thao Lược': 49, 'Nội Chính': 59, 'Thống Ngự': 74, 'Khí Độ': 59, 'Sức Khỏe': 59 }, selectedTraits: [{ name: 'Ỷ trượng tiên đăng', effects: 'Thống Ngự+5' }], crisis: 'Công Tôn Toản Bạch Mã Nghĩa Tòng áp sát Giới Kiều, toàn bộ dựa vào Khúc Nghĩa tử chiến.' };
+                if (scriptName === '194 Tam Nhượng Từ Châu' || scriptName === '196 Hiệp Đế Lệnh Hầu' || scriptName === '198 Bạch Môn Vẫn Mệnh' || scriptName === '199 Y Đái Mật Chiếu') return { force: 'Hà Bắc Viên thị', classLevel: 'Tứ thế tam công', position: 'Đại tướng quân', age: 44, children: 'Viên Đàm, Viên Hy, Viên Thượng', region: 'Nghiệp Thành', power: 'Mười vạn đại quân', subordinates: 'Nhan Lương, Văn Xú, Trương Cáp, Cao Lãm, Điền Phong, Thư Thụ, Hứa Du, Thẩm Phối', reputation: 'Quan Miện Quần Luân', assets: { name: 'Ký Châu phủ khố', income: 100000, expense: 60000, food: 800000, gold: 300000 }, attributes: { 'Dũng Vũ': 48, 'Thao Lược': 48, 'Nội Chính': 58, 'Thống Ngự': 73, 'Khí Độ': 58, 'Sức Khỏe': 58 }, selectedTraits: [{ name: 'Ngoại khoan nội kỵ', effects: 'Khí Độ-5' }], crisis: 'Tuy ngồi ôm bốn châu nhưng các con tranh quyền, mưu thần chèn ép nhau, Tào Tháo đón thiên tử nên áp đảo ngươi về mặt chính trị.' };
+                if (scriptName === '200 Quan Độ Liệt Hỏa') return { force: 'Hà Bắc Viên thị', classLevel: 'Tứ thế tam công', position: 'Đại tướng quân', age: 46, children: 'Viên Thượng', region: 'Quan Độ', power: 'Mười lăm vạn đại quân', subordinates: 'Trương Cáp, Cao Lãm, Thuần Vu Quỳnh, Hứa Du(Sắp phản), Quách Đồ', reputation: 'Quan Miện Quần Luân', assets: { name: 'Hà Bắc lương thương', income: 155000, expense: 105000, food: 1050000, gold: 510000 }, attributes: { 'Dũng Vũ': 45, 'Thao Lược': 45, 'Nội Chính': 55, 'Thống Ngự': 70, 'Khí Độ': 55, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Cương phúc tự dụng', effects: 'Thống Ngự-10' }], crisis: 'Quan Độ tổn tướng, Hứa Du đào tẩu, Tào quân đang kỳ tập Ô Sào, ngươi lại hạ lệnh cường công doanh trại kiên cố.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Quan Đông liên quân', classLevel: 'Tứ thế tam công', position: 'Bột Hải thái thú', age: 35, children: 'Viên Đàm', region: 'Bột Hải', power: 'Một vạn tinh binh', subordinates: 'Hứa Du, Quách Đồ, Phùng Kỷ, Nhan Lương, Văn Xú', reputation: 'Quan Miện Quần Luân', assets: { name: 'Viên thị tư sản', income: 32000, expense: 17000, food: 105000, gold: 82000 }, attributes: { 'Dũng Vũ': 62, 'Thao Lược': 72, 'Nội Chính': 82, 'Thống Ngự': 86, 'Khí Độ': 86, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Chiết tiết hạ sĩ', effects: 'Khí Độ+20' }], crisis: 'Đổng Trác muốn khép ngươi vào tội chết, phải mau chóng liên hợp sĩ tộc Quan Đông khởi binh.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Ký Châu mục phủ', classLevel: 'Tứ thế tam công', position: 'Ký Châu mục', age: 38, children: 'Viên Đàm', region: 'Giới Kiều đại doanh', power: 'Năm vạn giáp sĩ', subordinates: 'Khúc Nghĩa, Thư Thụ, Điền Phong, Thẩm Phối, Nhan Lương, Văn Xú', reputation: 'Quan Miện Quần Luân', assets: { name: 'Ký Châu thuế phú', income: 82000, expense: 52000, food: 410000, gold: 155000 }, attributes: { 'Dũng Vũ': 61, 'Thao Lược': 71, 'Nội Chính': 81, 'Thống Ngự': 85, 'Khí Độ': 85, 'Sức Khỏe': 67 }, selectedTraits: [{ name: 'Mưu toán Hàn Phức', effects: 'Thao Lược+5' }], crisis: 'Trận Giới Kiều ngươi đối mặt với Bạch Mã Nghĩa Tòng xung phong, suýt chút nữa bị bắt sống.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { force: 'Hà Bắc Viên thị', classLevel: 'Tứ thế tam công', position: 'Đại tướng quân', age: 42, children: 'Viên Đàm, Viên Hy, Viên Thượng', region: 'Nghiệp Thành', power: 'Mười hai vạn đại quân', subordinates: 'Nhan Lương, Văn Xú, Trương Cáp, Thư Thụ, Điền Phong, Thẩm Phối', reputation: 'Quan Miện Quần Luân', assets: { name: 'Hà Bắc tứ châu', income: 122000, expense: 82000, food: 710000, gold: 305000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 70, 'Nội Chính': 80, 'Thống Ngự': 84, 'Khí Độ': 84, 'Sức Khỏe': 66 }, selectedTraits: [{ name: 'Trì trọng thiểu quyết', effects: 'Khí Độ-5' }], crisis: 'Nghe tin Quách Đồ đám người không đón thiên tử khiến Tào Tháo giành được tiên cơ, hậu phương lại chưa hoàn toàn bình định.' };
+                if (scriptName === '200 Quan Độ Chi Chiến') return { force: 'Hà Bắc Viên thị', classLevel: 'Tứ thế tam công', position: 'Đại tướng quân', age: 46, children: 'Viên Thượng', region: 'Quan Độ đại doanh', power: 'Mười một vạn tinh nhuệ', subordinates: 'Trương Cáp, Cao Lãm, Thẩm Phối, Quách Đồ, Thuần Vu Quỳnh, Hứa Du', reputation: 'Quan Miện Quần Luân', assets: { name: 'Nam hạ quân nhu', income: 52000, expense: 122000, food: 810000, gold: 205000 }, attributes: { 'Dũng Vũ': 58, 'Thao Lược': 68, 'Nội Chính': 78, 'Thống Ngự': 82, 'Khí Độ': 80, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Ngoại khoan nội kỵ', effects: 'Thao Lược-10' }], crisis: 'Tướng giữ Ô Sào không phòng bị, Hứa Du đào tẩu tiết lộ bí mật, Tào quân đột kỵ đánh vào Ô Sào, mười vạn đại quân đối mặt với nguy cơ đứt lương.' };
+            }
+            return {};
+        }
+    },
+    'Lữ Bố': {
+        zi: 'Phụng Tiên',
+        scripts: { 'Diễn Nghĩa': ['189 Đế Đô Kinh Biến', '190 Chư Hầu Hội Minh', '192 Phụng Nghi Đình Kế', '194 Tam Nhượng Từ Châu', '196 Viên Môn Xạ Kích', '198 Bạch Môn Vẫn Mệnh'], 'Chính Sử': ['189 Đổng Trác Nhập Kinh', '192 Lý Quách Chi Loạn', '196 Dĩ Lệnh Bất Thần'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '189 Đế Đô Kinh Biến') return { faction: 'Đổng Trác quân(Phụ dung)', classLevel: 'Biên quận vũ phu', position: 'Chủ bạ', age: 38, children: 'Lữ Linh Khởi', region: 'Lạc Dương', power: 'Năm ngàn Tịnh Châu lang kỵ', subordinates: 'Cao Thuận, Trương Liêu, Ngụy Tục, Tống Hiến', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Xích Thố mã', income: 10000, expense: 5000, food: 20000, gold: 50000 }, attributes: { 'Dũng Vũ': 100, 'Thao Lược': 20, 'Nội Chính': 10, 'Thống Ngự': 80, 'Khí Độ': 10, 'Sức Khỏe': 90 }, selectedTraits: [{ name: 'Tam tính gia nô', effects: 'Khí Độ-50' }], crisis: 'Nhận ngựa Xích Thố vừa chém giết Đinh Nguyên, mãn triều văn võ khinh bỉ.' };
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Đổng Trác quân(Phụ dung)', classLevel: 'Biên quận vũ phu', position: 'Ôn Hầu', age: 39, children: 'Lữ Linh Khởi', region: 'Hổ Lao Quan', power: 'Ba vạn thiết kỵ', subordinates: 'Cao Thuận, Trương Liêu, Hầu Thành, Hách Manh', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Tướng quốc hậu thưởng', income: 15000, expense: 10000, food: 50000, gold: 80000 }, attributes: { 'Dũng Vũ': 100, 'Thao Lược': 20, 'Nội Chính': 10, 'Thống Ngự': 80, 'Khí Độ': 10, 'Sức Khỏe': 90 }, selectedTraits: [{ name: 'Thiên hạ vô địch', effects: 'Dũng Vũ+30' }], crisis: 'Trước Hổ Lao Quan bị Lưu Quan Trương ba người giáp công khiến ngươi dần dần đuối sức, phải tìm cơ hội rút lui.' };
+                if (scriptName === '192 Phụng Nghi Đình Kế') return { faction: 'Thái sư phủ(Tâm sinh phản ý)', classLevel: 'Biên quận vũ phu', position: 'Phấn vũ tướng quân', age: 41, children: 'Lữ Linh Khởi', region: 'Phụng Nghi Đình', power: 'Hai vạn Tịnh Châu binh', subordinates: 'Cao Thuận, Trương Liêu', reputation: 'Y Quan Kiêu Kính', assets: { name: 'Trường An phủ khố', income: 20000, expense: 15000, food: 80000, gold: 30000 }, attributes: { 'Dũng Vũ': 100, 'Thao Lược': 20, 'Nội Chính': 10, 'Thống Ngự': 75, 'Khí Độ': 10, 'Sức Khỏe': 90 }, selectedTraits: [{ name: 'Nhi nữ tình trường', effects: 'Thao Lược-10' }], crisis: 'Tư hội cùng Điêu Thuyền bị Đổng Trác bắt gặp, họa kích sượt qua tai bay đi, Vương Doãn khuyên ngươi tru sát Đổng tặc.' };
+                if (scriptName === '194 Tam Nhượng Từ Châu') return { force: 'Duyện Châu phản quân', classLevel: 'Phản phúc vô thường', position: 'Duyện Châu mục', age: 43, children: 'Lữ Linh Khởi', region: 'Bộc Dương', power: 'Bốn vạn đại quân', subordinates: 'Trần Cung, Trương Liêu, Cao Thuận, Tang Bá', reputation: 'Y Quan Kiêu Kính', assets: { name: 'Kiếp lược Duyện Châu', income: 30000, expense: 20000, food: 100000, gold: 50000 }, attributes: { 'Dũng Vũ': 100, 'Thao Lược': 25, 'Nội Chính': 15, 'Thống Ngự': 80, 'Khí Độ': 15, 'Sức Khỏe': 90 }, selectedTraits: [{ name: 'Hữu dũng vô mưu', effects: 'Thao Lược-30' }], crisis: 'Đánh lén Duyện Châu đắc thủ, Tào Tháo quay về chi viện, ngươi tự tin vào võ lực muốn chính diện đánh tan Tào quân.' };
+                if (scriptName === '196 Viên Môn Xạ Kích') return { force: 'Từ Châu Lữ thị', classLevel: 'Phản phúc vô thường', position: 'Từ Châu mục', age: 45, children: 'Lữ Linh Khởi', region: 'Hạ Phì', power: 'Năm vạn binh mã', subordinates: 'Trần Cung, Trương Liêu, Cao Thuận, Tang Bá, Ngụy Tục', reputation: 'Y Quan Kiêu Kính', assets: { name: 'Từ Châu phủ khố', income: 40000, expense: 30000, food: 150000, gold: 60000 }, attributes: { 'Dũng Vũ': 100, 'Thao Lược': 25, 'Nội Chính': 15, 'Thống Ngự': 80, 'Khí Độ': 15, 'Sức Khỏe': 90 }, selectedTraits: [{ name: 'Kiến lợi vong nghĩa', effects: 'Khí Độ-20' }], crisis: 'Viên Thuật đại quân áp cảnh, bắn kích cửa viên ở tại một lần này.' };
+                if (scriptName === '198 Bạch Môn Vẫn Mệnh') return { force: 'Hạ Phì cô thành', classLevel: 'Chúng phán thân ly', position: 'Từ Châu mục', age: 47, children: 'Lữ Linh Khởi', region: 'Bạch Môn Lâu', power: 'Ba vạn bì binh', subordinates: 'Trần Cung, Trương Liêu, Cao Thuận, Hầu Thành(Sắp phản), Ngụy Tục(Sắp phản)', reputation: 'Y Quan Kiêu Kính', assets: { name: 'Tàn phá Hạ Phì', income: 0, expense: 10000, food: 10000, gold: 5000 }, attributes: { 'Dũng Vũ': 100, 'Thao Lược': 20, 'Nội Chính': 10, 'Thống Ngự': 60, 'Khí Độ': 5, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Khất ai khất liên', effects: 'Khí Độ-40' }], crisis: 'Bị nước ngập thành, bộ tướng trộm đi ngựa Xích Thố trói ngươi tại Bạch Môn Lâu, ngươi hướng Tào Tháo vẫy đuôi cầu xin thương xót.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Đổng Trác quân(Phụ dung)', classLevel: 'Biên quận vũ phu', position: 'Kỵ đô úy', age: 38, children: 'Không Có', region: 'Lạc Dương', power: 'Vài ngàn Tịnh Châu dư bộ', subordinates: 'Trương Liêu, Cao Thuận, Thành Liêm, Ngụy Tục', reputation: 'Quận Vọng Mông Tu', assets: { name: 'Đổng Trác thưởng tứ', income: 8000, expense: 5000, food: 15000, gold: 30000 }, attributes: { 'Dũng Vũ': 95, 'Thao Lược': 30, 'Nội Chính': 20, 'Thống Ngự': 75, 'Khí Độ': 20, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Kiêu dũng thiện chiến', effects: 'Dũng Vũ+20' }], crisis: 'Giết Đinh Nguyên đầu quân Đổng Trác, Tịnh Châu đích hệ cùng Tây Lương quân phiệt mâu thuẫn trùng điệp, thời khắc đề phòng bị nuốt chửng.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { faction: 'Trường An triều đình(Phụ dung)', classLevel: 'Biên quận vũ phu', position: 'Phấn vũ tướng quân', age: 41, children: 'Không Có', region: 'Trường An', power: 'Hai vạn Tịnh Châu binh', subordinates: 'Trương Liêu, Cao Thuận', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Triều đình cấp phát', income: 15000, expense: 15000, food: 50000, gold: 20000 }, attributes: { 'Dũng Vũ': 95, 'Thao Lược': 30, 'Nội Chính': 20, 'Thống Ngự': 75, 'Khí Độ': 20, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Khinh giảo phản phúc', effects: 'Khí Độ-30' }], crisis: 'Đổng Trác ném kích cùng tư thông tỳ nữ khiến ngươi sợ hãi, sau khi giết Đổng, đại quân Lý Thôi Quách Dĩ phản công đã binh lâm thành hạ.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { force: 'Từ Châu Lữ thị', classLevel: 'Phản phúc vô thường', position: 'Từ Châu mục(Tự lĩnh)', age: 45, children: 'Không Có', region: 'Hạ Phì', power: 'Bốn vạn binh mã', subordinates: 'Trần Cung, Cao Thuận, Trương Liêu, Tang Bá', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Từ Châu phủ khố', income: 35000, expense: 25000, food: 120000, gold: 50000 }, attributes: { 'Dũng Vũ': 95, 'Thao Lược': 35, 'Nội Chính': 25, 'Thống Ngự': 78, 'Khí Độ': 25, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Duy lợi thị thị', effects: 'Nội Chính-10' }], crisis: 'Phản bội Lưu Bị cướp Từ Châu, quân kỷ bại hoại túng binh cướp bóc mất hết lòng dân, Trần Đăng đám người ngầm liên kết Tào Tháo.' };
+            }
+            return {};
+        }
+    },
+    'Trương Lỗ': {
+        zi: 'Công Kỳ',
+        scripts: { 'Diễn Nghĩa': ['211 Tây Xuyên Đồ Nghiệp', '215 Đơn Đao Phó Hội'], 'Chính Sử': ['192 Lý Quách Chi Loạn', '196 Dĩ Lệnh Bất Thần', '200 Quan Độ Chi Chiến', '211 Tây Xuyên Định Đỉnh', '215 Hợp Phì Chi Dịch'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '211 Tây Xuyên Đồ Nghiệp') return { force: 'Hán Trung chính quyền', classLevel: 'Ngũ Đẩu Mễ Đạo chủ', position: 'Hán Ninh thái thú', age: 45, children: 'Trương Vệ', region: 'Nam Trịnh', power: 'Năm vạn đạo chúng', subordinates: 'Dương Tùng, Diêm Phố, Trương Vệ, Mã Siêu(Tạm đầu quân)', reputation: 'Châu Quận Trì Danh', assets: { name: 'Hán Trung phủ khố', income: 25000, expense: 15000, food: 200000, gold: 60000 }, attributes: { 'Dũng Vũ': 40, 'Thao Lược': 50, 'Nội Chính': 70, 'Thống Ngự': 60, 'Khí Độ': 50, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Thiên an nhất ngung', effects: 'Thao Lược-10' }], crisis: 'Nghe tin lời gièm pha của Dương Tùng nghi kỵ Mã Siêu, khiến hắn đảo qua Lưu Bị.' };
+                if (scriptName === '215 Đơn Đao Phó Hội') return { force: 'Hán Trung chính quyền', classLevel: 'Ngũ Đẩu Mễ Đạo chủ', position: 'Hán Ninh thái thú', age: 49, children: 'Trương Vệ', region: 'Dương Bình Quan', power: 'Bảy vạn binh mã', subordinates: 'Dương Tùng(Nội quỷ), Diêm Phố, Trương Vệ, Bàng Đức', reputation: 'Châu Quận Trì Danh', assets: { name: 'Hán Trung phủ khố', income: 25000, expense: 20000, food: 150000, gold: 50000 }, attributes: { 'Dũng Vũ': 40, 'Thao Lược': 45, 'Nội Chính': 65, 'Thống Ngự': 55, 'Khí Độ': 45, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Khinh tín sàm ngôn', effects: 'Thao Lược-20' }], crisis: 'Tào Tháo mười vạn đại quân cường công, Dương Tùng đã bị trọng kim thu mua chuẩn bị dâng quan.' };
+            } else {
+                if (scriptName === '192 Lý Quách Chi Loạn' || scriptName === '196 Dĩ Lệnh Bất Thần' || scriptName === '200 Quan Độ Chi Chiến') return { force: 'Ngũ Đẩu Mễ Đạo', classLevel: 'Ngũ Đẩu Mễ Đạo chủ', position: 'Hán Trung thái thú', age: 30, children: 'Trương Phú', region: 'Hán Trung', power: 'Vài vạn quỷ tốt', subordinates: 'Diêm Phố, Trương Vệ', reputation: 'Châu Quận Trì Danh', assets: { name: 'Nghĩa xá tuế cống', income: 30000, expense: 15000, food: 250000, gold: 80000 }, attributes: { 'Dũng Vũ': 45, 'Thao Lược': 60, 'Nội Chính': 85, 'Thống Ngự': 75, 'Khí Độ': 70, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Chính giáo hợp nhất', effects: 'Nội Chính+20' }], crisis: 'Giết Trương Tu độc chiếm Hán Trung, Lưu Chương giết mẹ ngươi kết hạ huyết cừu, phải tử thủ phòng tuyến Tần Lĩnh.' };
+                if (scriptName === '211 Tây Xuyên Định Đỉnh') return { force: 'Hán Trung chính quyền', classLevel: 'Ngũ Đẩu Mễ Đạo chủ', position: 'Sư quân', age: 45, children: 'Trương Phú', region: 'Hán Trung', power: 'Mười vạn tín chúng', subordinates: 'Diêm Phố, Dương Ngang, Trương Vệ', reputation: 'Châu Quận Trì Danh', assets: { name: 'Hán Trung thiên phủ', income: 35000, expense: 20000, food: 300000, gold: 90000 }, attributes: { 'Dũng Vũ': 45, 'Thao Lược': 65, 'Nội Chính': 85, 'Thống Ngự': 75, 'Khí Độ': 70, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Khoan nhân trị dân', effects: 'Nội Chính+10' }], crisis: 'Quan Lũng hội bại lưu dân tràn vào, bộ hạ khuyên ngươi xưng vương, Diêm Phố tử gián không thể tiếm việt.' };
+                if (scriptName === '215 Hợp Phì Chi Dịch') return { faction: 'Tào Tháo quân(Hàng)', classLevel: 'Ngũ Đẩu Mễ Đạo chủ', position: 'Trấn nam tướng quân(Hàng)', age: 49, children: 'Trương Vệ', region: 'Ba Trung', power: 'Tàn bộ', subordinates: 'Diêm Phố', reputation: 'Châu Quận Trì Danh', assets: { name: 'Phong tồn phủ khố', income: 0, expense: 5000, food: 10000, gold: 0 }, attributes: { 'Dũng Vũ': 45, 'Thao Lược': 65, 'Nội Chính': 80, 'Thống Ngự': 70, 'Khí Độ': 80, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Thức thời vụ', effects: 'Khí Độ+20' }], crisis: 'Dương Bình Quan bị phá lui về Ba Trung, kiên quyết phong tồn phủ khố để hướng Tào Tháo cầu xin thiện chung.' };
+            }
+            return {};
+        }
+    },
+    'Trương Giác': {
+        zi: 'Không Có',
+        scripts: { 'Diễn Nghĩa': ['184 Thái Bình Đạo Khởi'], 'Chính Sử': ['184 Hoàng Cân Khởi Nghĩa'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '184 Thái Bình Đạo Khởi') return { force: 'Hoàng Cân quân', classLevel: 'Thái Bình Đạo chủ', position: 'Đại hiền lương sư', age: 45, children: 'Không Có', region: 'Quảng Tông', power: 'Mười lăm vạn binh mã', subordinates: 'Trương Bảo, Trương Lương, Mã Nguyên Nghĩa, Ba Tài', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Giáo chúng cúng phụng', income: 50000, expense: 80000, food: 300000, gold: 50000 }, attributes: { 'Dũng Vũ': 40, 'Thao Lược': 60, 'Nội Chính': 30, 'Thống Ngự': 85, 'Khí Độ': 50, 'Sức Khỏe': 10 }, selectedTraits: [{ name: 'Hô phong hoán vũ', effects: 'Thao Lược+50' }], crisis: 'Thổ huyết không ngừng, pháp thuật của Nam Hoa lão tiên mất linh, đối mặt với tín ngưỡng sụp đổ.' };
+            } else {
+                if (scriptName === '184 Hoàng Cân Khởi Nghĩa') return { force: 'Hoàng Cân quân', classLevel: 'Thái Bình Đạo chủ', position: 'Đại hiền lương sư', age: 45, children: 'Không Có', region: 'Quảng Tông', power: 'Mười lăm vạn đồ chúng', subordinates: 'Trương Bảo, Trương Lương, Ba Tài, Trương Mạn Thành', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Kiếp lược châu quận', income: 40000, expense: 90000, food: 250000, gold: 40000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 50, 'Nội Chính': 60, 'Thống Ngự': 80, 'Khí Độ': 60, 'Sức Khỏe': 20 }, selectedTraits: [{ name: 'Yêu ngôn hoặc chúng', effects: 'Thống Ngự+40' }], crisis: 'Mã Nguyên Nghĩa mưu tiết bị ngũ mã phanh thây, Hoàng Phủ Tung trùng trùng bao vây, ngươi bệnh nhập cao hoang.' };
+            }
+            return {};
+        }
+    },
+    'Hà Tiến': {
+        zi: 'Toại Cao',
+        scripts: { 'Diễn Nghĩa': ['189 Đế Đô Kinh Biến'], 'Chính Sử': ['189 Đổng Trác Nhập Kinh'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '189 Đế Đô Kinh Biến') return { faction: 'Đại Hán triều đình', classLevel: 'Đồ tể xuất thân ngoại thích', position: 'Đại tướng quân', age: 45, children: 'Hà Yến', region: 'Lạc Dương cung thành', power: 'Tám vạn cấm quân', subordinates: 'Viên Thiệu, Tào Tháo, Ngô Khuông, Trương Chương', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Ngoại thích tư sản', income: 60000, expense: 30000, food: 200000, gold: 150000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 40, 'Nội Chính': 50, 'Thống Ngự': 70, 'Khí Độ': 60, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Ưu nhu quả đoán', effects: 'Thao Lược-20' }], crisis: 'Thập Thường Thị giả chiếu gọi ngươi vào cung, Viên Thiệu khổ khuyên không nghe, đao phủ thủ đã ở sau cửa.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Đại Hán triều đình', classLevel: 'Đồ tể xuất thân ngoại thích', position: 'Đại tướng quân', age: 45, children: 'Hà Yến', region: 'Lạc Dương cung thành', power: 'Ngũ hiệu bắc quân', subordinates: 'Viên Thiệu, Viên Thuật, Tào Tháo', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Thực ấp', income: 55000, expense: 25000, food: 180000, gold: 160000 }, attributes: { 'Dũng Vũ': 55, 'Thao Lược': 45, 'Nội Chính': 55, 'Thống Ngự': 75, 'Khí Độ': 55, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Dẫn lang nhập thất', effects: 'Thao Lược-15' }], crisis: 'Muốn gọi Đổng Trác vào kinh uy hiếp thái hậu tru sát hoạn quan, cơ mật bị lộ, Trương Nhượng chuẩn bị đem ngươi chém đầu.' };
+            }
+            return {};
+        }
+    },
+    'Tư Mã Ý': {
+        zi: 'Trọng Đạt',
+        scripts: { 'Diễn Nghĩa': ['228 Không Thành Chi Kế', '234 Thượng Phương Cốc Kế', '238 Đạp Tuyết Bình Liêu', '249 Lạc Thủy Bội Thệ'], 'Chính Sử': ['219 Kinh Châu Chi Tranh', '234 Lục Xuất Kỳ Sơn', '238 Thừa Chí Khởi Phạt', '249 Bội Thệ Lạc Thủy'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '228 Không Thành Chi Kế') return { faction: 'Tào Ngụy(Ngoại nhậm)', classLevel: 'Hà Nội sĩ tộc', position: 'Đại đô đốc', age: 49, children: 'Tư Mã Sư, Tư Mã Chiêu', region: 'Tây Thành', power: 'Mười lăm vạn đại quân', subordinates: 'Trương Cáp, Quách Hoài, Tôn Lễ, Tư Mã Chiêu', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Tây tuyến quân nhu', income: 40000, expense: 60000, food: 300000, gold: 100000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 95, 'Nội Chính': 85, 'Thống Ngự': 90, 'Khí Độ': 40, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Ưng thị lang cố', effects: 'Thao Lược+20' }], crisis: 'Truy kích Gia Cát Lượng đến Tây Thành, cửa thành mở rộng tiếng đàn tranh tranh, ngươi rất sợ trong thành có phục binh.' };
+                if (scriptName === '234 Thượng Phương Cốc Kế') return { faction: 'Tào Ngụy(Ngoại nhậm)', classLevel: 'Hà Nội sĩ tộc', position: 'Đại đô đốc', age: 55, children: 'Tư Mã Sư, Tư Mã Chiêu', region: 'Thượng Phương Cốc', power: 'Hai mươi vạn binh mã', subordinates: 'Quách Hoài, Tôn Lễ, Hạ Hầu Bá', reputation: 'Quan Miện Quần Luân', assets: { name: 'Vị Nam đồn điền', income: 50000, expense: 50000, food: 400000, gold: 150000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 95, 'Nội Chính': 85, 'Thống Ngự': 90, 'Khí Độ': 40, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Ưng thị lang cố', effects: 'Thao Lược+20' }], crisis: 'Bị dụ vào Thượng Phương Cốc hỏa công, sắp bị thiêu chết thì trời giáng mưa to chết hụt.' };
+                if (scriptName === '238 Đạp Tuyết Bình Liêu') return { faction: 'Tào Ngụy(Ngoại nhậm)', classLevel: 'Hà Nội sĩ tộc', position: 'Thái úy', age: 59, children: 'Tư Mã Sư, Tư Mã Chiêu', region: 'Liêu Đông', power: 'Bốn vạn viễn chinh quân', subordinates: 'Hồ Tuân, Ngưu Kim, Vô Khâu Kiệm', reputation: 'Quan Miện Quần Luân', assets: { name: 'Viễn chinh tri trọng', income: 30000, expense: 40000, food: 150000, gold: 80000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 95, 'Nội Chính': 85, 'Thống Ngự': 90, 'Khí Độ': 40, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Ưng thị lang cố', effects: 'Thao Lược+20' }], crisis: 'Viễn chinh Liêu Đông gặp mưa to liên miên, ngươi đội áp lực triều dã rút quân tử vây Tương Bình.' };
+                if (scriptName === '249 Lạc Thủy Bội Thệ') return { force: 'Tư Mã thị', classLevel: 'Hà Nội sĩ tộc', position: 'Thái phó', age: 70, children: 'Tư Mã Sư, Tư Mã Chiêu', region: 'Lạc Dương', power: 'Ba ngàn tử sĩ', subordinates: 'Tưởng Tế, Cao Nhu, Vương Quan, Tư Mã Sư', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Tư Mã thị ám súc', income: 20000, expense: 30000, food: 50000, gold: 200000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 95, 'Nội Chính': 85, 'Thống Ngự': 90, 'Khí Độ': 40, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Ưng thị lang cố', effects: 'Thao Lược+20' }], crisis: 'Phát động Cao Bình Lăng chi biến, nếu Tào Sảng hiệp thiên tử hiệu triệu thiên hạ ngươi sẽ chết không có chỗ chôn.' };
+            } else {
+                if (scriptName === '219 Kinh Châu Chi Tranh') return { faction: 'Tào Ngụy(Văn thần)', classLevel: 'Hà Nội sĩ tộc', position: 'Thượng thư', age: 40, children: 'Tư Mã Sư, Tư Mã Chiêu', region: 'Lạc Dương', power: 'Ba ngàn tư binh', subordinates: 'Tưởng Tế(Đồng liêu)', reputation: 'Châu Quận Trì Danh', assets: { name: 'Thượng thư phủ bổng lộc', income: 5000, expense: 4000, food: 10000, gold: 8000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 98, 'Nội Chính': 92, 'Thống Ngự': 95, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Lão mưu thâm toán', effects: 'Thao Lược+30' }], crisis: 'Quan Vũ uy chấn Hoa Hạ Tào Tháo muốn dời đô, ngươi gạt bỏ mọi ý kiến hiến kế liên Ngô đâm lén.' };
+                if (scriptName === '234 Lục Xuất Kỳ Sơn') return { faction: 'Tào Ngụy(Ngoại nhậm)', classLevel: 'Hà Nội sĩ tộc', position: 'Đại đô đốc', age: 55, children: 'Tư Mã Sư, Tư Mã Chiêu', region: 'Ngũ Trượng Nguyên', power: 'Sáu vạn tinh nhuệ', subordinates: 'Quách Hoài, Hồ Tuân, Ngưu Kim', reputation: 'Quan Miện Quần Luân', assets: { name: 'Quan Trung phủ khố', income: 60000, expense: 50000, food: 350000, gold: 120000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 98, 'Nội Chính': 92, 'Thống Ngự': 95, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Lão mưu thâm toán', effects: 'Thao Lược+30' }], crisis: 'Gia Cát Lượng tặng nữ trang nhục nhã, ngươi biết rõ Thục quân lợi ở tốc chiến phải cố nén lửa giận.' };
+                if (scriptName === '238 Thừa Chí Khởi Phạt') return { faction: 'Tào Ngụy(Ngoại nhậm)', classLevel: 'Hà Nội sĩ tộc', position: 'Thái úy', age: 59, children: 'Tư Mã Sư, Tư Mã Chiêu', region: 'Ngoài thành Tương Bình', power: 'Bốn vạn bộ kỵ', subordinates: 'Ngưu Kim, Hồ Tuân, Vô Khâu Kiệm', reputation: 'Quan Miện Quần Luân', assets: { name: 'Triều đình cấp phát', income: 40000, expense: 45000, food: 200000, gold: 90000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 98, 'Nội Chính': 92, 'Thống Ngự': 95, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Lão mưu thâm toán', effects: 'Thao Lược+30' }], crisis: 'Liêu Thủy bạo trướng cản trở công thành, Ngụy Minh Đế bệnh nặng giục chiến, phải dùng thiết huyết thủ đoạn chấn nhiếp Liêu Đông.' };
+                if (scriptName === '249 Bội Thệ Lạc Thủy') return { force: 'Tư Mã thị', classLevel: 'Hà Nội sĩ tộc', position: 'Thái phó', age: 70, children: 'Tư Mã Sư, Tư Mã Chiêu', region: 'Lạc Dương vũ khố', power: 'Ba ngàn tử sĩ', subordinates: 'Cao Nhu, Tưởng Tế, Vương Quan, Tư Mã Sư', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Môn phiệt nội tình', income: 50000, expense: 20000, food: 100000, gold: 300000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 98, 'Nội Chính': 92, 'Thống Ngự': 95, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Lão mưu thâm toán', effects: 'Thao Lược+30' }], crisis: 'Nhân lúc Tào Sảng yết lăng phát động chính biến, ngươi lấy Lạc Thủy làm lời thề dụ hàng Tào Sảng chuẩn bị tru di tam tộc hắn.' };
+            }
+            return {};
+        }
+    },
+    'Tư Mã Sư': {
+        zi: 'Tử Nguyên',
+        scripts: { 'Diễn Nghĩa': ['251 Hoài Nam Thủ Phản', '253 Tân Thành Huyết Chiến', '255 Thao Tây Đại Tiệp', '255 Hoài Nam Tái Phản'], 'Chính Sử': ['251 Hoài Nam Thủ Phản', '252 Đông Hưng Đại Tiệp', '253 Chỉ Bộ Hợp Phì', '255 Hoài Nam Tái Phản', '255 Cửu Phạt Trung Nguyên'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '251 Hoài Nam Thủ Phản') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 43, children: 'Không Có', region: 'Hứa Xương', power: 'Mười vạn đại quân', subordinates: 'Tư Mã Chiêu, Chung Hội, Giả Sung, Vương Cơ', reputation: 'Quan Miện Quần Luân', assets: { name: 'Ngụy quốc quốc khố(Khống chế)', income: 90000, expense: 70000, food: 500000, gold: 200000 }, attributes: { 'Dũng Vũ': 68, 'Thao Lược': 82, 'Nội Chính': 85, 'Thống Ngự': 90, 'Khí Độ': 70, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Nhẫn lạt quả quyết', effects: 'Khí Độ-10' }], crisis: 'Phụ thân vừa mất, Vương Lăng phản loạn, bắt buộc phải nhanh chóng trấn áp để lập uy..' };
+                if (scriptName === '253 Tân Thành Huyết Chiến') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 45, children: 'Không Có', region: 'Lạc Dương', power: 'Mười vạn đại quân', subordinates: 'Tư Mã Chiêu, Trương Đặc, Vô Khâu Kiệm', reputation: 'Quan Miện Quần Luân', assets: { name: 'Ngụy quốc quốc khố(Khống chế)', income: 90000, expense: 70000, food: 500000, gold: 200000 }, attributes: { 'Dũng Vũ': 68, 'Thao Lược': 82, 'Nội Chính': 85, 'Thống Ngự': 90, 'Khí Độ': 70, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Ổn tọa trung quân', effects: 'Thao Lược+10' }], crisis: 'Hợp Phì tân thành nguy tại đán tịch, ngươi án binh bất động, gây ra sự nghi ngờ trong triều dã..' };
+                if (scriptName === '255 Thao Tây Đại Tiệp') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 47, children: 'Không Có', region: 'Lạc Dương', power: 'Mười vạn Ngụy quân', subordinates: 'Tư Mã Chiêu, Giả Sung, Chung Hội', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Ngụy quốc quốc khố(Khống chế)', income: 100000, expense: 80000, food: 600000, gold: 250000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 85, 'Nội Chính': 88, 'Thống Ngự': 92, 'Khí Độ': 75, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Tàn bạo bất nhân', effects: 'Khí Độ-30' }], crisis: 'Vừa phế truất Tào Phương, Khương Duy lại đại phá Vương Kinh ở Thao Tây..' };
+                if (scriptName === '255 Hoài Nam Tái Phản') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 47, children: 'Không Có', region: 'Hạng Thành', power: 'Mười vạn Ngụy quân', subordinates: 'Tư Mã Chiêu, Vương Cơ, Giả Sung, Chung Hội', reputation: 'Quan Miện Quần Luân', assets: { name: 'Bình phản quân nhu(Khống chế)', income: 100000, expense: 80000, food: 600000, gold: 250000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 85, 'Nội Chính': 88, 'Thống Ngự': 92, 'Khí Độ': 75, 'Sức Khỏe': 20 }, selectedTraits: [{ name: 'Kinh hãi trí tử', effects: 'Sức Khỏe-50' }], crisis: 'Văn Ương dạ tập quân doanh, ngươi kinh hãi đến mức nứt cả tròng mắt, mạng sống như chuối treo chỉ mành..' };
+            } else {
+                if (scriptName === '251 Hoài Nam Thủ Phản') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 43, children: 'Không Có', region: 'Hứa Xương', power: 'Mười vạn tinh nhuệ', subordinates: 'Vương Cơ, Chung Hội, Tư Mã Chiêu', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đại tướng quân phủ', income: 95000, expense: 75000, food: 550000, gold: 220000 }, attributes: { 'Dũng Vũ': 69, 'Thao Lược': 84, 'Nội Chính': 87, 'Thống Ngự': 91, 'Khí Độ': 72, 'Sức Khỏe': 45 }, selectedTraits: [{ name: 'Lôi lệ phong hành', effects: 'Thống Ngự+10' }], crisis: 'Vương Lăng dấy binh, ngươi lấy thế lôi đình thân chinh không cho kẻ phản loạn cơ hội thở dốc..' };
+                if (scriptName === '252 Đông Hưng Đại Tiệp') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 44, children: 'Không Có', region: 'Lạc Dương', power: 'Mười vạn đại quân', subordinates: 'Tư Mã Chiêu, Hồ Tuân, Gia Cát Đản', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đại tướng quân phủ', income: 95000, expense: 75000, food: 550000, gold: 220000 }, attributes: { 'Dũng Vũ': 69, 'Thao Lược': 84, 'Nội Chính': 87, 'Thống Ngự': 91, 'Khí Độ': 72, 'Sức Khỏe': 45 }, selectedTraits: [{ name: 'Dẫn cữu tự trách', effects: 'Khí Độ+10' }], crisis: 'Đông Hưng đại bại, triều dã chấn động, ngươi bắt buộc phải chủ động nhận trách nhiệm để củng cố bá quyền của Tư Mã thị..' };
+                if (scriptName === '253 Chỉ Bộ Hợp Phì') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 45, children: 'Không Có', region: 'Lạc Dương', power: 'Mười vạn tinh nhuệ', subordinates: 'Tư Mã Chiêu, Vô Khâu Kiệm, Gia Cát Đản', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đại tướng quân phủ', income: 95000, expense: 75000, food: 550000, gold: 220000 }, attributes: { 'Dũng Vũ': 69, 'Thao Lược': 84, 'Nội Chính': 87, 'Thống Ngự': 91, 'Khí Độ': 72, 'Sức Khỏe': 45 }, selectedTraits: [{ name: 'Thâm trầm đa mưu', effects: 'Thống Ngự+20' }], crisis: 'Gia Cát Khác đem trọng binh vây Hợp Phì tân thành, ngươi quyết định vườn không nhà trống, kéo sập Ngô quân..' };
+                if (scriptName === '255 Cửu Phạt Trung Nguyên') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 47, children: 'Không Có', region: 'Lạc Dương', power: 'Mười vạn cấm quân', subordinates: 'Tư Mã Chiêu, Giả Sung, Chung Hội, Quách Hoài', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đại tướng quân phủ', income: 100000, expense: 80000, food: 600000, gold: 250000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 85, 'Nội Chính': 88, 'Thống Ngự': 92, 'Khí Độ': 75, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Nhẫn lạt thanh tẩy', effects: 'Khí Độ-10' }], crisis: 'Quả quyết phế đế Tào Phương, Khương Duy ở tây tuyến giành được Thao Tây đại tiệp..' };
+                if (scriptName === '255 Hoài Nam Tái Phản') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 47, children: 'Không Có', region: 'Hạng Thành', power: 'Mười vạn Ngụy quân', subordinates: 'Tư Mã Chiêu, Vương Cơ, Chung Hội', reputation: 'Quan Miện Quần Luân', assets: { name: 'Bình phản quân nhu(Khống chế)', income: 100000, expense: 80000, food: 600000, gold: 250000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 85, 'Nội Chính': 88, 'Thống Ngự': 92, 'Khí Độ': 75, 'Sức Khỏe': 20 }, selectedTraits: [{ name: 'Cường nhẫn kịch thống', effects: 'Sức Khỏe-50' }], crisis: 'Văn Ương dạ tập, ngươi cắn chăn nhịn đau đến mức nứt cả nhãn cầu, cố nén kịch thống chỉ huy không loạn..' };
+            }
+            return {};
+        }
+    },
+    'Tư Mã Chiêu': {
+        zi: 'Tử Thượng',
+        scripts: { 'Diễn Nghĩa': ['253 Tân Thành Huyết Chiến', '255 Thao Tây Đại Tiệp', '255 Hoài Nam Tái Phản', '257 Hoài Nam Tam Phản', '260 Lộ Nhân Giai Chi', '263 Thâu Độ Âm Bình'], 'Chính Sử': ['252 Đông Hưng Đại Tiệp', '253 Chỉ Bộ Hợp Phì', '255 Cửu Phạt Trung Nguyên', '255 Hoài Nam Tái Phản', '257 Hoài Nam Tam Phản', '260 Lộ Nhân Giai Chi', '263 Kiếm Các Lạc Nhật'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '253 Tân Thành Huyết Chiến') return { faction: 'Tào Ngụy đại tướng quân phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Tân Thành hương hầu', age: 42, children: 'Tư Mã Viêm', region: 'Lạc Dương', power: 'Năm ngàn thân vệ', subordinates: 'Giả Sung, Bùi Tú', reputation: 'Châu Quận Trì Danh', assets: { name: 'Hầu phủ tài sản', income: 20000, expense: 15000, food: 80000, gold: 40000 }, attributes: { 'Dũng Vũ': 63, 'Thao Lược': 85, 'Nội Chính': 88, 'Thống Ngự': 88, 'Khí Độ': 58, 'Sức Khỏe': 69 }, selectedTraits: [{ name: 'Lãnh nhãn bàng quan', effects: 'Thao Lược+5' }], crisis: 'Ngô quân đại binh áp cảnh, ngươi theo huynh trưởng tọa trấn hậu phương, lạnh lùng nhìn tướng sĩ tiền tuyến đổ máu..' };
+                if (scriptName === '255 Thao Tây Đại Tiệp' || scriptName === '255 Hoài Nam Tái Phản') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 44, children: 'Tư Mã Viêm', region: 'Lạc Dương', power: 'Mười vạn Ngụy quân', subordinates: 'Trần Thái, Đặng Ngải, Giả Sung, Chung Hội', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Ngụy quốc quốc khố(Khống chế)', income: 90000, expense: 70000, food: 500000, gold: 200000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 88, 'Nội Chính': 90, 'Thống Ngự': 90, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Quyền gian chi tâm', effects: 'Khí Độ-30' }], crisis: 'Huynh trưởng vừa mất tiếp quản bá phủ, Khương Duy thừa cơ ở Thao Tây đại phá Ngụy quân, Quan Lũng chấn động..' };
+                if (scriptName === '257 Hoài Nam Tam Phản') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 46, children: 'Tư Mã Viêm', region: 'Thọ Xuân', power: 'Hai mươi sáu vạn đại quân', subordinates: 'Chung Hội, Vương Cơ, Giả Sung', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Khuynh quốc chi binh', income: 80000, expense: 150000, food: 800000, gold: 300000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 88, 'Nội Chính': 90, 'Thống Ngự': 90, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Quyền gian chi tâm', effects: 'Khí Độ-30' }], crisis: 'Gia Cát Đản liên kết Ngô phản loạn, ngươi gặp mưa lớn nhiều tháng doanh trại nước ngập đến đầu gối..' };
+                if (scriptName === '260 Lộ Nhân Giai Chi') return { force: 'Tư Mã thị bá phủ', classLevel: 'Quyền thần', position: 'Tướng quốc', age: 49, children: 'Tư Mã Viêm', region: 'Lạc Dương', power: 'Năm ngàn Lạc Dương cấm quân', subordinates: 'Giả Sung, Chung Hội, Bùi Tú', reputation: 'Di Xú Phủ Việt', assets: { name: 'Tướng quốc phủ khố', income: 100000, expense: 50000, food: 400000, gold: 200000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 88, 'Nội Chính': 90, 'Thống Ngự': 90, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Quyền gian chi tâm', effects: 'Khí Độ-30' }], crisis: 'Tào Mao dẫn điện trung túc vệ giết ra khỏi cung môn lao thẳng đến phủ đệ của ngươi, đối mặt với ác danh thí quân..' };
+                if (scriptName === '263 Thâu Độ Âm Bình') return { force: 'Tư Mã thị bá phủ', classLevel: 'Tấn công', position: 'Tấn công', age: 52, children: 'Tư Mã Viêm', region: 'Lạc Dương', power: 'Mười tám vạn phạt Thục quân', subordinates: 'Chung Hội, Đặng Ngải, Giả Sung', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Phạt Thục quân nhu(Khống chế)', income: 120000, expense: 100000, food: 600000, gold: 250000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 88, 'Nội Chính': 90, 'Thống Ngự': 90, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Quyền gian chi tâm', effects: 'Khí Độ-30' }], crisis: 'Chung Hội bị chặn ở Kiếm Các, nếu chiến sự kéo dài phe phản chiến trong triều ắt sinh sự đoan..' };
+            } else {
+                if (scriptName === '252 Đông Hưng Đại Tiệp') return { faction: 'Tào Ngụy tây tuyến quân', classLevel: 'Hà Nội sĩ tộc', position: 'An Đông tướng quân', age: 41, children: 'Tư Mã Viêm', region: 'Đông Hưng tiền tuyến', power: 'Bảy vạn Ngụy quân', subordinates: 'Hồ Tuân, Gia Cát Đản, Vương Xưởng', reputation: 'Châu Quận Trì Danh', assets: { name: 'Tiền tuyến quân tư', income: 40000, expense: 50000, food: 200000, gold: 80000 }, attributes: { 'Dũng Vũ': 64, 'Thao Lược': 85, 'Nội Chính': 88, 'Thống Ngự': 88, 'Khí Độ': 60, 'Sức Khỏe': 69 }, selectedTraits: [{ name: 'Khinh địch mạo tiến', effects: 'Thao Lược-10' }], crisis: 'Phù kiều bị Ngô quân đột kích xông hủy, đại quân hội bại, ngươi đối mặt với hiểm cảnh chiến bại bị hỏi tội..' };
+                if (scriptName === '253 Chỉ Bộ Hợp Phì') return { faction: 'Tào Ngụy đại tướng quân phủ', classLevel: 'Hà Nội sĩ tộc', position: 'An Đông tướng quân', age: 42, children: 'Tư Mã Viêm', region: 'Lạc Dương', power: 'Năm ngàn tư binh', subordinates: 'Giả Sung', reputation: 'Châu Quận Trì Danh', assets: { name: 'Gia tộc nội hàm', income: 30000, expense: 20000, food: 100000, gold: 50000 }, attributes: { 'Dũng Vũ': 64, 'Thao Lược': 86, 'Nội Chính': 89, 'Thống Ngự': 89, 'Khí Độ': 61, 'Sức Khỏe': 69 }, selectedTraits: [{ name: 'Thao quang dưỡng hối', effects: 'Nội Chính+10' }], crisis: 'Huynh trưởng ứng phó Hợp Phì nguy cơ, ngươi ở trong triều phụ trách đàn áp sự dị động của bảo hoàng đảng..' };
+                if (scriptName === '255 Cửu Phạt Trung Nguyên' || scriptName === '255 Hoài Nam Tái Phản') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 44, children: 'Tư Mã Viêm', region: 'Lạc Dương', power: 'Mười vạn đại quân', subordinates: 'Vương Cơ, Trần Thái, Chung Hội, Giả Sung, Đặng Ngải', reputation: 'Quan Miện Quần Luân', assets: { name: 'Thiên hạ thuế phú(Khống chế)', income: 100000, expense: 80000, food: 600000, gold: 250000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 89, 'Nội Chính': 91, 'Thống Ngự': 91, 'Khí Độ': 62, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Thâm trầm đa mưu', effects: 'Thống Ngự+20' }], crisis: 'Hoài Nam tam phản liên miên bất đoạn, Thục Hán Khương Duy lũ lũ phạm biên, bắt buộc phải củng cố cơ bản bàn..' };
+                if (scriptName === '257 Hoài Nam Tam Phản') return { force: 'Tư Mã thị bá phủ', classLevel: 'Hà Nội sĩ tộc', position: 'Đại tướng quân', age: 46, children: 'Tư Mã Viêm', region: 'Thọ Xuân ngoại vi', power: 'Hai mươi sáu vạn tinh nhuệ', subordinates: 'Chung Hội, Vương Cơ, Giả Sung', reputation: 'Quan Miện Quần Luân', assets: { name: 'Bình phản quân nhu(Khống chế)', income: 110000, expense: 140000, food: 700000, gold: 280000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 89, 'Nội Chính': 91, 'Thống Ngự': 91, 'Khí Độ': 62, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Thâm trầm đa mưu', effects: 'Thống Ngự+20' }], crisis: 'Gia Cát Đản cấu kết Đông Ngô tử thủ Thọ Xuân, nếu kéo dài ngày tháng sinh biến Tư Mã thị sẽ vạn kiếp bất phục..' };
+                if (scriptName === '260 Lộ Nhân Giai Chi') return { force: 'Tư Mã thị bá phủ', classLevel: 'Quyền thần', position: 'Tướng quốc', age: 49, children: 'Tư Mã Viêm', region: 'Lạc Dương', power: 'Năm ngàn cấm vệ quân', subordinates: 'Giả Sung, Bùi Tú, Chung Hội', reputation: 'Di Xú Phủ Việt', assets: { name: 'Đại tướng quân phủ', income: 120000, expense: 40000, food: 500000, gold: 400000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 89, 'Nội Chính': 91, 'Thống Ngự': 91, 'Khí Độ': 62, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Thâm trầm đa mưu', effects: 'Thống Ngự+20' }], crisis: 'Hoàng đế Tào Mao cầm kiếm vung qua thảo phạt ngươi, Thành Tế giữa phố thí quân, bắt buộc phải nhanh chóng tìm kẻ chết thay..' };
+                if (scriptName === '263 Kiếm Các Lạc Nhật') return { force: 'Tư Mã thị bá phủ', classLevel: 'Tấn công', position: 'Tấn công', age: 52, children: 'Tư Mã Viêm', region: 'Lạc Dương bá phủ', power: 'Mười tám vạn tinh nhuệ', subordinates: 'Chung Hội, Đặng Ngải, Giả Sung', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Diệt Thục hậu cần(Khống chế)', income: 150000, expense: 120000, food: 900000, gold: 300000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 89, 'Nội Chính': 91, 'Thống Ngự': 91, 'Khí Độ': 62, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Thâm trầm đa mưu', effects: 'Thống Ngự+20' }], crisis: 'Đặng Ngải thâu độ Âm Bình tuy thành, nhưng Chung Hội chiếm Thục có dị tâm, bắt buộc phải ngầm phòng bị..' };
+            }
+            return {};
+        }
+    },
+    'Tư Mã Viêm': {
+        zi: 'An Thế',
+        scripts: { 'Diễn Nghĩa': ['264 Nhị Sĩ Tranh Công', '279 Lâu Thuyền Phá Ngô', '280 Tam Phân Quy Nhất'], 'Chính Sử': ['264 Cô Giang Tỏa Dược', '280 Tam Phân Quy Tấn'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '264 Nhị Sĩ Tranh Công') return { force: 'Tây Tấn', classLevel: 'Tấn vương', position: 'Tấn vương', age: 28, children: 'Tư Mã Trung', region: 'Lạc Dương', power: 'Ba mươi vạn đại quân', subordinates: 'Dương Hỗ, Đỗ Dự, Giả Sung', reputation: 'Quan Miện Quần Luân', assets: { name: 'Soán Ngụy cơ nghiệp', income: 180000, expense: 120000, food: 1000000, gold: 500000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 80, 'Nội Chính': 85, 'Thống Ngự': 85, 'Khí Độ': 90, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Thiên hạ nhất thống', effects: 'Khí Độ+30' }], crisis: 'Vừa thay Ngụy lập Tấn, Giang Nam Đông Ngô vẫn còn, ngươi cần an phủ nhân tâm trù bị nhất thống..' };
+                if (scriptName === '279 Lâu Thuyền Phá Ngô') return { force: 'Tây Tấn', classLevel: 'Tây Tấn khai quốc hoàng đế', position: 'Tấn Vũ Đế', age: 43, children: 'Tư Mã Trung', region: 'Lạc Dương', power: 'Hai mươi vạn phạt Ngô quân', subordinates: 'Đỗ Dự, Vương Tuấn, Dương Hỗ(Đã mất)', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Tây Tấn quốc khố', income: 200000, expense: 150000, food: 1500000, gold: 800000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 80, 'Nội Chính': 85, 'Thống Ngự': 85, 'Khí Độ': 90, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Thiên hạ nhất thống', effects: 'Khí Độ+30' }], crisis: 'Trong triều nhiều người phản đối phạt Ngô, ngươi gạt bỏ mọi ý kiến sai bảo Vương Tuấn đóng lâu thuyền..' };
+                if (scriptName === '280 Tam Phân Quy Nhất') return { force: 'Tây Tấn', classLevel: 'Tây Tấn khai quốc hoàng đế', position: 'Tấn Vũ Đế', age: 44, children: 'Tư Mã Trung', region: 'Lạc Dương', power: 'Hai mươi vạn đại quân', subordinates: 'Đỗ Dự, Vương Tuấn', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Tây Tấn quốc khố', income: 200000, expense: 150000, food: 1500000, gold: 800000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 80, 'Nội Chính': 85, 'Thống Ngự': 85, 'Khí Độ': 90, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Thiên hạ nhất thống', effects: 'Khí Độ+30' }], crisis: 'Vương Tuấn lâu thuyền phá Ngô, Tôn Hạo đầu hàng, thiên hạ quy Tấn..' };
+            } else {
+                if (scriptName === '264 Cô Giang Tỏa Dược') return { force: 'Tây Tấn', classLevel: 'Tấn vương', position: 'Tấn vương', age: 28, children: 'Tư Mã Trung', region: 'Lạc Dương', power: 'Ba mươi vạn Tấn quân', subordinates: 'Dương Hỗ, Giả Sung, Bùi Tú', reputation: 'Quan Miện Quần Luân', assets: { name: 'Sơ Tấn quốc khố', income: 190000, expense: 130000, food: 1100000, gold: 550000 }, attributes: { 'Dũng Vũ': 52, 'Thao Lược': 82, 'Nội Chính': 88, 'Thống Ngự': 87, 'Khí Độ': 92, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Thái Khang chi trị', effects: 'Nội Chính+20' }], crisis: 'Thục địa vừa bình, Chung Hội chi loạn vừa dứt, bắt buộc phải nhanh chóng ổn định chính cục áp chế thế gia..' };
+                if (scriptName === '280 Tam Phân Quy Tấn') return { force: 'Tây Tấn', classLevel: 'Tây Tấn khai quốc hoàng đế', position: 'Tấn Vũ Đế', age: 44, children: 'Tư Mã Trung', region: 'Lạc Dương', power: 'Hai mươi vạn thủy lục đại quân', subordinates: 'Đỗ Dự, Vương Tuấn', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Diệt Ngô chiến bị', income: 210000, expense: 160000, food: 1600000, gold: 850000 }, attributes: { 'Dũng Vũ': 52, 'Thao Lược': 82, 'Nội Chính': 88, 'Thống Ngự': 87, 'Khí Độ': 92, 'Sức Khỏe': 68 }, selectedTraits: [{ name: 'Thái Khang chi trị', effects: 'Nội Chính+20' }], crisis: 'Thiên hạ nhất thống, bắt đầu bắt tay vào bố cục Thái Khang chi trị và đại phong tông thất..' };
+            }
+            return {};
+        }
+    },
+    'Tào Phi': {
+        zi: 'Tử Hoàn',
+        scripts: { 'Diễn Nghĩa': ['221 Phạt Ngô Tuyết Hận', '222 Hỏa Thiêu Liên Doanh', '225 Thất Cầm Mạnh Hoạch'], 'Chính Sử': ['221 Di Lăng Chi Chiến', '225 Nam Trung Chi Dịch'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '221 Phạt Ngô Tuyết Hận') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy khai quốc hoàng đế', position: 'Ngụy Văn Đế', age: 34, children: 'Tào Duệ', region: 'Lạc Dương', power: 'Ba mươi vạn Ngụy quân', subordinates: 'Tư Mã Ý, Tào Nhân, Tào Hưu, Tào Chân, Giả Hủ', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đại Ngụy quốc khố', income: 150000, expense: 100000, food: 1000000, gold: 500000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 85, 'Nội Chính': 90, 'Thống Ngự': 85, 'Khí Độ': 60, 'Sức Khỏe': 55 }, selectedTraits: [{ name: 'Âm hiểm khắc bạc', effects: 'Khí Độ-20' }], crisis: 'Ép Hiến Đế thiền nhượng dẫn đến thiên hạ thóa mạ, ngươi muốn tọa quan Lưu Bị phạt Ngô ngư lợi..' };
+                if (scriptName === '222 Hỏa Thiêu Liên Doanh' || scriptName === '225 Thất Cầm Mạnh Hoạch') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy hoàng đế', position: 'Ngụy Văn Đế', age: 35, children: 'Tào Duệ', region: 'Lạc Dương', power: 'Ba mươi vạn đại quân', subordinates: 'Tào Hưu, Tào Chân, Tư Mã Ý, Trần Quần', reputation: 'Quan Miện Quần Luân', assets: { name: 'Nam chinh quân nhu', income: 140000, expense: 120000, food: 900000, gold: 400000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 85, 'Nội Chính': 90, 'Thống Ngự': 85, 'Khí Độ': 60, 'Sức Khỏe': 55 }, selectedTraits: [{ name: 'Âm hiểm khắc bạc', effects: 'Khí Độ-20' }], crisis: 'Phạt Ngô gặp Lục Tốn ngoan cường chống cự, đại dịch lưu hành..' };
+            } else {
+                if (scriptName === '221 Di Lăng Chi Chiến') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy khai quốc hoàng đế', position: 'Ngụy Văn Đế', age: 34, children: 'Tào Duệ', region: 'Lạc Dương', power: 'Ba mươi vạn tinh nhuệ', subordinates: 'Trần Quần, Tư Mã Ý, Tào Hưu, Tào Chân', reputation: 'Trúc Bạch Thùy Huân', assets: { name: 'Tân Ngụy quốc khố', income: 160000, expense: 110000, food: 1100000, gold: 550000 }, attributes: { 'Dũng Vũ': 62, 'Thao Lược': 88, 'Nội Chính': 92, 'Thống Ngự': 87, 'Khí Độ': 65, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Cửu phẩm trung chính', effects: 'Nội Chính+30' }], crisis: 'Thôi hành cửu phẩm trung chính chế thỏa hiệp thế gia đổi lấy xưng đế, Tôn Quyền xưng thần ngươi muốn mượn cơ hội nắm thóp..' };
+                if (scriptName === '225 Nam Trung Chi Dịch') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy hoàng đế', position: 'Ngụy Văn Đế', age: 38, children: 'Tào Duệ', region: 'Quảng Lăng', power: 'Mười vạn thủy lục quân', subordinates: 'Tào Chân, Tào Hưu, Tư Mã Ý, Trần Quần', reputation: 'Quan Miện Quần Luân', assets: { name: 'Tiền tuyến vật tư', income: 130000, expense: 130000, food: 800000, gold: 350000 }, attributes: { 'Dũng Vũ': 62, 'Thao Lược': 88, 'Nội Chính': 92, 'Thống Ngự': 87, 'Khí Độ': 65, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Cửu phẩm trung chính', effects: 'Nội Chính+30' }], crisis: 'Tôn Quyền xưng thần sau đó phục phản, đích thân dẫn đại quân đến bờ sông thấy sóng to gió lớn, than rằng Ngụy tuy có võ kỵ cũng không có chỗ dùng..' };
+            }
+            return {};
+        }
+    },
+    'Tào Duệ': {
+        zi: 'Nguyên Trọng',
+        scripts: { 'Diễn Nghĩa': ['227 Xuất Sư Thượng Biểu', '228 Không Thành Chi Kế', '234 Tinh Lạc Thu Phong', '238 Đạp Tuyết Bình Liêu', '239 Thác Cô Tư Mã'], 'Chính Sử': ['228 Sơ Xuất Kỳ Sơn', '234 Lục Xuất Kỳ Sơn', '238 Thừa Chí Khởi Phạt'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '227 Xuất Sư Thượng Biểu') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy hoàng đế', position: 'Ngụy Minh Đế', age: 23, children: 'Tào Phương(Nuôi)', region: 'Lạc Dương', power: 'Bốn mươi vạn đại quân', subordinates: 'Tư Mã Ý, Tào Chân, Tào Hưu, Trần Quần', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đại Ngụy quốc khố', income: 160000, expense: 120000, food: 1200000, gold: 600000 }, attributes: { 'Dũng Vũ': 55, 'Thao Lược': 85, 'Nội Chính': 85, 'Thống Ngự': 88, 'Khí Độ': 75, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Trầm ổn ngự tướng', effects: 'Thống Ngự+20' }], crisis: 'Gia Cát Lượng thượng biểu xuất sư, ngươi mới lên ngôi báu cần chấn nhiếp triều dã..' };
+                if (scriptName === '228 Không Thành Chi Kế') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy hoàng đế', position: 'Ngụy Minh Đế', age: 24, children: 'Tào Phương(Nuôi)', region: 'Trường An', power: 'Mười lăm vạn tây tuyến quân', subordinates: 'Trương Cáp, Tào Chân, Tư Mã Ý', reputation: 'Quan Miện Quần Luân', assets: { name: 'Quan Trung lương thương', income: 100000, expense: 100000, food: 800000, gold: 400000 }, attributes: { 'Dũng Vũ': 55, 'Thao Lược': 85, 'Nội Chính': 85, 'Thống Ngự': 88, 'Khí Độ': 75, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Trầm ổn ngự tướng', effects: 'Thống Ngự+20' }], crisis: 'Gia Cát Lượng nhiều lần ra Kỳ Sơn bắc phạt Quan Trung chấn động, đích thân đến Trường An tọa trấn..' };
+                if (scriptName === '234 Tinh Lạc Thu Phong') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy hoàng đế', position: 'Ngụy Minh Đế', age: 30, children: 'Tào Phương(Nuôi)', region: 'Lạc Dương', power: 'Bốn mươi vạn binh mã', subordinates: 'Tư Mã Ý, Mãn Sủng', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đại hưng thổ mộc', income: 150000, expense: 150000, food: 1000000, gold: 500000 }, attributes: { 'Dũng Vũ': 55, 'Thao Lược': 85, 'Nội Chính': 85, 'Thống Ngự': 88, 'Khí Độ': 75, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Trầm ổn ngự tướng', effects: 'Thống Ngự+20' }], crisis: 'Gia Cát Lượng ở Ngũ Trượng Nguyên tử chiến, Tôn Quyền ba đường phạt Ngụy, cần điều độ nhiều tuyến..' };
+                if (scriptName === '238 Đạp Tuyết Bình Liêu') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy hoàng đế', position: 'Ngụy Minh Đế', age: 34, children: 'Tào Phương(Nuôi)', region: 'Lạc Dương', power: 'Bốn mươi vạn binh mã', subordinates: 'Tư Mã Ý, Tào Sảng', reputation: 'Quan Miện Quần Luân', assets: { name: 'Đại hưng thổ mộc', income: 150000, expense: 150000, food: 1000000, gold: 500000 }, attributes: { 'Dũng Vũ': 55, 'Thao Lược': 85, 'Nội Chính': 85, 'Thống Ngự': 88, 'Khí Độ': 75, 'Sức Khỏe': 20 }, selectedTraits: [{ name: 'Trầm ổn ngự tướng', effects: 'Thống Ngự+20' }], crisis: 'Công Tôn Uyên phản loạn, phái Tư Mã Ý viễn chinh, bản thân thân thể thấu chi..' };
+                if (scriptName === '239 Thác Cô Tư Mã') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy hoàng đế', position: 'Ngụy Minh Đế', age: 35, children: 'Tào Phương(Nuôi)', region: 'Lạc Dương tẩm cung', power: 'Năm vạn trung quân', subordinates: 'Tào Sảng, Tư Mã Ý', reputation: 'Quan Miện Quần Luân', assets: { name: 'Hoàng gia nội khố', income: 100000, expense: 100000, food: 500000, gold: 200000 }, attributes: { 'Dũng Vũ': 55, 'Thao Lược': 85, 'Nội Chính': 85, 'Thống Ngự': 88, 'Khí Độ': 75, 'Sức Khỏe': 5 }, selectedTraits: [{ name: 'Trầm ổn ngự tướng', effects: 'Thống Ngự+20' }], crisis: 'Bệnh nhập cao hoang, nắm tay Tư Mã Ý thác cô Tào Phương còn nhỏ tuổi.' };
+            } else {
+                if (scriptName === '228 Sơ Xuất Kỳ Sơn') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy hoàng đế', position: 'Ngụy Minh Đế', age: 24, children: 'Tào Phương(Nuôi)', region: 'Trường An', power: 'Hơn mười vạn Quan Lũng quân', subordinates: 'Trương Cáp, Tào Chân, Tư Mã Ý', reputation: 'Quan Miện Quần Luân', assets: { name: 'Trường An phủ khố', income: 110000, expense: 110000, food: 850000, gold: 450000 }, attributes: { 'Dũng Vũ': 58, 'Thao Lược': 88, 'Nội Chính': 86, 'Thống Ngự': 90, 'Khí Độ': 78, 'Sức Khỏe': 35 }, selectedTraits: [{ name: 'Minh đoán thiện đoán', effects: 'Thao Lược+15' }], crisis: 'Lũng Hữu ba quận phản Ngụy, thân chinh Trường An ổn định quân tâm phái Trương Cáp phá Nhai Đình.' };
+                if (scriptName === '234 Lục Xuất Kỳ Sơn') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy hoàng đế', position: 'Ngụy Minh Đế', age: 30, children: 'Tào Phương(Nuôi)', region: 'Lạc Dương', power: 'Bốn mươi vạn đại quân', subordinates: 'Tư Mã Ý, Mãn Sủng, Tào Sảng', reputation: 'Quan Miện Quần Luân', assets: { name: 'Tào Ngụy thuế phú', income: 170000, expense: 140000, food: 1300000, gold: 650000 }, attributes: { 'Dũng Vũ': 58, 'Thao Lược': 88, 'Nội Chính': 86, 'Thống Ngự': 90, 'Khí Độ': 78, 'Sức Khỏe': 35 }, selectedTraits: [{ name: 'Minh đoán thiện đoán', effects: 'Thao Lược+15' }], crisis: 'Thục Ngô đồng thời đại cử nhập khấu, ngươi chỉ huy nhược định đông lui Tôn Quyền tây cự Gia Cát.' };
+                if (scriptName === '238 Thừa Chí Khởi Phạt') return { force: 'Đại Ngụy', classLevel: 'Đại Ngụy hoàng đế', position: 'Ngụy Minh Đế', age: 34, children: 'Tào Phương(Nuôi)', region: 'Lạc Dương bệnh tháp', power: 'Bốn mươi vạn binh mã', subordinates: 'Tư Mã Ý, Tào Sảng', reputation: 'Quan Miện Quần Luân', assets: { name: 'Xa mỉ cung thất', income: 160000, expense: 180000, food: 1100000, gold: 550000 }, attributes: { 'Dũng Vũ': 58, 'Thao Lược': 88, 'Nội Chính': 86, 'Thống Ngự': 90, 'Khí Độ': 78, 'Sức Khỏe': 20 }, selectedTraits: [{ name: 'Minh đoán thiện đoán', effects: 'Thao Lược+15' }], crisis: 'Trầm ổn điều khiển Tư Mã Ý viễn chinh Liêu Đông, đại hưng thổ mộc doanh kiến cung thất thân thể nhật tiệm thấu chi bệnh trọng.' };
+            }
+            return {};
+        }
+    },
+    'Tào Phương': {
+        zi: 'Lan Khanh',
+        scripts: { 'Diễn Nghĩa': ['239 Thác cô Tư Mã', '249 Lạc Thủy bội thệ'], 'Chính Sử': ['249 Bội Thệ Lạc Thủy'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '239 Thác Cô Tư Mã') return { force: 'Đại Ngụy(Hư quân)', classLevel: 'Ấu đế', position: 'Hoàng đế', age: 7, children: 'Không Có', region: 'Lạc Dương', power: 'Năm ngàn cấm quân', subordinates: 'Tào Sảng, Tư Mã Ý', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Hoàng gia nội khố(Bị khống)', income: 10000, expense: 10000, food: 50000, gold: 20000 }, attributes: { 'Dũng Vũ': 30, 'Thao Lược': 40, 'Nội Chính': 40, 'Thống Ngự': 30, 'Khí Độ': 50, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Niên ấu ám nhược', effects: 'Thống Ngự-40' }], crisis: 'Minh Đế vừa chết ngươi còn nhỏ tuổi đăng cơ, Tào Sảng cùng Tư Mã Ý minh tranh ám đấu.' };
+                if (scriptName === '249 Lạc Thủy Bội Thệ') return { force: 'Đại Ngụy(Hư quân)', classLevel: 'Khôi lỗi hoàng đế', position: 'Hoàng đế', age: 17, children: 'Không Có', region: 'Cao Bình Lăng', power: 'Ba ngàn thân vệ', subordinates: 'Tào Sảng, Tư Mã Ý', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Nội khố(Bị khống)', income: 10000, expense: 10000, food: 50000, gold: 20000 }, attributes: { 'Dũng Vũ': 30, 'Thao Lược': 40, 'Nội Chính': 40, 'Thống Ngự': 30, 'Khí Độ': 50, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Niên ấu ám nhược', effects: 'Thống Ngự-40' }], crisis: 'Yết lăng thời Tư Mã Ý đột nhiên quan bế Lạc Dương thành môn, ngươi bị kẹp ở quyền thần chi gian sắt sắt phát đẩu.' };
+            } else {
+                if (scriptName === '249 Bội Thệ Lạc Thủy') return { force: 'Đại Ngụy(Hư quân)', classLevel: 'Khôi lỗi hoàng đế', position: 'Hoàng đế', age: 17, children: 'Không Có', region: 'Cao Bình Lăng', power: 'Một vạn cấm quân', subordinates: 'Tào Sảng, Hoàn Phạm, Tư Mã Ý', reputation: 'Quận Vọng Mông Tu', assets: { name: 'Nội khố(Bị khống)', income: 10000, expense: 10000, food: 50000, gold: 20000 }, attributes: { 'Dũng Vũ': 30, 'Thao Lược': 40, 'Nội Chính': 40, 'Thống Ngự': 30, 'Khí Độ': 50, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Niên ấu ám nhược', effects: 'Thống Ngự-40' }], crisis: 'Cao Bình Lăng chi biến bạo phát, Hoàn Phạm khuyên Tào Sảng hiệp ngươi di giá Hứa Xương, ngươi hoàn toàn vô pháp chưởng khống mệnh vận.' };
+            }
+            return {};
+        }
+    },
+    'Tào Mao': {
+        zi: 'Ngạn Sĩ',
+        scripts: { 'Diễn Nghĩa': ['260 Lộ Nhân Giai Chi'], 'Chính Sử': ['255 Hoài Nam tái phản', '255 Cửu phạt Trung Nguyên', '260 Lộ nhân giai chi'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '260 Lộ Nhân Giai Chi') return { force: 'Đại Ngụy(Hư quân)', classLevel: 'Khôi lỗi hoàng đế', position: 'Hoàng đế', age: 19, children: 'Không Có', region: 'Lạc Dương nhai đầu', power: 'Ba trăm đồng bộc', subordinates: 'Vương Thẩm, Vương Kinh, Vương Nghiệp', reputation: 'Châu Quận Trì Danh', assets: { name: 'Cận tồn binh khí', income: 0, expense: 0, food: 1000, gold: 500 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 60, 'Nội Chính': 50, 'Thống Ngự': 60, 'Khí Độ': 95, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Cao Quý Hương Công', effects: 'Khí Độ+40' }], crisis: '“Tư Mã Chiêu chi tâm lộ nhân giai tri", ngươi bạt kiếm suất sổ bách nô bộc trùng xuất cung môn nghênh diện chàng thượng Thành Tế trường qua.' };
+            } else {
+                if (scriptName === '255 Hoài Nam Tái Phản' || scriptName === '255 Cửu Phạt Trung Nguyên') return { force: 'Đại Ngụy(Hư quân)', classLevel: 'Khôi lỗi hoàng đế', position: 'Hoàng đế', age: 14, children: 'Không Có', region: 'Lạc Dương', power: 'Số ngàn túc vệ', subordinates: 'Tư Mã Sư(Bả trì triều chính), Tư Mã Chiêu(Bả trì triều chính)', reputation: 'Châu Quận Trì Danh', assets: { name: 'Nội đình tuế nhập(Bị khống)', income: 25000, expense: 20000, food: 120000, gold: 60000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 60, 'Nội Chính': 50, 'Thống Ngự': 60, 'Khí Độ': 95, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Tài tuệ túc thành', effects: 'Thao Lược+10' }], crisis: 'Bất cam khôi lỗi, thường dữ cận thần mật mưu thí đồ đả phá bị giá không đích khốn cục.' };
+                if (scriptName === '260 Lộ Nhân Giai Chi') return { force: 'Đại Ngụy(Hư quân)', classLevel: 'Khôi lỗi hoàng đế', position: 'Hoàng đế', age: 19, children: 'Không Có', region: 'Lạc Dương nam khuyết hạ', power: 'Số trăm túc vệ', subordinates: 'Vương Thẩm, Vương Nghiệp, Vương Kinh', reputation: 'Châu Quận Trì Danh', assets: { name: 'Nội đình tuế nhập(Bị khống)', income: 25000, expense: 20000, food: 120000, gold: 60000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 60, 'Nội Chính': 50, 'Thống Ngự': 60, 'Khí Độ': 95, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Tài tuệ túc thành', effects: 'Thao Lược+10' }], crisis: 'Bất cam tái nhẫn, suất lĩnh túc vệ, đồng bộc sổ bách nhân, trì kiếm cổ táo nhi xuất, trùng hướng Tư Mã Chiêu phủ để.' };
+            }
+            return {};
+        }
+    },
+    'Tôn Hạo': {
+        zi: 'Nguyên Tông',
+        scripts: { 'Diễn Nghĩa': ['264 Lục Kháng trấn biên', '279 Lâu thuyền phá Ngô', '280 Tam phân quy nhất'], 'Chính Sử': ['264 Cô giang tỏa dược', '280 Tam phân quy Tấn'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '264 Lục Kháng Trấn Biên') return { force: 'Đông Ngô', classLevel: 'Bạo quân', position: 'Ngô Mạt Đế', age: 22, children: 'Tôn Cẩn', region: 'Kiến Nghiệp', power: 'Hai mươi vạn Ngô quân', subordinates: 'Lục Kháng, Bộc Dương Hưng, Vạn Úc', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Đông Ngô quốc khố', income: 80000, expense: 60000, food: 500000, gold: 200000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 40, 'Nội Chính': 20, 'Thống Ngự': 50, 'Khí Độ': 20, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Bạo ngược vô đạo', effects: 'Nội Chính-40' }], crisis: 'Cương kế vị tiện hiển lộ tàn bạo bản tính, lạm sát vô cô, đại thần cảm nộ bất cảm ngôn.' };
+                if (scriptName === '279 Lâu Thuyền Phá Ngô') return { force: 'Đông Ngô', classLevel: 'Bạo quân', position: 'Ngô Mạt Đế', age: 37, children: 'Tôn Cẩn', region: 'Kiến Nghiệp cung trung', power: 'Mười vạn thủy lục quân', subordinates: 'Trương Đễ, Thẩm Oánh', reputation: 'Di Xú Phủ Việt', assets: { name: 'Sưu quát dân tài', income: 70000, expense: 90000, food: 400000, gold: 150000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 40, 'Nội Chính': 20, 'Thống Ngự': 50, 'Khí Độ': 20, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Bạo ngược vô đạo', effects: 'Nội Chính-40' }], crisis: 'Tấn Vũ Đế lục lộ phạt Ngô, ngươi hoàn trầm mê tửu sắc, tiền tuyến tướng lĩnh vọng phong nhi hàng.' };
+                if (scriptName === '280 Tam Phân Quy Nhất') return { faction: 'Tây Tấn(Vong quốc hàng thần)', classLevel: 'Vong quốc chi quân', position: 'Quy Mệnh Hầu', age: 38, children: 'Tôn Cẩn', region: 'Thạch Đầu thành hạ', power: 'Ba ngàn tàn binh', subordinates: 'Không Có', reputation: 'Di Xú Phủ Việt', assets: { name: 'Tàn Ngô phủ khố', income: 60000, expense: 80000, food: 300000, gold: 100000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 40, 'Nội Chính': 20, 'Thống Ngự': 50, 'Khí Độ': 20, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Bạo ngược vô đạo', effects: 'Nội Chính-40' }], crisis: 'Tạc trầm hỏa thuyền vô hiệu, Kiến Nghiệp bách quan ly tâm, ngươi chỉ năng tố xa bạch mã xuất thành đầu hàng.' };
+            } else {
+                if (scriptName === '264 Cô Giang Tỏa Dược') return { force: 'Đông Ngô', classLevel: 'Bạo quân', position: 'Ngô Mạt Đế', age: 22, children: 'Tôn Cẩn', region: 'Kiến Nghiệp', power: 'Hai mươi vạn tinh nhuệ', subordinates: 'Bộc Dương Hưng, Trương Bố, Lục Kháng', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Đông Ngô quốc khố', income: 85000, expense: 65000, food: 550000, gold: 220000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 40, 'Nội Chính': 20, 'Thống Ngự': 50, 'Khí Độ': 20, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Bạo ngược vô đạo', effects: 'Nội Chính-40' }], crisis: 'Sơ phát thương lẫm chẩn bần bác thủ minh chủ chi danh, toàn tức kiêu xa dâm dật tru sát ủng lập công thần.' };
+                if (scriptName === '280 Tam Phân Quy Tấn') return { faction: 'Tây Tấn(Vong quốc hàng thần)', classLevel: 'Vong quốc chi quân', position: 'Quy Mệnh Hầu', age: 38, children: 'Tôn Cẩn', region: 'Kiến Nghiệp thành môn', power: 'Số ngàn túc vệ', subordinates: 'Không Có', reputation: 'Di Xú Phủ Việt', assets: { name: 'Tàn Ngô phủ khố', income: 60000, expense: 80000, food: 300000, gold: 100000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 40, 'Nội Chính': 20, 'Thống Ngự': 50, 'Khí Độ': 20, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Bạo ngược vô đạo', effects: 'Nội Chính-40' }], crisis: 'Trương Đễ chiến tử Bản Kiều, Kiến Nghiệp phòng tuyến triệt để băng hội, ngươi bị bách diện phược dư sấn xuất hàng.' };
+            }
+            return {};
+        }
+    },
+    'Lưu Thiện': {
+        zi: 'Công Tự',
+        scripts: { 'Diễn Nghĩa': ['223 Bạch Đế thác cô', '225 Thất cầm Mạnh Hoạch', '227 Xuất sư thượng biểu', '228 Không thành chi kế', '234 Tinh lạc thu phong', '263 Thâu độ Âm Bình', '264 Lạc bất tư Thục'], 'Chính Sử': ['225 Nam Trung chi dịch', '228 Sơ xuất Kỳ Sơn', '234 Lục xuất Kỳ Sơn', '238 Thừa chí khởi phạt', '249 Bội thệ Lạc Thủy', '255 Cửu phạt Trung Nguyên', '263 Kiếm Các lạc nhật'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '223 Bạch Đế Thác Cô' || scriptName === '225 Thất Cầm Mạnh Hoạch' || scriptName === '227 Xuất Sư Thượng Biểu' || scriptName === '228 Không Thành Chi Kế' || scriptName === '234 Tinh Lạc Thu Phong') return { force: 'Thục Hán', classLevel: 'Đại Hán thiên tử', position: 'Hoàng đế', age: 17, children: 'Lưu Thiền', region: 'Thành Đô', power: 'Mười vạn Thục quân', subordinates: 'Gia Cát Lượng(Chuyên chính), Tưởng Uyển, Phí Y, Triệu Vân', reputation: 'Châu Quận Trì Danh', assets: { name: 'Đại Hán quốc khố', income: 50000, expense: 60000, food: 300000, gold: 100000 }, attributes: { 'Dũng Vũ': 10, 'Thao Lược': 20, 'Nội Chính': 30, 'Thống Ngự': 40, 'Khí Độ': 50, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Ám nhược vô năng', effects: 'Thống Ngự-30' }], crisis: 'Ngươi tại thâm cung trung thính tín sàm ngôn nhĩ căn cực nhuyễn, hoàn toàn y lại thừa tướng đích an bài.' };
+                if (scriptName === '263 Thâu Độ Âm Bình') return { force: 'Thục Hán', classLevel: 'Đại Hán thiên tử', position: 'Hoàng đế', age: 57, children: 'Lưu Thiền', region: 'Thành Đô', power: 'Số ngàn túc vệ', subordinates: 'Tiều Chu, Hoàng Hạo, Gia Cát Chiêm', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Tàn phá quốc khố', income: 30000, expense: 40000, food: 100000, gold: 50000 }, attributes: { 'Dũng Vũ': 10, 'Thao Lược': 20, 'Nội Chính': 30, 'Thống Ngự': 30, 'Khí Độ': 30, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Thân tín hoạn quan', effects: 'Nội Chính-30' }], crisis: 'Đặng Ngải binh lâm thành hạ Gia Cát Chiêm chiến tử, ngươi thính tín Tiều Chu chi ngôn bị hảo diện phược dư sấn xuất hàng.' };
+                if (scriptName === '264 Lạc Bất Tư Thục') return { faction: 'Tây Tấn(Hàng thần)', classLevel: 'Vong quốc chi quân', position: 'An Lạc Công', age: 58, children: 'Không Có', region: 'Lạc Dương', power: 'Không Có', subordinates: 'Khước Chính', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Thực ấp', income: 5000, expense: 3000, food: 10000, gold: 5000 }, attributes: { 'Dũng Vũ': 10, 'Thao Lược': 20, 'Nội Chính': 30, 'Thống Ngự': 20, 'Khí Độ': 40, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Lạc bất tư Thục', effects: 'Khí Độ-30' }], crisis: 'Tư Mã Chiêu thiết yến thí thám, ngươi tiếu đáp thử gian lạc bất tư Thục, sinh tử tại kỳ nhất niệm chi gian.' };
+            } else {
+                if (scriptName === '225 Nam Trung Chi Dịch' || scriptName === '228 Sơ Xuất Kỳ Sơn' || scriptName === '234 Lục Xuất Kỳ Sơn' || scriptName === '238 Thừa Chí Khởi Phạt' || scriptName === '249 Bội Thệ Lạc Thủy' || scriptName === '255 Cửu Phạt Trung Nguyên') return { force: 'Thục Hán', classLevel: 'Đại Hán thiên tử', position: 'Hoàng đế', age: 20, children: 'Lưu Thiền', region: 'Thành Đô', power: 'Mười vạn Thục quân', subordinates: 'Gia Cát Lượng, Tưởng Uyển, Phí Y, Khương Duy', reputation: 'Châu Quận Trì Danh', assets: { name: 'Đại Hán quốc khố', income: 50000, expense: 50000, food: 300000, gold: 100000 }, attributes: { 'Dũng Vũ': 20, 'Thao Lược': 40, 'Nội Chính': 50, 'Thống Ngự': 50, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Thùy củng nhi trị', effects: 'Nội Chính+10' }], crisis: 'Trường kỳ phóng quyền vu tướng phủ đại tướng quân, thí đồ tại quyền thần dữ nội đình gian tầm trảo vi nhược bình hành.' };
+                if (scriptName === '263 Kiếm Các Lạc Nhật') return { force: 'Thục Hán', classLevel: 'Đại Hán thiên tử', position: 'Hoàng đế', age: 57, children: 'Lưu Thiền', region: 'Thành Đô', power: 'Số ngàn túc vệ', subordinates: 'Tiều Chu, Khương Duy(Tiền tuyến)', reputation: 'Quận Vọng Mông Tu', assets: { name: 'Tàn phá quốc khố', income: 30000, expense: 40000, food: 100000, gold: 50000 }, attributes: { 'Dũng Vũ': 20, 'Thao Lược': 40, 'Nội Chính': 40, 'Thống Ngự': 40, 'Khí Độ': 50, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Ủy khúc bảo toàn', effects: 'Khí Độ-10' }], crisis: 'Đặng Ngải kỳ tập Thành Đô phòng tuyến băng hội, vi bảo toàn bách tính miễn tao đồ lục hạ chiếu đầu hàng.' };
+            }
+            return {};
+        }
+    },
+    'Lưu Đại': {
+        zi: 'Công Sơn',
+        scripts: { 'Diễn Nghĩa': ['190 Chư hầu hội minh', '192 Liên hoàn tru tặc'], 'Chính Sử': ['189 Đổng Trác nhập kinh', '192 Lý Quách chi loạn'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Quan Đông liên quân', classLevel: 'Hán thất tông thân', position: 'Duyện Châu thứ sử', age: 40, children: 'Không Có', region: 'Toan Táo', power: 'Một vạn binh mã', subordinates: 'Vương Trung, Kiều Mạo', reputation: 'Châu Quận Trì Danh', assets: { name: 'Duyện Châu quân tư', income: 8000, expense: 10000, food: 30000, gold: 15000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 50, 'Nội Chính': 60, 'Thống Ngự': 60, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Hán thất tông thân', effects: 'Khí Độ+10' }], crisis: 'Dữ Kiều Mạo bất hòa, chính mưu hoạch tại doanh trung hỏa tịnh.' };
+                if (scriptName === '192 Liên Hoàn Tru Tặc') return { force: 'Duyện Châu thứ sử phủ', classLevel: 'Hán thất tông thân', position: 'Duyện Châu thứ sử', age: 42, children: 'Không Có', region: 'Duyện Châu', power: 'Một vạn năm ngàn binh mã', subordinates: 'Bào Tín, Vu Cấm', reputation: 'Châu Quận Trì Danh', assets: { name: 'Duyện Châu phủ khố', income: 10000, expense: 15000, food: 40000, gold: 10000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 40, 'Nội Chính': 60, 'Thống Ngự': 55, 'Khí Độ': 60, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Cương phúc khinh địch', effects: 'Thao Lược-20' }], crisis: 'Bất thính Bào Tín khuyến trở chấp ý xuất chiến, hãm nhập Hoàng Cân trùng vi.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Quan Đông liên quân', classLevel: 'Hán thất tông thân', position: 'Duyện Châu thứ sử', age: 40, children: 'Không Có', region: 'Toan Táo', power: 'Hai vạn binh mã', subordinates: 'Bào Tín', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Duyện Châu thuế phú', income: 12000, expense: 15000, food: 50000, gold: 20000 }, attributes: { 'Dũng Vũ': 55, 'Thao Lược': 55, 'Nội Chính': 65, 'Thống Ngự': 65, 'Khí Độ': 70, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Tông thân thanh lưu', effects: 'Khí Độ+20' }], crisis: 'Nhân tư oán kích sát Kiều Mạo, Duyện Châu nội bộ xuất hiện liệt ngân.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Duyện Châu thứ sử phủ', classLevel: 'Hán thất tông thân', position: 'Duyện Châu thứ sử', age: 42, children: 'Không Có', region: 'Đông Bình', power: 'Hai vạn binh mã', subordinates: 'Bào Tín', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Duyện Châu quân tư', income: 10000, expense: 20000, food: 40000, gold: 15000 }, attributes: { 'Dũng Vũ': 55, 'Thao Lược': 50, 'Nội Chính': 60, 'Thống Ngự': 60, 'Khí Độ': 65, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Cấp công cận lợi', effects: 'Thao Lược-15' }], crisis: 'Bách vạn Hoàng Cân dũng nhập, ngươi cự tuyệt kiên bích thanh dã suất quân chính diện nghênh kích, tức tương diện lâm phúc diệt.' };
+            }
+            return {};
+        }
+    },
+  'Hàn Phức': {
+        zi: 'Văn Tiết',
+        scripts: { 'Diễn Nghĩa': ['190 Chư Hầu Hội Minh'], 'Chính Sử': ['189 Đổng Trác nhập kinh', '192 Lý Quách chi loạn'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Quan Đông liên quân', classLevel: 'Dĩnh Xuyên danh sĩ', position: 'Ký Châu mục', age: 39, children: 'Không Có', region: 'Toan Táo', power: 'Mười vạn đại quân', subordinates: 'Phan Phượng, Khúc Nghĩa, Cảnh Vũ, Mẫn Thuần, Thư Thụ', reputation: 'Châu Quận Trì Danh', assets: { name: 'Ký Châu phủ khố', income: 50000, expense: 30000, food: 300000, gold: 100000 }, attributes: { 'Dũng Vũ': 30, 'Thao Lược': 40, 'Nội Chính': 60, 'Thống Ngự': 40, 'Khí Độ': 30, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Đảm tiểu khuông khiếp', effects: 'Thống Ngự-30' }], crisis: 'Thượng tướng Phan Phượng cương bị Hoa Hùng trảm sát, ngươi hách đắc can đảm câu liệt, Viên Thiệu chính đối ngươi đích Ký Châu hổ thị đam đam.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { force: 'Ký Châu mục phủ', classLevel: 'Dĩnh Xuyên danh sĩ', position: 'Ký Châu mục', age: 38, children: 'Không Có', region: 'Nghiệp Thành', power: 'Mười vạn tinh nhuệ', subordinates: 'Cảnh Vũ, Mẫn Thuần, Thư Thụ, Tuân Thầm, Tân Bình', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Thiên hạ trọng tư', income: 80000, expense: 40000, food: 500000, gold: 200000 }, attributes: { 'Dũng Vũ': 35, 'Thao Lược': 45, 'Nội Chính': 65, 'Thống Ngự': 45, 'Khí Độ': 40, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Không hữu đại chí', effects: 'Thao Lược-20' }], crisis: 'Thụ Đổng Trác chi ân lĩnh Ký Châu, khước bị sĩ nhân khỏa hiệp phản Đổng, Viên Thiệu đình trú Bột Hải nhượng ngươi tẩm thực nan an.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { faction: 'Viên Thiệu quân(Đầu hàng)', classLevel: 'Dĩnh Xuyên danh sĩ', position: 'Phấn uy tướng quân(Hư chức)', age: 41, children: 'Không Có', region: 'Nghiệp Thành', power: 'Vô thực quyền', subordinates: 'Tuân Thầm(Dĩ phản), Tân Bình(Dĩ phản)', reputation: 'Quận Vọng Mông Tu', assets: { name: 'Bị trĩ đoạt', income: 0, expense: 500, food: 2000, gold: 500 }, attributes: { 'Dũng Vũ': 35, 'Thao Lược': 40, 'Nội Chính': 65, 'Thống Ngự': 40, 'Khí Độ': 30, 'Sức Khỏe': 55 }, selectedTraits: [{ name: 'Thủ thử lưỡng đoan', effects: 'Khí Độ-30' }], crisis: 'Công Tôn Toản đại quân áp cảnh xuất chiến bất lợi, Viên Thiệu đích mưu sĩ chính bức ngươi nhượng xuất Ký Châu, ngươi dĩ tang thất để kháng ý chí.' };
+            }
+            return {};
+        }
+    },
+    'Đào Khiêm': {
+        zi: 'Cung Tổ',
+        scripts: { 'Diễn Nghĩa': ['190 Chư hầu hội minh', '194 Tam nhượng Từ Châu'], 'Chính Sử': ['189 Đổng Trác nhập kinh', '192 Lý Quách chi loạn'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Quan Đông liên quân', classLevel: 'Đan Dương danh sĩ', position: 'Từ Châu thứ sử', age: 58, children: 'Đào Thương, Đào Ứng', region: 'Từ Châu', power: 'Hai vạn binh mã', subordinates: 'Tào Báo, Trương Khải, Mi Trúc', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Từ Châu phủ khố', income: 30000, expense: 20000, food: 150000, gold: 60000 }, attributes: { 'Dũng Vũ': 40, 'Thao Lược': 50, 'Nội Chính': 80, 'Thống Ngự': 60, 'Khí Độ': 90, 'Sức Khỏe': 50 }, selectedTraits: [{ name: 'Ôn hậu trưởng giả', effects: 'Khí Độ+30' }], crisis: 'Hội minh quy lai Từ Châu thượng an, đãn tứ chu chư hầu giai như hổ lang, ngươi thâm cảm binh vi tướng quả nan dĩ thủ thành.' };
+                if (scriptName === '194 Tam Nhượng Từ Châu') return { force: 'Từ Châu mục phủ', classLevel: 'Đan Dương danh sĩ', position: 'Từ Châu mục', age: 62, children: 'Đào Thương, Đào Ứng', region: 'Bành Thành', power: 'Ba vạn binh mã', subordinates: 'Mi Trúc, Tôn Càn, Tào Báo, Lưu Bị(Tương thác phó)', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Từ Châu phủ khố', income: 30000, expense: 40000, food: 100000, gold: 50000 }, attributes: { 'Dũng Vũ': 30, 'Thao Lược': 40, 'Nội Chính': 75, 'Thống Ngự': 50, 'Khí Độ': 95, 'Sức Khỏe': 20 }, selectedTraits: [{ name: 'Bệnh nhập cao hoang', effects: 'Sức Khỏe-50' }], crisis: 'Bộ tướng Trương Khải sát Tào Tung, Tào Tháo đại quân huyết tẩy Từ Châu, ngươi bệnh cốt chi ly cấp dục tương Từ Châu thác phó cấp Lưu Bị.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { force: 'Từ Châu mục phủ', classLevel: 'Đan Dương danh sĩ', position: 'Từ Châu thứ sử', age: 57, children: 'Đào Thương', region: 'Từ Châu', power: 'Ba vạn tinh nhuệ', subordinates: 'Tang Bá, Tôn Quan, Tào Báo', reputation: 'Châu Quận Trì Danh', assets: { name: 'Từ Châu đồn điền', income: 45000, expense: 30000, food: 200000, gold: 80000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 70, 'Nội Chính': 85, 'Thống Ngự': 75, 'Khí Độ': 65, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Cương trực kiệt ngao', effects: 'Dũng Vũ+10' }], crisis: 'Ngươi cự tuyệt gia nhập Quan Đông liên quân, độc khiển sứ giả ám thông Trường An triều đình, dẫn đắc chu biên chư hầu đối ngươi cực độ địch thị.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Từ Châu mục phủ', classLevel: 'Đan Dương danh sĩ', position: 'Từ Châu mục', age: 60, children: 'Đào Thương', region: 'Từ Châu', power: 'Năm vạn binh mã', subordinates: 'Tào Hoành, Trách Dung, Tang Bá, Tào Báo', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Từ Châu phú thuế', income: 50000, expense: 40000, food: 250000, gold: 100000 }, attributes: { 'Dũng Vũ': 50, 'Thao Lược': 60, 'Nội Chính': 75, 'Thống Ngự': 65, 'Khí Độ': 50, 'Sức Khỏe': 40 }, selectedTraits: [{ name: 'Bối đạo nhậm tình', effects: 'Nội Chính-20' }], crisis: 'Vãn niên sủng tín tiểu nhân đạo trí hình chính thất hòa, Tào Tháo dĩ vi phụ báo cừu vi danh đại cử đông chinh, Tứ Thủy vi chi bất lưu.' };
+            }
+            return {};
+        }
+    },
+    'Trương Bảo': {
+        zi: 'Không Có',
+        scripts: { 'Diễn Nghĩa': ['184 Thái Bình Đạo Khởi'], 'Chính Sử': ['184 Hoàng Cân Khởi Nghĩa'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '184 Thái Bình Đạo Khởi') return { force: 'Hoàng Cân quân', classLevel: 'Thái Bình Đạo thủ lĩnh', position: 'Địa Công tướng quân', age: 40, children: 'Không Có', region: 'Dương Thành', power: 'Mười vạn yêu binh', subordinates: 'Nghiêm Chính', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Kiếp lược tư tài', income: 20000, expense: 30000, food: 150000, gold: 40000 }, attributes: { 'Dũng Vũ': 60, 'Thao Lược': 40, 'Nội Chính': 20, 'Thống Ngự': 60, 'Khí Độ': 20, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Yêu đạo tác pháp', effects: 'Thao Lược+20' }], crisis: 'Ngươi đích chỉ nhân thảo mã yêu pháp bị Lưu Bị bát cẩu huyết phá giải, trúng tiễn bại nhập Dương Thành, bộ tướng Nghiêm Chính khán ngươi đích nhãn thần thiểm thước bất định.' };
+            } else {
+                if (scriptName === '184 Hoàng Cân Khởi Nghĩa') return { force: 'Hoàng Cân quân', classLevel: 'Thái Bình Đạo thủ lĩnh', position: 'Địa Công tướng quân', age: 40, children: 'Không Có', region: 'Hạ Khúc Dương', power: 'Hơn mười vạn tín chúng', subordinates: 'Nghiêm Chính', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Thái Bình Đạo khố', income: 15000, expense: 40000, food: 120000, gold: 30000 }, attributes: { 'Dũng Vũ': 70, 'Thao Lược': 65, 'Nội Chính': 40, 'Thống Ngự': 75, 'Khí Độ': 50, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Tông giáo cuồng nhiệt', effects: 'Thống Ngự+20' }], crisis: 'Hoàng Phủ Tung cương trảm sát Trương Lương, huề đại quân cùng Quách Điển tương Hạ Khúc Dương vi đắc thủy tiết bất thông, thành trung lương thảo tương tuyệt.' };
+            }
+            return {};
+        }
+    },
+    'Trương Lương': {
+        zi: 'Không Có',
+        scripts: { 'Diễn Nghĩa': ['184 Thái Bình Đạo Khởi'], 'Chính Sử': ['184 Hoàng Cân Khởi Nghĩa'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '184 Thái Bình Đạo Khởi') return { force: 'Hoàng Cân quân', classLevel: 'Thái Bình Đạo thủ lĩnh', position: 'Nhân Công tướng quân', age: 38, children: 'Không Có', region: 'Khúc Dương', power: 'Năm vạn bại quân', subordinates: 'Ba Tài', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Lưu khấu sưu quát', income: 10000, expense: 20000, food: 80000, gold: 20000 }, attributes: { 'Dũng Vũ': 65, 'Thao Lược': 30, 'Nội Chính': 20, 'Thống Ngự': 50, 'Khí Độ': 20, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Hữu dũng vô mưu', effects: 'Thao Lược-30' }], crisis: 'Trường Xã chi chiến tao hỏa công hội bại, tiếp liên bại cấp Hoàng Phủ Tung thất trận, quan binh chính hướng ngươi đích đại doanh phát khởi tối hậu xung phong.' };
+            } else {
+                if (scriptName === '184 Hoàng Cân Khởi Nghĩa') return { force: 'Hoàng Cân quân', classLevel: 'Thái Bình Đạo thủ lĩnh', position: 'Nhân Công tướng quân', age: 38, children: 'Không Có', region: 'Quảng Tông', power: 'Tám vạn tinh dũng', subordinates: 'Ba Tài, Quản Hợi', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Quảng Tông phủ khố', income: 20000, expense: 30000, food: 150000, gold: 50000 }, attributes: { 'Dũng Vũ': 80, 'Thao Lược': 70, 'Nội Chính': 45, 'Thống Ngự': 85, 'Khí Độ': 60, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Kiên nhẫn tử chiến', effects: 'Thống Ngự+15' }], crisis: 'Dựa vào trận địa kiên cố cầm chân Hoàng Phủ Tung hơn một tháng, đêm nay lúc gà gáy, chủ lực Hán quân lại đột nhiên phát động dạ tập.' };
+            }
+            return {};
+        }
+    },
+    'Lưu Ngu': {
+        zi: 'Bá An',
+        scripts: { 'Diễn Nghĩa': ['190 Chư hầu hội minh', '192 Giới Kiều chi chiến'], 'Chính Sử': ['189 Đổng Trác nhập kinh', '192 Lý Quách chi loạn'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '190 Chư Hầu Hội Minh') return { faction: 'Đại Hán triều đình(Từ chối đầu hàng)', classLevel: 'Hán thất tông thân', position: 'Đại tư mã', age: 50, children: 'Lưu Hòa', region: 'U Châu', power: 'Năm vạn binh mã', subordinates: 'Ngụy Du, Tiên Vu Phụ, Diêm Nhu', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'U Châu phủ khố', income: 20000, expense: 15000, food: 100000, gold: 50000 }, attributes: { 'Dũng Vũ': 40, 'Thao Lược': 60, 'Nội Chính': 80, 'Thống Ngự': 70, 'Khí Độ': 85, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Khoan nhân ái dân', effects: 'Nội Chính+20' }], crisis: 'Viên Thiệu muốn ủng lập ngươi làm hoàng đế, ngươi thấu hiểu đại nghĩa nghiêm lời từ chối chọc giận chư hầu Quan Đông.' };
+                if (scriptName === '192 Giới Kiều Chi Chiến') return { force: 'U Châu mục phủ', classLevel: 'Hán thất tông thân', position: 'U Châu mục', age: 52, children: 'Lưu Hòa', region: 'U Châu', power: 'Mười vạn đại quân', subordinates: 'Điền Trù, Tiên Vu Phụ, Diêm Nhu, Tề Chu', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'U Châu phủ khố', income: 20000, expense: 25000, food: 80000, gold: 40000 }, attributes: { 'Dũng Vũ': 40, 'Thao Lược': 50, 'Nội Chính': 80, 'Thống Ngự': 60, 'Khí Độ': 85, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Khoan nhân ái dân', effects: 'Nội Chính+20' }], crisis: 'Vì không nỡ thiêu hủy nhà cửa của bách tính mà bỏ lỡ chiến cơ, ngược lại bị Công Tôn Toản đánh bại.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Đại Hán triều đình', classLevel: 'Hán thất tông thân', position: 'U Châu mục', age: 50, children: 'Lưu Hòa', region: 'Kế Thành', power: 'Vài vạn quận binh', subordinates: 'Tiên Vu Phụ, Vĩ Đôn, Diêm Nhu, Điền Trù', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'U Châu biên mậu', income: 25000, expense: 20000, food: 120000, gold: 60000 }, attributes: { 'Dũng Vũ': 45, 'Thao Lược': 70, 'Nội Chính': 90, 'Thống Ngự': 80, 'Khí Độ': 90, 'Sức Khỏe': 65 }, selectedTraits: [{ name: 'Ân tín viễn bá', effects: 'Nội Chính+30' }], crisis: 'Công Tôn Toản liên tục phá hoại chính sách hoài nhu của ngươi, ám sát sứ giả người Hồ, văn võ U Châu quyết liệt.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'U Châu mục phủ', classLevel: 'Hán thất tông thân', position: 'Thái phó', age: 52, children: 'Lưu Hòa', region: 'Ngoài ải Cư Dung', power: 'Mười vạn đại quân', subordinates: 'Tiên Vu Phụ, Tề Chu, Tiên Vu Ngân, Diêm Nhu, Điền Trù', reputation: 'Hải Nội Ngưỡng Đức', assets: { name: 'Cử châu chi binh', income: 20000, expense: 40000, food: 100000, gold: 30000 }, attributes: { 'Dũng Vũ': 45, 'Thao Lược': 55, 'Nội Chính': 85, 'Thống Ngự': 70, 'Khí Độ': 90, 'Sức Khỏe': 60 }, selectedTraits: [{ name: 'Vu hủ hoài nhu', effects: 'Thao Lược-15' }], crisis: 'Ra lệnh không được thiêu hủy nhà dân, Công Tôn Toản mượn thế gió phản kích, đại quân tan tác sắp bị bắt sống.' };
+            }
+            return {};
+        }
+    },
+    'Lý Thôi': {
+        zi: 'Trĩ Nhiên',
+        scripts: { 'Diễn Nghĩa': ['189 Đế đô kinh biến', '192 Liên hoàn tru tặc', '196 Hiệp đế lệnh hầu'], 'Chính Sử': ['189 Đổng Trác nhập kinh', '192 Lý Quách chi loạn', '196 Dĩ lệnh bất thần'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '189 Đế Đô Kinh Biến') return { faction: 'Đổng Trác quân(Phụ dung)', classLevel: 'Tây Lương bộ tướng', position: 'Hiệu úy', age: 40, children: 'Lý Thức', region: 'Lạc Dương', power: 'Một vạn Phi Hùng quân', subordinates: 'Quách Dĩ, Phàn Trù, Trương Tế', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Tây Lương kiếp lược', income: 10000, expense: 5000, food: 30000, gold: 20000 }, attributes: { 'Dũng Vũ': 80, 'Thao Lược': 40, 'Nội Chính': 20, 'Thống Ngự': 70, 'Khí Độ': 30, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Tây Lương hãn tướng', effects: 'Dũng Vũ+15' }], crisis: 'Làm nanh vuốt của Đổng Trác, ngươi dung túng binh lính cướp bóc ở Lạc Dương, phụng mệnh trấn thủ tiền tuyến.' };
+                if (scriptName === '192 Liên Hoàn Tru Tặc') return { force: 'Tây Lương phản quân', classLevel: 'Tây Lương thống soái', position: 'Dương Vũ tướng quân', age: 43, children: 'Lý Thức', region: 'Trường An', power: 'Mười vạn Tây Lương quân', subordinates: 'Giả Hủ, Quách Dĩ, Phàn Trù, Trương Tế', reputation: 'Y Quan Kiêu Kính', assets: { name: 'Kiếp lược Tam Phụ', income: 20000, expense: 10000, food: 80000, gold: 50000 }, attributes: { 'Dũng Vũ': 82, 'Thao Lược': 45, 'Nội Chính': 20, 'Thống Ngự': 75, 'Khí Độ': 30, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Thính tín phản gián', effects: 'Thao Lược-10' }], crisis: 'Nghe theo kế của Giả Hủ phản công Trường An, Lữ Bố đang ở ngay sau cổng thành.' };
+                if (scriptName === '196 Hiệp Đế Lệnh Hầu') return { force: 'Trường An loạn quân', classLevel: 'Tây Lương hãn phỉ', position: 'Đại tư mã', age: 47, children: 'Lý Thức', region: 'Trường An phế khư', power: 'Vài vạn kiêu binh', subordinates: 'Lý Thức, Quách Dĩ(Sắp phản)', reputation: 'Y Quan Kiêu Kính', assets: { name: 'Khô kiệt Quan Trung', income: 5000, expense: 15000, food: 10000, gold: 10000 }, attributes: { 'Dũng Vũ': 80, 'Thao Lược': 30, 'Nội Chính': 10, 'Thống Ngự': 60, 'Khí Độ': 20, 'Sức Khỏe': 70 }, selectedTraits: [{ name: 'Mê tín vu cổ', effects: 'Nội Chính-30' }], crisis: 'Ngươi uy hiếp thiên tử hỏa tịnh với Quách Dĩ, thiên tử đang nhân lúc hỗn loạn chạy trốn về phía đông.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Đổng Trác quân(Phụ dung)', classLevel: 'Lương Châu biên quân', position: 'Hiệu úy', age: 40, children: 'Lý Thức', region: 'Lạc Dương', power: 'Một vạn Tây Lương binh', subordinates: 'Quách Dĩ, Giả Hủ, Phàn Trù', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Quân trung kiếp lược', income: 8000, expense: 5000, food: 20000, gold: 15000 }, attributes: { 'Dũng Vũ': 82, 'Thao Lược': 50, 'Nội Chính': 30, 'Thống Ngự': 75, 'Khí Độ': 40, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Lương Châu hào soái', effects: 'Dũng Vũ+15' }], crisis: 'Là đích hệ của Lương Châu quân, bị phái ra tiền tuyến cản bước liên quân, tuyến tiếp tế cực kỳ mỏng manh.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Tây Lương phản quân', classLevel: 'Lương Châu hào cường', position: 'Dương Vũ tướng quân', age: 43, children: 'Lý Thức', region: 'Trường An', power: 'Hơn mười vạn liên quân', subordinates: 'Giả Hủ, Quách Dĩ, Phàn Trù', reputation: 'Di Xú Phủ Việt', assets: { name: 'Khỏa hiệp Quan Trung', income: 25000, expense: 20000, food: 100000, gold: 40000 }, attributes: { 'Dũng Vũ': 85, 'Thao Lược': 60, 'Nội Chính': 35, 'Thống Ngự': 80, 'Khí Độ': 45, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Phá phủ trầm chu', effects: 'Thống Ngự+10' }], crisis: 'Vương Doãn cự tuyệt ân xá, ngươi dọc đường thu biên đại quân phản công Trường An.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { force: 'Trường An bá phủ', classLevel: 'Lương Châu quân phiệt', position: 'Xa kỵ tướng quân', age: 47, children: 'Lý Thức', region: 'Trường An nội thành', power: 'Vài vạn tàn binh', subordinates: 'Lý Thức', reputation: 'Di Xú Phủ Việt', assets: { name: 'Quan Trung hoang dã', income: 8000, expense: 20000, food: 15000, gold: 20000 }, attributes: { 'Dũng Vũ': 80, 'Thao Lược': 40, 'Nội Chính': 20, 'Thống Ngự': 65, 'Khí Độ': 30, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Cương phúc xai kỵ', effects: 'Thao Lược-20' }], crisis: 'Bắt cóc thiên tử đến doanh trại của mình, Trường An hóa thành đống đổ nát, các tướng ly tâm.' };
+            }
+            return {};
+        }
+    },
+    'Quách Dĩ': {
+        zi: 'Không Có',
+        scripts: { 'Diễn Nghĩa': ['189 Đế đô kinh biến', '192 Liên hoàn tru tặc', '196 Hiệp đế lệnh hầu'], 'Chính Sử': ['189 Đổng Trác nhập kinh', '192 Lý Quách chi loạn', '196 Dĩ lệnh bất thần'] },
+        getDetails: (scriptName, mode) => {
+            if (mode === 'Diễn Nghĩa') {
+                if (scriptName === '189 Đế Đô Kinh Biến') return { faction: 'Đổng Trác quân(Phụ dung)', classLevel: 'Tây Lương hãn tướng', position: 'Hiệu úy', age: 38, children: 'Không Có', region: 'Lạc Dương', power: 'Một vạn Phi Hùng quân', subordinates: 'Lý Thôi', reputation: 'Vạn Phu Sở Chỉ', assets: { name: 'Tây Lương kiếp lược', income: 10000, expense: 5000, food: 30000, gold: 20000 }, attributes: { 'Dũng Vũ': 82, 'Thao Lược': 30, 'Nội Chính': 10, 'Thống Ngự': 65, 'Khí Độ': 20, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Tây Lương hãn tướng', effects: 'Dũng Vũ+15' }], crisis: 'Phụng mệnh tịch thu tài sản hộ giàu ở Lạc Dương, đối mặt với sự đe dọa từ tiên phong liên quân.' };
+                if (scriptName === '192 Liên Hoàn Tru Tặc') return { force: 'Tây Lương phản quân', classLevel: 'Tây Lương thống soái', position: 'Dương Liệt tướng quân', age: 41, children: 'Không Có', region: 'Trường An', power: 'Năm vạn Tây Lương binh', subordinates: 'Lý Thôi', reputation: 'Y Quan Kiêu Kính', assets: { name: 'Kiếp lược Tam Phụ', income: 15000, expense: 10000, food: 60000, gold: 30000 }, attributes: { 'Dũng Vũ': 85, 'Thao Lược': 35, 'Nội Chính': 10, 'Thống Ngự': 70, 'Khí Độ': 20, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Kiêu dũng tàn bạo', effects: 'Khí Độ-20' }], crisis: 'Đơn thương độc mã giao chiến với Lữ Bố trước trận, suýt bị họa kích đâm trúng.' };
+                if (scriptName === '196 Hiệp Đế Lệnh Hầu') return { force: 'Trường An loạn quân', classLevel: 'Tây Lương hãn phỉ', position: 'Hậu tướng quân', age: 45, children: 'Không Có', region: 'Trường An phế khư', power: 'Vài vạn kiêu binh', subordinates: 'Ngũ Tập', reputation: 'Y Quan Kiêu Kính', assets: { name: 'Khô kiệt Quan Trung', income: 5000, expense: 15000, food: 10000, gold: 10000 }, attributes: { 'Dũng Vũ': 80, 'Thao Lược': 20, 'Nội Chính': 10, 'Thống Ngự': 55, 'Khí Độ': 10, 'Sức Khỏe': 75 }, selectedTraits: [{ name: 'Thính tín phụ ngôn', effects: 'Thao Lược-30' }], crisis: 'Nghe lời gièm pha của vợ nghi ngờ Lý Thôi hạ độc, dẫn quân hỏa tịnh bắt cóc bá quan.' };
+            } else {
+                if (scriptName === '189 Đổng Trác Nhập Kinh') return { faction: 'Đổng Trác quân(Phụ dung)', classLevel: 'Đạo mã tặc', position: 'Hiệu úy', age: 38, children: 'Không Có', region: 'Lạc Dương', power: 'Một vạn Tây Lương binh', subordinates: 'Không Có', reputation: 'Hương Luận Sở Bỉ', assets: { name: 'Quân trung kiếp lược', income: 8000, expense: 5000, food: 20000, gold: 15000 }, attributes: { 'Dũng Vũ': 84, 'Thao Lược': 40, 'Nội Chính': 20, 'Thống Ngự': 70, 'Khí Độ': 30, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Đạo mã tặc xuất thân', effects: 'Dũng Vũ+20' }], crisis: 'Xuất thân đạo mã tặc thống lĩnh tinh kỵ, đối mặt với sĩ tộc Trung Nguyên cực kỳ bài xích.' };
+                if (scriptName === '192 Lý Quách Chi Loạn') return { force: 'Tây Lương phản quân', classLevel: 'Tây Lương quân phiệt', position: 'Dương Liệt tướng quân', age: 41, children: 'Không Có', region: 'Ngoài thành Trường An', power: 'Vài vạn liên quân', subordinates: 'Không Có', reputation: 'Di Xú Phủ Việt', assets: { name: 'Khỏa hiệp Quan Trung', income: 20000, expense: 15000, food: 80000, gold: 30000 }, attributes: { 'Dũng Vũ': 86, 'Thao Lược': 50, 'Nội Chính': 25, 'Thống Ngự': 75, 'Khí Độ': 35, 'Sức Khỏe': 85 }, selectedTraits: [{ name: 'Phá phủ trầm chu', effects: 'Dũng Vũ+10' }], crisis: 'Hợp binh với Lý Thôi phản công, đích thân dẫn quân mãnh công tường thành Trường An huyết chiến.' };
+                if (scriptName === '196 Dĩ Lệnh Bất Thần') return { force: 'Trường An bá phủ', classLevel: 'Tây Lương quân phiệt', position: 'Hậu tướng quân', age: 45, children: 'Không Có', region: 'Trường An nội thành', power: 'Vài vạn tàn binh', subordinates: 'Ngũ Tập', reputation: 'Di Xú Phủ Việt', assets: { name: 'Quan Trung hoang dã', income: 8000, expense: 20000, food: 15000, gold: 20000 }, attributes: { 'Dũng Vũ': 82, 'Thao Lược': 30, 'Nội Chính': 15, 'Thống Ngự': 60, 'Khí Độ': 20, 'Sức Khỏe': 80 }, selectedTraits: [{ name: 'Xai kỵ thành tính', effects: 'Thao Lược-20' }], crisis: 'Nghi ngờ Lý Thôi hạ độc trong rượu, uống nước phân móc họng rồi khởi binh đánh trại Lý Thôi.' };
+            }
+            return {};
+        }
+    }
+};
+
+const joyData = {
+    classes: [
+        { name: 'Quốc quân', desc:'Tọa ủng thiên hạ, phú hữu tứ hải.', assets: { name: 'Thiên hạ châu quận', income: 100000, expense: 50000, food: 1000000, gold: 500000 } },
+        { name: 'Quý tộc', desc:'Chung minh đỉnh thực, tư súc giai lệ vô số.', assets: { name: 'Kinh kỳ trang viên', income: 20000, expense: 10000, food: 100000, gold: 50000 } },
+        { name: 'Sĩ nhân', desc:'Thi thư truyền gia, phong nhã thanh đàm.', assets: { name: 'Gia tộc điền sản', income: 5000, expense: 2000, food: 20000, gold: 10000 } },
+        { name: 'Hào cường', desc:'Liên thiên thiên mạch, bộ khúc thành quần.', assets: { name: 'Địa phương ổ bảo', income: 15000, expense: 5000, food: 80000, gold: 30000 } },
+        { name: 'Tử sĩ', desc:'Đao đầu thiểm huyết, kim triêu hữu tửu kim triêu túy.', assets: { name: 'Vô cố định sản nghiệp', income: 100, expense: 100, food: 0, gold: 0 } }
+    ],
+    regions: [
+        { name: 'Lạc Dương', desc:'Hán thất cựu đô, thiên hạ phồn hoa chi trung, đa danh môn thư hương.' },
+        { name: 'Trường An', desc:'Bát thủy nhiễu thành, đế vương chi châu, khí tượng hoành đại.' },
+        { name: 'Nghiệp Thành', desc:'Ngụy vương bá phủ, Đồng Tước xuân thâm, đa quân trung doanh kỹ.' },
+        { name: 'Kiến Nghiệp', desc:'Hổ cứ long bàn, Tần Hoài phong nguyệt, thủy tạ lâu thuyền cực đa.' },
+        { name: 'Thành Đô', desc:'Thiên phủ chi quốc, Cẩm Quan thành ngoại, vu phong dữ Thục cẩm giao chức.' }
+    ],
+    entertainments: [
+        { name: 'Viên lâm du thưởng', desc:'Dẫn hoạt thủy tạo trì, thực kỳ hoa dị mộc, huề sủng phi đăng lâm thủy tạ.', isSex: false },
+        { name: 'Điền liệp kỵ xạ', desc:'Giá ưng khiên khuyển, xạ lộc trục thố, lộ thiên chích khảo liệp vật tá dĩ thuần tửu.', isSex: false },
+        { name: 'Đầu hồ bác dịch', desc:'Đầu hồ định thắng phụ, hoặc ngoạn lục bác, xư bồ, thâu giả phạt tửu.', isSex: false },
+        { name: 'Yến ẩm phú thi', desc:'Đồng Tước đài thiết yến, ẩm tửu tác thi, bạn tùy nhạc vũ.', isSex: false },
+        { name: 'Thu tàng trân ngoạn', desc:'Thu tập Tây Vực lưu ly bình phong, ngọc khí đồng kính, thác kim Bác Sơn lô.', isSex: false },
+        { name: 'Thanh đàm phẩm mính', desc:'Danh sĩ tụ hội, chử trà luận đạo, trà diệp tá dĩ khương quế điều vị.', isSex: false },
+        { name: 'Dân gian thuyết xướng', desc:'Thính thuyết thư nhân giảng "Sơn Hải Kinh", manh nghệ nhân đàn không hầu xướng "Mạch Thượng Tang》.', isSex: false },
+        { name: 'Tiết khánh xã hỏa', desc:'Thượng Tị lâm thủy phất khế, Tương Dương đạp ca, Hứa Xương nguyên tiêu huyền quải quyên chế thải đăng.', isSex: false },
+        { name: 'Xư bồ đấu kê', desc:'Thị tỉnh đổ phường dĩ đồng tiền trịch đầu, quần hùng chính hấp hách đấu kê đổ thắng.', isSex: false },
+        { name: 'Thôn đao thổ hỏa', desc:'Bách hí tạp kỹ, kinh hiểm thứ kích đích nhai đầu ngư long mạn duyên biểu diễn.', isSex: false },
+        { name: 'Tẩu sách', desc:'Tẩu cương ti tuyệt kỹ, khấu nhân tâm huyền.', isSex: false },
+        { name: 'Tầm đồng', desc:'Ba can tạp kỹ, cao không đằng na.', isSex: false },
+        { name: 'Giác để', desc:'Kiện hán suất giao, lực lượng dữ kỹ xảo đích bính chàng.', isSex: false },
+        { name: 'Doanh kỹ', desc:'Quan phương thiết lập đích "doanh hộ", chiến phu thê nữ biên nhập, chủ tư quân nhạc vũ.', isSex: true },
+        { name: 'Ca vũ phường', desc:'Lạc Dương Minh Loan các đẳng tư doanh cơ cấu, súc dưỡng chuyên nghiệp ca vũ kỹ.', isSex: true },
+        { name: 'Gia kỹ', desc:'Quý tộc tư súc Đan Dương kỹ đẳng, phân môn biệt loại, tinh nghiên các sắc kỹ nghệ.', isSex: true }
+    ],
+    categories: {
+        'Doanh kỹ': [
+            { name: 'Phá trận quân kỹ', desc:'Bị ép mua vui cho tướng sĩ trong máu tanh và tàn khốc, một doanh trại nữ bi thảm.' },
+            { name: 'Úy quân nữ doanh', desc:'Vợ con tù binh bị sung làm quan kỹ, chủ yếu lo ca múa và hầu hạ cơ bản trong quân.' }
+        ],
+        'Ca vũ phường': [
+            { name: 'Nhạc kỹ', desc:'Chuyên về nhạc cụ, tinh thông các khúc nhạc phức tạp, khí chất thanh lãnh.' },
+            { name: 'Vũ kỹ', desc:'Thân hình cực kỳ mềm dẻo, nắm vững nhiều điệu múa độ khó cao và thân pháp mị hoặc.' },
+            { name: 'Ca kỹ', desc:'Giọng hát uyển chuyển, giỏi hát đối đáp và ứng khẩu điền từ.' }
+        ],
+        'Gia kỹ': [
+            { name: 'Thư hương kỹ', desc:'Tinh thông thi thư, khí chất nhã nhặn, có thể phân tích chính cục.' },
+            { name: 'Nhạc luật kỹ', desc:'Chuyên về cổ khúc thất truyền và nhạc lý phức tạp, kỹ nghệ cao siêu.' },
+            { name: 'Thủy tạ kỹ', desc:'Giỏi ca múa trên nước, làn da như ngọc, am hiểu mị thuật ướt át của Giang Nam.' },
+            { name: 'Dịch kỳ kỹ', desc:'Tinh thông binh pháp sa bàn và kỳ cục, có thể hầu hạ trong lúc suy diễn.' },
+            { name: 'Cẩm Thành chức kỹ', desc:'Bảo dưỡng cực tốt, phô diễn tuyệt kỹ dệt Thục cẩm, thân mang kỳ hương.' },
+            { name: 'Vu vũ kỹ', desc:'Kế thừa văn hóa vu thuật của Tây Nam Di, biết huyễn thuật và thân pháp mị hoặc.' },
+            { name: 'Song diện kỹ', desc:'Ca kỹ dạng gian tế do Tào Tháo bồi dưỡng, ẩn chứa sát cơ.' },
+            { name: 'Y kỹ', desc:'Được đệ tử Hoa Đà đào tạo, thị dược nữ am hiểu dược lý và cấp cứu.' }
+        ]
+    },
+    plays: {
+        'Nhạc kỹ': [
+            { name: 'Hồ già tuyệt hưởng', desc:'Đeo vòng tay kim túc, ngồi sau màn giao tiêu tấu những khúc nhạc phức tạp như "Hồ Già Thập Bát Phách.' }
+        ],
+        'Vũ kỹ': [
+            { name: 'Thất bàn vũ', desc:'Nhảy múa nhẹ nhàng giữa các mâm trống, mỗi ngày phải dùng hương liệu xông áo ba canh giờ.' },
+            { name: 'Chiết yêu vũ', desc:'Dáng múa mềm dẻo, ngả người ra sau cong như trăng khuyết.' },
+            { name: 'Kính tiền chiến vũ', desc:'Chu sa điểm xuyết xương quai xanh và lúm đồng tiền ở eo, thoa dầu hoa quế phản chiếu ánh sáng, chỉ khoác dải lụa giao tiêu xoay vòng, nhũ ba trước ngực dập dờn tạo thành gợn sóng hình hoa sen.' }
+        ],
+        'Ca kỹ': [
+            { name: 'Thanh thương tùy phong', desc:'Ứng khẩu điền từ, vận dụng kỹ xảo phát âm "Thanh thương tùy phong phát" để hát đối đáp.' }
+        ],
+        'Phá trận quân kỹ': [
+            { name: 'Phá trận thải tinh', desc:'Mười hai người đi chân trần xoay tít trên chiếu rải đầy hạt kê, những giọt máu rỉ ra từ lòng bàn chân đạp thành hình Bắc Đẩu thất tinh, bắp chân buộc chuông đồng phát ra tiếng vang trầm đục.' },
+            { name: 'Thù du dung lạp', desc:'Đầu vú bôi sáp ong pha bột thù du, khi nhảy múa thân nhiệt làm tan chảy lớp sáp, hương thơm cay nồng bốc lên cùng mồ hôi.' }
+        ],
+        'Úy quân nữ doanh': [
+            { name: 'Ba Du chiến vũ', desc:'Biểu diễn các điệu quân nhạc vũ như "Ba Du vũ" trong tiệc mừng công, động tác mạnh mẽ pha lẫn bi tráng.' }
+        ],
+        'Thư hương kỹ': [
+            { name: 'Thi thư tá tửu', desc:'Tinh thông "Kinh Thi", "Sở Từ", trong bữa tiệc biết quan sát sắc mặt, hùa theo sở thích.' },
+            { name: 'Kỵ trúc mã', desc:'Một trong Âm dương tam thập lục thức, chỉ dùng hai chân kẹp chặt gối gấm, dựa vào sức eo lơ lửng nhấp nhô trong nửa nén hương.' }
+        ],
+        'Nhạc luật kỹ': [
+            { name: 'U lan hưởng linh', desc:'Gảy đàn Tiêu Vĩ, cổ tay đeo chuông rung theo điệu nhạc, đồng thời tấu đàn trúc và sênh mô phỏng tiếng chiêng trống.' },
+            { name: 'Văn Quân đương lô', desc:'Huấn luyện miệng lưỡi bí mật, ngậm rượu ấm không nuốt, đầu lưỡi xoay chuyển chín vòng, hóa thành dòng rượu nhỏ như sợi chỉ từ từ rót vào chén ngọc.' }
+        ],
+        'Thủy tạ kỹ': [
+            { name: 'Lăng ba vũ', desc:'Cổ chân buộc chuông bạc, nhảy múa trên đài sen đường kính sáu thước, tắm bằng bột ngọc trai và nước thơm xương bồ cho làn da như ngọc.' },
+            { name: 'Thủy kỹ thấu sa', desc:'Dùng đá vũ hoa ấm nóng xoa bóp mặt trong đùi đến ửng đỏ, lớp áo lụa hồ bột gạo gặp hơi rượu dần trở nên trong suốt, những giọt mồ hôi chảy dọc vào rãnh mông kéo thành vệt sáng lấp lánh.' }
+        ],
+        'Dịch kỳ kỹ': [
+            { name: 'Bát quái bàn tràng', desc:'Dùng quân cờ diễn thị Bát quái trận trong bữa tiệc, ngầm hùa theo trận pháp để hầu hạ sát rạt.' }
+        ],
+        'Cẩm Thành chức kỹ': [
+            { name: 'Thục cẩm lưu hương', desc:'Trình diễn dệt Thục cẩm trong bữa tiệc, cài trang sức kim cốt bảy lỗ, váy điểm xuyết hoa văn phù dung bằng chỉ vàng, tỏa ra hương hoa dành dành.' }
+        ],
+        'Vu vũ kỹ': [
+            { name: 'Hỏa thán đạp túc', desc:'Mặt vẽ đồ đằng màu chàm, đeo mặt nạ đồng thau mắt lồi nhảy múa Na hí, biểu diễn huyễn thuật đạp than hồng bằng lòng bàn chân đã được xử lý bằng loại thuốc đặc biệt.' },
+            { name: 'Vu Sơn vân lãng', desc:'Thoa cao dầu xuyên khung xạ hương lên eo, tháo mặt nạ, dùng trâm cài gỡ dải lụa cởi áo tế để lộ đồ đằng, eo bụng run rẩy như gợn sóng né tránh sự đụng chạm.' }
+        ],
+        'Song diện kỹ': [
+            { name: 'Lộc minh ám phù', desc:'Bề ngoài tấu khúc "Lộc Minh", thực chất dùng ám phù ghi chép lại lời nói của quan khách, trong tay áo giấu bột đá nam châm để tiêu hủy lụa.' }
+        ],
+        'Y kỹ': [
+            { name: 'Dược ngọc hồi xuân', desc:'Tinh thông "Thần Nông Bản Thảo Kinh", đai lưng khảm ngọc chia mười hai ngăn đựng các loại thuốc cấp cứu như xạ hương, tô hợp hương để hầu hạ bên cạnh.' }
+        ]
+    }
+};
+
+const attributesList = ['Dũng Vũ', 'Thao Lược', 'Nội Chính', 'Thống Ngự', 'Khí Độ', 'Sức Khỏe'];
+
+// Bổ sung: Hàm lấy niên hiệu tương ứng với năm lịch sử
+function getEraName(year) {
+    if (!year) return '';
+    const y = parseInt(year);
+    if (y === 184) return 'Trung Bình nguyên niên';
+    if (y === 189) return 'Trung Bình lục niên';
+    if (y === 190) return 'Sơ Bình nguyên niên';
+    if (y === 191) return 'Sơ Bình nhị niên';
+    if (y === 192) return 'Sơ Bình tam niên';
+    if (y === 194) return 'Hưng Bình nguyên niên';
+    if (y === 195) return 'Hưng Bình nhị niên';
+    if (y === 196) return 'Kiến An nguyên niên';
+    if (y === 197) return 'Kiến An nhị niên';
+    if (y === 198) return 'Kiến An tam niên';
+    if (y === 199) return 'Kiến An tứ niên';
+    if (y === 200) return 'Kiến An ngũ niên';
+    if (y === 202) return 'Kiến An thất niên';
+    if (y === 207) return 'Kiến An thập nhị niên';
+    if (y === 208) return 'Kiến An thập tam niên';
+    if (y === 210) return 'Kiến An thập ngũ niên';
+    if (y === 211) return 'Kiến An thập lục niên';
+    if (y === 214) return 'Kiến An thập cửu niên';
+    if (y === 215) return 'Kiến An nhị thập niên';
+    if (y === 219) return 'Kiến An nhị thập tứ niên';
+    if (y === 221) return 'Chương Vũ nguyên niên';
+    if (y === 222) return 'Chương Vũ nhị niên';
+    if (y === 223) return 'Kiến Hưng nguyên niên';
+    if (y === 225) return 'Kiến Hưng tam niên';
+    if (y === 227) return 'Kiến Hưng ngũ niên';
+    if (y === 228) return 'Kiến Hưng lục niên';
+    if (y === 229) return 'Kiến Hưng thất niên';
+    if (y === 230) return 'Kiến Hưng bát niên';
+    if (y === 231) return 'Kiến Hưng cửu niên';
+    if (y === 234) return 'Kiến Hưng thập nhị niên';
+    if (y === 238) return 'Cảnh Sơ nhị niên';
+    if (y === 239) return 'Cảnh Sơ tam niên';
+    if (y === 241) return 'Xích Ô tứ niên';
+    if (y === 249) return 'Chính Thủy thập niên';
+    if (y === 251) return 'Gia Bình tam niên';
+    if (y === 252) return 'Kiến Hưng nguyên niên';
+    if (y === 253) return 'Kiến Hưng nhị niên';
+    if (y === 255) return 'Chính Nguyên nhị niên';
+    if (y === 256) return 'Cam Lộ nguyên niên';
+    if (y === 257) return 'Cam Lộ nhị niên';
+    if (y === 260) return 'Cảnh Nguyên nguyên niên';
+    if (y === 262) return 'Cảnh Nguyên tam niên';
+    if (y === 263) return 'Cảnh Nguyên tứ niên';
+    if (y === 264) return 'Hàm Hy nguyên niên';
+    if (y === 272) return 'Thái Thủy bát niên';
+    if (y === 279) return 'Hàm Ninh ngũ niên';
+    if (y === 280) return 'Thái Khang nguyên niên';
+    if (y === 290) return 'Thái Hy nguyên niên';
+    return 'Niên hiệu chưa rõ';
+}
+
+const traitsData = [
+    { name: 'Thiên mệnh chi tử', effects: 'Dũng Vũ+20, Thao Lược+20, Nội Chính+20, Thống Ngự+20, Khí Độ+20, Sức Khỏe+20' },
+    { name: 'Bá vương chi dũng', effects: 'Dũng Vũ+50, Thống Ngự+10, Khí Độ+10' },
+    { name: 'Ngọa long chi tài', effects: 'Thao Lược+50, Nội Chính+30' },
+    { name: 'Kiêu hùng chi tư', effects: 'Thống Ngự+40, Khí Độ+30, Thao Lược+10' },
+    { name: 'Thiên sinh tàn tật', effects: 'Sức Khỏe-50' },
+    { name: 'Thể nhược đa bệnh', effects: 'Sức Khỏe-30, Dũng Vũ-20' },
+    { name: 'Thiên sinh thần lực', effects: 'Dũng Vũ+40, Sức Khỏe+10' },
+    { name: 'Bách bộ xuyên dương', effects: 'Dũng Vũ+30, Thống Ngự+10' },
+    { name: 'Đồng bì thiết cốt', effects: 'Sức Khỏe+40, Dũng Vũ+20' },
+    { name: 'Trị thế năng thần', effects: 'Nội Chính+50, Khí Độ+20' },
+    { name: 'Quá mục bất vong', effects: 'Thao Lược+30, Nội Chính+20' },
+    { name: 'Xảo ngôn thiện biện', effects: 'Khí Độ+30, Nội Chính+10' },
+    { name: 'Toán vô di sách', effects: 'Thao Lược+40, Thống Ngự+20' },
+    { name: 'Vương giả chi phong', effects: 'Khí Độ+50, Thống Ngự+30' },
+    { name: 'Uy chấn địch đảm', effects: 'Dũng Vũ+30, Thống Ngự+30' },
+    { name: 'Nhân nghĩa chi danh', effects: 'Khí Độ+40, Nội Chính+20' },
+    { name: 'Tri nhân thiện nhiệm', effects: 'Thống Ngự+30, Nội Chính+30' },
+    { name: 'Cương phúc tự dụng', effects: 'Thống Ngự-20, Khí Độ-20' },
+    { name: 'Manh mục xung động', effects: 'Thao Lược-30, Dũng Vũ+20' },
+    { name: 'Ưu nhu quả đoán', effects: 'Thống Ngự-30, Thao Lược-10' },
+    { name: 'Thị tửu như mệnh', effects: 'Sức Khỏe-20, Thống Ngự-10' },
+    { name: 'Hảo sắc chi đồ', effects: 'Khí Độ-30, Sức Khỏe-10' },
+    { name: 'Loạn thế yêu tinh', effects: 'Thao Lược+40, Khí Độ-20, Thống Ngự+20' },
+    { name: 'Trích tiên giáng thế', effects: 'Khí Độ+40, Thao Lược+20, Sức Khỏe-10' },
+    { name: 'Quỷ Cốc truyền nhân', effects: 'Thao Lược+40, Nội Chính+20' },
+    { name: 'Mô kim hiệu úy', effects: 'Nội Chính+20, Dũng Vũ+10, Khí Độ-10' },
+    { name: 'Lục lâm hảo hán', effects: 'Dũng Vũ+20, Khí Độ+10, Thống Ngự-10' },
+    { name: 'Du hiệp kiếm khách', effects: 'Dũng Vũ+30, Khí Độ+10' },
+    { name: 'Thương giả cự phú', effects: 'Nội Chính+40, Khí Độ+10, Dũng Vũ-10' },
+    { name: 'Diệu thủ hồi xuân', effects: 'Nội Chính+10, Sức Khỏe+30' },
+    { name: 'Khí vũ hiên ngang', effects: 'Khí Độ+30' },
+    { name: 'Mạo nhược Phan An', effects: 'Khí Độ+40, Dũng Vũ-10' },
+    { name: 'Hung thần ác sát', effects: 'Dũng Vũ+20, Khí Độ-30, Thống Ngự+10' },
+    { name: 'Trường tụ thiện vũ', effects: 'Nội Chính+20, Khí Độ+20' },
+    { name: 'Thiết huyết trị quân', effects: 'Thống Ngự+40, Khí Độ-10' },
+    { name: 'Ái dân như tử', effects: 'Nội Chính+30, Khí Độ+30' },
+    { name: 'Hoành tảo thiên quân', effects: 'Dũng Vũ+40, Thống Ngự+20' },
+    { name: 'Cố nhược kim thang', effects: 'Thống Ngự+40, Nội Chính+10' },
+    { name: 'Vận trù duy ác', effects: 'Thao Lược+50' },
+    { name: 'Xung phong hãm trận', effects: 'Dũng Vũ+40, Thống Ngự-10' },
+    { name: 'Lão mưu thâm toán', effects: 'Thao Lược+30, Sức Khỏe-10' },
+    { name: 'Thất phu chi dũng', effects: 'Dũng Vũ+30, Thao Lược-30' },
+    { name: 'Chỉ thượng đàm binh', effects: 'Thao Lược+20, Thống Ngự-30' },
+    { name: 'Tham sinh phạ tử', effects: 'Dũng Vũ-40, Sức Khỏe+10' },
+    { name: 'Kiến phong sử đà', effects: 'Khí Độ-20, Nội Chính+20' },
+    { name: 'Tật hiền đố năng', effects: 'Khí Độ-40, Thống Ngự-10' },
+    { name: 'Mục bất thức đinh', effects: 'Thao Lược-40, Nội Chính-30' },
+    { name: 'Cùng binh độc vũ', effects: 'Thống Ngự+20, Nội Chính-40' },
+    { name: 'Xa mỉ vô độ', effects: 'Nội Chính-30, Sức Khỏe-20' },
+    { name: 'Khí mãn hung đường', effects: 'Khí Độ+20, Sức Khỏe+20' },
+    { name: 'Long câu phượng sồ', effects: 'Thao Lược+30, Khí Độ+20' },
+    { name: 'Nhất thân thị đảm', effects: 'Dũng Vũ+40, Khí Độ+20' },
+    { name: 'Văn võ song toàn', effects: 'Dũng Vũ+30, Thao Lược+30' },
+    { name: 'Tàn bạo bất nhân', effects: 'Dũng Vũ+20, Khí Độ-50' },
+    { name: 'Phong lưu phóng đãng', effects: 'Khí Độ+30, Sức Khỏe-10' },
+    { name: 'Thảo gian nhân mệnh', effects: 'Thống Ngự-20, Khí Độ-40' },
+    { name: 'Y đạo thánh thủ', effects: 'Sức Khỏe+50, Nội Chính+10' },
+    { name: 'Cơ quan toán tận', effects: 'Thao Lược+40, Sức Khỏe-20' },
+    { name: 'Lực bạt sơn hề', effects: 'Dũng Vũ+50' },
+    { name: 'Bách chiết bất nạo', effects: 'Sức Khỏe+30, Thống Ngự+20' },
+    { name: 'Quốc sĩ vô song', effects: 'Thao Lược+30, Nội Chính+30, Khí Độ+30' }
+];
+
+const reputationLevels = [
+    { name: 'Trúc Bạch Thùy Huân', desc:'Công tích phong cốt ghi vào sử sách, danh lưu thiên cổ, vinh dự tinh thần cao nhất của kẻ sĩ.', type:'Thanh', level: 5 },
+    { name:'Quan Miện Quần Luân', desc:'Danh tiếng trong một lĩnh vực vượt qua tất cả những người cùng thế hệ, trở thành người đứng đầu được công nhận.', type:'Thanh', level: 4 },
+    { name:'Hải Nội Ngưỡng Đức', desc:'Đạo đức, học vấn hoặc nghĩa cử truyền khắp bốn bể, kẻ sĩ trong thiên hạ đều hướng về.', type:'Thanh', level: 3 },
+    { name:'Châu Quận Trì Danh', desc:'Danh tiếng lưu truyền trong phạm vi một châu quận, được hào cường quan lại biết đến và kính trọng.', type:'Thanh', level: 2 },
+    { name:'Lý Lư Xưng Thiện', desc:'Ở xóm làng được hàng xóm khen ngợi là hiền lành an phận, danh tiếng cơ bản nhất.', type:'Thanh', level: 1 },
+    { name:'Hương Luận Sở Bỉ', desc:'Bị mọi người khinh thường trong những cuộc bàn luận ở xóm làng, nằm ở rìa vòng tròn xã giao.', type:'Ác', level: 1 },
+    { name:'Quận Vọng Mông Tu', desc:'Hành vi cực kỳ không đứng đắn, khiến danh tiếng của cả gia tộc thậm chí là quận huyện bị vấy bẩn.', type:'Ác', level: 2 },
+    { name:'Y Quan Kiêu Kính', desc:'Kẻ vong ân phụ nghĩa, giết cha giết chủ, mất hết nhân luân, như loài cầm thú đội lốt người.', type:'Ác', level: 3 },
+    { name:'Vạn Phu Sở Chỉ', desc:'Ác hành rõ rành rành, khiến trời giận người oán, bị ngàn vạn người chửi rủa chỉ trích.', type:'Ác', level: 4 },
+    { name:'Di Xú Phủ Việt', desc:'Ác danh sẽ vĩnh viễn bị đóng đinh trên cột nhục nhã của lịch sử, bị người đời sau lên án.', type:'Ác', level: 5 }
+];
+
+const lowClasses = [
+    'Giáo chúng bình thường', 'Hoàng Cân lực sĩ', 'Sĩ tốt bình thường', 'Trung quân tốt', 'Đồn điền khách', 'Lưu dân', 'Lưu dân vô tịch', 'Bạch y thương giả',
+    'Khách quân bộ khúc', 'Dân phu vận lương', 'Sĩ tốt viễn chinh', 'Sĩ tốt thủ thành', 'Tử sĩ đảo qua', 'Nghĩa dũng hương binh', 'Tây Lương bộ tốt',
+    'Hà Bắc bộ tốt', 'Hoài Nam bộ tốt', 'Tấn quân sĩ tốt', 'Nguyên tòng lão tốt', 'Hàn môn thứ tộc', 'Quân hộ', 'Bạch Đinh', 'Bố y', 'Bình Dân', 'Đồn điền thanh tráng',
+    'Tùy quân lão tốt', 'Trung quân bộ tốt', 'Lính đánh thuê Man tộc', 'Tử chiến chi sĩ', 'Giang Đông thủy sư'
+];
+
+function isLowClass(className) {
+    if (!className) return false;
+    for (let c of lowClasses) {
+        if (className.includes(c)) return true;
+    }
+    return false;
+}
+
+function getHistoryAssets(className) {
+    const assets = { name: 'Không Có', income: 0, expense: 0, food: 0, gold: 0 };
+    if (!className) return assets;
+
+    if (className.includes('Quân phiệt cát cứ') || className.includes('Cát cứ thủ lĩnh') || className.includes('Đại hiền lương sư') || className.includes('Chư hầu minh chủ') || className.includes('Các lộ chư hầu') || className.includes('Tọa sơn quan hổ đấu chi quân') || className.includes('Phán trấn thủ lĩnh') || className.includes('Bá phủ quyền thần') || className.includes('Tông thất quyền thần') || className.includes('Đại tướng quân') || className.includes('Đại đô đốc') || className.includes('Đông chinh chủ soái') || className.includes('Bắc phạt chủ soái')) {
+        assets.name = 'Kim khố bá phủ và thuế thu châu quận'; assets.income = 50000; assets.expense = 40000; assets.food = 500000; assets.gold = 100000;
+    }
+    else if (className.includes('Tư Mã thị tông vương') || className.includes('Hán thất tông thân') || className.includes('Châu mục thân tộc') || className.includes('Ngoại trấn đô đốc') || className.includes('Khai quốc huân quý') || className.includes('Bình Thục đại đô đốc')) {
+        assets.name = 'Thực ấp phiên quốc và đô đốc giữ lại'; assets.income = 20000; assets.expense = 15000; assets.food = 100000; assets.gold = 50000;
+    }
+    else if (className.includes('Tứ thế tam công') || className.includes('Giang Đông thế tộc') || className.includes('Bản thổ vọng tộc') || className.includes('Liêu Đông hào tộc') || className.includes('Lương Châu hào tộc') || className.includes('Ngoại thích tử đệ')) {
+        assets.name = 'Vạn khoảnh ruộng tốt và bộ khúc ẩn nấp'; assets.income = 15000; assets.expense = 8000; assets.food = 80000; assets.gold = 40000;
+    }
+    else if (className.includes('Công khanh đại thần') || className.includes('Trung thường thị') || className.includes('Hán thất cựu thần') || className.includes('Hoạn quan đảng vũ') || className.includes('Thanh lưu danh sĩ') || className.includes('Địa phương danh sĩ') || className.includes('Tông tộc trưởng giả') || className.includes('Thế gia tử đệ')) {
+        assets.name = 'Trang viên kinh kỳ và giao dịch quyền tiền'; assets.income = 12000; assets.expense = 9000; assets.food = 20000; assets.gold = 80000;
+    }
+    else if (className.includes('Viễn chinh quân chủ soái') || className.includes('Thủy quân đô đốc') || className.includes('Nam phạt đại tướng') || className.includes('Thủ thành chủ tướng') || className.includes('Cô thành thủ tướng') || className.includes('Tông tộc đại tướng') || className.includes('Hoài Nam thượng tướng')) {
+        assets.name = 'Đại doanh quân trấn và chiến lợi phẩm giữ lại'; assets.income = 8000; assets.expense = 6000; assets.food = 50000; assets.gold = 20000;
+    }
+    else if (className.includes('Đương địa thổ hào') || className.includes('Ích Châu hào cường') || className.includes('Man hoang động chủ') || className.includes('Khương tộc thủ lĩnh') || className.includes('Sơn Việt hào tù') || className.includes('Địa phương hào cường') || className.includes('Ổ bảo bảo chủ')) {
+        assets.name = 'Ổ bảo địa phương và cống nạp bộ lạc'; assets.income = 5000; assets.expense = 3000; assets.food = 30000; assets.gold = 15000;
+    }
+    else if (className.includes('Tiên phong quan') || className.includes('Tiên phong hãn tướng') || className.includes('Ngoại tính hãn tướng') || className.includes('Quân trung mãnh tướng') || className.includes('Lương Châu hãn tướng') || className.includes('Hà Bắc hãn tướng') || className.includes('Trấn bắc thủ tướng') || className.includes('Biên cảnh thủ tướng') || className.includes('Trì viện kiêu tướng') || className.includes('Khách tướng') || className.includes('Giải phiền đốc tướng') || className.includes('Châu quận đốc tướng') || className.includes('Tiên đăng mãnh tướng') || className.includes('Trung quân đô đốc') || className.includes('Đông chinh tiền phong') || className.includes('Phục cừu mãnh tướng')) {
+        assets.name = 'Tham ô doanh trại và thưởng tiên đăng'; assets.income = 1500; assets.expense = 1000; assets.food = 5000; assets.gold = 3000;
+    }
+    else if (className.includes('Mạc phủ mưu sĩ') || className.includes('Tùy quân tham quân') || className.includes('Gián ngôn mưu thần') || className.includes('Phù hoa danh sĩ') || className.includes('Dĩnh Xuyên mưu sĩ') || className.includes('Ký Châu danh sĩ') || className.includes('Kinh Sở sĩ nhân') || className.includes('Trì tiết sứ thần') || className.includes('Trần Cung đẳng mưu sĩ')) {
+        assets.name = 'Chủ công trọng thưởng và môn sinh cung dưỡng'; assets.income = 1000; assets.expense = 500; assets.food = 2000; assets.gold = 5000;
+    }
+    else if (className.includes('Hổ Báo Kỵ') || className.includes('Bạch Mã Nghĩa Tòng') || className.includes('Hãm Trận Doanh') || className.includes('Vô Đương Phi Quân') || className.includes('Phi Hùng quân sĩ') || className.includes('Trung quân tinh kỵ') || className.includes('Túc vệ cấm quân') || className.includes('Giang Đông bộ khúc') || className.includes('Hoài Nam cựu bộ') || className.includes('Tinh nhuệ nha binh') || className.includes('Khách quân bộ khúc') || className.includes('Tịnh Châu lang kỵ') || className.includes('Liêu Đông thiết kỵ') || className.includes('Tây Lương thiết kỵ') || className.includes('Cảm tử duệ sĩ') || className.includes('Bạch Nhĩ Binh') || className.includes('Hoàng Cân lực sĩ') || className.includes('Tử sĩ đảo qua') || className.includes('Tử chiến chi sĩ')) {
+        assets.name = 'Quân lương tinh nhuệ và định mức cướp bóc'; assets.income = 300; assets.expense = 200; assets.food = 500; assets.gold = 800;
+    }
+    else if (className.includes('Lục lâm du hiệp') || className.includes('Cẩm phàm tặc') || className.includes('Tị loạn thương giả') || className.includes('Bạch y thương giả')) {
+        assets.name = 'Tuyến đường buôn lậu và cướp bóc giang hồ'; assets.income = 500; assets.expense = 300; assets.food = 1000; assets.gold = 2000;
+    }
+    else if (className.includes('Vận lương quan') || className.includes('Tiểu hoàng môn') || className.includes('Tế tửu') || className.includes('Hiếp tòng tướng tá') || className.includes('Yêm đảng thân tín') || className.includes('Phương trấn cừ soái')) {
+        assets.name = 'Bổng lộc ít ỏi và ăn chặn bỏ túi'; assets.income = 100; assets.expense = 80; assets.food = 200; assets.gold = 150;
+    }
+    else if (className.includes('Sĩ tốt bình thường') || className.includes('Sĩ tốt viễn chinh') || className.includes('Sĩ tốt thủ thành') || className.includes('Trung quân bộ tốt') || className.includes('Tây Lương bộ tốt') || className.includes('Hà Bắc bộ tốt') || className.includes('Hoài Nam bộ tốt') || className.includes('Tấn quân sĩ tốt') || className.includes('Giang Đông thủy sư') || className.includes('Địa phương thủy quân') || className.includes('Lâu thuyền thủy sư') || className.includes('Trường Giang thủy doanh') || className.includes('Thanh Châu binh') || className.includes('Đông Châu binh') || className.includes('Nghĩa dũng hương binh') || className.includes('Đằng giáp binh') || className.includes('Tượng binh') || className.includes('Nguyên tòng lão tốt') || className.includes('Bắc quân tướng sĩ') || className.includes('Quan Lũng quận binh') || className.includes('Khách quân sĩ tốt') || className.includes('Tùy quân lão tốt') || className.includes('Lính đánh thuê Man tộc')) {
+        assets.name = 'Khẩu phần ăn trong doanh trại và quân lương ít ỏi'; assets.income = 20; assets.expense = 20; assets.food = 50; assets.gold = 10;
+    }
+    else if (className.includes('Đồn điền khách') || className.includes('Đồn điền thanh tráng') || className.includes('Dân phu vận lương') || className.includes('Giáo chúng bình thường') || className.includes('Ngũ Đẩu Mễ Đạo') || className.includes('Sơn lâm ẩn sĩ') || className.includes('Ẩn thế cao nhân') || className.includes('Ẩn thế di dân')) {
+        assets.name = 'Ruộng cằn quan phủ và khai hoang núi sâu'; assets.income = 10; assets.expense = 10; assets.food = 20; assets.gold = 0;
+    }
+    else if (className.includes('Lưu dân') || className.includes('Lưu dân vô tịch') || className.includes('Lưu vong bộ chúng') || className.includes('Tàn binh bại tướng') || className.includes('Bại quân chi tướng') || className.includes('Tản binh du dũng') || className.includes('Di lão cô thần') || className.includes('Vong quốc cựu thần') || className.includes('Triều đình hàng thần') || className.includes('Trọng Gia ngụy thần')) {
+        assets.name = 'Ăn xin dọc đường và lục lọi thi thể'; assets.income = 0; assets.expense = 0; assets.food = 0; assets.gold = 0;
+    }
+    else {
+        assets.name = 'Vốn liếng sống tạm thời loạn'; assets.income = 15; assets.expense = 10; assets.food = 10; assets.gold = 5;
+    }
+    return assets;
+}
+
+function getClassOptionsByFaction(factionName) {
+    const name = factionName || "";
+
+    if (name.includes('Tàn') || name.includes('Dư') || name.includes('Vong quốc')) {
+        if (name.includes('Thục') || name.includes('Hán')) {
+            return [{ name: 'Di lão cô thần', desc:'Cựu thần ôm lòng nhớ nước cũ, thề không hàng Ngụy' }, { name: 'Tàn binh bại tướng', desc:'Binh lính tan rã, lưu lạc nơi rừng núi' }, { name: 'Tử chiến chi sĩ', desc:'Tử sĩ theo Khương Duy và các tướng chiến đấu đến phút cuối cùng' }, { name: 'Ẩn thế di dân', desc:'Bách tính ẩn danh, không màng thế sự' }];
+        }
+        if (name.includes('Tam phương') || name.includes('Thiên hạ')) {
+            return [{ name: 'Vong quốc cựu thần', desc:'Hàng thần sống tạm bợ sau khi Tam Quốc diệt vong' }, { name: 'Sơn lâm ẩn sĩ', desc:'Cao nhân nhìn thấu hồng trần, ẩn cư lánh đời' }, { name: 'Tản binh du dũng', desc:'Loạn binh dù thiên hạ đã định vẫn làm thảo khấu' }];
+        }
+        return [{ name: 'Lưu vong bộ chúng', desc:'Sĩ tốt chạy trốn khắp nơi sau khi bại trận' }, { name: 'Bại quân chi tướng', desc:'Võ tướng mất thành mất đất, chỉ mang theo thân tín bỏ trốn' }];
+    }
+
+    if (name.includes('Viện quân') || name.includes('Thâu tập quân')) {
+        if (name.includes('Đông Ngô') || name.includes('Tôn') || name.includes('Ngô')) {
+            return [{ name: 'Trì tiết sứ thần', desc:'Sứ tiết Giang Đông phụng mệnh đi sứ liên lạc' }, { name: 'Giang Đông thủy sư', desc:'Thủy quân tinh nhuệ đi thuyền ngược dòng sông' }, { name: 'Giải phiền đốc tướng', desc:'Tướng hiệu Đông Ngô thống lĩnh khách quân tinh nhuệ' }, { name: 'Bạch y thương giả', desc:'Thủy quân tinh nhuệ ngụy trang thành thương nhân(Chuyên dùng để đánh lén)' }, { name: 'Khách quân bộ khúc', desc:'Tư binh Giang Đông tác chiến xa quê hương' }];
+        }
+        if (name.includes('Tào') || name.includes('Ngụy')) {
+            return [{ name: 'Trì viện kiêu tướng', desc:'Tướng lĩnh phụng mệnh ngày đêm gấp rút ra tiền tuyến' }, { name: 'Trung quân tinh kỵ', desc:'Kỵ binh do trung ương quân Tào Ngụy điều động' }, { name: 'Vận lương quan', desc:'Quan viên phụ trách bảo đảm lương thảo tiền tuyến' }];
+        }
+        return [{ name: 'Khách tướng', desc:'Tướng lĩnh dẫn quân chi viện người khác' }, { name: 'Khách quân sĩ tốt', desc:'Binh lính theo quân viễn chinh' }];
+    }
+
+    if (name.includes('Đông chinh') || name.includes('Phạt Ngô') || name.includes('Di Lăng')) {
+        if (name.includes('Thục') || name.includes('Lưu Bị')) {
+            return [{ name: 'Đông chinh chủ soái', desc:'Thống soái tối cao thống lĩnh đại quân xuôi dòng sông' }, { name: 'Phục cừu mãnh tướng', desc:'Võ tướng mang đầy lửa giận xung phong hãm trận' }, { name: 'Tùy quân lão tốt', desc:'Lão binh bách chiến theo Lưu Bị chinh chiến nửa đời' }, { name: 'Lính đánh thuê Man tộc', desc:'Man binh Ngũ Khê do Sa Ma Kha thống lĩnh' }];
+        }
+        if (name.includes('Ngô') || name.includes('Phòng ngự')) {
+             return [{ name: 'Đại đô đốc', desc:'Thống soái tối cao điều phối phòng ngự toàn tuyến' }, { name: 'Trường Giang thủy doanh', desc:'Thủy quân dựa vào thiên hiểm Trường Giang để phòng ngự' }, { name: 'Giải phiền đốc tướng', desc:'Tướng hiệu thống lĩnh cấm vệ tinh nhuệ' }];
+        }
+    }
+
+    if (name.includes('Nam chinh') || name.includes('Nam Man') || name.includes('Mạnh Hoạch')) {
+        if (name.includes('Thục') || name.includes('Gia Cát Lượng') || name.includes('Hán')) {
+            return [{ name: 'Nam phạt đại tướng', desc:'Thống soái thống lĩnh đại quân nam chinh' }, { name: 'Tiên phong hãn tướng', desc:'Mãnh tướng gặp núi mở đường, gặp nước bắc cầu' }, { name: 'Tùy quân tham quân', desc:'Văn chức trong quân bày mưu tính kế' }, { name: 'Sĩ tốt viễn chinh', desc:'Binh lính bình thường không quen thủy thổ' }];
+        }
+        return [{ name: 'Man hoang động chủ', desc:'Thủ lĩnh dân tộc thiểu số thống lĩnh một động man binh' }, { name: 'Đằng giáp binh', desc:'Chiến binh dị tộc mặc giáp mây' }, { name: 'Tượng binh', desc:'Chiến binh dị tộc cưỡi voi khổng lồ' }, { name: 'Đương địa thổ hào', desc:'Hào cường người Hán ở Nam Trung ủng hộ phản loạn' }];
+    }
+
+    if (name.includes('Hoàng Cân') || name.includes('Thái Bình Đạo')) {
+        return [{ name: 'Đại hiền lương sư', desc:'Thống soái tối cao của nghĩa quân' }, { name: 'Phương trấn cừ soái', desc:'Cừ soái thống lĩnh hàng vạn tín đồ một phương' }, { name: 'Hoàng Cân lực sĩ', desc:'Tinh nhuệ cuồng nhiệt bị tẩy não, không sợ chết' }, { name: 'Giáo chúng bình thường', desc:'Nông dân nghèo khổ bình thường đi theo khởi nghĩa' }];
+    }
+
+    if (name.includes('Hoài Nam') || name.includes('Chung Hội')) {
+        return [{ name: 'Phán trấn thủ lĩnh', desc:'Quan lớn địa phương giương cờ phản loạn' }, { name: 'Hiếp tòng tướng tá', desc:'Quân quan bị ép buộc hoặc mù quáng đi theo phản loạn' }, { name: 'Tử sĩ đảo qua', desc:'Tử sĩ theo chủ soái dốc túi một phen' }, { name: 'Hoài Nam cựu bộ', desc:'Tư binh bản địa cắm rễ nhiều năm ở địa phương' }];
+    }
+
+    if (name.includes('Tào Sảng')) {
+        return [{ name: 'Tông thất quyền thần', desc:'Phái thực quyền hoàng tộc Tào Ngụy' }, { name: 'Phù hoa danh sĩ', desc:'Danh sĩ thanh đàm dựa dẫm Tào Sảng' }];
+    }
+
+    if (name.includes('Thảo phạt quân') || name.includes('Liên quân')) {
+        return [{ name: 'Chư hầu minh chủ', desc:'Cốt lõi thống lĩnh nhiều lộ binh mã' }, { name: 'Các lộ chư hầu', desc:'Thế lực một phương hưởng ứng lời kêu gọi nhưng mỗi người một bụng dạ' }, { name: 'Triều đình chính quy quân', desc:'Bộ đội chính quy chịu sự điều khiển của triều đình' }, { name: 'Nghĩa dũng hương binh', desc:'Lực lượng vũ trang do dân gian tự phát tổ chức' }];
+    }
+
+    if (name.includes('Quan chiến quân') || name.includes('Quan vọng phái') || name.includes('Trung lập')) {
+        return [{ name: 'Tọa sơn quan hổ đấu chi quân', desc:'Quân chủ án binh bất động, ý đồ ngồi thu ngư ông đắc lợi' }, { name: 'Gián ngôn mưu thần', desc:'Mưu sĩ phân tích cục diện, đưa ra chiến lược' }, { name: 'Biên cảnh thủ tướng', desc:'Võ tướng dàn trận chờ địch, phòng bị chiến hỏa lan rộng' }];
+    }
+
+    if (name.includes('Sĩ tộc') || name.includes('Thanh lưu') || name.includes('Danh sĩ') || name.includes('Đảng nhân')) {
+        return [
+            { name: 'Tứ thế tam công', desc:'Cốt lõi môn phiệt đỉnh cấp có môn sinh cố lại khắp thiên hạ' },
+            { name: 'Thanh lưu danh sĩ', desc:'Sĩ nhân được hải nội ngưỡng vọng, không sợ cường quyền thẳng thắn can gián' },
+            { name: 'Địa phương danh sĩ', desc:'Bậc học rộng tài cao hưởng danh tiếng trong châu quận' },
+            { name: 'Hàn môn thứ tộc', desc:'Tử đệ hàn môn gia đạo sa sút nhưng vẫn kiên trì khổ đọc' },
+            { name: 'Ẩn thế cao nhân', desc:'Danh sĩ nhìn thấu hồng trần, ẩn cư giảng học' }
+        ];
+    }
+
+    if (name.includes('Hào cường') || name.includes('Thế gia') || name.includes('Vọng tộc') || name.includes('Hào tộc')) {
+        return [
+            { name: 'Bản thổ vọng tộc', desc:'Đại tộc nhiều đời chiếm cứ châu quận, căn cơ thâm hậu' },
+            { name: 'Địa phương hào cường', desc:'Thổ hào có ruộng đất liền kề, sở hữu lượng lớn điền sản và bộ khúc' },
+            { name: 'Tông tộc trưởng giả', desc:'Trưởng bối chủ trì sự vụ tông tộc, đức cao vọng trọng' },
+            { name: 'Thế gia tử đệ', desc:'Kẻ hoàn khố hoặc tuấn kiệt dựa vào gia tộc che chở bước vào con đường làm quan' },
+            { name: 'Ổ bảo bảo chủ', desc:'Nhân vật thực quyền lập trại tự bảo vệ, thống lĩnh hương lý' }
+        ];
+    }
+
+    if (name.includes('Phái')) {
+        if (name.includes('Nhập Thục')) return [{ name: 'Kinh Châu nguyên tòng', desc:'Đội ngũ cốt lõi theo Lưu Bị vào Thục' }, { name: 'Tiên đăng mãnh tướng', desc:'Võ tướng xung phong hãm trận' }];
+        if (name.includes('Ích Châu')) return [{ name: 'Bản thổ sĩ tộc', desc:'Hào cường nhiều đời cư trú ở Ích Châu' }, { name: 'Đông Châu binh', desc:'Khách quân chảy vào Ích Châu từ những năm đầu' }];
+        if (name.includes('Hiệp thiên tử')) return [{ name: 'Bá phủ quyền thần', desc:'Cốt lõi họ Tào nắm giữ triều chính' }, { name: 'Hán thất cựu thần', desc:'Quan viên danh nghĩa là Hán thần thực chất là Tào thần' }];
+        if (name.includes('Giang Đông')) return [{ name: 'Hoài Tứ cựu tướng', desc:'Tướng lĩnh Giang Bắc do Tôn Sách mang đến' }, { name: 'Giang Đông sĩ tộc', desc:'Môn phiệt bản địa Giang Đông' }];
+    }
+
+    if (name.includes('Hán triều đình') || name.includes('Trường An triều đình') || name.includes('Hứa Đô triều đình') || name.includes('Triều đình bách quan') || name.includes('Bảo hoàng đảng') || name.includes('Hoàn Đế hệ') || name.includes('Quan vọng triều thần')) {
+        return [{ name: 'Công khanh đại thần', desc:'Nằm trong hàng tam công cửu khanh, nắm giữ động thái triều cục' }, { name: 'Hán thất tông thân', desc:'Huyết mạch hoàng tộc họ Lưu, thân phận tôn quý' }, { name: 'Túc vệ cấm quân', desc:'Vũ Lâm quân hoặc Hổ Bôn quân phụ trách bảo vệ hoàng cung' }, { name: 'Thanh lưu danh sĩ', desc:'Được hải nội ngưỡng vọng, không sợ cường quyền thẳng thắn can gián' }, { name: 'Hoạn quan đảng vũ', desc:'Tay sai dựa dẫm thế lực nội đình như Thập Thường Thị' }];
+    }
+
+    if (name.includes('Tào Ngụy chính quyền') || name.includes('Tào Ngụy triều đình') || name.includes('Tư Mã thị')) {
+        return [{ name: 'Công khanh đại thần', desc:'Trọng thần nằm trong hàng tam công cửu khanh' }, { name: 'Tào Ngụy tông thất', desc:'Cốt lõi họ Tào hoặc họ Hạ Hầu' }, { name: 'Trung quân đô đốc', desc:'Tướng lĩnh thực quyền thống lĩnh trung quân Lạc Dương' }, { name: 'Thế gia tử đệ', desc:'Tử đệ môn phiệt đắc thế dưới chế độ Cửu Phẩm Trung Chính' }, { name: 'Túc vệ cấm quân', desc:'Cấm quân đóng quân ở Nghiệp Thành hoặc Lạc Dương' }];
+    }
+    if (name.includes('Đông Ngô triều đình') || name.includes('Đông Ngô đại quân') || name.includes('Tôn thị')) {
+        return [{ name: 'Giang Đông thế tộc', desc:'Lãnh tụ môn phiệt bản địa như Cố Lục Chu Trương' }, { name: 'Công khanh đại thần', desc:'Trọng thần nắm giữ triều chính Giang Đông' }, { name: 'Thủy quân đô đốc', desc:'Thống soái cốt lõi thống lĩnh thủy sư Giang Đông' }, { name: 'Giải phiền đốc tướng', desc:'Tướng hiệu thống lĩnh cấm vệ tinh nhuệ' }];
+    }
+    if (name.includes('Tây Tấn triều đình') || name.includes('Tây Tấn sơ lập')) {
+        return [{ name: 'Tư Mã thị tông vương', desc:'Cốt lõi hoàng thất của gia tộc Tư Mã' }, { name: 'Khai quốc huân quý', desc:'Công thần giúp Tư Mã thị soán Ngụy hoặc bình Ngô' }, { name: 'Ngoại trấn đô đốc', desc:'Phong cương đại lại trấn thủ đại quyền quân chính một phương' }, { name: 'Tấn quân sĩ tốt', desc:'Thường bị quân hoặc thủy quân triều Tấn' }];
+    }
+    if (name.includes('Châu quận') || name.includes('Địa phương')) {
+        return [
+            { name: 'Bản thổ vọng tộc', desc:'Đại tộc nhiều đời chiếm cứ châu quận, căn cơ thâm hậu' },
+            { name: 'Địa phương hào cường', desc:'Thổ hào có ruộng đất liền kề, sở hữu lượng lớn điền sản và bộ khúc' },
+            { name: 'Châu quận đốc tướng', desc:'Tướng quan cấp trung nắm giữ binh mã địa phương' },
+            { name: 'Châu mục thân tộc', desc:'Tử đệ thân tộc của trưởng quan cát cứ' },
+            { name: 'Địa phương sĩ nhân', desc:'Bậc học rộng tài cao hưởng danh tiếng trong châu quận' }
+        ];
+    }
+
+    if (name.includes('Chinh') || name.includes('Phạt') || name.includes('Diệt')) {
+        if (name.includes('Thục') || name.includes('Gia Cát') || name.includes('Khương Duy') || name.includes('Quan Vũ')) {
+            return [{ name: 'Bắc phạt chủ soái', desc:'Thống soái thống lĩnh đại quân, khôi phục Trung Nguyên' }, { name: 'Tiên phong hãn tướng', desc:'Mãnh tướng gặp núi mở đường, gặp nước bắc cầu' }, { name: 'Dân phu vận lương', desc:'Phu dịch đẩy trâu gỗ ngựa máy lội suối trèo đèo gian nan' }, { name: 'Vô Đương Phi Quân', desc:'Tinh nhuệ Nam Trung giỏi tác chiến vùng núi' }];
+        }
+        if (name.includes('Tào Ngụy') || name.includes('Tư Mã') || name.includes('Tây tuyến')) {
+            return [{ name: 'Bình Thục đại đô đốc', desc:'Thống soái nắm giữ trọng binh, thống soái đại quân phạt Thục' }, { name: 'Trung quân duệ sĩ', desc:'Trung quân Lạc Dương theo Tư Mã thị xuất chinh' }, { name: 'Quan Lũng quận binh', desc:'Binh mã Ung Lương bị trưng dụng tham chiến' }, { name: 'Tùy quân tham quân', desc:'Văn chức trong quân bày mưu tính kế' }];
+        }
+        if (name.includes('Tây Tấn') && name.includes('Diệt Ngô')) {
+            return [{ name: 'Lâu thuyền thủy sư', desc:'Thủy quân dưới trướng Vương Tuấn xuôi dòng sông' }, { name: 'Nam phạt đại tướng', desc:'Tướng soái quân Tấn thống suất nhiều lộ đại quân' }, { name: 'Trung quân bộ tốt', desc:'Binh lính bình thường tham gia chiến dịch bình Ngô' }];
+        }
+        return [{ name: 'Viễn chinh quân chủ soái', desc:'Trưởng quan tối cao thống lĩnh toàn quân' }, { name: 'Tiên phong quan', desc:'Tướng lĩnh dẫn dắt bộ đội tiền phong' }, { name: 'Sĩ tốt viễn chinh', desc:'Binh lính bình thường rời quê hương tác chiến' }];
+    }
+
+    if (name.includes('Thủ quân') || name.includes('Phòng ngự quân')) {
+        if (name.includes('Hợp Phì') || name.includes('Phàn Thành') || name.includes('Tào') || name.includes('Ngụy')) {
+            return [{ name: 'Cô thành thủ tướng', desc:'Tướng lĩnh kiên thủ trọng trấn, tử chiến không lùi' }, { name: 'Cảm tử duệ sĩ', desc:'Cảm tử chi sĩ theo Trương Liêu và các tướng xông trận' }, { name: 'Đồn điền thanh tráng', desc:'Đồn điền khách bị tạm thời trưng dụng lên tường thành' }];
+        }
+        if (name.includes('Ngô') || name.includes('Tôn')) {
+            return [{ name: 'Đại đô đốc', desc:'Thống soái tối cao điều phối phòng ngự toàn tuyến' }, { name: 'Trường Giang thủy doanh', desc:'Thủy quân dựa vào thiên hiểm Trường Giang để phòng ngự' }, { name: 'Giang Đông bộ khúc', desc:'Tư gia bộ khúc do tướng lĩnh tự mang theo' }];
+        }
+        return [{ name: 'Thủ thành chủ tướng', desc:'Tướng lĩnh phụ trách phòng thủ thành' }, { name: 'Sĩ tốt thủ thành', desc:'Binh lính đóng giữ thành trì' }];
+    }
+
+    if (name.includes('Hoạn quan tập đoàn') || name.includes('Hoạn quan thế lực')) {
+        return [{ name: 'Trung thường thị', desc:'Thủ lĩnh nội đình quyền khuynh triều dã' }, { name: 'Tiểu hoàng môn', desc:'Hoạn quan hầu hạ trong cung, truyền đạt thánh chỉ' }, { name: 'Yêm đảng thân tín', desc:'Quan viên địa phương hoặc tướng lĩnh dựa dẫm hoạn quan' }];
+    }
+    if (name.includes('Ngoại thích')) {
+        return [{ name: 'Đại tướng quân', desc:'Thủ lĩnh ngoại thích nắm giữ binh mã thiên hạ' }, { name: 'Ngoại thích tử đệ', desc:'Dựa vào thế lực gia tộc để chiếm giữ chức vụ quan trọng' }, { name: 'Bắc quân tướng sĩ', desc:'Quân trung ương nghe theo sự điều động của ngoại thích' }];
+    }
+
+    if (name.includes('Đổng Trác') || name.includes('Tây Lương quân') || name.includes('Lý Thôi') || name.includes('Quách Dĩ')) {
+        return [{ name: 'Lương Châu hãn tướng', desc:'Tây Lương mãnh tướng dày dạn kinh nghiệm chiến trường biên ải' }, { name: 'Phi Hùng quân sĩ', desc:'Trọng kỵ binh tinh nhuệ nhất dưới trướng Đổng Trác' }, { name: 'Khương Hồ nghĩa tòng', desc:'Kỵ binh dị tộc quy phụ quân phiệt Tây Lương' }, { name: 'Triều đình hàng thần', desc:'Cựu thần Hán thất buộc phải đầu hàng Đổng Trác vì uy dâm' }, { name: 'Tây Lương bộ tốt', desc:'Sĩ tốt bình thường gốc Tây Lương' }];
+    }
+
+    if (name.includes('Viên Thiệu') || name.includes('Ký Châu') || name.includes('Quan Đông chư hầu')) {
+        return [{ name: 'Tứ thế tam công', desc:'Tông tộc họ Viên hoặc cốt lõi môn phiệt hàng đầu' }, { name: 'Ký Châu danh sĩ', desc:'Bậc trí mưu của các đại tộc Hà Bắc' }, { name: 'Hà Bắc hãn tướng', desc:'Mãnh tướng thống lĩnh Đại Kích Sĩ hoặc Tiên Đăng' }, { name: 'Châu quận đốc tướng', desc:'Tướng quan cấp trung nắm giữ binh mã địa phương' }, { name: 'Hà Bắc bộ tốt', desc:'Binh lính được trưng binh từ Ký, Thanh, U, Tịnh' }];
+    }
+    if (name.includes('Viên Thuật') || name.includes('Uyển Thành')) {
+        return [{ name: 'Trọng Gia ngụy thần', desc:'Quan lại ngụy triều đi theo Viên Thuật xưng đế' }, { name: 'Hoài Nam thượng tướng', desc:'Võ tướng thống lĩnh đại quân Hoài Nam' }, { name: 'Hoài Nam bộ tốt', desc:'Binh lính bình thường dưới trướng Viên Thuật' }];
+    }
+
+    if (name.includes('Tây Tấn') || name.includes('Tư Mã') || name.includes('Tấn')) {
+        return [{ name: 'Tư Mã thị tông vương', desc:'Cốt lõi hoàng thất của gia tộc Tư Mã' }, { name: 'Khai quốc huân quý', desc:'Công thần giúp Tư Mã thị soán Ngụy hoặc bình Ngô' }, { name: 'Trung quân đô đốc', desc:'Tướng lĩnh cấp cao thống lĩnh cấm quân Lạc Dương' }, { name: 'Ngoại trấn đô đốc', desc:'Phong cương đại lại trấn giữ quân chính một phương' }, { name: 'Tấn quân sĩ tốt', desc:'Thường bị quân hoặc thủy quân triều Tấn' }];
+    }
+
+    if (name.includes('Tào') || name.includes('Ngụy') || name.includes('Duyện Châu')) {
+        return [{ name: 'Tông tộc đại tướng', desc:'Thống soái cốt lõi của họ Tào hoặc họ Hạ Hầu' }, { name: 'Dĩnh Xuyên mưu sĩ', desc:'Trí nang hàng đầu xuất thân từ danh môn Trung Nguyên' }, { name: 'Ngoại tính hãn tướng', desc:'Võ tướng thăng tiến nhờ chiến công như Ngũ Tử Lương Tướng' }, { name: 'Hổ Báo Kỵ', desc:'Lực lượng tinh nhuệ cốt lõi nhất của Tào quân' }, { name: 'Thanh Châu binh', desc:'Đội quân dũng hãn được thu biên từ Hoàng Cân' }, { name: 'Đồn điền khách', desc:'Binh lính tầng chót thuộc biên chế quân đồn điền' }];
+    }
+
+    if (name.includes('Lưu Bị') || name.includes('Thục') || name.includes('Quan Vũ') || name.includes('Gia Cát Lượng') || name.includes('Khương Duy')) {
+        return [{ name: 'Nguyên tòng lão tốt', desc:'Đích hệ theo Lưu Bị từ lúc khởi binh ở Trác Huyện' }, { name: 'Kinh Sở sĩ nhân', desc:'Trí nang được Lưu Bị chiêu mộ khi nương nhờ Kinh Châu' }, { name: 'Ngũ Hổ Thượng Tướng', desc:'Võ tướng hàng đầu uy chấn Hoa Hạ' }, { name: 'Ích Châu hào cường', desc:'Thế lực bản địa được thu biên sau khi vào Thục' }, { name: 'Bạch Nhĩ Binh', desc:'Đội quân tinh nhuệ của Thục Hán' }];
+    }
+
+    if (name.includes('Tôn Sách') || name.includes('Tôn Quyền') || name.includes('Ngô') || name.includes('Giang Đông')) {
+        return [{ name: 'Giang Đông thế tộc', desc:'Lãnh tụ môn phiệt bản địa như Cố, Lục, Chu, Trương' }, { name: 'Hoài Tứ cựu tướng', desc:'Nguyên lão Giang Bắc thời Tôn Kiên, Tôn Sách' }, { name: 'Thủy quân đô đốc', desc:'Thống soái cốt lõi thống lĩnh thủy sư Giang Đông' }, { name: 'Cẩm Phàm Tặc', desc:'Thủy quân du hiệp do Cam Ninh thống lĩnh' }, { name: 'Sơn Việt hào tù', desc:'Thủ lĩnh người Việt chiếm cứ núi rừng được thu biên' }];
+    }
+
+    if (name.includes('Lữ Bố')) {
+        return [{ name: 'Tịnh Châu lang kỵ', desc:'Kỵ binh Tịnh Châu theo Lữ Bố chinh chiến nhiều năm' }, { name: 'Hãm Trận Doanh', desc:'Trọng bộ binh cực kỳ tinh nhuệ do Cao Thuận thống lĩnh' }, { name: 'Bát Kiện Tướng', desc:'Võ tướng cốt lõi dưới trướng Lữ Bố' }, { name: 'Trần Cung và các mưu sĩ', desc:'Trí nang phò tá Lữ Bố' }];
+    }
+
+    if (name.includes('Công Tôn Toản')) {
+        return [{ name: 'Bạch Mã Nghĩa Tòng', desc:'Khinh kỵ binh tinh nhuệ uy chấn biên ải' }, { name: 'U Châu đột kỵ', desc:'Kỵ binh biên phòng quanh năm chống lại Ô Hoàn' }, { name: 'Trấn Bắc thủ tướng', desc:'Võ tướng dưới trướng Công Tôn Toản' }];
+    }
+    if (name.includes('Mã Siêu') || name.includes('Mã Đằng')) {
+        return [{ name: 'Tây Lương thiết kỵ', desc:'Kỵ binh cốt lõi của Mã gia quân' }, { name: 'Khương tộc thủ lĩnh', desc:'Đầu lĩnh người Khương kính phục Mã Siêu' }, { name: 'Lương Châu hào tộc', desc:'Thế lực địa phương cát cứ Tây Bắc' }];
+    }
+    if (name.includes('Liêu Đông')) {
+        return [{ name: 'Công Tôn thị tông tộc', desc:'Gia tộc thống trị cát cứ Liêu Đông' }, { name: 'Liêu Đông thiết kỵ', desc:'Kỵ binh quanh năm tác chiến với Cao Câu Ly' }];
+    }
+
+    if (name.includes('Lưu Biểu') || name.includes('Lưu Chương') || name.includes('Trương Lỗ') || name.includes('Sĩ Tiếp') || name.includes('Từ Châu') || name.includes('Lưu Tông')) {
+        return [{ name: 'Châu mục thân tộc', desc:'Con em thân tộc của quan cát cứ' }, { name: 'Bản thổ vọng tộc', desc:'Danh môn nhiều đời cắm rễ tại châu này' }, { name: 'Ngoại lai khách tướng', desc:'Tướng lĩnh Trung Nguyên nương nhờ châu mục' }, { name: 'Ngũ Đẩu Mễ Đạo', desc:'Tín đồ của tổ chức chính giáo hợp nhất' }, { name: 'Địa phương thủy quân', desc:'Quân phòng thủ châu quận bảo vệ biên giới an dân' }];
+    }
+
+    if (name.includes('Tại dã') || name.includes('Du hiệp') || name.includes('Ẩn sĩ')) {
+        return [{ name: 'Ẩn thế cao nhân', desc:'Bậc trí giả ẩn cư sơn lâm, thấu hiểu thiên hạ' }, { name: 'Lục lâm du hiệp', desc:'Trọng lời hứa, xem nhẹ sinh tử, vác kiếm đi khắp thiên nhai' }, { name: 'Tị loạn thương giả', desc:'Thương nhân vận chuyển hàng hóa kiếm sống giữa thời loạn' }, { name: 'Vô tịch lưu dân', desc:'Mất đất đai hộ khẩu, lang thang khắp nơi' }];
+    }
+
+    return [{ name: 'Cát cứ thủ lĩnh', desc:'Người thống trị cao nhất của thế lực này' }, { name: 'Quân trung mãnh tướng', desc:'Tướng lĩnh quân sự xông pha trận mạc' }, { name: 'Mạc phủ mưu sĩ', desc:'Đoàn trí nang vận trù duy ác' }, { name: 'Tinh nhuệ nha binh', desc:'Đội thân vệ của chủ tướng' }, { name: 'Phổ thông sĩ tốt', desc:'Một người lính bình thường trong đại quân' }];
+}
+
+ function getRegions(faction, mode, year, classLevel) {
+    const fName = faction || "";
+    if (classLevel) {
+        if (classLevel.includes('Tàn') || classLevel.includes('Di dân') || classLevel.includes('Cựu thần') || classLevel.includes('Bại tướng') || classLevel.includes('Lưu vong')) {
+            return [
+                {name: 'Rừng sâu núi thẳm', desc:'Nơi vắng dấu chân người, chốn tuyệt hảo để tránh nạn binh đao'},
+                {name: 'Ổ bảo hẻo lánh', desc:'Cứ điểm do tông tộc tàn tồn tự phát kết xã để tự vệ'},
+                {name: 'Đô thành địch quốc', desc:'Nơi bị giam lỏng giám sát với tư cách hàng tướng hoặc tù binh'},
+                {name: 'Thôn xóm hương dã', desc:'Khu dân cư tầng chót để ẩn danh, sống lay lắt qua ngày'},
+                {name: 'Biên hoang chướng địa', desc:'Vùng đất khổ hàn cực Nam hoặc cực Bắc để trốn tránh chiến hỏa Trung Nguyên'}
+            ];
+        }
+        if (classLevel.includes('Ẩn sĩ') || fName.includes('Tại dã') || fName.includes('Du hiệp')) {
+            return [
+                {name: 'Thủy Kính Trang', desc:'Danh thắng nơi Tư Mã Huy ẩn cư, thanh đàm luận bàn thiên hạ'},
+                {name: 'Long Trung', desc:'Nơi Gia Cát Lượng cày cấy ẩn cư'},
+                {name: 'Phồn hoa thị tỉnh', desc:'Đại ẩn ẩn ư thị, chốn hồng trần náo nhiệt lạnh lùng quan sát loạn thế'},
+                {name: 'Thâm sơn mao lư', desc:'Tiên cảnh ngoài cõi trần, hái thuốc luyện đan, không màng thế sự'},
+                {name: 'Biên tái hoang mạc', desc:'Vùng cát bụi biên ải nơi du hiệp cưỡi ngựa hành hiệp'},
+                {name: 'Giang hồ thảo mãng', desc:'Địa bàn lục lâm chứa chấp cặn bã, nơi tụ tập của tam giáo cửu lưu'}
+            ];
+        }
+    }
+
+    if (fName.includes('Hoàng Cân') || fName.includes('Thái Bình Đạo')) {
+        return [
+            {name: 'Cự Lộc', desc:'Đại bản doanh truyền đạo của Đại Hiền Lương Sư Trương Giác'},
+            {name: 'Quảng Tông', desc:'Tu la trường nơi chủ lực Hoàng Cân quyết chiến với Hán quân'},
+            {name: 'Dĩnh Xuyên', desc:'Vùng bụng Trung Nguyên nơi Ba Tài đại phá Hán quân'},
+            {name: 'Nhữ Nam', desc:'Đại quận trù phú bị Hoàng Cân tàn phá'},
+            {name: 'Thanh Châu', desc:'Vùng đất Tề Lỗ bị hàng triệu Hoàng Cân Thanh Châu lưu thoái cướp bóc'}
+        ];
+    }
+    if (fName.includes('Nam Man') || fName.includes('Mạnh Hoạch')) {
+        return [
+            {name: 'Kiến Ninh', desc:'Cốt lõi bốn quận Nam Trung, nơi Ung Khải làm phản'},
+            {name: 'Vân Nam', desc:'Vùng suối độc chướng khí thâm sơn cùng cốc, nơi đại quân Mạnh Hoạch chiếm cứ'},
+            {name: 'Lô Thủy', desc:'Con sông hiểm ác nơi Gia Cát Lượng vượt qua vào tháng năm'}
+        ];
+    }
+
+    if (year >= 189 && year <= 192) {
+        if (fName.includes('Đổng Trác') || fName.includes('Lý Thôi') || fName.includes('Lương Châu quân')) {
+            return [
+                {name: 'Lạc Dương', desc:'Cựu đô Đông Hán bị Đổng Trác thiêu rụi'},
+                {name: 'Trường An', desc:'Tân đô sau khi ép Hiến Đế dời về phía tây'},
+                {name: 'Mi Ổ', desc:'Thành lũy kiên cố nơi Đổng Trác tích trữ lương thực đủ dùng hai mươi năm'},
+                {name: 'Tây Lương', desc:'Sào huyệt khổ hàn nơi Đổng Trác quân phát tích'}
+            ];
+        }
+        if (fName.includes('Liên quân') || fName.includes('Viên Thiệu')) {
+            return [
+                {name: 'Toan Táo', desc:'Đại doanh nơi Quan Đông chư hầu cắt máu ăn thề'},
+                {name: 'Bột Hải', desc:'Đại bản doanh nơi Viên Thiệu khởi binh thảo phạt Đổng Trác'},
+                {name: 'Hổ Lao Quan', desc:'Đệ nhất hùng quan thiên hạ nơi liên quân huyết chiến với Lữ Bố'},
+                {name: 'Tĩ Thủy Quan', desc:'Cửa ải hiểm yếu nơi Quan Vũ ôn tửu trảm Hoa Hùng'}
+            ];
+        }
+    }
+
+    if (year >= 194 && year <= 199) {
+        if (fName.includes('Tôn Sách') || fName.includes('Lưu Do') || fName.includes('Ngô') || fName.includes('Hào cường')) {
+            return [
+                {name: 'Khúc A', desc:'Đại bản doanh của Lưu Do, bị Tôn Sách đánh hạ'},
+                {name: 'Lịch Dương', desc:'Trọng địa đồn binh trước khi Tôn Sách qua sông'},
+                {name: 'Thần Đình Lĩnh', desc:'Dãy núi hiểm trở nơi Tôn Sách và Thái Sử Từ quyết chiến sinh tử'},
+                {name: 'Cối Kê', desc:'Đại quận Giang Nam do Vương Lãng cố thủ'},
+                {name: 'Ngô Quận', desc:'Trọng trấn Giang Đông do Nghiêm Bạch Hổ chiếm cứ, sau bị Tôn Sách dẹp yên'}
+            ];
+        }
+        if (fName.includes('Lưu Bị') || fName.includes('Lữ Bố') || fName.includes('Từ Châu')) {
+            return [
+                {name: 'Hạ Phì', desc:'Thủ phủ Từ Châu, nơi có lầu Bạch Môn Lữ Bố bỏ mạng'},
+                {name: 'Tiểu Bái', desc:'Thành nhỏ đồn binh Lưu Bị mượn tạm'},
+                {name: 'Bành Thành', desc:'Yết hầu trọng yếu của Từ Châu'}
+            ];
+        }
+        if (fName.includes('Viên Thuật')) {
+            return [
+                {name: 'Thọ Xuân', desc:'Ngụy đô Trọng Gia nơi Viên Thuật tiếm quyền xưng đế'},
+                {name: 'Uyển Thành', desc:'Trọng trấn Nam Dương nơi Viên Thuật chiếm cứ thời trẻ'}
+            ];
+        }
+    }
+
+    if (year >= 200 && year <= 202) {
+        if (fName.includes('Tào') || fName.includes('Viên Thiệu')) {
+            return [
+                {name: 'Quan Độ đại doanh', desc:'Doanh lũy nơi trăm vạn đại quân của hai phe Tào Viên đối đầu'},
+                {name: 'Ô Sào', desc:'Tử huyệt then chốt nơi Viên Thiệu tích trữ trọng binh và lương thảo'},
+                {name: 'Hứa Đô', desc:'Đô thành của Hiến Đế nơi hậu phương Tào Tháo trống rỗng'},
+                {name: 'Nghiệp Thành', desc:'Đại hậu phương trù phú của Viên Thiệu'}
+            ];
+        }
+    }
+
+    if (year >= 207 && year <= 208) {
+        if (fName.includes('Lưu Bị') || fName.includes('Lưu Biểu')) {
+            return [
+                {name: 'Tân Dã', desc:'Tiền tuyến nơi Lưu Bị ẩn mình chống Tào'},
+                {name: 'Phàn Thành', desc:'Pháo đài Giang Bắc như môi với răng cùng Tân Dã'},
+                {name: 'Trường Bản Pha', desc:'Tu la trường nơi Triệu Vân bảy lần ra vào cứu chúa'},
+                {name: 'Đương Dương Kiều', desc:'Cây cầu gỗ nơi Trương Phi quát lui trăm vạn quân Tào'},
+                {name: 'Giang Hạ', desc:'Nơi Lưu Kỳ trấn giữ, điểm dừng chân của Lưu Bị sau khi bại lui'},
+                {name: 'Giang Lăng', desc:'Trọng trấn Kinh Châu nơi Lưu Biểu tích trữ lương thảo quân giới'}
+            ];
+        }
+        if (fName.includes('Tôn Quyền') || fName.includes('Ngô') || fName.includes('Liên quân')) {
+            return [
+                {name: 'Sài Tang', desc:'Đại doanh Đông Ngô nơi Chu Du huấn luyện thủy sư'},
+                {name: 'Xích Bích', desc:'Mặt sông quyết chiến nơi Tôn Lưu liên quân hỏa thiêu thuyền Tào'},
+                {name: 'Ô Lâm', desc:'Trại cạn nơi đại quân Tào Tháo đóng quân, cuối cùng bị biển lửa nuốt chửng'},
+                {name: 'Hạ Khẩu', desc:'Yết hầu trọng yếu nơi Tôn Lưu hội minh chống Tào'}
+            ];
+        }
+        if (fName.includes('Tào') || fName.includes('Ngụy')) {
+            return [
+                {name: 'Tương Dương', desc:'Trọng trấn Tào quân tiếp quản sau khi Lưu Tông dâng châu đầu hàng'},
+                {name: 'Ô Lâm', desc:'Đại doanh thủy quân nơi Tào quân dùng xích sắt nối thuyền'},
+                {name: 'Hoa Dung Đạo', desc:'Đầm lầy tử thần lầy lội khó đi của tàn quân Tào Tháo'}
+            ];
+        }
+    }
+
+    if (year >= 211 && year <= 214) {
+        if (fName.includes('Lưu Bị') || fName.includes('Lưu Chương') || fName.includes('Thục') || fName.includes('Ích Châu')) {
+            return [
+                {name: 'Thành Đô', desc:'Châu trị Ích Châu do Lưu Chương cố thủ'},
+                {name: 'Gia Meng Quan', desc:'Hùng quan nơi Lưu Bị đồn binh khi mới vào Thục'},
+                {name: 'Bạch Thủy Quan', desc:'Cửa ải hiểm yếu trấn giữ cửa ngõ phía bắc Thục'},
+                {name: 'Lạc Thành', desc:'Huyết thành nơi Lưu Bị khổ chiến một năm, tổn thất đại tướng'},
+                {name: 'Lạc Phượng Pha', desc:'Đường núi hiểm tuyệt nơi Bàng Thống trúng mai phục bỏ mạng'},
+                {name: 'Miên Trúc', desc:'Bức bình phong cuối cùng bảo vệ Thành Đô'}
+            ];
+        }
+    }
+
+    if (year >= 215 && year <= 219) {
+        if (fName.includes('Quan Vũ') || fName.includes('Tào') || fName.includes('Lữ Mông')) {
+            return [
+                {name: 'Phàn Thành', desc:'Cô thành nơi Tào Nhân tử thủ, Quan Vũ dâng nước ngập bảy đạo quân'},
+                {name: 'Tương Dương', desc:'Trọng trấn Hán Thủy bị đại quân Quan Vũ vây chặt'},
+                {name: 'Giang Lăng', desc:'Thủ phủ Nam Quận bị Lữ Mông lấy không tốn một giọt máu do Mi Phương dâng thành'},
+                {name: 'Công An', desc:'Khởi điểm sụp đổ của phòng tuyến Kinh Châu do Sĩ Nhân dâng thành đầu hàng'},
+                {name: 'Mạch Thành', desc:'Cô thành bi phong nơi Quan Vũ bại lui phá vây'}
+            ];
+        }
+        if (fName.includes('Hán Trung') || fName.includes('Định Quân Sơn')) {
+            return [
+                {name: 'Định Quân Sơn', desc:'Cao địa hiểm yếu nơi Hoàng Trung từ trên cao chém Hạ Hầu Uyên'},
+                {name: 'Hán Trung', desc:'Thành trì "gân gà" khiến Tào Tháo cảm thán sau nhiều tháng giằng co với Lưu Bị'},
+                {name: 'Nam Trịnh', desc:'Nơi đóng quân của Thái thú Hán Trung, điểm tập kết quân nhu lương thảo'},
+                {name: 'Dương Bình Quan', desc:'Hùng quan thiên hạ từ Hán Trung vào Thục'}
+            ];
+        }
+        if (fName.includes('Hợp Phì') || fName.includes('Tôn Quyền') || fName.includes('Ngô')) {
+            return [
+                {name: 'Hợp Phì Thành', desc:'Cối xay thịt nơi Trương Liêu tám trăm phá mười vạn'},
+                {name: 'Tiêu Dao Tân', desc:'Tử địa nơi Tôn Quyền phóng ngựa nhảy qua cầu thoát thân'},
+                {name: 'Nhu Tu Khẩu', desc:'Pháo đài thủy quân Đông Ngô chống Ngụy'}
+            ];
+        }
+    }
+
+    if (year >= 221 && year <= 222) {
+        if (fName.includes('Thục') || fName.includes('Lưu Bị') || fName.includes('Lục Tốn') || fName.includes('Ngô')) {
+            return [
+                {name: 'Di Lăng', desc:'Đại doanh liên miên nơi mấy chục vạn đại quân Thục Ngô giằng co'},
+                {name: 'Hào Đình', desc:'Tử địa nơi Lục Tốn hỏa thiêu liên doanh bảy trăm dặm'},
+                {name: 'Bạch Đế Thành', desc:'Hành cung thê lương nơi Lưu Bị binh bại lui giữ, cuối cùng thác cô'},
+                {name: 'Vĩnh An', desc:'Cửa ngõ trấn giữ Tam Hiệp, phòng bị Đông Ngô truy kích'},
+                {name: 'Giang Châu', desc:'Trọng trấn Ba Thục nơi Triệu Vân tiếp ứng tàn quân'}
+            ];
+        }
+    }
+
+    if (year >= 227 && year <= 234) {
+        if (year === 228) {
+            if (fName.includes('Gia Cát Lượng') || fName.includes('Ngụy') || fName.includes('Thục')) {
+                 return [
+                    {name: 'Nhai Đình', desc:'Yết hầu trọng yếu Mã Tốc để mất, bước ngoặt khiến Thục quân bại lui'},
+                    {name: 'Kỳ Sơn', desc:'Pháo đài nơi chủ lực đại quân Gia Cát Lượng đóng quân'},
+                    {name: 'Thiên Thủy', desc:'Một trong ba quận Lũng Hữu, nơi Khương Duy quy hàng'},
+                    {name: 'Nam An', desc:'Thành trì Lũng Hữu nghe gió mà hàng'},
+                    {name: 'An Định', desc:'Trọng trấn Tây Bắc hưởng ứng Gia Cát Lượng bắc phạt'},
+                    {name: 'Hán Trung', desc:'Đại bản doanh hậu phương Thục Hán'}
+                ];
+            }
+        }
+        if (year === 229) {
+            if (fName.includes('Gia Cát Lượng') || fName.includes('Ngụy') || fName.includes('Thục')) {
+                 return [
+                    {name: 'Trần Thương', desc:'Pháo đài kiên cố do Hách Chiêu phòng thủ nghiêm ngặt, Thục quân đánh mãi không hạ'},
+                    {name: 'Hán Trung', desc:'Đại bản doanh hậu phương Thục Hán'}
+                ];
+            }
+        }
+        if (year === 230) {
+            if (fName.includes('Gia Cát Lượng') || fName.includes('Ngụy') || fName.includes('Thục')) {
+                 return [
+                    {name: 'Vũ Đô', desc:'Trọng địa chiến lược do Gia Cát Lượng đánh chiếm'},
+                    {name: 'Âm Bình', desc:'Quận huyện hiểm ác trấn giữ quần sơn phía bắc Thục'},
+                    {name: 'Hán Trung', desc:'Đại bản doanh hậu phương Thục Hán'}
+                ];
+            }
+        }
+        if (year === 231) {
+             if (fName.includes('Gia Cát Lượng') || fName.includes('Ngụy') || fName.includes('Thục')) {
+                 return [
+                    {name: 'Kỳ Đại Doanh', desc:'Nơi đóng quân của chủ lực đại quân Gia Cát Lượng'},
+                    {name: 'Mộc Môn Đạo', desc:'Hang hiểm nơi Gia Cát Lượng lui binh đặt phục kích, vạn tiễn cùng bắn giết chết Trương Cáp'},
+                    {name: 'Hán Trung', desc:'Đại bản doanh hậu phương Thục Hán'}
+                ];
+            }
+        }
+        if (year === 234) {
+             if (fName.includes('Gia Cát Lượng') || fName.includes('Tư Mã Ý') || fName.includes('Thục') || fName.includes('Ngụy')) {
+                 return [
+                    {name: 'Ngũ Trượng Nguyên', desc:'Đại doanh đồn điền nơi Gia Cát Lượng sao rơi gió thu'},
+                    {name: 'Vị Nam', desc:'Trận địa phòng ngự Tư Mã Ý kiên thủ không ra'},
+                    {name: 'Tà Cốc', desc:'Đường thung lũng hiểm yếu Thục quân vận lương rút lui'},
+                    {name: 'Hán Trung', desc:'Đại bản doanh hậu phương Thục Hán'},
+                    {name: 'Trường An', desc:'Tổng chỉ huy bộ tuyến tây Tào Ngụy chống lại Thục Hán'}
+                ];
+            }
+        }
+        if (fName.includes('Ngô') || fName.includes('Tôn Quyền')) {
+             return [
+                {name: 'Thạch Đình', desc:'Chiến trường Lục Tốn đại phá Tào Hưu'},
+                {name: 'Hợp Phì Tân Thành', desc:'Kiên thành nước Ngụy mà Tôn Quyền đánh mãi không hạ'},
+                {name: 'Kiến Nghiệp', desc:'Trung tâm chính trị Đông Ngô'}
+            ];
+        }
+    }
+
+    if (year >= 238 && year <= 263) {
+        if (year === 251) {
+            return [
+                {name: 'Thọ Xuân', desc:'Trọng trấn Hoài Nam nơi Vương Lăng mưu đồ khởi binh'},
+                {name: 'Bách Xích Câu', desc:'Yết hầu trọng yếu nơi thủy quân Tư Mã Ý đột kích dừng chân'},
+                {name: 'Hạng Thành', desc:'Nơi Vương Lăng binh bại bị ép tự sát'},
+                {name: 'Lạc Dương', desc:'Đô thành nơi Tư Mã Ý khải hoàn rồi bệnh mất'}
+            ];
+        }
+        if (year === 252) {
+            return [
+                {name: 'Đông Hưng Đại Đê', desc:'Trường thành trên nước do Gia Cát Khác tu trúc, cản bước quân Ngụy nam hạ'},
+                {name: 'Kiến Nghiệp', desc:'Đô thành Giang Đông nơi tân đế tức vị sau khi Tôn Quyền băng hà, nhị cung tranh sủng'},
+                {name: 'Vũ Xương', desc:'Đầu mối phòng ngự trung du Trường Giang của Đông Ngô'}
+            ];
+        }
+        if (year === 253) {
+            return [
+                {name: 'Hợp Phì Tân Thành', desc:'Pháo đài kiên cố nơi Trương Đặc tử thủ, Ngô quân đại dịch thảm bại'},
+                {name: 'Thọ Xuân', desc:'Trọng trấn Hoài Nam nơi Tào Ngụy điều binh khiển tướng chi viện Hợp Phì'},
+                {name: 'Kiến Nghiệp', desc:'Đô thành nơi Gia Cát Khác chiến bại về triều, cuối cùng bị ám sát'}
+            ];
+        }
+        if (year === 257) {
+            return [
+                {name: 'Thọ Xuân', desc:'Cối xay thịt nơi Gia Cát Đản cứ thành tử thủ, trong thành hết lương người ăn thịt người'},
+                {name: 'Hạng Thành', desc:'Đại doanh Ngụy quân nơi Tư Mã Chiêu đóng quân dẹp loạn'},
+                {name: 'An Phong', desc:'Yếu tắc quanh Hoài Nam nơi Văn Khâm đột vây thất bại'},
+                {name: 'Giang Lăng', desc:'Bàn đạp hậu phương Đông Ngô điều binh khiển tướng định chi viện Hoài Nam'}
+            ];
+        }
+        if (fName.includes('Tư Mã') || fName.includes('Ngụy') || fName.includes('Tào')) {
+            return [
+                {name: 'Lạc Dương', desc:'Trung tâm quyền lực nơi Tư Mã thị soán quyền qua biến Cao Bình Lăng'},
+                {name: 'Thọ Xuân', desc:'Vùng đất binh gia tất tranh'},
+                {name: 'Hứa Xương', desc:'Đầu mối chiến lược đồn binh trấn áp phản loạn'}
+            ];
+        }
+        if (fName.includes('Khương Duy') || fName.includes('Đặng Ngải') || fName.includes('Chung Hội') || fName.includes('Thục')) {
+            return [
+                {name: 'Kiếm Các', desc:'Thiên hiểm nơi Khương Duy tử thủ, một người giữ ải vạn người không thể qua'},
+                {name: 'Âm Bình', desc:'Tử địa nơi Đặng Ngải bọc nỉ lăn xuống, đánh úp đại hậu phương Thục Hán'},
+                {name: 'Miên Trúc', desc:'Trận địa cuối cùng nơi cha con Gia Cát Chiêm tử chiến tuẫn quốc'},
+                {name: 'Thành Đô', desc:'Đô thành vong quốc của Thục Hán, nơi Lưu Thiện cởi trần trói tay dắt dê đầu hàng'},
+                {name: 'Thao Tây', desc:'Nơi diễu võ dương oai Khương Duy đại phá Vương Kinh'},
+                {name: 'Đoạn Cốc', desc:'Chỗ gãy kích nơi Khương Duy binh bại trước Đặng Ngải'}
+            ];
+        }
+    }
+
+    if (year >= 264 && year <= 280) {
+        if (fName.includes('Ngô') || fName.includes('Tôn Hạo') || fName.includes('Lục Kháng')) {
+            return [
+                {name: 'Kiến Nghiệp', desc:'Đô thành vong quốc nơi Tôn Hạo hoang dâm tàn bạo, cuối cùng hàng Tấn'},
+                {name: 'Tây Lăng', desc:'Yếu tắc phòng ngự trên sông cuối cùng nơi Lục Kháng trấn giữ, đại phá Tấn quân'},
+                {name: 'Vũ Xương', desc:'Đầu mối phòng tuyến trung thượng du Trường Giang của Đông Ngô'}
+            ];
+        }
+        if (fName.includes('Tấn') || fName.includes('Tư Mã Viêm')) {
+            return [
+                {name: 'Lạc Dương', desc:'Đế đô phồn hoa khi Tây Tấn thống nhất thiên hạ'},
+                {name: 'Ích Châu', desc:'Nơi khởi đầu Vương Tuấn đóng lầu thuyền, xuôi dòng diệt Ngô'},
+                {name: 'Tương Dương', desc:'Bàn đạp nam hạ nơi Dương Hỗ kinh lược Kinh Châu, chuẩn bị diệt Ngô'}
+            ];
+        }
+    }
+
+    let fallback = [];
+    if (fName.includes('Tào') || fName.includes('Ngụy') || fName.includes('Tấn')) {
+        fallback = [
+            {name: 'Hứa Xương', desc:'Nơi đóng đô trên danh nghĩa của Hán thất, trọng trấn của Tào Ngụy'},
+            {name: 'Lạc Dương', desc:'Đế đô các triều đại, cốt lõi của Tào Ngụy và Tây Tấn'},
+            {name: 'Nghiệp Thành', desc:'Bá phủ do Tào Tháo xây dựng sau khi bình định Hà Bắc'},
+            {name: 'Trường An', desc:'Tổng chỉ huy bộ tuyến tây phòng bị Tây Thục'},
+            {name: 'Hợp Phì', desc:'Trương Liêu trấn thủ, bức tường thành tuyến nam khiến Đông Ngô khiếp đảm'},
+            {name: 'Thọ Xuân', desc:'Trọng trấn Hoài Nam, vùng đất binh gia tất tranh'}
+        ];
+    } else if (fName.includes('Thục') || fName.includes('Lưu Bị')) {
+        fallback = [
+            {name: 'Thành Đô', desc:'Trái tim của thiên phủ chi quốc, quốc đô Thục Hán'},
+            {name: 'Hán Trung', desc:'Trấn giữ cửa ngõ Ba Thục, yết hầu bắc phạt Trung Nguyên'},
+            {name: 'Giang Châu', desc:'Nút giao thông thủy bộ Ba Quận'},
+            {name: 'Bạch Đế Thành', desc:'Pháo đài tuyến đông phòng bị Đông Ngô'},
+            {name: 'Nam Trung', desc:'Đại hậu phương nam cương hoang vu hỗn tạp'}
+        ];
+    } else if (fName.includes('Hán triều đình') || fName.includes('Đông Hán') || fName.includes('Triều đình') || fName.includes('Hán thất')) {
+        fallback = [
+            {name: 'Lạc Dương', desc:'Trung tâm thiên hạ, đế đô các đời Đại Hán'},
+            {name: 'Trường An', desc:'Tám dòng sông bao quanh Trường An, cố đô Tây Hán, vùng đất hiểm yếu'},
+            {name: 'Hứa Đô', desc:'Nơi đóng đô trên danh nghĩa của Hán thất, sau là bá phủ họ Tào'}
+        ];
+    } else if (fName.includes('Ngô') || fName.includes('Tôn')) {
+        fallback = [
+            {name: 'Kiến Nghiệp', desc:'Hổ cứ long bàn, trung tâm chính trị Đông Ngô'},
+            {name: 'Ngô Quận', desc:'Đại bản doanh của thế gia đại tộc Giang Đông'},
+            {name: 'Sài Tang', desc:'Đại doanh thủy quân trung lưu Trường Giang'},
+            {name: 'Giang Hạ', desc:'Pháo đài cốt lõi của phòng tuyến Trường Giang'},
+            {name: 'Giao Châu', desc:'Vùng đất Lĩnh Nam ẩm ướt xa xôi'}
+        ];
+    } else {
+        fallback = [
+            {name: 'Tư Lệ', desc:'Đầu mối thiên hạ nơi có Lạc Dương, Trường An'},
+            {name: 'Dự Châu', desc:'Vùng bụng Trung Nguyên nơi có Hứa Xương, Nhữ Nam'},
+            {name: 'Duyện Châu', desc:'Vùng đất tứ chiến nơi Tào Tháo phát tích'},
+            {name: 'Ký Châu', desc:'Vùng đất Hà Bắc trù phú nơi có Nghiệp Thành'},
+            {name: 'Dương Châu', desc:'Vùng sông nước Giang Đông nơi có Kiến Nghiệp'},
+            {name: 'Kinh Châu', desc:'Vùng đất binh gia tất tranh nơi có Tương Phàn, Giang Lăng'},
+            {name: 'Ích Châu', desc:'Thiên hiểm thiên phủ nơi có Thành Đô'},
+            {name: 'Lương Châu', desc:'Biên cương khổ hàn Mã Siêu, Hàn Toại từng chiếm cứ'}
+        ];
+    }
+    return fallback;
+}
+
+const crisisData = {
+    specific: {
+        'Diễn Nghĩa': {
+            184: {
+                'Đại Hán triều đình': ['Chiến cuộc tiền tuyến thảm bại, Thập Thường Thị lại lệnh cho ngươi mang xe tù đi bắt Lư Thực đang khổ chiến.'],
+                'Hoàng Cân quân': ['Trương Giác bệnh nặng, bùa nước mất linh, tín đồ bắt đầu tháo chạy hàng loạt.'],
+                'Địa phương hào cường': ['Hoàng Cân quân vây công trang viên, ngươi chỉ có thể dẫn gia đinh cầm nông cụ chờ chết trong ổ bảo.'],
+                'Tại dã/Du hiệp': ['Loạn quân Hoàng Cân và quan binh khắp nơi bắt tráng đinh, ngươi bị hai đạo nhân mã kẹp giữa nơi hoang dã, tiến thoái lưỡng nan.']
+            },
+            189: {
+                'Đổng Trác quân': ['Ngươi áp giải ngựa Xích Thố đi mua chuộc Lữ Bố, nửa đường chạm trán cựu bộ Đinh Nguyên liều chết cướp giết.'],
+                'Đinh Nguyên quân': ['Lữ Bố xách thủ cấp Đinh Nguyên bước ra khỏi trướng, nếu ngươi không lập tức quỳ xuống đổi cờ hiệu sẽ bị chém.'],
+                'Triều đình bách quan': ['Đổng Trác mở tiệc chiêu đãi bách quan, ngươi bị ép ký tên vào tấu chương phế Thiếu Đế, ca tụng Đổng Trác.'],
+                'Tào Tháo đào vong giả': ['Ngươi theo Tào Tháo giết cả nhà Lữ Bá Xa trốn đến khách điếm, Tào Tháo vừa nói câu "Thà ta phụ người trong thiên hạ", ngươi lo sợ hắn sẽ giết luôn cả ngươi.'],
+                'Lạc Dương triều thần': ['Tào Tháo ám sát Đổng Trác thất bại bỏ trốn, tướng quốc nổi giận lục soát toàn thành, phủ đệ của ngươi đang bị lính Tây Lương lục tung.'],
+                'Tại dã/Du hiệp': ['Trong thành Lạc Dương đại loạn, lính Tây Lương cướp bóc khắp nơi, ngươi bị coi là gian tế phản quân chặn trong ngõ cụt.']
+            },
+            190: {
+                'Quan Đông liên quân': ['Hoa Hùng chém liền mấy tướng, ngươi bị đội đốc chiến xua đi nghênh chiến thiết kỵ Tây Lương.'],
+                'Đổng Trác quân': ['Đổng Trác hạ lệnh đốt cháy Lạc Dương, ngươi bị phái đi khai quật đế lăng các triều đại để sung làm quân tư.'],
+                'Triều đình bách quan': ['Theo Hiến Đế bị ép dời đô về Trường An, dọc đường lính Tây Lương dùng roi da quất những quan viên tụt lại phía sau.'],
+                'Tại dã/Du hiệp': ['Lửa lớn Lạc Dương lan rộng, ngươi bị kẹt trong cổng thành đang bốc cháy, ngoài thành là liên quân bắn tên loạn xạ.']
+            },
+            191: {
+                'Viên Thiệu quân': ['Bạch Mã Nghĩa Tòng của Công Tôn Toản như cơn bão trắng cuốn tới, ngươi cầm nỏ mạnh nấp sau tấm khiên hai chân run rẩy.'],
+                'Công Tôn Toản quân': ['Trận Giới Kiều ngươi theo Bạch Mã Nghĩa Tòng xung phong, lại gặp phải tám trăm tiên đăng tử sĩ bắn nỏ đồng loạt, chiến mã kêu thảm ngã gục.']
+            },
+            192: {
+                'Trường An triều đình': ['Lý Thôi Quách Dĩ phản công Trường An, Vương Doãn tử tiết, ngươi bị kẹt trong thành chờ đợi bị đồ sát.'],
+                'Đổng Trác thân vệ': ['Ngươi canh gác ngoài Phụng Nghi Đình, Đổng Trác bừng bừng lửa giận xách kích lao tới, ngươi không dám cản cũng cản không nổi.'],
+                'Tịnh Châu cựu tướng': ['Lữ Bố vì Điêu Thuyền ám sát Đổng Trác, ngươi thân là phe Tịnh Châu, phải đối mặt với sự trả thù đẫm máu điên cuồng của quân Lương Châu.'],
+                'Lương Châu quân': ['Triều đình tuyên bố chôn sống lính Tây Lương, ngươi chỉ có thể theo đi đánh Trường An, nấp dưới chân thành tránh gỗ lăn.'],
+                'Quan Đông chư hầu': ['Nội bộ liên quân tan rã bắt đầu thôn tính lẫn nhau, doanh trướng của ngươi đêm qua bị quân bạn cướp sạch.'],
+                'Tại dã/Du hiệp': ['Ngoài thành Trường An xác chết đói la liệt, ngươi vì nửa cái bánh hồ mà bị một đám lưu dân lấy đá ném vỡ đầu.']
+            },
+            194: {
+                'Từ Châu trận doanh': ['Tào Tháo tắm máu Từ Châu, đại tộc trong thành vì tự bảo vệ, đã âm thầm mở cổng thành dẫn quân Tào vào.'],
+                'Duyện Châu Tào Tháo': ['Hậu phương Duyện Châu bị Lữ Bố đánh lén, đại quân đứt lương, thậm chí bắt đầu ăn thịt người lót dạ.'],
+                'Lữ Bố quân': ['Vừa chiếm Duyện Châu chưa vững chân, quân Tào điên cuồng phản công, phòng tuyến của ngươi bị Thanh Châu binh đánh sập.']
+            },
+            195: {
+                'Tôn Sách quân': ['Dùng ngọc tỷ mượn binh qua sông, gặp phải Lưu Do trọng binh cản bước, binh lực chênh lệch, đành phải đập nồi dìm thuyền.'],
+                'Lưu Do quân': ['Thái Sử Từ ở Thần Đình Lĩnh cô quân phấn chiến, đại quân lại không dám ứng cứu, Tôn Sách đang càn quét kéo tới.'],
+                'Giang Đông hào cường': ['Tôn Sách thiết oản bình định Giang Đông, hễ có phản kháng liền bị đồ sát, bên ngoài ổ bảo đã bị quân Tôn Sách bao vây trùng trùng.']
+            },
+            196: {
+                'Hứa Đô triều đình': ['Ngươi vô tình nhìn thấy vết máu trên y đái chiếu của Hiến Đế, giáp sĩ của Tào Tháo đã mài đao ngoài điện.'],
+                'Lưu Bị trận doanh': ['Trấn thủ Từ Châu lại bị Lữ Bố đánh lén Hạ Phì, gia quyến của ngươi toàn bộ rơi vào tay Lữ Bố.'],
+                'Lữ Bố quân': ['Chiếm được Từ Châu xong lại do dự thiếu quyết đoán, cha con Trần Đăng âm thầm liên lạc Tào Tháo, kho lương nơi ngươi đóng quân bị đốt cháy một cách khó hiểu.', 'Ngươi đứng ngoài viên môn, nếu mũi tên này của Lữ Bố bắn không trúng ngạnh kích, ngươi sẽ phải lập tức nghênh chiến mấy vạn đại quân của Kỷ Linh.'],
+                'Lưu Bị quân': ['Kỷ Linh đại quân áp sát, ngươi nấp sau tường thành Tiểu Bái, hoàn toàn trông cậy vào mũi tên kia của Lữ Bố có thể bắn trúng họa kích hóa giải nguy cơ.'],
+                'Viên Thuật quân': ['Kỷ Linh vốn có thể nghiền ép Lưu Bị, lại bị Lữ Bố cưỡng ép can ngăn, ngươi thân là thiên tướng không biết nên tiến hay lui.'],
+                'Ký Châu Viên Thiệu': ['Mưu sĩ nội bộ vì tranh sủng mà chèn ép lẫn nhau, ngươi vì đứng sai phe mà bị hạ lệnh chém đầu thị chúng.']
+            },
+            197: {
+                'Trọng Gia ngụy triều': ['Viên Thuật tiếm quyền xưng đế, ngươi thân là quan viên ngụy triều bị chư hầu thiên hạ coi như bia ngắm, trong thành Thọ Xuân đại hạn thiếu lương.'],
+                'Giang Đông Tôn Sách': ['Viên Thuật xưng đế khiến ngươi rơi vào cảnh bất nghĩa, ngươi cần gấp rút thoát khỏi sự khống chế của hắn, nhưng truyền quốc ngọc tỷ vẫn nằm trong tay hắn.'],
+                'Tào Ngụy trận doanh': ['Viên Thuật xưng đế ở Hoài Nam, chủ công hạ lệnh thảo phạt, ngươi làm tiên phong phải đối mặt với trọng giáp liều chết đánh cược của Trọng Gia ngụy triều.'],
+                'Tào Tháo quân': ['Đêm Uyển Thành Tào Tháo vì Trâu thị chọc giận Trương Tú, ngươi ở trong đại doanh gặp phải tập kích, Điển Vi chiến tử, ngươi hộ chủ tháo chạy.'],
+                'Trương Tú quân': ['Trương Tú dạ tập doanh Tào, ngươi bị phái đi truy sát Tào Tháo, nếu để hắn trốn thoát ắt sẽ chuốc lấy sự trả thù điên cuồng.'],
+                'Kinh Châu Lưu Biểu': ['Trương Tú chiếm cứ Uyển Thành liên tục rục rịch, ngươi làm tướng giữ tiền tiêu bị thiết kỵ Tây Lương quấy rối liên tục nửa tháng không thể chợp mắt.']
+            },
+            198: {
+                'Tào Tháo quân': ['Vây đánh Hạ Phì nước lớn tràn vào, ngươi công thành trong bùn lầy, còn phải đề phòng Tịnh Châu lang kỵ dưới trướng Lữ Bố đột kích.'],
+                'Lữ Bố quân': ['Hạ Phì bị nước nhấn chìm, bộ tướng trộm mất ngựa Xích Thố, ngươi trơ mắt nhìn Lữ Bố bị trói ở lầu Bạch Môn.'],
+                'Lưu Bị quân': ['Gia quyến rơi vào tay giặc, đại quân tan tác, ngươi chỉ có thể dẫn tàn binh lẩn trốn quân Tào truy bắt trong bùn lầy.']
+            },
+            199: {
+                'Hứa Đô triều đình': ['Đổng Thừa mật mưu bại lộ, quân Tào phong tỏa chín cửa, ngươi là kẻ bị liên lụy bị đề kỵ phá cửa xông vào.'],
+                'Bảo hoàng đảng': ['Sự việc y đái chiếu vỡ lở, Tào Tháo dẫn giáp sĩ xông vào phủ đệ, đao chém đã giơ lên đỉnh đầu ngươi.'],
+                'Lưu Bị trận doanh': ['Lưu Bị thừa cơ trốn khỏi Từ Châu, ngươi theo quân chạy thục mạng trong đêm, phía sau Hổ Vệ quân Tào bám riết như đỉa.'],
+                'Hà Bắc Viên Thiệu': ['Sau khi tiêu diệt Công Tôn Toản đại quân mệt mỏi, chủ tướng lại hạ lệnh cưỡng ép nam hạ đánh Tào, quân tâm dao động.'],
+                'Trọng Gia ngụy triều': ['Viên Thuật binh bại như núi lở, ngươi trên đường đào vong gặm vỏ cây, nghe tin Viên Thuật ở Giang Đình đòi nước mật không được thổ huyết mà chết.'],
+                'Lưu Bị quân': ['Ngươi theo Lưu Bị phụng chiếu chặn đánh Viên Thuật, đối mặt với tử sĩ Trọng Gia dù đang tháo chạy nhưng vẫn còn hung tính điên cuồng phản công.'],
+                'Tào Tháo quân': ['Vây đánh Thọ Xuân gặp mưa lớn nhiều ngày, trong doanh nước ngập ngang lưng, ôn dịch bắt đầu lây lan trong quân.'],
+                'Giang Đông Tôn Sách': ['Ngươi theo Tôn Sách thoát ly Viên Thuật, qua sông bình định Giang Đông, trong rừng núi gặp phải Nghiêm Bạch Hổ dùng gỗ lăn phục kích.']
+            },
+            200: {
+                'Tào Tháo quân': ['Quan Độ cạn lương, ngươi hộ tống Tào Tháo dạ tập Ô Sào, một khi thất bại đại doanh Hứa Xương ắt sẽ ầm ĩ.'],
+                'Viên Thiệu quân': ['Ô Sào bị đốt, ngươi bị xẻo mũi đuổi về bản trận, làm dao động quân tâm của mấy chục vạn đại quân.'],
+                'Quan Vũ nhất hành': ['Ngươi hộ tống hai vị tẩu tẩu qua năm ải, không chỉ phải phòng ám tiễn, còn phải tránh né Hạ Hầu Đôn truy sát.'],
+                'Giang Đông Tôn Quyền': ['Tôn Sách bị ám sát trọng thương không qua khỏi, nội bộ Giang Đông Sơn Việt làm phản, ngươi bị kẹt trong cô thành.'],
+                'Kinh Châu Lưu Biểu': ['Trương Tú đầu hàng Tào Tháo, cửa ngõ phía bắc Kinh Châu mở toang, tiền phong quân Tào đã áp sát Nam Dương.']
+            },
+            202: {
+                'Lưu Bị tàn quân': ['Trận Nhương Sơn đại bại, ngươi bị trọng kỵ binh của Tào Nhân đánh tan, chỉ có thể giả chết trong đống xác để trốn tránh truy bắt.'],
+                'Tào Tháo quân': ['Khi truy kích Lưu Bị gặp phải Triệu Vân liều mạng bọc hậu, Cao Lãm bị một thương đâm rớt ngựa, ngươi sợ hãi không dám tiến lên.'],
+                'Nhữ Nam Hoàng Cân': ['Lưu Tịch Cung Đô chiến tử, ngươi thân là dư đảng Hoàng Cân còn sót lại, bị quân Tào bao vây tiêu diệt như săn giết dã thú.']
+            },
+            207: {
+                'Lưu Bị trận doanh': ['Trong gió tuyết ba lần đến lều tranh, Trương Phi nóng nảy muốn phóng hỏa, mà đại quân Tào Nhân đã áp sát Tân Dã.'],
+                'Tào Tháo quân': ['Viễn chinh Ô Hoàn gặp phải băng tuyết giá rét, lương thảo cạn kiệt chỉ có thể giết ngựa lót dạ, Quách Gia bệnh nặng.'],
+                'Thủy Kính môn sinh': ['Từ Thứ bị Tào Tháo dùng thư giả lừa đi, ngươi hiểu rõ doanh Tào hung hiểm, lại không thể ngăn cản bước chân như đi vào chỗ chết của hắn.'],
+                'Giang Đông Tôn Quyền': ['Tây chinh Hoàng Tổ tuy thắng nhưng thành Giang Hạ kiên cố, ngươi làm tiên đăng bị loạn tiễn ép dưới sông hộ thành.'],
+                'Kinh Châu Lưu Biểu': ['Lưu Biểu bệnh nặng, Thái thị và Lưu Kỳ tranh quyền, ngươi bị kẹp giữa cuộc hỏa tịnh của tư binh hai phe.']
+            },
+            208: {
+                'Lưu Bị quân': ['Trường Bản Pha đại hội quân tan tác, ngươi bị cuốn vào dòng người tị nạn, Hổ Báo Kỵ quân Tào đang giẫm đạp lên người ngươi.'],
+                'Tào Tháo quân': ['Thuyền thiết sách liên hoàn chìm trong biển lửa, ngươi nhảy xuống sông là chết, ở lại trên thuyền sẽ bị thiêu thành than.'],
+                'Tôn Lưu liên quân': ['Sau khi mượn gió đông Chu Du phái binh truy sát Gia Cát Lượng, ngươi làm hộ vệ ở bờ sông liều chết cản bước khoái thuyền Đông Ngô.'],
+                'Chủ hàng văn quan': ['Gia Cát Lượng trên triều đường khẩu chiến quần nho, ngươi bị phản bác đến á khẩu không trả lời được, Tôn Quyền rút kiếm chém án quyết ý khai chiến.'],
+                'Đông Ngô thủy quân': ['Trên mặt sông sương mù dày đặc ngươi lái thuyền cỏ, nghe tiếng mưa tên quân Tào cắm phập phập lên ván thuyền, trong lòng kinh hãi.'],
+                'Tào Tháo thủy quân': ['Trong sương mù không dám xuất chiến chỉ có thể bắn bừa, hôm sau phát hiện trúng kế, ngươi phải đối mặt với cơn thịnh nộ trách phạt của Tào Tháo.'],
+                'Đông Ngô trận doanh': ['Hoàng Cái dùng khổ nhục kế bị đánh đến da tróc thịt bong, ngươi thân là thân tín phụ trách hộ tống thư trá hàng xuyên qua phòng tuyến trùng trùng của quân Tào.'],
+                'Ích Châu Lưu Chương': ['Trận Xích Bích nổ ra thiên hạ chấn động, Trương Lỗ thừa cơ ồ ạt nam hạ, cửa ải của ngươi bị giáo chúng Ngũ Đẩu Mễ dạ tập đánh phá.']
+            },
+            210: {
+                'Lưu Bị quân': ['Mượn Kinh Châu khiến Đông Ngô cực độ bất mãn, ngươi phòng thủ bên bờ sông, thủy quân Đông Ngô ngày đêm quấy rối.'],
+                'Đông Ngô trận doanh': ['Kế mượn đường diệt Quắc của Chu Du bị nhìn thấu, tức giận đến mức vết thương cũ nứt toác ngã ngựa, ngươi ở trước trận hộ vệ chủ soái phá vây.'],
+                'Tào Tháo quân': ['Xích Bích chiến bại rút về phương Bắc, giữa đường gặp phải dịch bệnh, ngươi phụ trách thiêu hủy từng đống thi thể đồng đội.']
+            },
+            211: {
+                'Lưu Bị quân': ['Ngươi theo quân vào Thục, tuyến tiếp tế kéo dài ba ngàn dặm, kho lương ở ải Gia Meng bị một trận hỏa hoạn khó hiểu thiêu rụi một nửa.'],
+                'Tây Lương quân': ['Mã Siêu Hàn Toại trúng kế ly gián chém giết lẫn nhau, đại quân Tây Lương tan rã trước tòa thành băng.'],
+                'Tào Tháo quân': ['Mã Siêu đánh cho Tào Tháo cắt râu vứt áo, ngươi trong loạn quân bị thiết kỵ Tây Lương giẫm gãy hai chân.'],
+                'Ích Châu Lưu Chương': ['Đón Lưu Bị vào Thục rước sói vào nhà, ngươi ở tiền tuyến bị quân Lưu Bị bao vây, trong thành đã cạn lương thảo.']
+            },
+            214: {
+                'Lưu Bị quân': ['Trương Phi nghĩa thích Nghiêm Nhan, nhưng đánh Thành Đô vẫn gặp phải tử trung ngoan cố chống cự, ngươi bị phái đi làm tử sĩ tiên đăng.', 'Bàng Thống chết ở gò Lạc Phượng, ngươi bị kẹt trong thung lũng chật hẹp, đường lui bị cự thạch cắt đứt, mưa tên trút xuống ngợp trời.'],
+                'Ích Châu quân': ['Lưu Chương mở thành đầu hàng, thân là phe chủ chiến ngươi bị tước đoạt binh quyền làm tù binh.'],
+                'Đông Ngô trận doanh': ['Lữ Mông đánh chiếm ba quận Kinh Châu, Quan Vũ dẫn đại quân phản công, ngươi ở dưới thành Trường Sa đối mặt với thủy quân.'],
+                'Ích Châu Lưu Chương': ['Đại quân Lưu Bị áp sát Thành Đô, các quận huyện nghe ngóng mà hàng, thủ tướng đã chuẩn bị giết ngươi dâng thành.'],
+                'Tào Tháo quân': ['Tuân Úc vì phản đối xưng Ngụy công bị ép tự sát, trong quân lòng người bàng hoàng, ngươi vì lỡ lời mà bị bắt giữ.', 'Tây chinh Hán Trung gặp phải hiểm trở, đường núi gập ghềnh lương thảo không đủ, đại quân rơi vào tử địa tiến thoái lưỡng nan.'],
+                'Tào Ngụy quân': ['Đại quân tây chinh Trương Lỗ gặp cảnh đứt lương, tướng sĩ vì mệt mỏi đã có khuynh hướng phản qua.'],
+                'Thục Hán trận doanh': ['Mã Siêu nương nhờ Lưu Bị khiến tướng lĩnh nội bộ không phục, ngươi ở trong doanh bắt buộc phải cẩn thận chọn phe.'],
+                'Hán Trung thủ quân': ['Trấn thủ ải Dương Bình ngươi phát hiện mưu sĩ đã nhận hối lộ, chuẩn bị mở thành dâng hàng trong đêm.']
+            },
+            215: {
+                'Đông Ngô trận doanh': ['Trương Liêu tám trăm phá mười vạn, chiến hữu bên cạnh ngươi bị chém thành bùn nhão, Tôn Quyền ở bến Tiêu Dao phóng ngựa nhảy cầu suýt bị bắt.'],
+                'Tào Ngụy thủ quân': ['Mười vạn quân Ngô vây đánh Hợp Phì, trong thành mưa to như trút bùng phát ôn dịch, ngươi ngay cả sức lực giơ trường mâu lên cũng không còn.'],
+                'Thục Hán trận doanh': ['Quan Vũ đơn đao phó hội đại doanh Đông Ngô, ngươi làm thân vệ đi theo lòng bàn tay đầy mồ hôi, bốn phía bố trí đầy đao phủ thủ.'],
+                'Thục Hán Kinh Châu quân': ['Quan Vũ dự tiệc, ngươi chèo thuyền nhỏ tiếp ứng giữa dòng sông, lâu thuyền Đông Ngô đã lờ mờ tạo thành thế bao vây.'],
+                'Đông Ngô thủy quân': ['Lỗ Túc bị Quan Vũ dùng đơn đao uy hiếp, ngươi ném chuột sợ vỡ đồ không dám bắn tên, trơ mắt nhìn hắn rút lui.']
+            },
+            219: {
+                'Thục Hán quân': ['Quan Vũ bại tẩu Mạch Thành bị bắt, ngươi đối mặt với trường thương Đông Ngô từ bốn phương tám hướng, phá vây vô vọng.', 'Mãnh công Hán Trung gặp phải Hạ Hầu Uyên tử thủ, ngươi ở dưới núi Định Quân bị gỗ lăn quân Tào đập gãy cánh tay.'],
+                'Tào Ngụy quân': ['Nước ngập bảy quân, ngươi bị kẹt trên bức tường thành ngâm trong nước, giết ngựa lót dạ, cứu viện xa vời vợi.', 'Hạ Hầu Uyên bị Hoàng Trung chém tại trận, quân Tào toàn tuyến sụp đổ, Bạch Nhĩ binh của Triệu Vân đang từ phía sau thu gặt.'],
+                'Đông Ngô quân': ['Vừa chiếm lĩnh Kinh Châu chưa vững chân, tàn bộ Quan Vũ trong thành liều chết phản công đánh giáp lá cà, ngươi giả chết trong đống xác.'],
+                'Thục Hán tàn quân': ['Giang Lăng thất thủ gia quyến bị giam giữ, ngươi dẫn theo mười mấy tàn binh trốn tránh chó săn Đông Ngô trong rừng cây.'],
+                'Đông Ngô trận doanh': ['Bến Nhu Tu lại lần nữa giao chiến với quân Tào, ngươi trên mặt sông gặp phải liên nỏ quân Tào bắn yểm trợ.']
+            },
+            221: {
+                'Thục Hán quân': ['Trương Phi bị bộ tướng ám sát, Lưu Bị khăng khăng phạt Ngô, ngươi bị ép tiến quân vào rừng rậm nguyên sinh giữa mùa hè oi bức.'],
+                'Đông Ngô quân': ['Đại quân Thục Hán xuôi dòng xuống thế như chẻ tre, ngươi ở tiền tuyến Tỷ Quy bị quân Thục bao vây cắt đứt đường lui.'],
+                'Tào Ngụy trận doanh': ['Tào Phi thi hành Cửu Phẩm Trung Chính chế, ngươi xuất thân hàn môn, vừa lập chiến công đã bị tử đệ thế gia tước đoạt quân chức.']
+            },
+            222: {
+                'Thục Hán quân': ['Lục Tốn hỏa thiêu liên doanh bảy trăm dặm, ngươi chạy thục mạng trong biển lửa, còn phải đề phòng đồng minh Man tộc phản qua.'],
+                'Đông Ngô quân': ['Khi truy kích bại quân đi nhầm vào Bát Trận Đồ, cát bay đá chạy, mấy vạn quân Ngô lạc lối trong đống đá lộn xộn.'],
+                'Tào Ngụy trận doanh': ['Ba đường phạt Ngô không công mà về đại dịch hoành hành, doanh trướng ngươi ở trong một ngày bệnh chết một nửa.']
+            },
+            223: {
+                'Thục Hán triều đình': ['Lưu Bị bệnh mất ở Bạch Đế Thành phó thác con côi, triều dã chấn động, hào cường Nam Trung thừa cơ làm loạn, Thục Hán đối mặt với nguy cơ diệt vong.'],
+                'Đông Ngô trận doanh': ['Nghe tin Lưu Bị phó thác con côi cho Gia Cát Lượng, ngươi bị phái đi thăm dò Thục Ngô có thể nối lại tình xưa hay không, bất cứ lúc nào cũng có thể bị giữ lại chém đầu.'],
+                'Tào Ngụy trận doanh': ['Thừa dịp Lưu Bị mới mất, Tư Mã Ý hiến kế năm đường phạt Thục, ngươi làm tiên phong đang đi qua sạn đạo Tần Lĩnh hiểm ác.']
+            },
+            225: {
+                'Thục Hán nam chinh quân': ['Vượt qua Lô Thủy gặp phải suối độc, chiến hữu uống nước xong cổ họng lở loét chết thảm, chướng khí hoành hành.'],
+                'Nam Man trận doanh': ['Đằng Giáp binh bị Gia Cát Lượng dụ vào hang Bàn Xà dùng hỏa công, đằng giáp tẩm dầu chớp mắt bùng cháy, ngươi thân ở nhân gian luyện ngục không chỗ trốn thoát.'],
+                'Đông Ngô trận doanh': ['Sơn Việt lại lần nữa làm phản quy mô lớn, bộ đội của ngươi bị cắt đứt trong núi sâu chỉ còn ba ngày khẩu phần lương thực.']
+            },
+            227: {
+                'Thục Hán quân': ['Gia Cát Lượng dâng biểu bắc phạt, ngươi ở Hán Trung đẩy xe lương nặng nề, lòng bàn chân mài ra xương trắng.'],
+                'Tào Ngụy quân': ['Mạnh Đạt làm phản ở Tân Thành bị Tư Mã Ý hỏa tốc trấn áp, ngươi thân là phản quân bị dồn vào tuyệt cảnh.'],
+                'Đông Ngô trận doanh': ['Đêm trước trận Thạch Đình, ngươi trong kế trá hàng liên hoàn đóng vai trò mồi nhử bất cứ lúc nào cũng có thể bị chém đầu.']
+            },
+            228: {
+                'Thục Hán quân': ['Mã Tốc mất Nhai Đình, ngươi bị liên lụy đánh một trăm quân côn, còn phải ở trên không thành đối mặt với đại quân Tư Mã.'],
+                'Tào Ngụy quân': ['Ở Nhai Đình bị tàn bộ Vương Bình liều chết cản bước, ngươi trong thung lũng chật hẹp gặp phải Gia Cát liên nỏ bắn yểm trợ.'],
+                'Thục Hán triệt thoái quân': ['Ngươi đứng sau cổng thành phía tây hai chân run rẩy, nghe tiếng đàn của thừa tướng trên lầu thành, ngoài thành là mười lăm vạn đại quân của Tư Mã Ý.'],
+                'Tào Ngụy truy kích quân': ['Tư Mã Ý hạ lệnh lui binh, ngươi vừa xoay người rút lui, trên tường thành phía sau đột nhiên tiếng trống trận vang lên đồng loạt tiếng hô giết rung trời.']
+            },
+            229: {
+                'Thục Hán quân': ['Vây Trần Thương hơn hai mươi ngày không hạ được cạn lương, khi lui binh gặp phải quân Ngụy điên cuồng truy kích.'],
+                'Tào Ngụy quân': ['Hách Chiêu bệnh nặng phòng tuyến Trần Thương nguy cấp, ngươi ở trên tường thành dùng tay chân tàn phế chặn thang mây của quân Thục.']
+            },
+            230: {
+                'Thục Hán quân': ['Đánh chiếm Vũ Đô Âm Bình gặp phải vườn không nhà trống, ngươi trong quần sơn hoang vu gặm rễ cỏ qua ngày.'],
+                'Tào Ngụy quân': ['Quách Hoài binh bại lui về phòng thủ, ngươi làm bộ đội bọc hậu bị quân Thục bao vây trên vùng đất cao không có nước.']
+            },
+            231: {
+                'Thục Hán quân': ['Lui binh đặt phục kích ở Mộc Môn Đạo bắn chết Trương Cáp, nhưng đường lui đã bị quân Ngụy cắt đứt.'],
+                'Tào Ngụy quân': ['Trương Cáp trúng mai phục tử trận đại quân như rắn mất đầu, ngươi ở đáy thung lũng Mộc Môn Đạo đối mặt với vạn tiễn xuyên tâm.']
+            },
+            234: {
+                'Thục Hán quân': ['Gia Cát Lượng bệnh mất, Ngụy Diên làm phản bị chém, ngươi bị những cuộc nội chiến liên hoàn dọa cho tinh thần sụp đổ.'],
+                'Tào Ngụy quân': ['Tư Mã Ý hạ lệnh kiên thủ không ra trong doanh bùng phát thương hàn, ngươi ở hang Thượng Phương suýt chút nữa bị lửa lớn thiêu thành tro bụi.'],
+                'Đông Ngô trận doanh': ['Ba đường phạt Ngụy toàn bộ thất bại, rút quân gặp phải quân Ngụy truy kích ngươi rơi xuống sông suýt chết đuối.']
+            },
+            238: {
+                'Tào Ngụy viễn chinh quân': ['Viễn chinh Liêu Đông gặp phải mưa bão, đất bằng nước sâu vài thước, mỗi ngày đều có mấy trăm người mất nhiệt chết cóng.'],
+                'Liêu Đông trận doanh': ['Tương Bình thành phá, Tư Mã Ý chôn sống nam đinh từ mười lăm tuổi trở lên, ngươi bị đẩy xuống hố vạn người.']
+            },
+            239: {
+                'Tào Ngụy trận doanh': ['Minh Đế phó thác con côi, Tào Sảng và Tư Mã Ý tranh giành đấu đá, ngươi thân là quân quan cấp dưới không biết nghe tướng lệnh của ai.'],
+                'Thục Hán trận doanh': ['Tưởng Uyển bệnh nặng phòng tuyến Hán Trung nguy cấp, ngươi ở tiền tuyến đối mặt với sự thăm dò thường xuyên của quân Ngụy.'],
+                'Đông Ngô trận doanh': ['Toàn Tông giao chiến với quân Ngụy ở Thược Pha đại bại, ngươi sa vào vũng bùn bị trường mâu quân Ngụy kề vào cổ họng.']
+            },
+            241: {
+                'Đông Ngô quân': ['Gia Cát Khác đánh Ngụy thất bại rút lui, ngươi khi bọc hậu bị thiết kỵ quân Ngụy chia cắt bao vây.'],
+                'Tào Ngụy quân': ['Hoài Nam chinh chiến liên miên mười nhà chín trống, ngươi thân là đồn điền binh bị cưỡng ép kéo lên tường thành làm bia đỡ đạn.']
+            },
+            249: {
+                'Tư Mã thị trận doanh': ['Tham gia chính biến một khi thất bại liền bị chu di cả nhà, ngươi ở cổng thành Lạc Dương nắm chặt trường mâu run rẩy.'],
+                'Tào Sảng dư đảng': ['Tư Mã Ý chỉ Lạc Thủy làm lời thề sau đó chớp mắt lật mặt, đề kỵ đang tông vào cửa nhà ngươi chuẩn bị diệt tộc.'],
+                'Thục Hán quân': ['Khương Duy xuất binh Lũng Hữu ý đồ hô ứng Trung Nguyên, lại ở Khúc Sơn bị đại quân Quách Hoài cắt đứt đường về.']
+            },
+            251: {
+                'Tào Ngụy triều đình': ['Vương Lăng làm phản tuy dẹp yên nhưng Tư Mã Ý bệnh nặng triều cục rung chuyển, ngươi bất cứ lúc nào cũng có thể bị thanh trừng.'],
+                'Hoài Nam phản quân': ['Vương Lăng tự sát đại quân tan tác, ngươi thân là phản đảng bị đại quân Tư Mã Sư truy sát dồn vào tuyệt cảnh.'],
+                'Đông Ngô trận doanh': ['Tôn Quyền bệnh nặng gây ra cuộc chiến Nhị Cung, ngươi vì dính líu trong đó mà bị hạ lệnh ban chết.']
+            },
+            253: {
+                'Tào Ngụy thủ quân': ['Hợp Phì Tân Thành bị mười vạn quân Ngô bao vây trùng trùng, tường thành thủng lỗ chỗ, ngươi đã chuẩn bị chiến tử.'],
+                'Đông Ngô đại quân': ['Vây thành mấy tháng không hạ được đại dịch hoành hành, mỗi ngày ngươi đều phải chôn cất vô số đồng đội nhiễm bệnh.']
+            },
+            255: {
+                'Thục Hán quân': ['Sau đại thắng Thao Tây ý đồ mở rộng chiến quả, lại ở Địch Đạo gặp phải quân Ngụy liều chết chống cự cạn kiệt lương thảo.'],
+                'Tào Ngụy quân': ['Thao Tây thảm bại thương vong mấy vạn, ngươi bị kẹt trong cô thành Địch Đạo chỉ có thể dựa vào uống máu loãng duy trì sự sống.'],
+                'Hoài Nam phản quân': ['Văn Ương dạ tập tuy mãnh liệt nhưng cô quân khó chống đỡ, đại doanh bị vây đến nước chảy không lọt, ngươi không chỗ trốn thoát.']
+            },
+            256: {
+                'Thục Hán quân': ['Hồ Tế lỡ hẹn Khương Duy đại bại ở Đoạn Cốc, ngươi trong thung lũng rút lui gặp phải phục kích.'],
+                'Tào Ngụy quân': ['Đoạn Cốc đại thắng nhưng khi truy kích cô quân thâm nhập, bị tàn binh Thục Hán liều chết cắn trả.']
+            },
+            257: {
+                'Tào Ngụy quân': ['Vây đánh Thọ Xuân gặp mưa dầm liên miên nhiều tháng, doanh địa tích nước sâu đến đầu gối ngươi nhiễm phải thương hàn nghiêm trọng.'],
+                'Hoài Nam phản quân': ['Gia Cát Đản cố thủ Thọ Xuân trong thành người ăn thịt người, ngươi đang cân nhắc xem có nên giết chiến hữu lót dạ hay không.'],
+                'Đông Ngô quân': ['Văn Khâm vào thành chi viện bị vây khốn, ngươi ở dưới thành phá vây vô vọng trơ mắt nhìn quân Ngụy đào hào dài khóa chết.']
+            },
+            260: {
+                'Tư Mã thị trận doanh': ['Tào Mao chết trong tay Thành Tế, thiên hạ xôn xao ngươi bị đẩy ra làm kẻ chết thay.'],
+                'Bảo hoàng đảng': ['Thảo phạt Tư Mã Chiêu thất bại, toàn gia già trẻ của ngươi bị tống hết vào tử lao chờ mùa thu xử trảm.'],
+                'Thục Hán quân': ['Bắc phạt liên miên dẫn đến Thục Trung mệt mỏi, ngươi thân là binh lính tiền tuyến đã nửa năm chưa thấy miếng thịt nào.']
+            },
+            262: {
+                'Thục Hán quân': ['Hầu Hòa binh bại Khương Duy lui về Đạp Trung đồn điền lánh nạn, ngươi ở núi hoang khai hoang đối mặt với dã thú tấn công.'],
+                'Tào Ngụy quân': ['Tư Mã Chiêu chuẩn bị phạt Thục, ngươi bị cưỡng ép mang theo lương khô đẩy khí cụ công thành đi tới Quan Trung.']
+            },
+            263: {
+                'Tào Ngụy phạt Thục quân': ['Đặng Ngải vượt lén Âm Bình, bảy trăm dặm không bóng người, binh lính cực độ đói khát gặm nhấm máu thịt người chết.'],
+                'Thục Hán phòng ngự quân': ['Gia Cát Chiêm chiến tử Miên Trúc, Đặng Ngải binh lâm Thành Đô, Hậu Chủ tự trói ra hàng, ngươi rút bội kiếm chuẩn bị tự vẫn.'],
+                'Đông Ngô viện quân': ['Cứu viện Thục Hán đến muộn một bước, ngươi ở Ba Đông gặp phải quân Tấn phục kích tiến thoái mất phương hướng.']
+            },
+            264: {
+                'Tào Ngụy quân': ['Chung Hội Đặng Ngải tranh công bùng nổ binh biến, ngươi ở Thành Đô gặp phải loạn dân và phản quân kẹp đánh hai mặt.'],
+                'Chung Hội phản quân': ['Mật mưu chiếm Thục tự lập bại lộ, tướng lĩnh làm phản, ngươi thân là thân tín bị loạn binh chặn trong đại trướng băm vằm thành muôn mảnh.'],
+                'Thục Hán tàn quân': ['Khương Duy kế trá hàng thất bại tự vẫn, ngươi thân là cựu thần trong loạn quân yểm trợ gia quyến tuyệt vọng bỏ trốn.'],
+                'Tây Tấn triều đình': ['Tư Mã Chiêu mở tiệc thăm dò Lưu Thiện, ngươi thân là khách bồi tiếp nếu lộ ra vẻ đồng tình liền mang họa sát thân.'],
+                'Thục Hán vong thần': ['Hậu Chủ cười đáp "Lạc bất tư Thục", ngươi quỳ giữa bữa tiệc khóc rống rơi lệ, bị giáp sĩ quân Tấn lôi ra khỏi đại điện.'],
+                'Tào Ngụy trận doanh': ['Sau khi bình định Thục Hán tướng sĩ lưu lại thủy thổ không phục, ngươi nhiễm phải ác tật sốt cao liên tục nhiều ngày không giảm.'],
+                'Đông Ngô trận doanh': ['Tôn Hạo ban đầu sáng suốt sau cực độ tàn bạo, ngươi vì khuyên can mà bị hạ lệnh khoét đi hai mắt.']
+            },
+            272: {
+                'Tây Tấn quân': ['Dương Hỗ tiến quân Tây Lăng gặp phải Lục Kháng cản bước, ngươi ở bên bờ Trường Giang bị hỏa thuyền đốt đứt cầu phao.'],
+                'Đông Ngô quân': ['Bộ Xiển phản hàng Tây Tấn, Lục Kháng tử thủ Tây Lăng, ngươi ở trên tường thành gặp phải quân Tấn kẹp đánh hai mặt.']
+            },
+            279: {
+                'Tây Tấn phạt Ngô quân': ['Mặt sông rải đầy thiết chùy đá ngầm, khoang đáy chiến thuyền của ngươi bị đâm thủng nước sông điên cuồng tràn vào.'],
+                'Đông Ngô phòng ngự quân': ['Lâu thuyền quân Tấn xuôi dòng xuống, phòng tuyến Kiến Nghiệp toàn tuyến sụp đổ, Tôn Hạo ra hàng.']
+            },
+            280: {
+                'Tây Tấn triều đình': ['Thiên hạ nhất thống phong thưởng công thần, ngươi thân là quân quan tầng chót không được thưởng còn bị cưỡng ép sa thải đuổi về.'],
+                'Tại dã/Ẩn sĩ': ['Thế gia môn phiệt lũng đoạn giai cấp, ngươi uổng có tài hoa lại chỉ có thể ẩn cư sơn lâm đốn củi qua ngày.']
+            }
+        },
+        'Chính Sử': {
+            159: {
+                'Đông Hán triều đình': ['Bọn hoạn quan Đơn Siêu mượn lệnh Hoàn Đế đột kích phủ Đại tướng quân, ngươi thân là vệ sĩ cung thành bị cuốn vào cuộc hỗn chiến đẫm máu.'],
+                'Ngoại thích thế lực': ['Lương Ký binh bại uống thuốc tự sát, đình úy đang theo danh sách đến từng nhà bắt giữ môn sinh họ Lương, đề kỵ đã đập phá cổng lớn nhà ngươi.'],
+                'Hoạn quan thế lực': ['Ngươi thay Ngũ Hầu tịch thu gia sản họ Lương lúc tư thôn ngọc khí, mật thám của Đông Xưởng đã kề chủy thủ vào sau eo ngươi.'],
+                'Sĩ tộc thanh lưu': ['Ngươi dâng thư mắng mỏ hoạn quan thao túng triều chính, Hoàng Môn Lệnh suốt đêm ngụy tạo thư từ mưu phản của ngươi dâng lên ngự án.'],
+                'Địa phương châu quận': ['Triều dã rung chuyển dẫn đến địa phương hào cường thôn tính gia tăng, huyện thành của ngươi bị mấy trăm tư binh cầm vũ khí bao vây trùng trùng.']
+            },
+            168: {
+                'Hoạn quan tập đoàn': ['Trần Phồn Đậu Vũ ý đồ chính biến, ngươi phụ trách khóa chặt cung môn, nhưng Vũ Lâm quân ngoài điện đã bắt đầu dùng xung xa tông cửa.'],
+                'Ngoại thích sĩ tộc': ['Cơ mật mưu giết hoạn quan bị rò rỉ, Vương Phủ dẫn hơn ngàn giáp sĩ dồn ngươi và đồng liêu vào ngõ cụt, chuẩn bị giết chết tại chỗ.'],
+                'Quan vọng triều thần': ['Ngươi ý đồ giữ thế trung lập giữa yêm đảng và sĩ nhân, hai phái lại đồng thời nhận định ngươi là nội gian, thích khách đã lẻn vào nhà ngươi.'],
+                'Địa phương sĩ nhân': ['Họa đảng cố lan đến châu quận, ngươi vì từng bái phỏng Lý Ưng, đội truy bắt của châu mục đang tiến hành bủa lưới lùng sục ngươi.']
+            },
+            184: {
+                'Đại Hán triều đình': ['Chiến báo tiền tuyến liên tiếp bay tới như bông tuyết, Hoàng Cân binh lâm Tư Lệ, ngươi suốt đêm mang theo ấn tín thiên tử trốn mạng trong hoảng loạn.'],
+                'Hoàng Cân quân': ['Trương Giác bệnh nặng ho ra máu, bùa nước mất linh, tín đồ đói khát bắt đầu vì tranh giành ngụm túc mễ cuối cùng mà vung đao chém nhau.'],
+                'Triều đình thảo phạt quân': ['Phương trận ngươi đang đứng gặp phải Hoàng Cân lực sĩ cuồng nhiệt xung phong không sợ chết, đội đốc chiến đã dựng đao chém ở phía sau.'],
+                'Địa phương hào cường': ['Loạn dân Hoàng Cân như châu chấu đầy núi khắp đồng bao vây trang viên, ổ bảo của ngươi chỉ còn ba ngày khẩu phần lương thực và mấy trăm người già yếu.']
+            },
+            189: {
+                'Đổng Trác quân': ['Ngươi phụng mệnh vào kinh tiếp quản Bắc quân, lại ở trên đường phố Lạc Dương gặp phải thị dân cực độ thù hận lính Tây Lương và ám tiễn của hội binh.'],
+                'Quan Đông liên quân': ['Ngươi hưởng ứng lời kêu gọi chạy tới Toan Táo, giữa đường lương thảo bị quân bạn cướp sạch, binh lính sắp sửa làm phản.'],
+                'Đông Hán triều đình': ['Đổng Trác cưỡng ép phế truất Thiếu Đế, ngươi vì ở trên triều đường lộ vẻ không đành lòng, võ sĩ Tây Lương đã đợi ngoài cung môn để chém ngươi.'],
+                'Quan vọng phái': ['Lạc Dương bốc cháy lửa lớn, ngươi bị kẹt trong bức tường thành đang thiêu rụi, ngoài cổng thành là thiết kỵ Tây Lương bắn tên không phân biệt.']
+            },
+            192: {
+                'Lương Châu phản quân': ['Lý Quách nội chiến, ngươi trên đường phố Trường An bị loạn binh coi thành mục tiêu cướp bóc, ngay cả giáp da cũng bị lột sạch.'],
+                'Tào Tháo quân': ['Thu biên Thanh Châu binh gây ra cựu tướng nội bộ bất mãn, ngươi khi trấn áp binh biến bị loạn binh Thanh Châu ép lùi đến bên vách núi.'],
+                'Viên Thiệu quân': ['Cùng Công Tôn Toản tử chiến ở Giới Kiều, mưa tên ngợp trời của Bạch Mã Nghĩa Tòng đã bắn tấm khiên của ngươi thành con nhím.'],
+                'Viên Thuật quân': ['Viên Thuật vơ vét của cải, trong quân ba ngày không có lương thực, ánh mắt các bộ tướng nhìn ngươi đã không giống nhìn người, mà là nhìn thịt.'],
+                'Lưu Bị quân': ['Ở Bình Nguyên nương nhờ Công Tôn Toản, khu vực phòng thủ của ngươi bị tiên đăng tử sĩ quân Viên điên cuồng đâm thủng.'],
+                'Lưu Biểu quân': ['Tôn Kiên qua sông đánh Lưu Biểu, ngươi ở Hiện Sơn đặt phục kích, lại bị Trình Phổ bọc sườn ngược lại cắt đứt đường lui.'],
+                'Tôn Sách quân': ['Tôn Kiên trúng tên lạc tử vong, ngươi khi hộ tống linh cữu rút lui gặp phải thủy quân Kinh Châu trùng trùng chặn đánh.'],
+                'Lữ Bố quân': ['Vương Doãn tử tiết Trường An thất thủ, ngươi theo Lữ Bố phá vây, bị mấy vạn thiết kỵ của Lý Thôi đuổi giết trên bình nguyên như lùa thỏ.']
+            },
+            195: {
+                'Lưu Do quân': ['Tôn Sách binh phong cực thịnh, đại doanh của ngươi bị chọc thủng, đang chật vật chạy trốn trong loạn quân.'],
+                'Tôn Sách quân': ['Trận đầu qua sông đối mặt với cường địch phản công, ngươi trong bùn lầy bị trọng giáp bộ binh của Lưu Do bao vây trùng trùng.'],
+                'Viên Thuật quân': ['Tôn Sách mượn binh thoát khỏi khống chế, ngươi thân là giám quân đối mặt với nguy hiểm bị Tôn Sách giết người diệt khẩu.'],
+                'Địa phương hào cường': ['Giang Đông môn phiệt san sát, ngươi trong lúc hai quân giao chiến bị ép phải chọn phe, chọn sai liền đối mặt với tai họa diệt môn.']
+            },
+            196: {
+                'Tào Ngụy chính quyền': ['Nghênh phụng thiên tử dẫn đến đảng bảo hoàng âm thầm liên kết, bức mật thư ngươi đánh chặn được cho thấy phó tướng của ngươi đã bị mua chuộc chuẩn bị dạ tập đại doanh.'],
+                'Viên Thiệu quân': ['Chủ công cự tuyệt nghênh đón thiên tử mất đi tiên cơ, hai phái mưu sĩ Thư Thụ và Quách Đồ chèn ép lẫn nhau, ngươi vì đứng sai phe mà bị thêu dệt tội lớn.'],
+                'Viên Thuật quân': ['Viên Thuật tiếm quyền dẫn đến tứ diện Sở ca, ngươi trên phòng tuyến Hoài Nam đối mặt với đợt xung phong đầu tiên của kỵ binh Lữ Bố đã vỡ trận.'],
+                'Lưu Bị quân': ['Lữ Bố thừa dịp đêm tối đánh lén Hạ Phì, gia quyến của ngươi toàn bộ rơi vào tay giặc, tàn quân trong bùn lầy bị Tịnh Châu lang kỵ truy kích.'],
+                'Lữ Bố quân': ['Ngươi đoạt lấy Từ Châu chưa vững chân, cha con Trần Đăng âm thầm liên kết Tào Tháo, kho lương nơi ngươi đóng quân bị đốt cháy một cách khó hiểu.'],
+                'Kinh Châu Lưu Biểu': ['Trương Tú chiếm cứ Uyển Thành liên tục rục rịch, ngươi làm tướng giữ tiền tiêu bị thiết kỵ Tây Lương quấy rối liên tục nửa tháng không thể chợp mắt.'],
+                'Giang Đông Tôn Sách': ['Tôn Sách bình định Giang Đông thủ đoạn đẫm máu, tàn bộ Nghiêm Bạch Hổ liên hợp Sơn Việt trong rừng sâu núi thẳm dùng tiễn độc bao vây ngươi trùng trùng.'],
+                'Ích Châu Lưu Chương': ['Triệu Vĩ phát động phản loạn ở Ba Quận, huyện thành của ngươi bị mấy vạn phản quân vây khốn, tường thành bị mưa lớn xối sập.'],
+                'Tây Lương Mã Đằng': ['Dư đảng Lý Quách lui vào Quan Trung, ngươi dưới trướng Mã Đằng phòng thủ cửa ải, đối mặt chính là những kẻ cướp bóc cuồng tín không có giới hạn.'],
+                'Hán Trung Trương Lỗ': ['Ngươi thi hành Ngũ Đẩu Mễ Đạo gặp phải địa phương hào cường liều chết chống cự, tế tửu bị ám sát, tín đồ đối mặt với sự trả thù đẫm máu.']
+            },
+            200: {
+                'Tào Tháo quân': ['Quan Độ cạn lương, ngươi đứng gác trong nước bùn lạnh lẽo ba ngày, tin tức Hứa Du đến hàng thật giả khó phân, đại quân sắp sửa làm phản.'],
+                'Viên Thiệu quân': ['Ô Sào ánh lửa ngút trời, ngươi ở trận địa tiền tuyến được báo cho biết chủ soái không cứu lương thảo ngược lại lệnh cường công kiên doanh, quân tâm chớp mắt tan rã.'],
+                'Lưu Bị quân': ['Nương nhờ Viên Thiệu gặp phải thảm bại, ngươi ở Nhữ Nam ý đồ thu gom tàn binh, lại bị Hổ Báo Kỵ của Tào Nhân càn quét như cắt lúa mạch.'],
+                'Giang Đông Tôn thị': ['Tôn Sách bị ám sát trọng thương, hào tộc Giang Đông thừa cơ đại phản, cô thành ngươi đang ở bị Sơn Việt và phản quân cắt đứt mọi nguồn nước.'],
+                'Kinh Châu Lưu Biểu': ['Ngươi bị phái đi chặn đánh Tào Tháo nam hạ, đối mặt chính là tiền phong quân Tào vừa đánh thắng trận Quan Độ, khí thế như cầu vồng.'],
+                'Ích Châu Lưu Chương': ['Mâu thuẫn giữa Đông Châu binh và hào tộc bản thổ trở nên gay gắt dẫn đến ẩu đả quy mô lớn, bạn bị tên lạc bắn xuyên qua bắp chân trên phố.'],
+                'Tây Lương Mã Đằng': ['Tào Tháo bình định Trung Nguyên xong liền uy hiếp Quan Lũng, ngươi ở tiền tuyến liên tục bị trinh sát tinh nhuệ của Tào Ngụy giảo sát.'],
+                'Hán Trung Trương Lỗ': ['Sứ giả của Tào Tháo mang đến chiếu thư nghiêm khắc, ngươi thân là phái chủ chiến lại bị phái đầu hàng trong giáo dồn vào chân tường.']
+            },
+            202: {
+                'Giang Đông Tôn thị': ['Tôn Quyền kế vị chưa vững vàng, Lý Thuật ở Lư Giang làm phản, ngươi làm tiên phong dẹp loạn lại vấp phải sự chống trả ngoan cường, lương thảo cạn kiệt.'],
+                'Giang Đông phản đảng': ['Lư Giang thất thủ, Tôn Quyền hạ lệnh đồ thành, ngươi bị kẹt cứng trong thành phụ đang bốc cháy, trên đỉnh đầu là mưa tên rợp trời.'],
+                'Tào Tháo quân': ['Viên Thiệu bệnh chết, ngươi ở Lê Dương đối mặt với sự phản công của Viên Thượng và Viên Đàm, đại quân sa lầy trong đầm lầy bùn nhão ở Hà Bắc.'],
+                'Lưu Bị quân': ['Làm khách ở Kinh Châu bị Lưu Biểu nghi kỵ, Thái Mạo âm thầm cắt đứt quân nhu Tân Dã của các ngươi, binh lính hoàn toàn không có áo rét.'],
+                'Kinh Châu Lưu Biểu': ['Ngươi cố gắng cân bằng thế lực giữa tông tộc và khách tướng, nhưng trong một buổi yến tiệc lại phát hiện trong rượu có cặn bẩn kỳ lạ.'],
+                'Ích Châu Lưu Chương': ['Bàng Hy phản loạn tuy đã dẹp yên, nhưng ngươi vì từng được hắn đề bạt, đang phải đối mặt với cuộc thanh trừng chính trị cực kỳ tàn khốc của châu mục.']
+            },
+            208: {
+                'Tào Tháo quân': ['Ô Lâm lửa cháy ngút trời, chiến thuyền của ngươi bị xích sắt khóa chặt, nhảy xuống sông thì chết đuối, ở lại thì chết cháy.'],
+                'Tôn Quyền quân': ['Tuy hỏa thiêu quân Tào nhưng tiền tuyến truy kích thương vong thảm trọng, ngươi ở trong đầm lầy vấp phải sự cắn trả điên cuồng của tử sĩ quân Tào.'],
+                'Lưu Bị quân': ['Trường Bản Pha đại bại, ngươi bị mười mấy vạn nạn dân cuốn theo, phía sau Hổ Báo Kỵ của Tào Thuần đang đâm trường mâu vào lưng ngươi.'],
+                'Kinh Châu quân': ['Lưu Tông hàng Tào, ngươi thân là cựu tướng Kinh Châu cự tuyệt đầu hàng, bị thân tín của Thái Mạo trói gô áp giải đến doanh trại quân Tào.'],
+                'Ích Châu Lưu Chương': ['Sau trận Xích Bích thiên hạ chấn động, Trương Lỗ nhân cơ hội xua quân ồ ạt xuống phía nam, cửa ải của ngươi bị giáo chúng Ngũ Đẩu Mễ tập kích ban đêm đánh hạ.'],
+                'Hán Trung Trương Lỗ': ['Ngươi cố gắng lấy lòng Tào Tháo nhưng bị từ chối, đại quân Tào Ngụy ở Quan Lũng đã áp sát biên giới, ngươi bị đẩy ra tiền tuyến làm bia đỡ đạn.'],
+                'Tây Lương Mã Đằng': ['Mã Đằng bị triệu tập vào kinh thành coi như bị giam lỏng, ngươi ở đại doanh Tây Lương phải đối mặt với các tướng lĩnh rắn mất đầu sắp sửa tàn sát lẫn nhau.']
+            },
+            211: {
+                'Lưu Bị quân': ['Ngươi theo quân vào Thục, tuyến tiếp tế kéo dài ba ngàn dặm, kho lương ở ải Hà Manh bị một trận hỏa hoạn không rõ nguyên nhân thiêu rụi một nửa.'],
+                'Lưu Chương quân': ['Lưu Bị trở mặt tấn công Ích Châu, ngươi ở tiền tuyến đối đầu với những cựu binh dày dạn sa trường, quận binh dưới trướng vừa chạm trán đã tan tác.'],
+                'Tào Tháo quân': ['Mã Siêu Hàn Toại khởi binh, ngươi ở bên bờ Vị Thủy hứng chịu đợt xung phong của thiết kỵ Tây Lương bọc giáp nặng, doanh trại chớp mắt bị san phẳng.'],
+                'Tây Lương quân': ['Trúng phản gián kế của Tào Tháo, Mã Siêu và Hàn Toại tàn sát nhau trong đại trướng, ngươi bị loạn binh hai phe cuốn vào cảnh chém giết lẫn nhau giữa doanh trại.'],
+                'Hán Trung Trương Lỗ': ['Mã Siêu binh bại trốn vào Hán Trung, ngươi được phái đi giám sát Mã Siêu, lại bị thân vệ của hắn kề hoàn thủ đao lên cổ.'],
+                'Tôn Quyền quân': ['Nhân lúc Tào Tháo tây chinh liền tấn công Hợp Phì, đại quân gặp mưa bão dịch bệnh hoành hành, ngươi ngay cả sức lực cầm trường mâu cũng đã mất sạch.']
+            },
+            215: {
+                'Hợp Phì thủ quân': ['Mười vạn quân Ngô vây thành, Trương Liêu hạ lệnh tử chiến, ngươi bị biên chế vào tám trăm quân cảm tử, lùi bước là chém, phía trước là núi đao biển lửa.'],
+                'Đông Ngô đại quân': ['Tám trăm người của Trương Liêu chọc thủng đại trận, Tôn Quyền suýt bị bắt sống, ngươi ở bên cầu gãy Tiêu Dao Tân bị giẫm đạp rơi xuống nước sắp chết đuối.'],
+                'Tào Ngụy viện quân': ['Ngươi ngày đêm gấp rút chạy đến Hợp Phì, trên con đường bùn lầy vấp phải quân Ngô phục kích, xe lương bị hủy sạch rơi vào tuyệt cảnh.'],
+                'Lưu Bị quân': ['Lấy sông Tương làm ranh giới đối đầu với Tôn Quyền, bạn ở tiền tuyến bị cung nỏ thủ của đồng minh cũ áp chế ngày đêm không ngóc đầu lên được.']
+            },
+            219: {
+                'Quan Vũ bắc phạt quân': ['Sau khi uy chấn Hoa Hạ bất ngờ bị Đông Ngô đâm sau lưng, ngươi theo Quan Vũ bại tẩu Mạch Thành, bốn bề đều là quân Ngô hát Sở ca làm loạn quân tâm.'],
+                'Phàn Thành thủ quân': ['Sau khi nước ngập bảy quân, Phàn Thành như một hòn đảo cô lập, ngươi trên bức tường thành bị ngâm mềm nhũn giết chiến mã lót dạ, dịch bệnh đã lan tràn trong thành.'],
+                'Đông Ngô thâu tập quân': ['Bạch y độ giang tuy thắng, nhưng tử trung của Quan Vũ trong thành Giang Lăng phát động chiến tranh đường phố thảm liệt, ngươi trong ánh lửa vấp phải sự phản công liều mạng.'],
+                'Thượng Dung thủ quân': ['Lưu Phong, Mạnh Đạt thấy chết không cứu, sau khi Quan Vũ bại vong Lưu Bị chấn nộ, mật thám của Cẩm Y Vệ đã mang theo thòng lọng lẻn vào doanh trướng của ngươi.']
+            },
+            221: {
+                'Thục Hán đông chinh quân': ['Lưu Bị dốc toàn quốc phạt Ngô, Trương Phi bị ám sát khiến quân tâm dao động, ngươi giữa mùa hè oi bức đẩy xe truy trọng nặng nề gian nan lội bộ trong hẻm núi.'],
+                'Đông Ngô phòng ngự quân': ['Quân Thục thế như chẻ tre liên tục phá vỡ mấy doanh trại, ngươi ở tiền tuyến Tỷ Quy bị cắt đứt đường lui, đối mặt với vòng vây trùng trùng của bộ binh tinh nhuệ nước Thục.'],
+                'Tào Ngụy quan chiến quân': ['Triều đình hạ lệnh tọa sơn quan hổ đấu, nhưng khu vực phòng thủ ngươi đóng quân đột nhiên bị quân Ngô mượn đường tập kích, cô quân kiên thủ không có viện binh.']
+            },
+            225: {
+                'Thục Hán nam chinh quân': ['Tiến sâu vào vùng đất cằn cỗi vấp phải suối độc chướng khí, chiến hữu của ngươi sau khi uống nước cổ họng lở loét chết thảm, lượng lớn binh lính xuất hiện triệu chứng sốt cao.'],
+                'Nam Trung phản quân': ['Đại quân Gia Cát Lượng thế như chẻ tre, Cao Định bị giết, bộ lạc của ngươi bị cắt đứt trong núi sâu chỉ còn lại ba ngày khẩu phần lương thực.'],
+                'Mạnh Hoạch bộ chúng': ['Nhiều lần chiến bại khiến các thủ lĩnh bộ lạc hoàn toàn mất đi chiến tâm, ngươi lúc chủ trương tử chiến bị tộc nhân trói lại chuẩn bị dâng lên đầu hàng.']
+            },
+            228: {
+                'Thục Hán bắc phạt quân': ['Mã Tốc để mất Nhai Đình, ngươi thân là tàn bộ đoạn hậu ở đường núi chật hẹp, đối mặt với sự nghiền ép lặp đi lặp lại của mấy vạn trọng kỵ binh Trương Cáp.'],
+                'Tào Ngụy tây tuyến quân': ['Gia Cát Lượng đột nhiên xuất Kỳ Sơn, ba quận Lũng Hữu làm phản đầu hàng, tòa thành cô lập ngươi đang ở bị liên nỗ của quân Thục phong tỏa trùng trùng mười ngày không có viện binh.']
+            },
+            234: {
+                'Thục Hán bắc phạt quân': ['Gia Cát Lượng bệnh mất ở Ngũ Trượng Nguyên, đại quân bí mật không phát tang rút lui, ngươi trong đêm tối yểm trợ chủ lực, vấp phải sự thăm dò truy kích điên cuồng của quân Ngụy.'],
+                'Tào Ngụy tây tuyến quân': ['Tư Mã Ý hạ lệnh kiên thủ không chiến, trong doanh bùng phát bệnh thương hàn nghiêm trọng, ngươi mỗi ngày kéo ra mấy chục thi thể chôn cất, bản thân cũng đã phát sốt cao.'],
+                'Thục Hán nội đấu phái': ['Ngụy Diên và Dương Nghi tàn sát lẫn nhau, ngươi đứng trước trận tuyến hai quân, bất luận nghe theo quân lệnh của ai, đều phải đối mặt với tội danh phản quốc bị tru di.']
+            },
+            238: {
+                'Thục Hán quân': ['Tưởng Uyển chủ chính hưu dưỡng sinh tức, ngươi thân là tướng lĩnh phái bắc phạt cấp tiến bị tước đoạt binh quyền, Hiệu Sự Phủ đang giám sát chặt chẽ nhất cử nhất động của ngươi.'],
+                'Tào Ngụy tây tuyến quân': ['Quân Thục ở Hán Trung bày binh thị uy, biên quan ngươi đang ở quanh năm thiếu lương, quân thủ thành đã chuẩn bị giết tướng dâng thành đầu hàng.'],
+                'Tào Ngụy viễn chinh quân': ['Tư Mã Ý viễn chinh Liêu Đông gặp mưa bão liên miên nhiều tháng, đất bằng tích nước sâu vài thước, ngươi mỗi ngày trong bùn lầy nhìn đồng đội chết vì mất nhiệt.']
+            },
+            249: {
+                'Tư Mã thị': ['Sự biến Cao Bình Lăng phát động, ngươi theo ba ngàn tử sĩ phong tỏa võ khố, nếu Tào Sảng quyết tâm phản công, ngươi sẽ phải đối mặt với sự trấn áp đẫm máu của quân chủ lực.'],
+                'Tào Sảng đảng vũ': ['Tư Mã Ý chỉ Lạc Thủy làm lời thề nhưng chớp mắt đã trở mặt, ngươi thân là thân tín bị Đình Úy bao vây trùng trùng, cả nhà bị chém đầu chỉ trong khoảnh khắc.'],
+                'Tào Ngụy tông thất': ['Đại quyền rơi vào tay kẻ khác, ngươi bị ra lệnh cấm túc ở Nghiệp Thành, thị vệ bên cạnh toàn bộ đổi thành thích khách của Tư Mã thị, trong thức ăn nước uống thoang thoảng mùi thuốc.'],
+                'Quan vọng trung lập phái': ['Triều cục thay máu lớn, ngươi vì cự tuyệt ký tên lên tấu chương liên danh thảo phạt Tào Sảng, bị mật thám thêu dệt tội danh tống vào tử lao.']
+            },
+            251: {
+                'Tào Ngụy triều đình quân': ['Vương Lăng mưu phản tuy đã bị phá, nhưng bè đảng trong quân đan xen chằng chịt, ngươi đang bị thẩm vấn điều tra, sống chết khó đoán.'],
+                'Hoài Nam phản quân': ['Vương Lăng khởi sự không thành bị ép tự sát, đại quân chớp mắt xôn xao tan rã, ngươi dưới trường thương của truy binh không chốn dung thân.'],
+                'Đông Ngô trận doanh': ['Vốn định nhân lúc Hoài Nam đại loạn vớt vát chút lợi lộc, lại vấp phải sự phòng thủ nghiêm ngặt của quân Ngụy, lúc rút lui ở ven sông bị phục kích.']
+            },
+            252: {
+                'Đông Ngô quân': ['Đại quân Gia Cát Khác phá Ngụy ở Đông Hưng, nhưng tiền tuyến tranh công dẫn đến các doanh tranh giành chiến lợi phẩm, ngươi suýt chút nữa chết dưới đao của đồng đội.'],
+                'Tào Ngụy quân': ['Trận Đông Hưng cầu phao đứt gãy đại quân thảm bại, ngươi bị chen lấn rơi xuống dòng nước sông lạnh thấu xương, xung quanh toàn là tiếng gào thét tuyệt vọng.'],
+                'Thục Hán quân': ['Khương Duy xuất binh tiếp ứng vấp phải Quách Hoài cản bước, tuyến tiếp tế bị kỵ binh tinh nhuệ quân Ngụy cắt đứt hoàn toàn.']
+            },
+            253: {
+                'Đông Ngô quân': ['Hợp Phì tân thành tấn công mãi không hạ được, trong quân dịch bệnh hoành hành, ngươi cả người nóng hổi nhưng vẫn bị ép vác vân đê xung phong.'],
+                'Tào Ngụy quân': ['Hợp Phì tân thành quân thủ thành thiếu hụt, tường thành sắp sửa sụp đổ, ngươi thân là tướng giữ thành được thông báo sẽ không có viện quân nữa.']
+            },
+            255: {
+                'Tào Ngụy triều đình quân': ['Tư Mã Sư mang bệnh thân chinh Hoài Nam, ngươi ở tiền tuyến cường công Thọ Xuân, vấp phải sự chống trả liều mạng của tinh nhuệ Vô Khâu Kiệm thương vong thảm trọng.'],
+                'Hoài Nam phản quân': ['Vô Khâu Kiệm binh bại ở Hạng Thành, ngươi thân là tàn bộ phản quân trốn vào núi sâu, không có lương thảo, còn phải đối mặt với mạng lưới lùng sục của triều đình.'],
+                'Đông Ngô viện quân': ['Văn Khâm đến hàng, bộ đội tiền tuyến ngươi đang ở vì thiếu hụt tiếp tế bắt đầu cướp bóc thôn làng, quân kỷ đối mặt với nguy cơ sụp đổ hoàn toàn.'],
+                'Thục Hán quân': ['Khương Duy đại thắng ở Thao Tây, ngươi thân là tiên phong lúc truy kích quân Ngụy, vấp phải sự phục kích của lực lượng dự bị quân Ngụy.'],
+                'Thục Hán bắc phạt quân': ['Sau đại thắng Thao Tây Khương Duy cô quân tiến sâu vào Địch Đạo, ngươi trong đống tuyết lương thảo cạn kiệt, chỉ có thể gặm nhấm tủy xương của xác chiến mã.'],
+                'Tào Ngụy tây tuyến quân': ['Vương Kinh đại bại ở Thao Tây thương vong mấy vạn, ngươi bị nhốt trong tòa thành cô lập Địch Đạo, bên ngoài không có viện binh, bên trong có thương binh gào thét.']
+            },
+            257: {
+                'Tào Ngụy triều đình quân': ['Vây công Thọ Xuân gặp mưa lớn nhiều tháng, doanh trướng của ngươi ngập nước ngang hông, dịch bệnh liên miên và sự mệt mỏi đang phá hủy quân tâm.'],
+                'Hoài Nam phản quân': ['Trong thành Thọ Xuân người ăn thịt người, Gia Cát Đản hạ lệnh không được ra khỏi thành, ngươi trong tuyệt vọng suy nghĩ xem có nên mở thành đầu hàng trong đêm hay không.'],
+                'Đông Ngô viện quân': ['Bị vây trong thành Thọ Xuân trở thành cá nằm trên thớt, quân Ngụy ngoài thành lũy phòng ngự sâm nghiêm, mỗi một lần đột phá vòng vây đều biến thành một cuộc đồ sát.']
+            },
+            263: {
+                'Tào Ngụy phạt Thục quân': ['Đặng Ngải lén vượt Âm Bình, bảy trăm dặm núi cao vực sâu không bóng người, ngươi trong cơn đói khát tột độ quấn chăn nỉ lăn từ vách đá xuống sống chết chưa rõ.'],
+                'Thục Hán phòng ngự quân': ['Gia Cát Chiêm chiến tử ở Miên Trúc, phòng tuyến Thành Đô ngươi đang ở sụp đổ toàn diện, Hậu Chủ đã chuẩn bị sẵn quan tài ra hàng, ngươi không còn đường lùi.'],
+                'Đông Ngô viện quân': ['Ngươi phụng mệnh cứu viện Thục Hán, vừa đến Ba Đông liền hay tin Lưu Thiện đầu hàng, đại quân rơi vào tử cục tiến thoái lưỡng nan, bị quân Tấn bao vây.']
+            },
+            264: {
+                'Đông Ngô triều đình': ['Tôn Hạo sau khi kế vị từ minh quân đột nhiên biến thành bạo chúa, ngươi vì dâng sớ can gián thẳng thắn, Đình Úy đang chuẩn bị móc hai mắt và lột da mặt ngươi.'],
+                'Tây Tấn sơ lập': ['Chung Hội Đặng Ngải tranh công ở Thục bùng phát binh biến quy mô lớn, ngươi trong loạn quân bị những binh lính đỏ mắt dồn vào ngõ cụt.'],
+                'Thục Hán tàn thần': ['Nước mất nhà tan, Khương Duy trá hàng kế bại thân tử, ngươi thân là cựu thần bị cưỡng ép di dời đến Lạc Dương, trên đường dịch bệnh hoành hành cửu tử nhất sinh.']
+            },
+            280: {
+                'Tây Tấn diệt Ngô quân': ['Lâu thuyền của Vương Tuấn xuôi dòng mà xuống, ngươi trên chiến thuyền tiên phong vấp phải chông sắt đá ngầm trên mặt sông của Đông Ngô, đáy thuyền bị chọc thủng nước sông điên cuồng tràn vào.'],
+                'Đông Ngô mạt lộ quân': ['Kiến Nghiệp thành phá, đại quân vừa chạm trán đã tan tác, ngươi thân là tướng lĩnh tử trung bị trọng giáp bộ binh quân Tấn bao vây trùng trùng, yêu cầu ngươi tự vẫn.'],
+                'Tam phương dư thần': ['Thiên hạ nhất thống, ngươi thân là cựu thần triều trước không những không được phong thưởng, ngược lại bị tân quý cướp đoạt điền sản, cả nhà già trẻ lưu lạc đầu đường xó chợ.']
+            },
+            290: {
+                'Tây Tấn triều đình': ['Tấn Vũ Đế băng hà, Dương Tuấn phụ chính chuyên quyền, Giả Hậu mật mưu chính biến, ngươi trong cấm quân bị ép phải chọn phe, chọn sai tức là diệt tộc.'],
+                'Ngoại trấn đô đốc': ['Bát vương chi loạn sóng ngầm cuộn trào, triều đình lấy việc cắt đứt quân lương để ép buộc tước quyền, kiêu binh hãn tướng dưới trướng bạn vì thiếu lương đã chuẩn bị binh biến.']
+            }
+        }
+    },
+    classSpecific: {
+        'Chính Sử': {
+            'Di lão cô thần': ['Cố quốc dẫu diệt vong vẫn cự tuyệt hàng địch, đặc sứ tân triều đưa tới ba thước lụa trắng, không tự tận liền tru di tam tộc.'],
+            'Tàn binh bại tướng': ['Chủ tướng tử trận đội ngũ đứt lương trong núi sâu, có người đề nghị giết thương binh để tiết kiệm khẩu phần, binh biến chỉ trong gang tấc.'],
+            'Tử chiến chi sĩ': ['Không còn đường lùi cắn đứt ngón tay thề tử chiến, nhưng búa công thành nặng nề đã đập nát bét cổng thành.'],
+            'Ẩn thế di dân': ['Quan lại tân triều lục soát từng nhà bắt bớ tàn dư triều trước, khẩu âm của ngươi gây ra nghi ngờ, thư tố cáo đã được gửi đến huyện nha.'],
+            'Vong quốc cựu thần': ['Cái mũ tàn dư triều trước bất cứ lúc nào cũng có thể khiến ngươi bị chém đầu cả nhà trong cuộc thanh trừng chính trị.'],
+            'Sơn lâm ẩn sĩ': ['Quân phiệt vì ép ngươi ra làm quan đã phóng hỏa thiêu rụi cả ngọn núi, cắt đứt mọi con đường sống của ngươi.'],
+            'Tản binh du dũng': ['Lên núi làm cướp bị triều đình xem là mối họa lớn, trọng binh càn quét sơn trại bị phá, tù binh toàn bộ bị chôn sống.'],
+            'Lưu vong bộ chúng': ['Chạy trốn khắp nơi bị lực lượng vũ trang địa phương bao vây, không lương không thuốc vết thương lở loét, chỉ có thể ngồi chờ chết.'],
+            'Bại quân chi tướng': ['Mất thành mất đất chỉ mang theo thân tín bỏ trốn, phó tướng vì muốn lấy đầu ngươi đổi tiền thưởng đã hạ độc trong bình nước.'],
+            'Ẩn thế cao nhân': ['Thảo đường trong núi sâu bị đám tàn binh đói đỏ mắt phát hiện, hai thanh đao đẫm máu kề cổ bức cung nơi giấu kho báu.'],
+            'Lục lâm du hiệp': ['Cướp của người giàu chia cho người nghèo ngoài ý muốn cướp được cơ mật quân sự, dẫn đến sự vây quét điên cuồng không tiếc cái giá nào của quân chính quy.'],
+            'Tị loạn thương giả': ['Vận chuyển vật tư bị tàn binh tiền tuyến nhắm tới, hàng hóa toàn bộ bị cướp sạch, gia quyến đi cùng cũng sớm tối khó giữ mạng.'],
+            'Bạch y thương giả': ['Cải trang lẻn vào trọng trấn bị Hiệu Sự phát hiện, một khi bị bắt vào địa lao lột da, hạm đội tập kích bất ngờ sẽ toàn quân bị diệt.'],
+            'Trì tiết sứ thần': ['Hai nước giao ác, quân chủ nước địch bạo nộ xé nát quốc thư, muốn ném ngươi vào vạc dầu nấu chín để tế cờ.'],
+            'Khách tướng': ['Ăn nhờ ở đậu chiến bại bị lôi ra làm dê thế tội, trường đao của đội đốc chiến đã kề trên cổ.'],
+            'Khách quân sĩ tốt': ['Tác chiến nơi đất khách quê người ngôn ngữ bất đồng, chiến bại tan tác ngay cả hỏi đường cũng không được, bị bách tính xem như giặc cướp mà săn lùng.'],
+            'Giải phiền đốc tướng': ['Khách quân thủy thổ không phục nhiễm chướng khí, tướng giữ thành địa phương không cho thuốc men còn bắt các ngươi làm bia đỡ đạn đẩy lên tiền tuyến.'],
+            'Khách quân bộ khúc': ['Lương thảo cạn kiệt quân bạn cự tuyệt tiếp tế, ánh mắt của những binh lính đói khát nhìn ngươi giống như đang nhìn một miếng thịt tươi.'],
+            'Trì viện kiêu tướng': ['Ngày đêm gấp rút người mệt ngựa mỏi, ở hẻm núi hiểm yếu vấp phải sự phục kích tinh nhuệ nhất của quân địch.'],
+            'Đông chinh chủ soái': ['Phòng tuyến trên sông bị phá vỡ đại quân thảm bại, kỳ hạm ngươi đang ở bị hỏa thuyền bao vây, truy binh phía sau đã cắt đứt đường lui.'],
+            'Bắc phạt chủ soái': ['Lúc tiền tuyến đại thắng, chủ bạ hậu phương ăn bớt lương thảo báo cáo sai quân tình, hoàng đế liên tiếp hạ ba đạo kim bài triệu ngươi hồi triều.'],
+            'Viễn chinh quân chủ soái': ['Đường vận lương bị lực lượng vũ trang du kích cắt đứt hoàn toàn, các tướng lĩnh mật mưu chém đầu ngươi để đổi lấy đường sống.'],
+            'Nam phạt đại tướng': ['Nam chinh vấp phải chướng khí dịch bệnh mỗi ngày người chết hàng trăm, chiếu thư hối thúc tác chiến từ hậu phương giống như bùa đòi mạng.'],
+            'Bình Thục đại đô đốc': ['Kẻ thù chính trị gièm pha nói ngươi muốn ủng binh tự lập, giám quân mang theo mật chỉ tước đoạt binh quyền đã đến đại doanh.'],
+            'Viễn chinh sĩ tốt': ['Thủy thổ không phục nhiễm bệnh sốt rét ác tính, quân y thiếu hụt, trơ mắt nhìn đồng hương chết trong cơn co giật đau đớn tột cùng.'],
+            'Cô thành thủ tướng': ['Quân địch buông lời thành phá sẽ đồ thành ba ngày, bên trong không lương thảo bên ngoài không viện binh, bách tính dùng ánh mắt khác thường nhìn ngươi.'],
+            'Thủ thành chủ tướng': ['Quân địch ném xác chết nhiễm bệnh vào trong thành, nguồn nước bị cắt đứt, thân vệ của ngươi mật mưu trói ngươi đổi lấy thuốc giải.'],
+            'Thủ thành sĩ tốt': ['Tường thành bị máy bắn đá đập sập, không có binh khí chỉ có thể giơ tàn chi của đồng đội lên đỡ mũi tên bay tới.'],
+            'Biên cảnh thủ tướng': ['Đại quân nước láng giềng tập kích bất ngờ, trong tay ngươi chỉ có người già yếu bệnh tật, thứ sử lại mang theo gia quyến bỏ trốn trong đêm.'],
+            'Trấn bắc thủ tướng': ['Du kỵ binh dị tộc đột nhiên xuôi nam gõ cửa ải, tường thành lâu năm không sửa chữa, phong hỏa lang yên bị mưa lớn dập tắt.'],
+            'Đại đô đốc': ['Phòng tuyến bị xé toạc hoàn toàn, kỳ hạm do ngươi đích thân đốc chiến bị đục thủng khoang đáy, nước sông điên cuồng tràn vào.'],
+            'Trung quân đô đốc': ['Kinh thành bùng phát binh biến, hoàng đế bị bắt cóc, cấm quân một nửa làm phản vung đồ đao chĩa thẳng vào doanh trướng của ngươi.'],
+            'Ngoại trấn đô đốc': ['Triều đình nghi kỵ binh quyền của bạn nên ngấm ngầm cắt quân lương, kiêu binh hãn tướng vì thiếu lương chuẩn bị binh biến.'],
+            'Thủy quân đô đốc': ['Thượng nguồn bị lâu thuyền khổng lồ phong tỏa, phó đô đốc cự tuyệt chấp hành mệnh lệnh và giam giữ toàn bộ hỏa thuyền.'],
+            'Châu quận đốc tướng': ['Châu quận bị quân phiệt tiếp quản, võ tướng thù hằn cựu tướng, hơi có ý không tuân theo liền dùng quân pháp chém đầu.'],
+            'Vận lương quan': ['Mưa bão cuốn trôi sạn đạo quân lương không thể đưa đến, trễ kỳ hạn sẽ bị chém, ngươi bắt buộc phải gom đủ mười vạn thạch lương thảo trong ba ngày.'],
+            'Vận lương dân phu': ['Đẩy mộc ngưu lưu mã lội bộ trên đường núi bùn lầy, bị khinh kỵ binh cướp lương chỉ có thể dùng đòn gánh chống cự.'],
+            'Tùy quân tham quân': ['Ngươi phát hiện chủ bạ ngấm ngầm cấu kết với quân địch, thích khách truy sát ngươi đã lẻn vào doanh trướng, quân quy và tư hình đang đến gần.'],
+            'Đại hiền lương sư': ['Chủ lực nghĩa quân bị vây quét sạch sẽ, ngươi bệnh nặng thổ huyết, cái đầu bị treo thưởng tước Vạn Hộ Hầu.'],
+            'Phương trấn cừ soái': ['Chủ lực Hoàng Cân diệt vong, ngươi dẫn tàn bộ trốn trong núi, mưa bão liên miên lương thảo nấm mốc binh biến sắp xảy ra.'],
+            'Hoàng Cân lực sĩ': ['Tác dụng tẩy não của bùa nước biến mất, đối mặt với chiến thuật chém đầu tàn khốc của quân Hán, đội hình sụp đổ hoàn toàn.'],
+            'Giáo chúng bình thường': ['Tế tửu cuỗm tiền bỏ trốn ngươi đói đến phát hoảng, còn phải đối mặt với cuộc thanh trừng đồ thôn vô nhân đạo của quân chính quy.'],
+            'Man hoang động chủ': ['Đại quân áp sát biên giới, mấy tiểu động chủ chuẩn bị nhân lúc đêm tối chém lấy thủ cấp của ngươi đi tranh công.'],
+            'Đằng giáp binh': ['Vấp phải hỏa công, đằng giáp tẩm đẫm dầu trong chớp mắt bốc cháy dữ dội, ngươi biến thành một ngọn đuốc sống gào thét tuyệt vọng.'],
+            'Tượng binh': ['Voi khổng lồ hoảng sợ phát điên giẫm đạp người phe mình, ngươi ngã khỏi lưng voi, móng voi nặng vài tấn hung hăng giẫm xuống.'],
+            'Khương tộc thủ lĩnh': ['Bộ lạc gặp bão tuyết trâu bò cừu chết cóng, quân phiệt người Hán cưỡng ép trưng dụng các ngươi đi làm bia đỡ đạn lấp chiến hào.'],
+            'Sơn Việt hào tù': ['Đại quân Đông Ngô phóng hỏa đốt núi, tộc nhân của ngươi ngã gục trong khói đặc, cửa ải xuống núi bị cường nỗ phong tỏa.'],
+            'Phán trấn thủ lĩnh': ['Đại quân dẹp loạn đến trước thời hạn, thứ sử từng hứa hẹn hưởng ứng toàn bộ đứng nhìn, cô thành không có viện binh.'],
+            'Hiếp tòng tướng tá': ['Bị ép mù quáng đi theo phản loạn, đại thế đã mất triều đình cự tuyệt đầu hàng, ngươi bị dồn vào tuyệt cảnh.'],
+            'Tử sĩ đảo qua': ['Phản loạn thất bại trở thành con cờ bị vứt bỏ, đại quân triều đình bốn bề bao vây cự tuyệt đầu hàng, chỉ có thể trong tuyệt vọng bị vạn tiễn xuyên tâm.'],
+            'Hoài Nam cựu bộ': ['Phản loạn thất bại bị đại quân bao vây, không chấp nhận đầu hàng, hoặc là tuyệt vọng tự vẫn hoặc là bị vạn tiễn xuyên tâm.'],
+            'Ngũ Đẩu Mễ Đạo': ['Tế tửu bị quân phiệt mua chuộc, ép buộc tín đồ đổi chiến giáp làm bia đỡ đạn, không đi liền khai trừ giáo tịch chịu khổ địa ngục.'],
+            'Cát cứ thủ lĩnh': ['Cường địch vây thành, thống binh đại tướng ngươi tín nhiệm nhất đã ngấm ngầm làm phản chuẩn bị dâng thành.'],
+            'Chư hầu minh chủ': ['Liên quân mỗi người một ý đồ riêng, trong doanh hai lộ chư hầu vì tranh giành lương thảo đã rút đao tàn sát lẫn nhau.'],
+            'Các lộ chư hầu': ['Ngươi thực lực yếu kém bị cuốn vào tham chiến, tiền phong bị diệt, minh chủ lại ra lệnh cho ngươi tiếp tục xông lên chịu chết.'],
+            'Tọa sơn quan hổ đấu chi quân': ['Hai bên giao chiến đột nhiên đạt thành hiệp nghị đình chiến, quyết định liên thủ nuốt chửng địa bàn của ngươi trước.'],
+            'Đương địa thổ hào': ['Phản quân ngươi tài trợ bị tiêu diệt, bộ đội dẹp loạn đang theo danh sách lục soát từng nhà diệt tộc.'],
+            'Ích Châu hào cường': ['Chính quyền ngoại lai thi hành Thục khoa hà khắc, ngươi vì che giấu hộ khẩu bị tước đoạt điền sản đày ra biên cương.'],
+            'Lương Châu hào tộc': ['Quân phiệt hỗn chiến lan đến lãnh địa, ổ bảo bị thiết kỵ Tây Lương bao vây, nguồn nước bị cắt đứt bảy ngày.'],
+            'Liêu Đông hào tộc': ['Viễn chinh quân phá thành, vì muốn chấn nhiếp vùng đất ngoài vòng giáo hóa, hạ lệnh chôn sống nam đinh trên mười lăm tuổi.'],
+            'Công Tôn thị tông tộc': ['Đại quân nước địch bao vây trùng trùng, trong thành đã xuất hiện thảm cảnh người ăn thịt người, tướng lĩnh cốt lõi của tông tộc càng bị kẻ phản bội ám sát.'],
+            'Châu mục thân tộc': ['Châu mục bệnh mất, thúc bá của ngươi vì tranh đoạt quyền kế thừa dẫn ngoại binh vào thành, trong thành bắt đầu cuộc tắm máu.'],
+            'Công khanh đại thần': ['Đại tướng quân vừa bị giết, giáp sĩ của Chấp Kim Ngô bao vây phủ đệ của ngươi, nếu không viết thư nhận tội lập tức diệt môn.'],
+            'Hán thất tông thân': ['Ngươi bị quyền thần lấy danh nghĩa mưu phản tước phiên, hộ vệ toàn bộ đổi thành thích khách, thức ăn nước uống tỏa ra mùi thuốc.'],
+            'Tông thất quyền thần': ['Thâu tóm đại quyền dẫn đến huyết chiếu của hoàng đế, thiết kỵ thanh trừng gian thần đã phá vỡ phòng tuyến kinh thành.'],
+            'Bá phủ quyền thần': ['Ngươi vừa trừ khử kẻ thù chính trị, lại phát hiện túc vệ trung quân đã bị tàn đảng của kẻ thù thẩm thấu khống chế toàn bộ.'],
+            'Tư Mã thị tông vương': ['Loạn Bát Vương sóng ngầm cuộn trào, anh em ruột của ngươi sắp xếp rượu độc trong bữa tiệc và xúi giục đô đốc của ngươi làm phản.'],
+            'Khai quốc huân quý': ['Thỏ khôn chết chó săn bị nấu, hoàng đế thanh trừng lão thần, bạn bị vu oan tội tham ô quân lương và bị tước đoạt tước vị.'],
+            'Hán thất cựu thần': ['Hành vi ngươi ngấm ngầm liên lạc với đảng bảo hoàng bị bại lộ, thích khách của bá phủ đã lẻn vào thư phòng của ngươi.'],
+            'Trung thường thị': ['Tài phú của ngươi bị điều tra rõ ràng, hoàng đế hạ lệnh tống ngươi vào tàm thất, đám con nuôi toàn bộ trở mặt.'],
+            'Tiểu hoàng môn': ['Đại thái giám thất thế, ngươi bị kéo ra ngoài cung môn, đám thái học sinh đang điên cuồng ném đá vào ngươi.'],
+            'Hoạn quan đảng vũ': ['Quan viên thanh lưu liên hợp ép cung, ngươi thân là nanh vuốt của yêm đảng bị lôi ra chợ chuẩn bị đánh chết bằng gậy.'],
+            'Yêm đảng thân tín': ['Sĩ tộc địa phương phát động bạo loạn, huyện nha bị phá vỡ, bạo dân yêu cầu thắp thiên đăng ngươi.'],
+            'Đại tướng quân': ['Hoạn quan giành trước bắt cóc thái hậu đóng chặt cung môn, trên tường thành toàn là ám tiễn, bộ tướng lặng lẽ lùi lại.'],
+            'Ngoại thích tử đệ': ['Chỗ dựa ngoại thích sụp đổ, ngươi bị tước đoạt đặc quyền, gông cùm của Đình Úy đã tròng lên cổ ngươi.'],
+            'Gián ngôn mưu thần': ['Ngươi liều chết can gián không thể xuất binh, chủ công bạo nộ tống ngươi vào ngục, đại quân nếu bại ngươi tất bị lôi ra chém đầu.'],
+            'Mạc phủ mưu sĩ': ['Kế sách của ngươi dẫn đến đại bại, chủ công vì bình tức oán hận trong quân, sai người bưng tới một ly rượu độc.'],
+            'Dĩnh Xuyên mưu sĩ': ['Chính sách đạc điền của ngươi chọc giận hào cường địa phương, tử sĩ đã giăng sẵn dây vấp ngựa trên đường về.'],
+            'Trần Cung đẳng mưu sĩ': ['Chủ công cự tuyệt nghe lời trung ngôn binh bại bị bắt, ngươi đối mặt với lời khuyên hàng của quân địch, chỉ có thể vươn cổ chịu chết để giữ vẹn danh tiết.'],
+            'Tiên phong quan': ['Cô quân tiến sâu vấp phải chủ lực quân địch bao vây, bản đội hậu phương lại án binh bất động thấy chết không cứu.'],
+            'Tiên phong hãn tướng': ['Chém tướng địch trước trận ngược lại bị chủ soái ghen tị, bị phái đi lấp chiến hào chịu chết, rõ ràng là muốn mượn đao giết người.'],
+            'Tiên đăng mãnh tướng': ['Người đầu tiên xông lên tường thành, vân đê phía sau bị đập gãy, ngươi cô thân rơi vào vòng vây trùng trùng.'],
+            'Đông chinh tiền phong': ['Trong liên doanh vấp phải hỏa hoạn tập kích bất ngờ, tiền phong doanh của ngươi chớp mắt bị cắt đứt đường lui hóa thành biển lửa.'],
+            'Phục cừu mãnh tướng': ['Giết đến đỏ mắt cô quân truy kích quá sâu, bị quân Ngô dụ vào vòng phục kích trong thung lũng, cự thạch đã bịt kín đường lui.'],
+            'Quân trung mãnh tướng': ['Lúc xung trận chiến mã bị dây vấp ngựa làm vấp ngã, trọng giáp đè lên người không thể đứng dậy, trường mâu đã đâm tới.'],
+            'Ngoại tính hãn tướng': ['Vì xuất thân thấp hèn bị tướng lĩnh tông thất bài xích, bị sắp xếp đoạn hậu ở tử địa nguy hiểm nhất không có viện quân.'],
+            'Lương Châu hãn tướng': ['Chủ soái trúng phản gián kế tàn sát lẫn nhau, ngươi kẹt giữa hai phe tàn sát trong quân doanh không biết vung đao về phía ai.'],
+            'Hà Bắc hãn tướng': ['Trọng giáp bộ binh bị khinh kỵ binh thả diều kéo sập hoàn toàn, ngươi ngay cả góc áo của kẻ địch cũng không chạm tới được.'],
+            'Tông tộc đại tướng': ['Chủ công bại lui mất tích, ngươi bắt buộc phải dẫn tàn binh chống đỡ mấy vạn truy binh, nếu chủ công bỏ mạng ngươi sẽ bị ban chết.'],
+            'Ngoại lai khách tướng': ['Ăn nhờ ở đậu bị phái bản thổ bài xích, lúc chiến bại ngươi bị trói lại làm dê thế tội để bình tức oán hận trong quân.'],
+            'Ngũ hổ thượng tướng': ['Công cao chấn chủ chuốc lấy sự ghen ghét của các bên, ngươi ở tiền tuyến huyết chiến, hậu phương lại cắt đứt lương thảo viện quân.'],
+            'Bát kiện tướng': ['Chủ công đắm chìm tửu sắc không nghe lời can gián, thành trì bị ngập, chiến mã của ngươi ngâm trong nước không thể xung phong.'],
+            'Hoài Nam thượng tướng': ['Chủ công tiếm việt dẫn đến bốn bề thọ địch đại quân không có đấu chí, vấp phải đợt xung phong đầu tiên liền tháo chạy toàn tuyến.'],
+            'Hoài Tứ cựu tướng': ['Cùng với sự trỗi dậy của sĩ tộc bản thổ ngươi bị gạt ra rìa, một trận thua nhỏ liền bị thêu dệt tội lớn tống vào tử lao.'],
+            'Cảm tử duệ sĩ': ['Thân là tử sĩ lấp chiến hào đợt đầu tiên, phía sau là đồ đao của đội đốc chiến, phía trước là gỗ lăn nước sôi đổ xuống.'],
+            'Trung quân duệ sĩ': ['Tiến sâu vào vùng bụng nước địch vấp phải phục kích, đường vận lương bị đứt, ngươi mỗi ngày dựa vào gặm nhấm vỏ cây và xương ngựa chết để duy trì đứng vững.'],
+            'Túc vệ cấm quân': ['Quyền thần dẫn binh ép cung, ngươi kiên thủ cung môn, đồng liêu lại lén mở cửa ngách, giáp sĩ phản loạn tràn vào đại điện.'],
+            'Tinh nhuệ nha binh': ['Chủ soái tử trận quân địch hô to giết sạch thân vệ, ngươi bị mấy chục tên lính địch đỏ mắt bao vây gắt gao.'],
+            'Giang Đông bộ khúc': ['Theo chủ tướng tiến sâu vào cảnh địch vấp phải phục kích, chủ tướng bỏ trốn, các ngươi bị vứt bỏ trong thung lũng đối mặt với đuốc sáng đầy núi.'],
+            'Trung quân tinh kỵ': ['Đường dài bôn tập ngựa sụt cân, chủ tướng hạ lệnh chém giết kỵ binh mất ngựa để tiết kiệm lương thực, móng ngựa của ngươi vừa vặn lở loét.'],
+            'Hổ Báo Kỵ': ['Truy kích sa vào đầm lầy, chiến mã không thể tự rút chân ra, hai bên vách núi xuất hiện mấy ngàn cường nỗ tinh nhuệ xem như bia ngắm sống.'],
+            'Bạch Mã Nghĩa Tòng': ['Khinh kỵ binh xung phong đâm sầm vào trận khiên kiên cố, cường nỗ như châu chấu bay, trảm mã kiếm đang bổ về phía đầu ngươi.'],
+            'Hãm Trận Doanh': ['Thành phá cự tuyệt đầu hàng, quân địch dùng xe khiên hạng nặng ép chặt các ngươi trong thành phụ chật hẹp, trường mâu điên cuồng đâm tới.'],
+            'Phi Hùng quân sĩ': ['Chủ công bỏ mạng thiên hạ cùng thảo phạt, nhánh trọng kỵ tinh nhuệ nhất này của các ngươi trở thành mục tiêu tiêu diệt hàng đầu của các lộ chư hầu.'],
+            'Tịnh Châu lang kỵ': ['Chủ tướng binh bại bị bắt, các ngươi chạy trốn tán loạn trên bình nguyên, bị trọng trang cung nỗ thủ của quân địch bắn chết hàng loạt.'],
+            'Liêu Đông thiết kỵ': ['Mưa bão liên miên đất bằng ngập nước chiến mã bệnh chết hàng loạt, trong bùn lầy trở thành bia ngắm sống của bộ binh quân địch.'],
+            'Tây Lương thiết kỵ': ['Trời đông giá rét lạc đường cạn lương, ban đêm đồng đội vì tranh giành áo da chống rét mà rút đao chém giết lẫn nhau.'],
+            'U Châu đột kỵ': ['Cô lập không viện binh bị vây mấy tháng cạn lương, chủ tướng đã hạ lệnh sát hại nữ quyến đi theo quân sung làm quân lương.'],
+            'Khương Hồ nghĩa tòng': ['Quân phiệt người Hán ăn bớt tiền thưởng, thủ lĩnh bộ lạc chuẩn bị ban đêm làm phản, ngươi không biết nên tạo phản hay là đi cáo mật.'],
+            'Thanh Châu binh': ['Chủ soái vừa chết chuẩn bị làm phản về quê, lại bị trung quân tinh nhuệ bao vây trùng trùng, cuộc trấn áp đẫm máu sắp sửa bắt đầu.'],
+            'Bạch Nhĩ Binh': ['Vì yểm trợ đại quân rút lui bị bỏ lại trên bình nguyên, gồng mình chống đỡ kỵ binh quân địch liên tục xung phong.'],
+            'Đông Châu binh': ['Bị thế lực bản thổ cực độ thù hằn, lương thảo cạn kiệt, xung quanh quân doanh toàn là tư binh địa phương tràn ngập địch ý.'],
+            'Kinh Châu nguyên tòng': ['Quanh năm chinh chiến bên ngoài tổn thất nặng nề, lại bị sĩ tộc bản thổ ngấm ngầm bài xích ngáng chân, lương thảo phát xuống bị trộn đầy cát đất.'],
+            'Triều đình hàng thần': ['Bức bách bởi dâm uy mà đầu hàng, chủ mới cực kỳ nghi kỵ, một lần lỡ lời không quan trọng khiến ngươi bị tống vào tử lao.'],
+            'Trọng Gia ngụy thần': ['Đi theo Viên Thuật xưng đế thất bại, ngươi trở thành kẻ phản nghịch bị thiên hạ cùng đánh, bách tính dọc đường ném đá vào ngươi.'],
+            'Phổ thông sĩ tốt': ['Bị sắp xếp vào hàng ngũ tử sĩ đợt đầu tiên, lùi bước bị chém đầu, tiến lên bị nước sôi luộc thành đống thịt nhão.'],
+            'Trung quân bộ tốt': ['Bị trọng giáp kỵ binh tập kích bất ngờ phương trận chớp mắt bị xé toạc, thiết kỵ của chiến mã đang giẫm về phía ngực ngươi.'],
+            'Tùy quân lão tốt': ['Trên đường đông chinh nhiễm bệnh thủy thổ không phục nghiêm trọng, bị vứt bỏ trong núi sâu chờ chết, sói hoang đã lảng vảng gần đó.'],
+            'Man tộc lính đánh thuê': ['Tướng lĩnh người Hán ăn bớt tiền thưởng của các ngươi, sau khi Sa Ma Kha tử trận các ngươi ở trong khu rừng xa lạ bị quân Ngô săn lùng.'],
+            'Tây Lương bộ tốt': ['Không có kỵ binh yểm trợ, trên bình nguyên bị cường nỗ áp chế không ngóc đầu lên nổi, thương vong thảm trọng.'],
+            'Hà Bắc bộ tốt': ['Chủ tướng tử trận toàn quân tan rã, ngươi vì cướp một miếng lương khô bị đồng đội đâm thủng bụng.'],
+            'Hoài Nam bộ tốt': ['Chủ công tiếm việt dẫn đến bốn bề thọ địch đại quân không có đấu chí, vấp phải đợt xung phong đầu tiên liền tháo chạy toàn tuyến.'],
+            'Tấn quân sĩ tốt': ['Lúc đóng quân ở vùng biên hoang hoặc theo quân viễn chinh gặp phải tình trạng nước hiểm ác, khoang đáy chiến thuyền bị nước sông đổ đầy, cả con thuyền sắp sửa chìm nghỉm.'],
+            'Quan Lũng quận binh': ['Quanh năm chinh chiến mười nhà chín trống, kéo theo thân thể bệnh tật bị cưỡng ép trưng dụng còn phải tự mang theo lương khô đi nộp mạng.'],
+            'Bắc quân tướng sĩ': ['Trung ương quân bị cưỡng ép tháo dỡ nuốt chửng, kẻ phản kháng bị chém đầu trước mặt mọi người, bị ép biên chế vào doanh trướng kẻ thù.'],
+            'Nguyên tòng lão tốt': ['Thương bệnh quấn thân bị đại quân vứt bỏ nơi hoang dã, không lương không thuốc, sói hoang đang chằm chằm nhìn vết thương chảy máu của ngươi.'],
+            'Nghĩa dũng hương binh': ['Lực lượng vũ trang tự phát bị quân chính quy xem như bia đỡ đạn, một đợt xung phong liền khiến hương thân chết thương hơn phân nửa.'],
+            'Triều đình chính quy quân': ['Quân lương bị tham ô từng tầng, mặc giáp da rách nát đi trấn áp phản quân trang bị tinh lương chẳng khác nào nộp mạng.'],
+            'Giang Đông thủy sư': ['Quân địch phóng hỏa đốt thuyền mặt sông hóa thành biển lửa, nhảy xuống sông bị chết đuối, ở lại thuyền bị thiêu thành than đen.'],
+            'Địa phương thủy quân': ['Trang bị cũ kỹ thiếu hụt huấn luyện, đối mặt với sự va chạm của lâu thuyền chính quy, thuyền nhỏ vỡ vụn như giấy dán.'],
+            'Lâu thuyền thủy sư': ['Xuôi dòng mà xuống vấp phải hỏa thuyền tử sĩ đâm sầm vào, vật dẫn lửa đốt cháy vị trí chiến đấu không chốn dung thân.'],
+            'Trường Giang thủy doanh': ['Nước sông dâng cao cuốn trôi doanh trại, hạm đội quân địch mò mẫm trong đêm tập kích bất ngờ, vẫn còn trong giấc mộng đã bị chém đầu.'],
+            'Cẩm phàm tặc': ['Cướp đoạt thuyền lớn chở quân lương trúng kế, mặt sông bốn phía nổi lên bè lửa, phong tỏa thuyền nhỏ giữa lòng sông.'],
+            'Đồn điền khách': ['Đại hạn hạt lúa không thu hoạch được, giao không ra quân lương sẽ bị chém đầu, thê nhi sẽ bị sung vào quân doanh làm doanh kỹ.'],
+            'Đồn điền thanh tráng': ['Ngay cả giáp da cũng không có bị cưỡng ép gác đêm, máy bắn đá ném xuống cự thạch đập đồng hương thành đống thịt nhão.'],
+            'Lưu dân': ['Chạy nạn ba tháng gặm sạch vỏ cây, cửa ải phía trước bắn chết lưu dân phòng ngừa dịch bệnh, truy binh phía sau trường mâu đã đến.'],
+            'Lưu dân vô tịch': ['Không có hộ tịch không thể vào thành, hào cường địa phương thả chó giống như dã thú bắt các ngươi đi mỏ quặng làm khổ sai.'],
+            'Quan Hệ': ['Đời đời tòng quân không được thoát tịch, phụ huynh đều chiến tử sa trường, ngươi chưa đến tuổi nhược quán lại bị cưỡng ép đưa ra tiền tuyến.'],
+            'Bạch Đinh': ['Quân đội cưỡng ép bắt tráng đinh, ngươi bị xích sắt trói chặt đi gấp trong đêm, tụt lại phía sau sẽ bị đội đốc chiến chém đầu.'],
+            'Bố y': ['Loạn quân vào thành cướp bóc, ngươi bị xem như bia thịt cho hai phe tranh đoạt kẹt ở giữa, đao kiếm vô tình.'],
+            'Bình Dân': ['Quan phủ cưỡng ép bổ đồng thuế má, ngươi bán con đứt ruột vẫn gom không đủ số, nha dịch đang chuẩn bị dỡ xà nhà của ngươi.'],
+            'Tứ thế tam công': ['Kẻ thù chính trị dâng lên quân phiệt nắm quyền bức thư mưu phản ngụy tạo, ba ngàn giáp sĩ ngoài thành đã phong tỏa triệt để trang viên nhà ngươi.'],
+            'Thanh lưu danh sĩ': ['Ngươi vì cự tuyệt tiếp nhận quyền thần trưng gọi và viết văn mắng mỏ xuất thân của hắn, thích khách của Hiệu Sự Phủ đã lẻn vào nơi ẩn náu của ngươi.'],
+            'Địa phương danh sĩ': ['Thứ sử mới đến của địa phương vì muốn lập uy, cưỡng ép vu oan tội danh tống bạn vào ngục, đình úy đang chuẩn bị dùng trọng hình với bạn.'],
+            'Hàn môn thứ tộc': ['Ngươi vất vả lắm mới dựa vào quân công mưu cầu được một chức quan nhỏ, lại bị thế gia tử đệ liên danh hặc tội, sắp sửa bị tước đoạt quan chức đày đi sung quân.'],
+            'Bản thổ vọng tộc': ['Quân phiệt ngoại lai cưỡng ép thanh tra ruộng đất hộ khẩu che giấu, binh khí nhà ngươi cất giấu bị lục soát ra, họa diệt môn ngay trước mắt.'],
+            'Địa phương hào cường': ['Chiến loạn liên miên dẫn đến quân phiệt cạn kiệt lương thảo, bọn họ đánh lấy danh nghĩa "mượn lương", thực chất chuẩn bị dẫn binh tắm máu ổ bảo của ngươi.'],
+            'Tông tộc trưởng giả': ['Tử đệ trẻ tuổi trong tộc mạo phạm gia quyến của quân phiệt đi ngang qua, chủ tướng đối phương bạo nộ, yêu cầu giao ra toàn bộ thanh tráng trong tộc sung làm tử sĩ tiền tuyến.'],
+            'Thế gia tử đệ': ['Gia tộc trong cuộc đấu tranh chính trị tàn khốc đứng sai phe bị nhổ tận gốc, ngươi mang theo ngọc tỷ và các tín vật khác đang trốn tránh sự truy sát trong bùn lầy.'],
+            'Ổ bảo bảo chủ': ['Bốn bề bị loạn quân Hoàng Cân đói đỏ mắt bao vây trùng trùng, giếng nước trong ổ bảo khô cạn, gia đinh đã bắt đầu xì xào bàn tán chuẩn bị dâng thủ cấp của ngươi để cầu sinh.']
+        }
+    }
+};
+
+function getClassCrises(year, faction, className) {
+    const mode = userData.mode;
+    let crises = [];
+
+    let classCrises = [];
+    if (mode === 'Chính Sử' && crisisData.classSpecific['Chính Sử']) {
+        for (let key in crisisData.classSpecific['Chính Sử']) {
+            if (className.includes(key)) {
+                classCrises = classCrises.concat(crisisData.classSpecific['Chính Sử'][key]);
+                break;
+            }
+        }
+    }
+
+    let factionCrises = [];
+    const modeData = crisisData.specific[mode];
+    if (modeData && modeData[year]) {
+        for (let key in modeData[year]) {
+            if (faction.includes(key) || key.includes(faction) ||
+                (faction.includes('Lưu Bị') && key.includes('Thục')) ||
+                (faction.includes('Tào') && key.includes('Ngụy')) ||
+                (faction.includes('Tôn') && key.includes('Ngô'))) {
+                factionCrises = factionCrises.concat(modeData[year][key]);
+            }
+        }
+    }
+
+    const isLow = isLowClass(className);
+    if (!isLow) {
+        factionCrises = factionCrises.filter(c =>
+            !c.includes('Vệ sĩ') && !c.includes('Sĩ tốt') && !c.includes('Binh') && !c.includes('Tiểu tốt') && !c.includes('Thôi trước')
+        );
+    }
+
+    crises = classCrises.concat(factionCrises);
+
+    if (crises.length === 0) {
+        if (mode === 'Chính Sử') {
+            if (className.includes('Lưu dân') || className.includes('Bình dân') || className.includes('Bố y') || className.includes('Bạch đinh') || className.includes('Hàn môn')) {
+                crises.push('Trong thôn đại hạn xuất hiện cảnh đổi con cho nhau ăn thịt, đội đốc thúc lương thực của đốc nông quan đang lục soát từng nhà lấy đi hạt lúa cuối cùng.');
+            }
+            else if (className.includes('Thủ lĩnh') || className.includes('Chủ soái') || className.includes('Minh chủ') || className.includes('Đô đốc') || className.includes('Quân') || className.includes('Quân phiệt')) {
+                crises.push('Hai tên thống binh đại tướng cốt lõi vì tranh đoạt binh quyền ngấm ngầm hạ độc lẫn nhau, đại quân cường địch đang tập kết hướng về biên giới.');
+            }
+            else if (className.includes('Thần') || className.includes('Danh sĩ') || className.includes('Thế tộc') || className.includes('Đại tộc') || className.includes('Công khanh') || className.includes('Tông thân')) {
+                crises.push('Kẻ thù chính trị ngụy tạo thư từ thông đồng với địch mưu phản của các ngươi, giáp sĩ của Đình Úy phủ đã bao vây phủ đệ của ngươi.');
+            }
+            else if (className.includes('Hoạn quan') || className.includes('Ngoại thích') || className.includes('Thường thị') || className.includes('Hoàng môn')) {
+                crises.push('Triều đình chính biến, mật chiếu thanh trừng loạn đảng ban xuống, chín cửa thành phong tỏa ngươi ngay cả cơ hội ra khỏi thành chạy trốn cũng không có.');
+            }
+            else if (className.includes('Tốt') || className.includes('Quân') || className.includes('Kỵ') || className.includes('Tướng') || className.includes('Binh')) {
+                crises.push('Trong doanh bùng phát bệnh thương hàn nghiêm trọng, ngươi phụ trách chôn cất đồng đội, phát hiện trong đó vẫn còn người sống bị ném xuống hố.');
+            }
+            else {
+                crises.push('Ngươi phát hiện thượng quan nhận hối lộ của nước địch, hắn ngấm ngầm giam giữ vật tư bảo mệnh của ngươi chuẩn bị để ngươi chết ở nơi hoang dã.');
+            }
+        } else {
+            crises.push('Ngươi đối mặt với quần hùng rình rập, lương thảo đại quân sắp sửa cạn kiệt, nội bộ lòng người dao động.');
+        }
+    }
+
+    crises = [...new Set(crises)].slice(0, 4);
+    return crises.map(c => ({ name: c, desc:'' }));
+}
+
+// ==================== Trạng thái dữ liệu ====================
+let userData = {
+    route: '',
+    mode: '',
+    name: '',
+    zi: '',
+    age: '',
+    situation: null,
+    faction: '',
+    customFactionName: '',
+    position: '',
+    classLevel: '',
+    region: '',
+    customRegion: '',
+    force: { name: '', power: '', subordinates: '' },
+    assets: { name: '', income: 0, expense: 0, food: 0, gold: 0 },
+    attributes: {},
+    selectedTraits: [],
+    customTrait: '',
+    reputation: '',
+    crisis: '',
+    joyEntertain: '',
+    joyCategory: '',
+    joyPlay: ''
+};
+
+let currentPage = '0';
+const totalPages = 10;
+
+function goToPage(n) {
+    document.querySelectorAll('#app.sango-wrapper .page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + n)?.classList.add('active');
+    currentPage = String(n);
+    updateStepIndicator();
+}
+
+function updateStepIndicator() {
+    const ind = document.getElementById('step-indicator');
+    if (!ind) return;
+    ind.innerHTML = '';
+    if (currentPage === '0') {
+        ind.style.display = 'none';
+        return;
+    }
+    ind.style.display = 'flex';
+
+    let isJoy = typeof currentPage === 'string' && currentPage.includes('joy');
+    let isLord = typeof currentPage === 'string' && currentPage.includes('lord');
+    let currentIdx = 0;
+    let total = isJoy ? 5 : totalPages - 1;
+
+    if (isJoy) {
+        if (currentPage === 'joy-1') currentIdx = 1;
+        else if (currentPage === 'joy-2') currentIdx = 2;
+        else if (currentPage === 'joy-3') currentIdx = 3;
+        else if (currentPage === 'joy-4' || currentPage === 'joy-5') currentIdx = 4;
+        else if (currentPage === 'joy-summary') currentIdx = 5;
+    } else if (isLord) {
+        if (currentPage === 'lord-1') currentIdx = 2;
+        else if (currentPage === 'lord-2') currentIdx = 3;
+    } else {
+        currentIdx = parseInt(currentPage);
+    }
+
+    for (let i = 1; i <= total; i++) {
+        const d = document.createElement('div');
+        d.className = 'step-dot';
+        if (i === currentIdx || (currentPage === '9' && i === total)) d.classList.add('active');
+        if (i < currentIdx || (currentPage === '9' && i < total)) d.classList.add('done');
+        ind.appendChild(d);
+    }
+}
+
+function selectCard(el, group, isMultiSelect = false) {
+    if (el.classList.contains('disabled')) return;
+    if (isMultiSelect) {
+        el.classList.toggle('selected');
+    } else {
+        document.querySelectorAll(`#${group} .card, #${group} .sub-card, #${group} .crisis-card`).forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+    }
+}
+
+function renderCards(containerId, data, group, onSelect, isMultiSelect = false, cardClass = 'card') {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    data.forEach(item => {
+        const card = document.createElement('div');
+        card.className = cardClass;
+        card.innerHTML = `<div class="card-title">${item.title || item.name}</div><div class="card-desc">${item.desc || item.effects || ''}</div>`;
+        if (item.disabled) card.classList.add('disabled');
+        card.onclick = () => {
+            if (card.classList.contains('disabled')) return;
+            selectCard(card, containerId, isMultiSelect);
+            onSelect(item);
+        };
+        container.appendChild(card);
+    });
+}
+
+function setupOriginPage() {
+    const routes = [
+        { name: 'Tự Tạo Nhân Vật', desc:'Tay trắng dựng nghiệp, viết nên truyền kỳ của bạn trong thời loạn thế này.' },
+        { name: 'Diễn Dịch Chủ Công', desc:'Hóa thân thành quần hùng cuối Hán, thống lĩnh thiên quân vạn mã tranh bá thiên hạ.' },
+        { name: 'Túng Tình Hoan Lạc', desc:'Không màng đại thế thiên hạ, chỉ mong nay say nằm gối mỹ nhân.' }
+    ];
+    renderCards('route-choice-cards', routes, 'route-choice-cards', item => {
+        userData.route = item.name;
+
+        if (item.name === 'Túng Tình Hoan Lạc') {
+            userData.mode = 'Túng Tình Hoan Lạc';
+            document.getElementById('mode-choice-cards').style.display = 'none';
+            document.getElementById('origin-details-custom').style.display = 'flex';
+        } else {
+            document.getElementById('mode-choice-cards').style.display = 'grid';
+            document.getElementById('origin-details-custom').style.display = item.name === 'Tự Tạo Nhân Vật' ? 'flex' : 'none';
+
+            const modes = [
+                { name: 'Chính Sử', desc:'Dựa theo "Tam Quốc Chí", loại bỏ các yếu tố thần dị và tu sức của Diễn nghĩa.' },
+                { name: 'Diễn Nghĩa', desc:'Dựa trên "Tam Quốc Diễn Nghĩa", trải nghiệm truyền kỳ và sự lãng mạn của anh hùng.' }
+            ];
+            renderCards('mode-choice-cards', modes, 'mode-choice-cards', m => {
+                userData.mode = m.name;
+            });
+        }
+    });
+}
+
+function saveOrigin() {
+    if (!userData.route) { alert('Vui lòng chọn tuyến đường vui chơi'); return; }
+
+    // Hạn chế nghiêm ngặt giá trị của chế độ
+    if (userData.route !== 'Túng Tình Hoan Lạc' && userData.mode !== 'Chính Sử' && userData.mode !== 'Diễn Nghĩa') {
+        alert('Vui lòng chọn chế độ Chính sử hoặc Diễn nghĩa');
+        return;
+    }
+
+    if (userData.route === 'Túng Tình Hoan Lạc') {
+        userData.name = document.getElementById('input-name').value.trim();
+        userData.zi = document.getElementById('input-zi').value.trim();
+        userData.age = document.getElementById('input-age').value.trim();
+        if (!userData.name) { alert('Vui lòng nhập họ tên'); return; }
+        setupJoyClassPage();
+        goToPage('joy-1');
+        return;
+    }
+
+    if (userData.route === 'Tự Tạo Nhân Vật') {
+        userData.name = document.getElementById('input-name').value.trim();
+        userData.zi = document.getElementById('input-zi').value.trim();
+        userData.age = document.getElementById('input-age').value.trim();
+        if (!userData.name) { alert('Vui lòng nhập họ tên'); return; }
+        setupSituationPage();
+        goToPage('2');
+    } else if (userData.route === 'Diễn Dịch Chủ Công') {
+        setupLordPage();
+        goToPage('lord-1');
+    }
+}
+
+// ----------------- Logic riêng cho diễn dịch chủ công -----------------
+function setupLordPage() {
+    const container = document.getElementById('lord-cards');
+    container.innerHTML = '';
+    const lords = Object.keys(lordData).map(k => ({ name: k, desc:lordData[k].zi ? 'Tự' + lordData[k].zi : 'Một đời kiêu hùng' }));
+    renderCards('lord-cards', lords, 'lord-cards', item => {
+        userData.name = item.name;
+        userData.zi = lordData[item.name].zi;
+    });
+}
+
+function saveLord() {
+    if (!userData.name || !lordData[userData.name]) { alert('Vui lòng chọn chủ công bạn muốn đóng vai'); return; }
+    setupLordSituationPage();
+    goToPage('lord-2');
+}
+
+function setupLordSituationPage() {
+    const container = document.getElementById('lord-situation-cards');
+    container.innerHTML = '';
+    const validYears = lordData[userData.name].scripts[userData.mode] || [];
+
+    // Sửa thành: Nối năm và tiêu đề lại rồi mới ghép
+    const situations = scriptData[userData.mode].filter(s => validYears.includes(s.year + s.title));
+
+    if(situations.length === 0) {
+        container.innerHTML = `<p style="color:var(--text-muted); font-size:var(--fs-base); text-align:center; width:100%;"> Chủ công này tạm thời không có kịch bản hoạt động trong chế độ này.</p>`;
+    } else {
+        situations.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.textAlign = 'left';
+            card.innerHTML = `
+                <div class="card-title" style="text-align:center;">${s.year} - ${s.title}</div>
+                <div class="card-desc" style="text-align:center;">${s.desc}</div>
+            `;
+            card.onclick = () => {
+                selectCard(card, 'lord-situation-cards');
+                userData.situation = s;
+            };
+            container.appendChild(card);
+        });
+    }
+}
+
+function saveLordSituation() {
+    if (!userData.situation) { alert('Vui lòng chọn kịch bản thời đại'); return; }
+
+    const scriptName = userData.situation.year + userData.situation.title;
+    const details = lordData[userData.name].getDetails(scriptName, userData.mode);
+
+    if (!details || Object.keys(details).length === 0) {
+        alert('Xin lỗi, dữ liệu chi tiết của kịch bản này đã bị mất, vui lòng chọn lại~');
+        return;
+    }
+
+        /* ===== faction / force Xử lý loại trừ lẫn nhau ===== */
+    if (details.force) {
+        /* Có force Trường = Lúc này chủ công là một phương chi chủ */
+        userData.faction = '自立山头';
+        userData.customFactionName = details.force;
+        userData.force = {
+            name: details.force,
+            power: details.power || '',
+            subordinates: details.subordinates || ''
+        };
+    } else if (details.faction) {
+        /* Có faction Trường = Lúc này nương tựa người khác */
+        userData.faction = details.faction;
+        userData.customFactionName = details.faction;
+        userData.force = {
+            name: '',
+            power: details.power || '',
+            subordinates: details.subordinates || ''
+        };
+    }
+
+    /* ===== classLevel Đọc từ dữ liệu thay vì viết cứng ===== */
+    userData.classLevel = details.classLevel || 'Chưa Rõ';
+    userData.position = details.position || 'Không Có';
+    userData.region = 'Tùy Chỉnh Khu Vực';
+    userData.customRegion = details.region || 'Chưa Rõ';
+    userData.age = details.age ? String(details.age) : 'Chưa định';
+
+    /* ===== Chỉ điền tử tự vào khung thông tin gia tộc bên dưới, còn lại để trống ===== */
+    document.getElementById('input-family-info').value = details.children ? ('Tử Tự:' + details.children) : 'Tử tự: Không có';
+    document.getElementById('input-relations').value = '';
+    document.getElementById('input-faction-dynamic').value = '';
+    document.getElementById('input-custom').value = '';
+
+    userData.reputation = details.reputation || 'Lý Lư Xưng Thiện';
+    userData.crisis = details.crisis || 'Tạm Không';
+    userData.attributes = details.attributes || {};
+    userData.selectedTraits = details.selectedTraits || [];
+
+    if (details.assets) {
+        userData.assets = {
+            name: details.assets.name || 'Không Có',
+            income: details.assets.income || 0,
+            expense: details.assets.expense || 0,
+            food: details.assets.food || 0,
+            gold: details.assets.gold || 0
+        };
+    } else {
+        userData.assets = getHistoryAssets(userData.classLevel);
+    }
+
+    displaySummary();
+    goToPage('9');
+}
+
+function goBackFromSummary() {
+    if (userData.route === 'Diễn Dịch Chủ Công') {
+        goToPage('lord-2');
+    } else {
+        if (userData.customSubordinate) {
+            goToPage('sub-detail');
+        } else {
+            goToPage('sub-choice');
+        }
+    }
+}
+// ---------------------------------------------------
+
+function setupSituationPage() {
+    const container = document.getElementById('situation-cards');
+    const guide = document.getElementById('situation-guide');
+    container.innerHTML = '';
+    guide.innerHTML = `Bạn đã chọn <strong>${userData.mode}</strong> Tuyến đường.<br> Đại thế thiên hạ, cuồn cuộn sóng trào. Vui lòng chọn mốc thời đại bạn muốn giáng lâm.`;
+
+    const situations = scriptData[userData.mode];
+    situations.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.textAlign = 'left';
+        card.innerHTML = `
+            <div class="card-title" style="text-align:center;">${s.year} - ${s.title}</div>
+            <div class="card-desc" style="text-align:center;">${s.desc}</div>
+        `;
+        card.onclick = () => {
+            selectCard(card, 'situation-cards');
+            userData.situation = s;
+        };
+        container.appendChild(card);
+    });
+}
+
+function saveSituation() {
+    if (!userData.situation) { alert('Vui lòng chọn mốc đại thế thời đại'); return; }
+    setupFactionPage();
+    goToPage('3');
+}
+
+function setupFactionPage() {
+    const container = document.getElementById('faction-cards');
+    container.innerHTML = '';
+    document.getElementById('custom-faction-container').style.display = 'none';
+
+    let factionsList = userData.situation.factions || [];
+    const factionsData = factionsList.map(f => ({ name: f, desc:'' }));
+
+    factionsData.push({ name: 'Bổ Sung Thêm Phe Phái', desc:'Tự nhập thế lực thiên hạ khác' });
+    factionsData.push({ name: 'Tự Lập Sơn Đầu', desc:'Không nương tựa người khác, tự mình xây dựng cơ đồ' });
+
+    renderCards('faction-cards', factionsData, 'faction-cards', item => {
+        userData.faction = item.name;
+        if (item.name === 'Bổ Sung Thêm Phe Phái') {
+            document.getElementById('custom-faction-container').style.display = 'flex';
+        } else {
+            document.getElementById('custom-faction-container').style.display = 'none';
+        }
+    });
+}
+
+function saveFaction() {
+    if (!userData.faction) {
+        alert('Vui lòng chọn phe phái trực thuộc');
+        return;
+    }
+
+    if (userData.faction === 'Bổ Sung Thêm Phe Phái') {
+        const customName = document.getElementById('input-custom-faction').value.trim();
+        if (!customName) {
+            alert('Vui lòng nhập tên phe phái tùy chỉnh');
+            return;
+        }
+        userData.customFactionName = customName;
+    } else {
+        userData.customFactionName = userData.faction;
+    }
+
+    const romanceContainer = document.getElementById('romance-position-container');
+    const historyContainer = document.getElementById('history-position-container');
+    const indepContainer = document.getElementById('independent-force-container');
+    const p4Title = document.getElementById('page-4-title');
+    const p4Guide = document.getElementById('page-4-guide');
+
+    document.getElementById('input-romance-position').value = '';
+    document.getElementById('input-romance-class').value = '';
+    document.getElementById('input-history-position').value = '';
+    document.getElementById('input-custom-class').value = '';
+    document.getElementById('force-name').value = '';
+    document.getElementById('force-power').value = '';
+    document.getElementById('force-subordinates').value = '';
+    userData.classLevel = '';
+
+    if (userData.faction === 'Tự Lập Sơn Đầu') {
+        romanceContainer.style.display = 'none';
+        historyContainer.style.display = 'none';
+        indepContainer.style.display = 'flex';
+        p4Title.innerText = 'Thế lực nắm giữ';
+        p4Guide.innerText = 'Đơn thương độc mã, hay thống soái bộ chúng? Lực lượng của bạn sẽ được tổ chức thế nào?';
+    } else {
+        indepContainer.style.display = 'none';
+        p4Title.innerText = 'Thân phận và giai cấp';
+        p4Guide.innerText = 'Vương hầu khanh tướng, há cứ phải con dòng cháu giống? Vui lòng xác định xuất thân gia thế trước, rồi mới định quan chức cao thấp.';
+
+        if (userData.mode === 'Diễn Nghĩa') {
+            romanceContainer.style.display = 'flex';
+            historyContainer.style.display = 'none';
+        } else {
+            romanceContainer.style.display = 'none';
+            historyContainer.style.display = 'flex';
+
+            const dynamicClassOptions = getClassOptionsByFaction(userData.customFactionName);
+            dynamicClassOptions.push({ name: 'Bổ Sung Giai Cấp', desc:'Không thuộc các loại trên, tự thiết lập xuất thân' });
+
+            renderCards('class-cards', dynamicClassOptions, 'class-cards', item => {
+                userData.classLevel = item.name;
+                if (item.name === 'Bổ Sung Giai Cấp') {
+                    document.getElementById('custom-class-container').style.display = 'flex';
+                } else {
+                    document.getElementById('custom-class-container').style.display = 'none';
+                }
+            });
+        }
+    }
+
+    goToPage('4');
+}
+
+function saveClass() {
+    if (userData.faction === 'Tự Lập Sơn Đầu') {
+        if (!userData.force) userData.force = {};
+        userData.force.name = document.getElementById('force-name').value.trim();
+        userData.force.power = document.getElementById('force-power').value.trim();
+        userData.force.subordinates = document.getElementById('force-subordinates').value.trim();
+
+        if (!userData.force.name) {
+            alert('Vui lòng điền tên thế lực');
+            return;
+        }
+        userData.position = 'Chủ công';
+        userData.classLevel = 'Quân phiệt cát cứ';
+        userData.assets = getHistoryAssets('Quân phiệt cát cứ');
+    } else {
+        if (userData.mode === 'Diễn Nghĩa') {
+            userData.position = document.getElementById('input-romance-position').value.trim();
+            userData.classLevel = document.getElementById('input-romance-class').value.trim();
+
+            if (!userData.position || !userData.classLevel) {
+                alert('Vui lòng điền chức vụ và giai cấp');
+                return;
+            }
+
+            userData.assets = {
+                name: document.getElementById('input-romance-asset-name').value.trim() || 'Kinh doanh bình thường',
+                income: parseInt(document.getElementById('input-romance-asset-income').value) || 0,
+                expense: parseInt(document.getElementById('input-romance-asset-expense').value) || 0,
+                food: parseInt(document.getElementById('input-romance-asset-food').value) || 0,
+                gold: parseInt(document.getElementById('input-romance-asset-gold').value) || 0
+            };
+
+        } else {
+            userData.position = document.getElementById('input-history-position').value.trim();
+
+            if (!userData.classLevel) {
+                alert('Vui lòng chọn giai cấp xuất thân');
+                return;
+            }
+
+            if (userData.classLevel === 'Bổ Sung Giai Cấp') {
+                const customClass = document.getElementById('input-custom-class').value.trim();
+                if (!customClass) {
+                    alert('Vui lòng nhập giai cấp tùy chỉnh');
+                    return;
+                }
+                userData.classLevel = customClass;
+            }
+
+            const customAssetName = document.getElementById('input-history-asset-name').value.trim();
+            if (customAssetName) {
+                userData.assets = {
+                    name: customAssetName,
+                    income: parseInt(document.getElementById('input-history-asset-income').value) || 0,
+                    expense: parseInt(document.getElementById('input-history-asset-expense').value) || 0,
+                    food: parseInt(document.getElementById('input-history-asset-food').value) || 0,
+                    gold: parseInt(document.getElementById('input-history-asset-gold').value) || 0
+                };
+            } else {
+                userData.assets = getHistoryAssets(userData.classLevel);
+            }
+        }
+    }
+
+    // Sửa lỗi: Đảm bảo assets Cấu trúc hoàn chỉnh, tránh lỗi khi vào trang 9 đọc undefined Báo lỗi
+    if (!userData.assets) {
+        userData.assets = { name: 'Không Có', income: 0, expense: 0, food: 0, gold: 0 };
+    } else {
+        userData.assets.name = userData.assets.name || 'Không Có';
+        userData.assets.income = userData.assets.income || 0;
+        userData.assets.expense = userData.assets.expense || 0;
+        userData.assets.food = userData.assets.food || 0;
+        userData.assets.gold = userData.assets.gold || 0;
+    }
+
+    setupRegionPage();
+    goToPage('5');
+}
+
+function setupRegionPage() {
+    const container = document.getElementById('region-cards');
+    container.innerHTML = '';
+    userData.region = '';
+    document.getElementById('custom-region-container').style.display = 'none';
+    document.getElementById('input-custom-region').value = '';
+
+    const regions = getRegions(userData.customFactionName, userData.mode, userData.situation.year, userData.classLevel);
+
+    regions.push({ name: 'Tùy Chỉnh Khu Vực', desc:'Nhập thành trì hoặc quan ải cụ thể bạn muốn giáng lâm' });
+
+    renderCards('region-cards', regions, 'region-cards', item => {
+        userData.region = item.name;
+        if (item.name === 'Tùy Chỉnh Khu Vực') {
+            document.getElementById('custom-region-container').style.display = 'flex';
+        } else {
+            document.getElementById('custom-region-container').style.display = 'none';
+        }
+    });
+
+    const firstCard = container.querySelector('.card:not(.disabled)');
+    if (firstCard) firstCard.click();
+}
+
+function saveRegion() {
+    if (!userData.region) {
+        alert('Vui lòng chọn khu vực hiện tại');
+        return;
+    }
+    if (userData.region === 'Tùy Chỉnh Khu Vực') {
+        const customRegion = document.getElementById('input-custom-region').value.trim();
+        if (!customRegion) {
+            alert('Vui lòng nhập tên khu vực tùy chỉnh');
+            return;
+        }
+        userData.customRegion = customRegion;
+    } else {
+        userData.customRegion = userData.region;
+    }
+
+    setupAttributesPage();
+    goToPage('6');
+}
+
+function setupAttributesPage() {
+    const container = document.getElementById('attr-selection-area');
+    container.innerHTML = '';
+    userData.attributes = {};
+
+    attributesList.forEach(attr => {
+        userData.attributes[attr] = 0;
+
+        const group = document.createElement('div');
+        group.className = 'attr-slider-group';
+
+        const header = document.createElement('div');
+        header.className = 'attr-header';
+        header.innerHTML = `<div class="attr-name">${attr}</div>`;
+
+        const numberInput = document.createElement('input');
+        numberInput.className = 'attr-number-input';
+        numberInput.type = 'number';
+        numberInput.min = '-100';
+        numberInput.max = '100';
+        numberInput.value = '0';
+        header.appendChild(numberInput);
+
+        const slider = document.createElement('input');
+        slider.className = 'attr-slider';
+        slider.type = 'range';
+        slider.min = '-100';
+        slider.max = '100';
+        slider.value = '0';
+        slider.step = '1';
+
+        const updateUI = (val) => {
+            let num = parseInt(val, 10);
+            if (isNaN(num)) num = 0;
+            if (num > 100) num = 100;
+            if (num < -100) num = -100;
+
+            slider.value = num;
+            numberInput.value = num;
+            userData.attributes[attr] = num;
+        };
+
+        slider.addEventListener('input', (e) => updateUI(e.target.value));
+        numberInput.addEventListener('input', (e) => updateUI(e.target.value));
+        numberInput.addEventListener('blur', (e) => {
+            if(e.target.value === '') updateUI(0);
+        });
+
+        group.appendChild(header);
+        group.appendChild(slider);
+        container.appendChild(group);
+    });
+
+    refreshTraits();
+}
+
+function refreshTraits() {
+    const shuffled = traitsData.sort(() => 0.5 - Math.random());
+    const selectedOptions = shuffled.slice(0, 8);
+
+    userData.selectedTraits = [];
+    const handler = (item, list) => {
+        const idx = list.findIndex(i => i.name === item.name);
+        if (idx > -1) list.splice(idx, 1);
+        else list.push(item);
+    };
+
+    renderCards('traits-cards', selectedOptions, 'traits-cards', item => handler(item, userData.selectedTraits), true, 'sub-card');
+}
+
+function saveAttributes() {
+    userData.customTrait = document.getElementById('input-custom-trait').value.trim();
+    setupReputationPage();
+    goToPage('7');
+}
+
+function setupReputationPage() {
+    const container = document.getElementById('reputation-cards');
+    container.innerHTML = '';
+
+    const isLow = isLowClass(userData.classLevel);
+
+    reputationLevels.forEach((rep) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<div class="card-title">${rep.name}</div><div class="card-desc">${rep.desc}</div>`;
+
+        if (isLow && rep.type === 'Thanh Tú' && rep.level >= 3) {
+            card.classList.add('disabled');
+        } else {
+            card.onclick = () => {
+                selectCard(card, 'reputation-cards');
+                userData.reputation = rep.name;
+            };
+        }
+        container.appendChild(card);
+    });
+
+    const firstCard = container.querySelector('.card:not(.disabled)');
+    if (firstCard) firstCard.click();
+}
+
+function saveReputation() {
+    if (!userData.reputation) {
+        alert('Vui lòng chọn danh tiếng');
+        return;
+    }
+    setupCrisisPage();
+    goToPage('8');
+}
+
+function setupCrisisPage() {
+    const container = document.getElementById('crisis-cards');
+    container.innerHTML = '';
+    document.getElementById('custom-crisis-container').style.display = 'none';
+
+    const crises = getClassCrises(userData.situation.year, userData.customFactionName, userData.classLevel);
+
+    crises.push({ name: 'Tùy Chỉnh Khủng Hoảng', desc:'Tự thiết lập khốn cảnh hoặc thử thách hiện tại, viết nên nỗi gian truân độc đáo của bạn' });
+
+    renderCards('crisis-cards', crises, 'crisis-cards', item => {
+        userData.crisis = item.name;
+        if (item.name === 'Tùy Chỉnh Khủng Hoảng') {
+            document.getElementById('custom-crisis-container').style.display = 'flex';
+        } else {
+            document.getElementById('custom-crisis-container').style.display = 'none';
+        }
+    }, false, 'crisis-card');
+
+    const firstCard = container.querySelector('.crisis-card:not(.disabled)');
+    if (firstCard) firstCard.click();
+}
+
+function saveCrisis() {
+    if (!userData.crisis) {
+        alert('Vui lòng chọn khủng hoảng hiện tại');
+        return;
+    }
+
+    if (userData.crisis === 'Tùy Chỉnh Khủng Hoảng') {
+        const customCrisis = document.getElementById('input-custom-crisis').value.trim();
+        if (!customCrisis) {
+            alert('Vui lòng mô tả chi tiết khủng hoảng tùy chỉnh bạn đang đối mặt');
+            return;
+        }
+        userData.crisis = customCrisis;
+    }
+
+    // Chỉ tuyến nhân vật tự tạo mới vào phần chọn bộ hạ tùy chỉnh
+    if (userData.route === 'Tự Tạo Nhân Vật') {
+        document.querySelectorAll('#sub-choice-cards .card').forEach(c => c.classList.remove('selected'));
+        const noCard = document.querySelectorAll('#sub-choice-cards .card')[1];
+        if(noCard) noCard.classList.add('selected');
+        document.getElementById('sub-choice-val').value = 'no';
+        goToPage('sub-choice');
+    } else {
+        displaySummary();
+        goToPage('9');
+    }
+}
+
+function saveSubChoice() {
+    const choice = document.getElementById('sub-choice-val').value;
+    if (choice === 'yes') {
+        setupSubDetailPage();
+        goToPage('sub-detail');
+    } else {
+        userData.customSubordinate = null;
+        displaySummary();
+        goToPage('9');
+    }
+}
+
+function setupSubDetailPage() {
+    const container = document.getElementById('sub-attr-area');
+    container.innerHTML = '';
+    if (!userData.customSubordinate) {
+        userData.customSubordinate = { name: '', age: '', customInfo: '', attributes: {} };
+        attributesList.forEach(attr => userData.customSubordinate.attributes[attr] = 0);
+    }
+
+    document.getElementById('sub-name').value = userData.customSubordinate.name || '';
+    document.getElementById('sub-age').value = userData.customSubordinate.age || '';
+
+    // Điền lại hộp văn bản tùy chỉnh
+    const customInfoEl = document.getElementById('sub-custom-info');
+    if(customInfoEl) {
+        customInfoEl.value = userData.customSubordinate.customInfo || '';
+    }
+
+    attributesList.forEach(attr => {
+        const val = userData.customSubordinate.attributes[attr] || 0;
+        const group = document.createElement('div');
+        group.className = 'attr-slider-group';
+
+        const header = document.createElement('div');
+        header.className = 'attr-header';
+        header.innerHTML = `<div class="attr-name">${attr}</div>`;
+
+        const numberInput = document.createElement('input');
+        numberInput.className = 'attr-number-input';
+        numberInput.type = 'number';
+        numberInput.min = '-100';
+        numberInput.max = '100';
+        numberInput.value = val;
+        header.appendChild(numberInput);
+
+        const slider = document.createElement('input');
+        slider.className = 'attr-slider';
+        slider.type = 'range';
+        slider.min = '-100';
+        slider.max = '100';
+        slider.value = val;
+        slider.step = '1';
+
+        const updateUI = (newVal) => {
+            let num = parseInt(newVal, 10);
+            if (isNaN(num)) num = 0;
+            if (num > 100) num = 100;
+            if (num < -100) num = -100;
+
+            slider.value = num;
+            numberInput.value = num;
+            userData.customSubordinate.attributes[attr] = num;
+        };
+
+        slider.addEventListener('input', (e) => updateUI(e.target.value));
+        numberInput.addEventListener('input', (e) => updateUI(e.target.value));
+        numberInput.addEventListener('blur', (e) => {
+            if(e.target.value === '') updateUI(0);
+        });
+
+        group.appendChild(header);
+        group.appendChild(slider);
+        container.appendChild(group);
+    });
+}
+
+function saveSubDetail() {
+    const name = document.getElementById('sub-name').value.trim();
+    if (!name) {
+        alert('Vui lòng nhập tên bộ hạ');
+        return;
+    }
+    userData.customSubordinate.name = name;
+    userData.customSubordinate.age = document.getElementById('sub-age').value.trim();
+
+    // Lưu thiết lập tùy chỉnh của bộ hạ
+    const customInfoEl = document.getElementById('sub-custom-info');
+    if(customInfoEl) {
+        userData.customSubordinate.customInfo = customInfoEl.value.trim();
+    }
+
+    displaySummary();
+    goToPage('9');
+}
+
+function displaySummary() {
+    const summaryInfo = document.getElementById('summary-info');
+
+    let html = `
+        <div class="edit-icon" onclick="openEditModal('normal')" title="Sửa thiết lập">✎ Sửa</div>
+        <strong> Tuyến đường chơi:</strong> ${userData.route || 'Chưa Rõ'}<br>
+        <strong> Tên thật:</strong> ${userData.name || 'Chưa Rõ'} ${userData.zi ? `(${userData.zi})` : ''}<br>
+        <strong> Tuổi Tác:</strong> ${userData.age || 'Chưa định'}<br>
+        Hướng Kịch Bản:</strong> ${userData.mode || 'Chưa Rõ'}<br>
+    `;
+
+    if (userData.situation) {
+        const era = getEraName(userData.situation.year);
+        html += `<strong> Mốc thời đại:</strong> ${era} (${userData.situation.year || ''} Năm) - ${userData.situation.title || ''}<br>`;
+    } else {
+        html += `<strong> Mốc thời đại:</strong> Chưa Rõ<br>`;
+    }
+
+    if (userData.faction === 'Tự Lập Sơn Đầu') {
+        html += `<strong> Thế lực tự lập:</strong> ${userData.force.name || 'Chưa đặt tên'}<br>`;
+        if (userData.force.power) html += `<strong> Binh lực:</strong> ${userData.force.power}<br>`;
+        if (userData.force.subordinates) html += `<strong> Bộ Hạ:</strong> ${userData.force.subordinates}<br>`;
+    } else {
+        html += `<strong> Phe phái trực thuộc:</strong> ${userData.customFactionName || 'Chưa Rõ'}<br>`;
+    }
+
+    html += `
+        Giai Cấp Xuất Thân:</strong> ${userData.classLevel || 'Chưa Rõ'}<br>
+        Khu Vực Hiện Tại:</strong> ${userData.customRegion || 'Chưa Rõ'}<br>
+        <strong> Chức vụ hiện tại:</strong> ${userData.position || 'Không Có'}<br>
+    `;
+
+    const attrArr = [];
+    if (userData.attributes) {
+        for(const [key, val] of Object.entries(userData.attributes)) {
+            if(val !== 0) attrArr.push(`${key}${val > 0 ? '+' : ''}${val}`);
+        }
+    }
+    html += `<strong> Thuộc tính cơ bản:</strong> ${attrArr.length > 0 ? attrArr.join(',') : 'Kẻ tầm thường'}<br>`;
+
+    let traitsArr = [];
+    if (userData.selectedTraits && Array.isArray(userData.selectedTraits)) {
+        traitsArr = userData.selectedTraits.map(t => `${t.name || ''}(${t.effects || ''})`);
+    }
+    if(userData.customTrait) traitsArr.push(userData.customTrait);
+    html += `<strong> Bẩm phú đặc biệt:</strong> ${traitsArr.length > 0 ? traitsArr.join(',') : 'Không Có'}<br>`;
+
+    html += `<strong> Danh tiếng đương thời:</strong> ${userData.reputation || 'Chưa Rõ'}<br>`;
+
+    if (userData.assets) {
+        html += `<strong> Tình trạng tài sản:</strong> Sản nghiệp:${userData.assets.name || 'Không Có'},Thu Nhập:${userData.assets.income || 0},Chi Tiêu:${userData.assets.expense || 0},Dự trữ(Thạch):${userData.assets.food || 0},Dự trữ(Vàng):${userData.assets.gold || 0}<br>`;
+    } else {
+        html += `<strong> Tình trạng tài sản:</strong> Chưa Rõ<br>`;
+    }
+
+    html += `<strong> Khủng Hoảng Hiện Tại:</strong> ${userData.crisis || 'Tạm Không'}<br>`;
+
+    if (userData.customSubordinate) {
+        const sub = userData.customSubordinate;
+        const subAttrArr = [];
+        for(const [key, val] of Object.entries(sub.attributes)) {
+            if(val !== 0) subAttrArr.push(`${key}${val > 0 ? '+' : ''}${val}`);
+        }
+        html += `<br><strong> Bộ hạ tâm phúc:</strong> ${sub.name} (Tuổi Tác: ${sub.age || 'Chưa Rõ'})<br>`;
+        html += `<strong> Thuộc tính bộ hạ:</strong> ${subAttrArr.length > 0 ? subAttrArr.join(',') : 'Kẻ tầm thường'}<br>`;
+        if (sub.customInfo) {
+            html += `<strong> Thiết lập bộ hạ:</strong> ${sub.customInfo}<br>`;
+        }
+    }
+
+    summaryInfo.innerHTML = html;
+}
+
+function formatUserDataAsContent() {
+    let lines = [];
+    const displayName = userData.name;
+    lines.push('[Thông tin nhân vật người dùng]');
+
+    if (userData.mode === 'Túng Tình Hoan Lạc') {
+        lines.push(`Chế độ kịch bản: Túng Tình Hoan Lạc`);
+        lines.push(`Họ Tên: ${displayName || 'Chưa định'}`);
+        if(userData.zi) lines.push(`Biểu Tự: ${userData.zi}`);
+        if(userData.age) lines.push(`Tuổi Tác: ${userData.age}`);
+        lines.push(`Giai Cấp Xuất Thân: ${userData.classLevel}`);
+        lines.push(`Khu Vực Hiện Tại: ${userData.region}`);
+        lines.push(`Phương thức giải trí: ${userData.joyEntertain}`);
+        if(userData.joyCategory) lines.push(`Loại hình thanh kỹ: ${userData.joyCategory}`);
+        if(userData.joyPlay) lines.push(`Cách chơi độc quyền: ${userData.joyPlay}`);
+        lines.push(`Tình trạng tài sản: Sản nghiệp(${userData.assets.name}), Thu Nhập(${userData.assets.income}), Chi Tiêu(${userData.assets.expense}), Dự trữ thạch(${userData.assets.food}), Dự trữ vàng(${userData.assets.gold})`);
+    } else {
+        lines.push(`Tuyến đường chơi: ${userData.route}`);
+        lines.push(`Chế độ kịch bản: ${userData.mode}`);
+        const era = getEraName(userData.situation.year);
+        lines.push(`Mốc thời đại: ${era} (${userData.situation.year} Năm) - ${userData.situation.title}`);
+        lines.push(`Họ Tên: ${displayName || 'Chưa định'}`);
+        if(userData.zi) lines.push(`Biểu Tự: ${userData.zi}`);
+        if(userData.age) lines.push(`Tuổi Tác: ${userData.age}`);
+
+        if (userData.faction === 'Tự Lập Sơn Đầu') {
+            lines.push(`Thế lực trực thuộc: Tự lập - ${userData.force.name || 'Chưa đặt tên'} (Binh lực: ${userData.force.power || 'Không Có'})`);
+            if(userData.force.subordinates) lines.push(`Bộ hạ cốt lõi: ${userData.force.subordinates}`);
+        } else {
+            lines.push(`Thế lực trực thuộc: Nương tựa - ${userData.customFactionName || 'Chưa Rõ'}`);
+        }
+
+        lines.push(`Giai Cấp Xuất Thân: ${userData.classLevel}`);
+        lines.push(`Khu Vực Hiện Tại: ${userData.customRegion}`);
+        lines.push(`Chức vụ hiện tại: ${userData.position || 'Không Có'}`);
+        lines.push(`Danh tiếng đương thời: ${userData.reputation}`);
+
+        const attrArr = [];
+        for(const [key, val] of Object.entries(userData.attributes)) {
+            if(val !== 0) attrArr.push(`${key}${val > 0 ? '+' : ''}${val}`);
+        }
+        lines.push(`Thuộc tính cơ bản: ${attrArr.length > 0 ? attrArr.join(',') : 'Kẻ tầm thường'}`);
+
+        const traitsArr = userData.selectedTraits.map(t => `${t.name}(${t.effects})`);
+        if(userData.customTrait) traitsArr.push(userData.customTrait);
+        lines.push(`Bẩm phú đặc biệt: ${traitsArr.length > 0 ? traitsArr.join(',') : 'Không Có'}`);
+
+        lines.push(`Tình trạng tài sản: Sản nghiệp(${userData.assets.name}), Thu Nhập(${userData.assets.income}), Chi Tiêu(${userData.assets.expense}), Dự trữ thạch(${userData.assets.food}), Dự trữ vàng(${userData.assets.gold})`);
+        lines.push(`Khủng Hoảng Hiện Tại: ${userData.crisis}`);
+
+        if (userData.customSubordinate) {
+            const sub = userData.customSubordinate;
+            const subAttrArr = [];
+            for(const [key, val] of Object.entries(sub.attributes)) {
+                if(val !== 0) subAttrArr.push(`${key}${val > 0 ? '+' : ''}${val}`);
+            }
+            lines.push(`Bộ hạ tâm phúc: ${sub.name} (Tuổi Tác: ${sub.age || 'Chưa Rõ'})`);
+            lines.push(`Thuộc tính bộ hạ: ${subAttrArr.length > 0 ? subAttrArr.join(',') : 'Kẻ tầm thường'}`);
+            if (sub.customInfo) lines.push(`Thiết lập bộ hạ: ${sub.customInfo}`);
+        }
+    }
+
+    if (userData.family_info) lines.push(`Tình hình gia tộc: ${userData.family_info}`);
+    if (userData.relations) lines.push(`Quan Hệ Cá Nhân: ${userData.relations}`);
+    if (userData.faction_dynamic) lines.push(`Động Thái Phe Phái: ${userData.faction_dynamic}`);
+    if (userData.custom) lines.push(`Thiết lập khác: ${userData.custom}`);
+
+    return lines.join('\n');
+}
+
+function formatUserDataAsMessage() {
+    let lines = [];
+    const displayName = userData.name;
+
+    if (userData.mode === 'Túng Tình Hoan Lạc') {
+        lines.push('Thiết lập túng tình hoan lạc của tôi đã hoàn tất, vui lòng bắt đầu diễn dịch dựa trên thiết lập sau:\n');
+        lines.push('【Thân phận cơ bản】');
+        lines.push(`Ta là ${displayName}${userData.zi ? `(Tự${userData.zi})` : ''}${userData.age ? `,Tuổi vừa tròn${userData.age} tuổi` : ''},Xuất thân${userData.classLevel} Giai cấp.`);
+        lines.push(`Ta đang ở chốn phong nguyệt vô biên${userData.region}.`);
+        lines.push('\n【Tình trạng tài sản】');
+        lines.push(`Dưới danh nghĩa của ta có sản nghiệp:${userData.assets.name}.`);
+        lines.push(`Thu nhập hàng tháng:${userData.assets.income} vàng, chi tiêu:${userData.assets.expense} Vàng.`);
+        lines.push(`Hiện tại dự trữ lương thảo:${userData.assets.food} thạch, vàng bạc:${userData.assets.gold} Vàng.`);
+        lines.push('\n【Cảnh giới cực lạc】');
+        lines.push(`Phương thức giải trí ta chọn là:${userData.joyEntertain}.`);
+        if(userData.joyCategory) lines.push(`Loại hình thanh kỹ ưa thích là:${userData.joyCategory}.`);
+        if(userData.joyPlay) lines.push(`Cách chơi bí mật độc quyền của ta là:${userData.joyPlay}.`);
+        lines.push('\nVui lòng trực tiếp bày ra trước mắt ta cảnh giới cực lạc thanh sắc khuyển mã này.');
+    } else if (userData.route === 'Diễn Dịch Chủ Công') {
+        lines.push('Thiết lập chủ công của ta đã sẵn sàng, vui lòng bắt đầu diễn dịch loạn thế Tam Quốc dựa trên thiết lập sau:\n');
+        lines.push('【Thân phận cơ bản】');
+        lines.push(`Hướng Kịch Bản:${userData.mode}`);
+        const era = getEraName(userData.situation.year);
+        lines.push(`Mốc thời gian:${era} (${userData.situation.year} Năm) - ${userData.situation.title}`);
+
+        if (userData.faction === 'Tự Lập Sơn Đầu') {
+            lines.push(`Ta là ${displayName}${userData.zi ? `(Tự${userData.zi})` : ''},Với tư cách là một phương hùng chủ, ta đang ở${userData.customRegion}.`);
+        } else {
+            lines.push(`Ta là ${displayName}${userData.zi ? `(Tự${userData.zi})` : ''},Đang ở${userData.customFactionName} thuộc phe phái${userData.customRegion}.`);
+        }
+
+        lines.push(`Xuất thân là${userData.classLevel},Thân phận địa vị hiện tại là${userData.position}.`);
+        lines.push(`Danh tiếng đương thời của ta là“${userData.reputation}”.`);
+
+        const attrArr = [];
+        for(const [key, val] of Object.entries(userData.attributes)) {
+            if(val !== 0) attrArr.push(`${key}${val > 0 ? '+' : ''}${val}`);
+        }
+        lines.push(`Thuộc tính cơ bản:${attrArr.length > 0 ? attrArr.join(',') : 'Kẻ tầm thường'}`);
+
+        const traitsArr = userData.selectedTraits.map(t => `${t.name}(${t.effects})`);
+        if(userData.customTrait) traitsArr.push(userData.customTrait);
+        lines.push(`Bẩm phú đặc biệt:${traitsArr.length > 0 ? traitsArr.join(',') : 'Không Có'}`);
+
+        lines.push('\n【Thế lực và tài sản】');
+        if (userData.faction === 'Tự Lập Sơn Đầu') {
+            lines.push(`Ta tự mình xây dựng một phương thế lực:${userData.force.name || 'Chưa đặt tên'}.`);
+            if(userData.force.power) lines.push(`Trong tay nắm giữ binh lực:${userData.force.power}.`);
+            if(userData.force.subordinates) lines.push(`Bộ hạ cốt lõi gồm có:${userData.force.subordinates}.`);
+        } else {
+            lines.push(`Hiện tại ta đang nương tựa vào:${userData.customFactionName || 'Chưa Rõ'}.`);
+        }
+
+        lines.push(`Tên sản nghiệp:${userData.assets.name}`);
+        lines.push(`Thu Nhập:${userData.assets.income}  Chi Tiêu:${userData.assets.expense}`);
+        lines.push(`Dự trữ(Thạch):${userData.assets.food}  Dự trữ(Vàng):${userData.assets.gold}`);
+
+        lines.push('\n【Hoàn cảnh hiện tại】');
+        lines.push(`Khủng hoảng hiện tại ta đang đối mặt là:${userData.crisis}.`);
+    } else {
+        lines.push('Thông tin nhân vật của ta đã được xác định, vui lòng bắt đầu diễn dịch loạn thế Tam Quốc dựa trên thiết lập sau:\n');
+        lines.push('【Thân phận cơ bản】');
+        lines.push(`Hướng Kịch Bản:${userData.mode}`);
+        const era = getEraName(userData.situation.year);
+        lines.push(`Mốc thời gian:${era} (${userData.situation.year} Năm) - ${userData.situation.title}`);
+        lines.push(`Ta là ${displayName}${userData.zi ? `(Tự${userData.zi})` : ''}${userData.age ? `,Tuổi vừa tròn${userData.age} tuổi` : ''},Đang ở${userData.customFactionName} thuộc phe phái${userData.customRegion}.`);
+        lines.push(`Xuất thân là${userData.classLevel},Thân phận địa vị hiện tại là${userData.position || 'Bố y'}.`);
+        lines.push(`Danh tiếng đương thời của ta là“${userData.reputation}”.`);
+
+        const attrArr = [];
+        for(const [key, val] of Object.entries(userData.attributes)) {
+            if(val !== 0) attrArr.push(`${key}${val > 0 ? '+' : ''}${val}`);
+        }
+        lines.push(`Thuộc tính cơ bản:${attrArr.length > 0 ? attrArr.join(',') : 'Kẻ tầm thường'}`);
+
+        const traitsArr = userData.selectedTraits.map(t => `${t.name}(${t.effects})`);
+        if(userData.customTrait) traitsArr.push(userData.customTrait);
+        lines.push(`Bẩm phú đặc biệt:${traitsArr.length > 0 ? traitsArr.join(',') : 'Không Có'}`);
+
+        lines.push('\n【Thế lực và tài sản】');
+        if (userData.faction === 'Tự Lập Sơn Đầu') {
+            lines.push(`Ta tự mình xây dựng một phương thế lực:${userData.force.name || 'Chưa đặt tên'}.`);
+            if(userData.force.power) lines.push(`Trong tay nắm giữ binh lực:${userData.force.power}.`);
+            if(userData.force.subordinates) lines.push(`Bộ hạ cốt lõi gồm có:${userData.force.subordinates}.`);
+        } else {
+            lines.push(`Phe phái ta trực thuộc là:${userData.customFactionName || 'Chưa Rõ'}.`);
+        }
+
+        lines.push(`Tên sản nghiệp:${userData.assets.name}`);
+        lines.push(`Thu Nhập:${userData.assets.income}  Chi Tiêu:${userData.assets.expense}`);
+        lines.push(`Dự trữ(Thạch):${userData.assets.food}  Dự trữ(Vàng):${userData.assets.gold}`);
+
+        lines.push('\n【Hoàn cảnh hiện tại】');
+        lines.push(`Khủng hoảng hiện tại ta đang đối mặt là:${userData.crisis}.`);
+
+        if (userData.customSubordinate) {
+            const sub = userData.customSubordinate;
+            const subAttrArr = [];
+            for(const [key, val] of Object.entries(sub.attributes)) {
+                if(val !== 0) subAttrArr.push(`${key}${val > 0 ? '+' : ''}${val}`);
+            }
+            lines.push('\n【Bộ hạ tâm phúc】');
+            lines.push(`Ta có một bộ hạ thề chết đi theo, tên là ${sub.name}${sub.age ? `,Tuổi vừa tròn${sub.age} tuổi` : ''}.`);
+            lines.push(`Thuộc tính năng lực của hắn là:${subAttrArr.length > 0 ? subAttrArr.join(',') : 'Kẻ tầm thường'}.`);
+            if (sub.customInfo) lines.push(`Thiết lập đặc biệt về người này:${sub.customInfo}`);
+        }
+    }
+
+    if(userData.family_info || userData.relations || userData.faction_dynamic || userData.custom) {
+        lines.push('\n【Bổ sung khác】');
+        if(userData.family_info) lines.push(`Tình hình gia tộc:${userData.family_info}`);
+        if(userData.relations) lines.push(`Quan Hệ Cá Nhân:${userData.relations}`);
+        if(userData.faction_dynamic) lines.push(`Động Thái Phe Phái:${userData.faction_dynamic}`);
+        if(userData.custom) lines.push(`Thiết lập đặc biệt:${userData.custom}`);
+    }
+
+    if (userData.mode !== 'Túng Tình Hoan Lạc') {
+        lines.push('\nBánh răng loạn thế đã bắt đầu chuyển động, hãy mô tả tình cảnh và lựa chọn cụ thể mà ta đang phải đối mặt.');
+    }
+
+    return lines.join('\n');
+}
+
+function onConfirm() {
+    userData.family_info = document.getElementById('input-family-info').value.trim();
+    userData.relations = document.getElementById('input-relations').value.trim();
+    userData.faction_dynamic = document.getElementById('input-faction-dynamic').value.trim();
+    userData.custom = document.getElementById('input-custom').value.trim();
+
+    try {
+        const charWB = getCharWorldbookNames('current');
+        const wbName = charWB.primary;
+        if (!wbName) {
+            alert('Thẻ nhân vật hiện tại chưa liên kết với sách thế giới chính, không thể ghi mục thông tin người dùng.\nVui lòng liên kết một cuốn sách thế giới cho thẻ nhân vật trước.');
+            return;
+        }
+        deleteWorldbookEntries(wbName, (entry) => entry.name === 'Thông Tin Người Dùng').then(() => {
+            return createWorldbookEntries(wbName, [{
+                name: 'Thông Tin Người Dùng',
+                enabled: true,
+                strategy: { type: 'constant' },
+                position: { type: 'before_character_definition' },
+                content: formatUserDataAsContent(),
+            }]);
+        }).then(() => {
+            return createChatMessages([{ role: 'user', message: formatUserDataAsMessage() }]);
+        }).then(() => {
+            return triggerSlash('/send');
+        }).catch((err) => {
+            alert('Thao tác thất bại: ' + (err.message || String(err)));
+            console.error('[Tạo nhân vật] onConfirm error:', err);
+        });
+    } catch(e) {
+        console.log('Final User Data:', formatUserDataAsMessage());
+        alert('APIGọi API thất bại, vui lòng đảm bảo đang chạy trong môi trường chính xác.\n' + e.message + '\n\nThiết lập nhân vật đã được xuất ra console.');
+    }
+}
+
+// ==================== Logic riêng cho túng tình hoan lạc ====================
+
+function setupJoyClassPage() {
+    userData.classLevel = '';
+    userData.assets = { name: '', income: 0, expense: 0, food: 0, gold: 0 };
+    renderCards('joy-class-cards', joyData.classes, 'joy-class-cards', item => {
+        userData.classLevel = item.name;
+        userData.assets = item.assets;
+    });
+}
+
+function saveJoyClass() {
+    if (!userData.classLevel) { alert('Vui lòng chọn giai cấp'); return; }
+    setupJoyRegionPage();
+    goToPage('joy-2');
+}
+
+function setupJoyRegionPage() {
+    userData.region = '';
+    renderCards('joy-region-cards', joyData.regions, 'joy-region-cards', item => {
+        userData.region = item.name;
+    });
+}
+
+function saveJoyRegion() {
+    if (!userData.region) { alert('Vui lòng chọn khu vực'); return; }
+    setupJoyEntertainPage();
+    goToPage('joy-3');
+}
+
+function setupJoyEntertainPage() {
+    userData.joyEntertain = '';
+    userData.joyCategory = '';
+    userData.joyPlay = '';
+    renderCards('joy-entertain-cards', joyData.entertainments, 'joy-entertain-cards', item => {
+        userData.joyEntertain = item.name;
+        userData._isSex = item.isSex;
+    });
+}
+
+function saveJoyEntertain() {
+    if (!userData.joyEntertain) { alert('Vui lòng chọn phương thức giải trí'); return; }
+    if (userData._isSex) {
+        setupJoyCategoryPage();
+        goToPage('joy-4');
+    } else {
+        displayJoySummary();
+        goToPage('joy-summary');
+    }
+}
+
+function setupJoyCategoryPage() {
+    userData.joyCategory = '';
+    const cats = joyData.categories[userData.joyEntertain] || [];
+    renderCards('joy-category-cards', cats, 'joy-category-cards', item => {
+        userData.joyCategory = item.name;
+    });
+}
+
+function saveJoyCategory() {
+    if (!userData.joyCategory) { alert('Vui lòng chọn loại hình thanh kỹ'); return; }
+    setupJoyPlayPage();
+    goToPage('joy-5');
+}
+
+function setupJoyPlayPage() {
+    userData.joyPlay = '';
+    const plays = joyData.plays[userData.joyCategory] || [];
+    renderCards('joy-play-cards', plays, 'joy-play-cards', item => {
+        userData.joyPlay = item.name;
+    }, false, 'crisis-card');
+}
+
+function saveJoyPlay() {
+    if (!userData.joyPlay) { alert('Vui lòng chọn cách chơi độc quyền'); return; }
+    displayJoySummary();
+    goToPage('joy-summary');
+}
+
+function goBackFromJoySummary() {
+    if (userData._isSex) {
+        goToPage('joy-5');
+    } else {
+        goToPage('joy-3');
+    }
+}
+
+function displayJoySummary() {
+    const summaryInfo = document.getElementById('joy-summary-info');
+    let html = `
+        <div class="edit-icon" onclick="openEditModal('joy')" title="Sửa thiết lập">✎ Sửa</div>
+        <strong> Họ Tên:</strong> ${userData.name}<br>
+        <strong> Tuổi Tác:</strong> ${userData.age || 'Chưa Rõ'}<br>
+        <strong> Biểu Tự:</strong> ${userData.zi || 'Không Có'}<br>
+        <strong> Sản nghiệp:</strong> ${userData.assets.name}<br>
+    `;
+    if (userData.joyPlay) html += `<strong> Cách chơi:</strong> ${userData.joyPlay}<br>`;
+    if (userData.joyCategory) html += `<strong> Loại hình:</strong> ${userData.joyCategory}<br>`;
+    html += `
+        <strong> Phương thức:</strong> ${userData.joyEntertain}<br>
+        <strong> Giai cấp:</strong> ${userData.classLevel}<br>
+        <strong> Khu vực:</strong> ${userData.region}<br>
+        <strong> Thu Nhập:</strong> ${userData.assets.income} Vàng/Tháng<br>
+        <strong> Chi Tiêu:</strong> ${userData.assets.expense} Vàng/Tháng<br>
+        <strong> Dự trữ lương:</strong> ${userData.assets.food} Thạch<br>
+        <strong> Dự trữ vàng:</strong> ${userData.assets.gold} Vàng<br>
+    `;
+    summaryInfo.innerHTML = html;
+}
+
+function onJoyConfirm() {
+    userData.family_info = document.getElementById('input-joy-family-info').value.trim();
+    userData.relations = document.getElementById('input-joy-relations').value.trim();
+    userData.faction_dynamic = document.getElementById('input-joy-faction-dynamic').value.trim();
+    userData.custom = document.getElementById('input-joy-custom').value.trim();
+
+    try {
+        const charWB = getCharWorldbookNames('current');
+        const wbName = charWB.primary;
+        if (!wbName) {
+            alert('Thẻ nhân vật hiện tại chưa liên kết với sách thế giới chính, không thể ghi mục thông tin người dùng.\nVui lòng liên kết một cuốn sách thế giới cho thẻ nhân vật trước.');
+            return;
+        }
+        deleteWorldbookEntries(wbName, (entry) => entry.name === 'Thông Tin Người Dùng').then(() => {
+            return createWorldbookEntries(wbName, [{
+                name: 'Thông Tin Người Dùng',
+                enabled: true,
+                strategy: { type: 'constant' },
+                position: { type: 'before_character_definition' },
+                content: formatUserDataAsContent(),
+            }]);
+        }).then(() => {
+            return createChatMessages([{ role: 'user', message: formatUserDataAsMessage() }]);
+        }).then(() => {
+            return triggerSlash('/send');
+        }).catch((err) => {
+            alert('Thao tác thất bại: ' + (err.message || String(err)));
+            console.error('[Tạo nhân vật] onJoyConfirm error:', err);
+        });
+    } catch(e) {
+        console.log('Final Joy Data:', formatUserDataAsMessage());
+        alert('APIGọi API thất bại, vui lòng đảm bảo đang chạy trong môi trường chính xác.\n' + e.message + '\n\nThiết lập nhân vật đã được xuất ra console.');
+    }
+}
+
+function showPreviewModal() {
+    userData.family_info = document.getElementById('input-family-info').value.trim();
+    userData.relations = document.getElementById('input-relations').value.trim();
+    userData.faction_dynamic = document.getElementById('input-faction-dynamic').value.trim();
+    userData.custom = document.getElementById('input-custom').value.trim();
+
+    const modal = document.getElementById('preview-modal');
+    const textarea = document.getElementById('preview-textarea');
+    const copyBtn = document.getElementById('btn-copy');
+
+    textarea.value = formatUserDataAsMessage();
+
+    copyBtn.innerText = 'Sao chép thông tin';
+    copyBtn.style.borderColor = 'var(--theme-main)';
+    copyBtn.style.color = 'var(--theme-main)';
+
+    modal.classList.add('show');
+}
+
+function showJoyPreviewModal() {
+    userData.family_info = document.getElementById('input-joy-family-info').value.trim();
+    userData.relations = document.getElementById('input-joy-relations').value.trim();
+    userData.faction_dynamic = document.getElementById('input-joy-faction-dynamic').value.trim();
+    userData.custom = document.getElementById('input-joy-custom').value.trim();
+
+    const modal = document.getElementById('preview-modal');
+    const textarea = document.getElementById('preview-textarea');
+    const copyBtn = document.getElementById('btn-copy');
+
+    textarea.value = formatUserDataAsMessage();
+
+    copyBtn.innerText = 'Sao chép thông tin';
+    copyBtn.style.borderColor = 'var(--theme-main)';
+    copyBtn.style.color = 'var(--theme-main)';
+
+    modal.classList.add('show');
+}
+
+function closePreviewModal() {
+    document.getElementById('preview-modal').classList.remove('show');
+}
+
+function copyPreviewText() {
+    const textarea = document.getElementById('preview-textarea');
+    const copyBtn = document.getElementById('btn-copy');
+
+    textarea.select();
+    textarea.setSelectionRange(0, 99999);
+
+    try {
+        navigator.clipboard.writeText(textarea.value).then(() => {
+            copyBtn.innerText = 'Sao chép thành công!';
+            copyBtn.style.borderColor = 'var(--text-secondary)';
+            copyBtn.style.color = 'var(--text-secondary)';
+        }).catch(err => {
+            document.execCommand('copy');
+            copyBtn.innerText = 'Sao chép thành công!';
+        });
+    } catch (err) {
+        document.execCommand('copy');
+        copyBtn.innerText = 'Sao chép thành công!';
+    }
+}
+
+// ==================== Logic chức năng chỉnh sửa ====================
+let currentEditMode = 'normal';
+
+function openEditModal(mode) {
+    currentEditMode = mode;
+    const container = document.getElementById('edit-form-container');
+    container.innerHTML = '';
+
+    let fields = [];
+    if (mode === 'normal') {
+        fields = [
+            { key: 'name', label: 'Họ Tên', type:'text' },
+            { key: 'zi', label: 'Biểu Tự', type:'text' },
+            { key: 'age', label: 'Tuổi Tác', type:'text' },
+            { key: 'customFactionName', label: 'Phe phái trực thuộc', type:'text' },
+            { key: 'classLevel', label: 'Giai Cấp Xuất Thân', type:'text' },
+            { key: 'customRegion', label: 'Khu Vực Hiện Tại', type:'text' },
+            { key: 'position', label: 'Chức vụ hiện tại', type:'text' },
+            { key: 'reputation', label: 'Danh tiếng đương thời', type:'text' },
+            { key: 'crisis', label: 'Khủng Hoảng Hiện Tại', type:'textarea' },
+            { key: 'asset_name', label: 'Tên sản nghiệp', type:'text', isAsset: true, assetKey: 'name' },
+            { key: 'asset_income', label: 'Thu nhập hàng tháng(Vàng)', type:'number', isAsset: true, assetKey: 'income' },
+            { key: 'asset_expense', label: 'Chi tiêu hàng tháng(Vàng)', type:'number', isAsset: true, assetKey: 'expense' },
+            { key: 'asset_food', label: 'Dự trữ lương thảo(Thạch)', type:'number', isAsset: true, assetKey: 'food' },
+            { key: 'asset_gold', label: 'Dự trữ vàng bạc(Vàng)', type:'number', isAsset: true, assetKey: 'gold' }
+        ];
+
+        // Nếu là tự lập sơn đầu hoặc diễn dịch chủ công, hiển thị thêm thông tin thế lực
+        if (userData.faction === 'Tự Lập Sơn Đầu') {
+            fields.splice(7, 0,
+                { key: 'force_name', label: 'Tên thế lực', type:'text', isForce: true, forceKey: 'name' },
+                { key: 'force_power', label: 'Số lượng binh lực', type:'text', isForce: true, forceKey: 'power' },
+                { key: 'force_sub', label: 'Bộ hạ cốt lõi', type:'text', isForce: true, forceKey: 'subordinates' }
+            );
+        }
+
+        // Thêm động hộp nhập thuộc tính
+        attributesList.forEach(attr => {
+            fields.push({ key: 'attr_' + attr, label: 'Thuộc Tính: ' + attr, type:'number', isAttr: true, attrKey: attr });
+        });
+
+        // Nếu có bộ hạ tùy chỉnh, cũng thêm vào danh sách chỉnh sửa
+        if (userData.customSubordinate) {
+            fields.push({ key: 'sub_name', label: 'Tên bộ hạ', type:'text', isSub: true, subKey: 'name' });
+            fields.push({ key: 'sub_age', label: 'Tuổi bộ hạ', type:'text', isSub: true, subKey: 'age' });
+            attributesList.forEach(attr => {
+                fields.push({ key: 'sub_attr_' + attr, label: 'Thuộc tính bộ hạ: ' + attr, type:'number', isSubAttr: true, attrKey: attr });
+            });
+            fields.push({ key: 'sub_customInfo', label: 'Thiết lập bộ hạ', type:'textarea', isSub: true, subKey: 'customInfo' });
+        }
+
+    } else {
+        // Trường chế độ túng tình hoan lạc
+        fields = [
+            { key: 'name', label: 'Họ Tên', type:'text' },
+            { key: 'zi', label: 'Biểu Tự', type:'text' },
+            { key: 'age', label: 'Tuổi Tác', type:'text' },
+            { key: 'classLevel', label: 'Giai cấp', type:'text' },
+            { key: 'region', label: 'Khu vực', type:'text' },
+            { key: 'joyEntertain', label: 'Phương thức giải trí', type:'text' },
+            { key: 'joyCategory', label: 'Loại hình thanh kỹ', type:'text' },
+            { key: 'joyPlay', label: 'Cách chơi độc quyền', type:'text' },
+            { key: 'asset_name', label: 'Tên sản nghiệp', type:'text', isAsset: true, assetKey: 'name' },
+            { key: 'asset_income', label: 'Thu nhập hàng tháng(Vàng)', type:'number', isAsset: true, assetKey: 'income' },
+            { key: 'asset_expense', label: 'Chi tiêu hàng tháng(Vàng)', type:'number', isAsset: true, assetKey: 'expense' },
+            { key: 'asset_food', label: 'Dự trữ lương thảo(Thạch)', type:'number', isAsset: true, assetKey: 'food' },
+            { key: 'asset_gold', label: 'Dự trữ vàng bạc(Vàng)', type:'number', isAsset: true, assetKey: 'gold' }
+        ];
+    }
+
+    // Duyệt qua để tạo hộp nhập liệu
+    fields.forEach(f => {
+        let val = '';
+        if (f.isAsset) {
+            val = userData.assets[f.assetKey] !== undefined ? userData.assets[f.assetKey] : '';
+        } else if (f.isForce) {
+            val = userData.force[f.forceKey] || '';
+        } else if (f.isAttr) {
+            val = userData.attributes[f.attrKey] !== undefined ? userData.attributes[f.attrKey] : 0;
+        } else if (f.isSub) {
+            val = userData.customSubordinate[f.subKey] || '';
+        } else if (f.isSubAttr) {
+            val = userData.customSubordinate.attributes[f.attrKey] !== undefined ? userData.customSubordinate.attributes[f.attrKey] : 0;
+        } else {
+            val = userData[f.key] || '';
+        }
+
+        let inputHtml = '';
+        if (f.type === 'textarea') {
+            inputHtml = `<textarea id="edit-input-${f.key}" class="edit-form-input" style="min-height: 80px; resize: vertical;">${val}</textarea>`;
+        } else {
+            inputHtml = `<input type="${f.type}" id="edit-input-${f.key}" class="edit-form-input" value="${val}">`;
+        }
+
+        container.innerHTML += `
+            <div class="edit-form-group">
+                <label class="edit-form-label">${f.label}</label>
+                ${inputHtml}
+            </div>
+        `;
+    });
+
+    document.getElementById('edit-modal').classList.add('show');
+}
+
+function closeEditModal() {
+    document.getElementById('edit-modal').classList.remove('show');
+}
+
+function saveEditedInfo() {
+    // Thu thập lại dữ liệu biểu mẫu
+    const inputs = document.getElementById('edit-form-container').querySelectorAll('.edit-form-input');
+    inputs.forEach(el => {
+        const id = el.id.replace('edit-input-', '');
+        let val = el.value.trim();
+
+        if (el.type === 'number') {
+            val = parseInt(val) || 0;
+        }
+
+        if (id.startsWith('asset_')) {
+            const key = id.replace('asset_', '');
+            userData.assets[key] = val;
+        } else if (id.startsWith('force_')) {
+            const key = id.replace('force_', '');
+            userData.force[key] = val;
+        } else if (id.startsWith('attr_')) {
+            const key = id.replace('attr_', '');
+            userData.attributes[key] = val;
+        } else if (id.startsWith('sub_attr_')) {
+            const key = id.replace('sub_attr_', '');
+            userData.customSubordinate.attributes[key] = val;
+        } else if (id.startsWith('sub_')) {
+            const key = id.replace('sub_', '');
+            userData.customSubordinate[key] = val;
+        } else {
+            userData[id] = val;
+        }
+    });
+
+    closeEditModal();
+
+    // Làm mới giao diện theo chế độ
+    if (currentEditMode === 'normal') {
+        displaySummary();
+    } else {
+        displayJoySummary();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('start-button').addEventListener('click', () => goToPage('1'));
+    setupOriginPage();
+    updateStepIndicator();
+});

@@ -646,26 +646,47 @@ export function buildUnifiedRAGContextWithDebug(input: UnifiedRAGInput): RAGBuil
     }
   }
 
-  // ══════════════════════════════════════════════════════════
-  // SECTION 3b: Entry Name Dictionary (EJS Auto-Trigger Sync)
-  // ══════════════════════════════════════════════════════════
   if (input.entryNameDictionary) {
     const entryNameEntries = Object.entries(input.entryNameDictionary)
       .filter(([k, v]) => k && v && k !== v);
     if (entryNameEntries.length > 0) {
-      for (const [k, v] of entryNameEntries) {
-        coveredTerms.add(k.toLowerCase());
-        coveredTerms.add(v.toLowerCase());
-      }
+      // Scan currentField.original to see which entries are actually referenced
+      const matchedEntries = entryNameEntries.filter(([k]) => currentField.original.includes(k));
 
-      const dictList = entryNameEntries.map(([k, v]) => `  "${k}" → "${v}"`).join('\n');
-      const section = '═══ ENTRY NAME DICTIONARY (EJS SYNC) ═══\n' +
-        'SillyTavern auto-loads lorebook entries when their EXACT NAME appears in text.\n' +
-        'When translating, replace original entry names with their translated equivalents:\n' +
-        dictList + '\n' +
-        'A mismatch = the entry will NEVER be loaded at runtime.';
-      sections.push(section);
-      totalChars += section.length;
+      // If nothing matches directly but it's a logic/code field, we show all entries (if total entries < 50)
+      // to ensure full context for variables/keys.
+      const finalEntriesToShow = matchedEntries.length > 0 ? matchedEntries : (
+        (['tavern_helper', 'regex'].includes(currentField.group) && entryNameEntries.length < 50) ? entryNameEntries : []
+      );
+
+      if (finalEntriesToShow.length > 0) {
+        for (const [k, v] of finalEntriesToShow) {
+          coveredTerms.add(k.toLowerCase());
+          coveredTerms.add(v.toLowerCase());
+        }
+
+        const isLogicField = ['tavern_helper', 'regex', 'lorebook'].includes(currentField.group);
+        const dictList = finalEntriesToShow.map(([k, v]) => `  "${k}" → "${v}"`).join('\n');
+        
+        let section: string;
+        if (isLogicField) {
+          section = '═══ ENTRY NAME DICTIONARY (EJS SYNC - CRITICAL FOR REGEX/CODE) ═══\n' +
+            'This card uses Lorebook entries that are dynamically loaded. In JavaScript, regex blocks, or keys, you MUST translate these terms EXACTLY as mapped:\n' +
+            dictList + '\n' +
+            'Rules:\n' +
+            '- You MUST use EXACTLY the mapped translation (e.g., if "前秦" maps to "Tiền Tần", do NOT translate it to "Tiền Yên").\n' +
+            '- This is critical for matching keys in arrays/objects (e.g., specificClassLists, raw lists).\n' +
+            '- Failure to match will break the game logic!';
+        } else {
+          section = '═══ ENTRY NAME DICTIONARY (EJS SYNC - MANDATORY) ═══\n' +
+            'SillyTavern auto-loads lorebook entries when their EXACT NAME appears in text.\n' +
+            'When translating, replace original entry names with their translated equivalents:\n' +
+            dictList + '\n' +
+            '- You MUST use EXACTLY the mapped translation. A mismatch = the entry will NEVER be loaded at runtime.';
+        }
+        sections.push(section);
+        totalChars += section.length;
+      }
     }
   }
 
