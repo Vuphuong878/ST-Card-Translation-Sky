@@ -820,28 +820,18 @@ function findSafeBoundary(text: string, targetPos: number, minPos: number): numb
     }
   }
 
-  return targetPos; // give up, use original position
+  return -1; // Failed to find safe boundary, trigger subsequent fallbacks
 }
 
 export function chunkText(text: string, maxChars?: number, _maxTokens?: number): string[] {
-  // Default chunk size depends on content type.
-  // Code-heavy content (regex HTML, embedded scripts) needs smaller chunks
-  // because AI output limit (~8K-65K tokens) can't reproduce 100K chars of code 1:1.
+  // Default chunk size is reduced to a safe 12,000 characters limit.
   if (maxChars === undefined) {
-    const codeSignals = [
-      /<style[\s>]/i.test(text),
-      /<script[\s>]/i.test(text),
-      (text.match(/\{/g) || []).length > 50,
-      (text.match(/<[a-z][^>]*>/gi) || []).length > 100,
-    ].filter(Boolean).length;
-    // Code-heavy: 30K chars ≈ 10K tokens output — safe for all models
-    // Normal text: 100K chars ≈ 30K tokens
-    maxChars = codeSignals >= 2 ? 30000 : 100000;
+    maxChars = 12000;
   }
 
-  // ═══ HARD CAP: 500K chars per chunk ═══
-  // Tăng giới hạn lên rất cao để tôn trọng API trả phí / proxy không giới hạn
-  const HARD_CAP = 500000;
+  // ═══ HARD CAP: 12,000 chars per chunk ═══
+  // Giảm giới hạn xuống mức an toàn để tránh bị cắt cụt đầu ra AI
+  const HARD_CAP = 12000;
   maxChars = Math.min(maxChars, HARD_CAP);
 
   if (text.length <= maxChars) return [text];
@@ -2949,10 +2939,10 @@ export async function translateText(
     const inlineCssSignals = (maskedText.match(/[{;}]\s*[a-z-]+\s*:/gi) || []).length;
     const htmlBodySignals = (maskedText.match(/<(?:div|span|button|input|label|section|article)\b/gi) || []).length;
     if (inlineCssSignals > 50 || htmlBodySignals > 30) {
-      effectiveChunkSize = 20000; // ~6K tokens — smaller chunks for CSS/HTML-heavy regex fields
-      console.log(`[translateText] ${fieldName}: Heavy inline CSS/HTML detected (${inlineCssSignals} CSS, ${htmlBodySignals} HTML signals) — using 20K chunk size`);
+      effectiveChunkSize = 12000; // ~6K tokens — smaller chunks for CSS/HTML-heavy regex fields
+      console.log(`[translateText] ${fieldName}: Heavy inline CSS/HTML detected (${inlineCssSignals} CSS, ${htmlBodySignals} HTML signals) — using 12K chunk size`);
     } else {
-      effectiveChunkSize = 30000; // ~10K tokens output — an toàn cho mọi model
+      effectiveChunkSize = 12000; // ~10K tokens output — an toàn cho mọi model
     }
   }
   const chunks = chunkText(maskedText, effectiveChunkSize, config.maxTokens);
