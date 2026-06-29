@@ -18,6 +18,7 @@ import {
   RefreshCw,
   ShieldCheck,
   BrainCircuit,
+  Layers,
 } from 'lucide-react';
 
 const PROVIDERS: { value: AIProvider; label: string }[] = [
@@ -35,6 +36,7 @@ export default function ProxyConfig() {
   const [testing, setTesting] = useState(false);
   const [testMessage, setTestMessage] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showSecondarySuggestions, setShowSecondarySuggestions] = useState(false);
   const [showKeyRotation, setShowKeyRotation] = useState(false);
   const [scanning, setScanning] = useState(false);
 
@@ -289,6 +291,111 @@ export default function ProxyConfig() {
                   {s}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* ─── Dual-Model RPM Section ─── */}
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
+          {/* Primary RPM row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <Layers size={13} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', flex: 1 }}>
+              Model chính (RPM)
+            </span>
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={120}
+              value={proxy.primaryModelRpm ?? 5}
+              onChange={(e) => setProxy({ primaryModelRpm: Math.max(1, parseInt(e.target.value) || 5) })}
+              style={{ width: '60px', padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
+              title="Số request/phút tối đa cho model chính"
+            />
+          </div>
+
+          {/* Secondary model toggle row */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '7px 10px',
+              background: proxy.enableSecondaryModel
+                ? 'rgba(124,106,240,0.06)'
+                : 'rgba(180,180,180,0.04)',
+              borderRadius: 'var(--radius-sm)',
+              border: `1px solid ${proxy.enableSecondaryModel ? 'rgba(124,106,240,0.2)' : 'rgba(180,180,180,0.1)'}`,
+              marginBottom: proxy.enableSecondaryModel ? '8px' : '0',
+              transition: 'all 0.2s',
+            }}
+          >
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              <span style={{ fontWeight: 600 }}>Model phụ</span>
+              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginLeft: '6px' }}>
+                tự dùng khi model chính hết RPM
+              </span>
+            </div>
+            <label style={{ position: 'relative', display: 'inline-block', width: '32px', height: '18px', flexShrink: 0, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={!!proxy.enableSecondaryModel}
+                onChange={(e) => setProxy({ enableSecondaryModel: e.target.checked })}
+                style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+              />
+              <span style={{ position: 'absolute', inset: 0, borderRadius: '9px', background: proxy.enableSecondaryModel ? 'var(--accent-primary)' : 'var(--border-default)', transition: 'background 0.2s' }} />
+              <span style={{ position: 'absolute', top: '2px', left: proxy.enableSecondaryModel ? '16px' : '2px', width: '14px', height: '14px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+            </label>
+          </div>
+
+          {/* Secondary model inputs — only shown when enabled */}
+          {proxy.enableSecondaryModel && (
+            <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {/* Secondary model name */}
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="input input-mono"
+                  value={proxy.secondaryModel ?? ''}
+                  onChange={(e) => setProxy({ secondaryModel: e.target.value })}
+                  onFocus={() => setShowSecondarySuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSecondarySuggestions(false), 200)}
+                  placeholder="gemini-2.0-flash"
+                  style={{ fontSize: '0.8rem' }}
+                />
+                {showSecondarySuggestions && suggestions.length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', marginTop: '4px', maxHeight: '140px', overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                    {suggestions.map((s) => (
+                      <div
+                        key={s}
+                        style={{ padding: '5px 10px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', cursor: 'pointer' }}
+                        onMouseDown={() => { setProxy({ secondaryModel: s }); setShowSecondarySuggestions(false); }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        {s}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Secondary RPM */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flex: 1 }}>RPM model phụ</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={proxy.secondaryModelRpm ?? 17}
+                  onChange={(e) => setProxy({ secondaryModelRpm: Math.max(1, parseInt(e.target.value) || 17) })}
+                  style={{ width: '60px', padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
+                  title="Số request/phút tối đa cho model phụ"
+                />
+              </div>
+              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                Gemini Pro: 5 RPM · Flash: 20 RPM (tạm đặt 17 để có buffer)
+              </div>
             </div>
           )}
         </div>

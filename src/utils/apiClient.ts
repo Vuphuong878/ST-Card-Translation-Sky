@@ -1381,6 +1381,7 @@ async function callGemini(
       { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
     ],
   };
 
@@ -1408,7 +1409,15 @@ async function callGemini(
 
   if (!useStream) {
     const json = await res.json();
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Check for prompt-level block (entire prompt rejected)
+    if (json.promptFeedback?.blockReason) {
+      throw new ApiError(`Gemini blocked the prompt (${json.promptFeedback.blockReason}). Try enabling Jailbreak mode or use a different model.`, 400);
+    }
+    const candidate = json.candidates?.[0];
+    if (candidate?.finishReason === 'SAFETY') {
+      throw new ApiError(`Gemini blocked this content (SAFETY filter). Try enabling Jailbreak mode or use Flash model which is less restrictive.`, 400);
+    }
+    const text = candidate?.content?.parts?.[0]?.text;
     if (!text) throw new ApiError(`Empty response from Gemini API`);
     return text.trim();
   }
@@ -1417,42 +1426,41 @@ async function callGemini(
   const decoder = new TextDecoder('utf-8');
   let fullContent = '';
   let buffer = '';
-  
+  let lastFinishReason = '';
+  let promptBlockReason = '';
+
+  function parseGeminiChunk(jsonStr: string) {
+    if (!jsonStr) return;
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.promptFeedback?.blockReason) {
+        promptBlockReason = parsed.promptFeedback.blockReason;
+      }
+      const candidate = parsed.candidates?.[0];
+      if (candidate?.finishReason) lastFinishReason = candidate.finishReason;
+      const text = candidate?.content?.parts?.[0]?.text;
+      if (text) fullContent += text;
+    } catch (e) {}
+  }
+
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) {
         if (buffer) {
           const line = buffer.trim();
-          if (line.startsWith('data: ')) {
-            try {
-              const jsonStr = line.slice(6).trim();
-              if (jsonStr) {
-                const parsed = JSON.parse(jsonStr);
-                const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (text) fullContent += text;
-              }
-            } catch (e) {}
-          }
+          if (line.startsWith('data: ')) parseGeminiChunk(line.slice(6).trim());
         }
         break;
       }
-      
+
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
-      
+
       for (const line of lines) {
         const trimmedLine = line.trim();
-        if (trimmedLine.startsWith('data: ')) {
-          try {
-            const jsonStr = trimmedLine.slice(6).trim();
-            if (!jsonStr) continue;
-            const parsed = JSON.parse(jsonStr);
-            const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) fullContent += text;
-          } catch (e) {}
-        }
+        if (trimmedLine.startsWith('data: ')) parseGeminiChunk(trimmedLine.slice(6).trim());
       }
     }
   } catch (err: any) {
@@ -1463,6 +1471,12 @@ async function callGemini(
     }
   }
 
+  if (promptBlockReason) {
+    throw new ApiError(`Gemini blocked the prompt (${promptBlockReason}). Try enabling Jailbreak mode or use a different model.`, 400);
+  }
+  if (!fullContent && lastFinishReason === 'SAFETY') {
+    throw new ApiError(`Gemini blocked this content (SAFETY filter). Try enabling Jailbreak mode or use Flash model which is less restrictive.`, 400);
+  }
   if (!fullContent) {
     throw new ApiError(`Empty response from Gemini API`);
   }
@@ -1492,37 +1506,55 @@ function advanceKeyRotation() {
   _keyIndex++;
 }
 
-/* ─── Rate Limiter — Sliding Window (5 req / 60s) ─── */
+/* ─── Rate Limiter — Per-model Sliding Window ─── */
 
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 5;
-const _requestTimestamps: number[] = [];
+// Per-model timestamp buckets: model → array of request timestamps in current window
+const _modelTimestamps = new Map<string, number[]>();
+
+function _getModelBucket(model: string): number[] {
+  if (!_modelTimestamps.has(model)) _modelTimestamps.set(model, []);
+  return _modelTimestamps.get(model)!;
+}
+
+function _pruneBucket(bucket: number[], now: number): void {
+  while (bucket.length > 0 && bucket[0] <= now - RATE_LIMIT_WINDOW_MS) bucket.shift();
+}
+
+/** Check capacity WITHOUT blocking or recording. Returns true if a slot is free right now. */
+function hasRateLimitCapacity(model: string, rpm: number): boolean {
+  const now = Date.now();
+  const bucket = _getModelBucket(model);
+  _pruneBucket(bucket, now);
+  return bucket.length < rpm;
+}
+
+/** Record one request for a model (call AFTER deciding to use it). */
+function recordRateLimitRequest(model: string): void {
+  const bucket = _getModelBucket(model);
+  _pruneBucket(bucket, Date.now());
+  bucket.push(Date.now());
+}
 
 /**
- * Wait until a rate-limit slot is available.
- * Uses a sliding window: keeps only timestamps within the last 60s,
- * and waits if 5 requests were already made in that window.
+ * Wait until a rate-limit slot is available for the given model+rpm.
+ * Uses a sliding window: records timestamp, waits if rpm requests already made in last 60s.
  */
-async function waitForRateLimit(signal?: AbortSignal): Promise<void> {
+async function waitForRateLimitModel(model: string, rpm: number, signal?: AbortSignal): Promise<void> {
   const now = Date.now();
+  const bucket = _getModelBucket(model);
+  _pruneBucket(bucket, now);
 
-  // Prune old timestamps outside the window
-  while (_requestTimestamps.length > 0 && _requestTimestamps[0] <= now - RATE_LIMIT_WINDOW_MS) {
-    _requestTimestamps.shift();
-  }
-
-  // If under limit, record and go
-  if (_requestTimestamps.length < RATE_LIMIT_MAX_REQUESTS) {
-    _requestTimestamps.push(now);
+  if (bucket.length < rpm) {
+    bucket.push(now);
     return;
   }
 
-  // Over limit — calculate wait time until oldest entry expires
-  const oldestInWindow = _requestTimestamps[0];
+  const oldestInWindow = bucket[0];
   const waitMs = oldestInWindow + RATE_LIMIT_WINDOW_MS - now + 50; // +50ms buffer
 
   if (waitMs > 0) {
-    console.log(`[RateLimit] 5/${RATE_LIMIT_WINDOW_MS / 1000}s limit hit — waiting ${(waitMs / 1000).toFixed(1)}s`);
+    console.log(`[RateLimit] ${model}: ${rpm}rpm limit hit — waiting ${(waitMs / 1000).toFixed(1)}s`);
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(resolve, waitMs);
       if (signal) {
@@ -1533,15 +1565,12 @@ async function waitForRateLimit(signal?: AbortSignal): Promise<void> {
     });
   }
 
-  // Prune again after waiting and record
   const now2 = Date.now();
-  while (_requestTimestamps.length > 0 && _requestTimestamps[0] <= now2 - RATE_LIMIT_WINDOW_MS) {
-    _requestTimestamps.shift();
-  }
-  _requestTimestamps.push(now2);
+  _pruneBucket(bucket, now2);
+  bucket.push(now2);
 }
 
-/* ─── Route to correct provider (with key rotation + rate limiting) ─── */
+/* ─── Route to correct provider (with key rotation + per-model rate limiting) ─── */
 export async function callProvider(
   config: ProxySettings,
   system: string,
@@ -1549,15 +1578,32 @@ export async function callProvider(
   signal?: AbortSignal,
   images?: string[]
 ): Promise<string> {
-  // ═══ Rate limit gate ═══
-  await waitForRateLimit(signal);
+  const primaryRpm = (config.primaryModelRpm && config.primaryModelRpm > 0) ? config.primaryModelRpm : 5;
+
+  // ═══ Dual-model overflow: if secondary is enabled and primary is saturated, use secondary ═══
+  let activeConfig = config;
+  if (config.enableSecondaryModel && config.secondaryModel?.trim()) {
+    const secondaryRpm = (config.secondaryModelRpm && config.secondaryModelRpm > 0) ? config.secondaryModelRpm : 17;
+    if (hasRateLimitCapacity(config.model, primaryRpm)) {
+      recordRateLimitRequest(config.model);
+    } else if (hasRateLimitCapacity(config.secondaryModel, secondaryRpm)) {
+      console.log(`[DualModel] ${config.model} rate-limited → switching to ${config.secondaryModel}`);
+      activeConfig = { ...config, model: config.secondaryModel };
+      recordRateLimitRequest(config.secondaryModel);
+    } else {
+      // Both saturated — wait for primary
+      await waitForRateLimitModel(config.model, primaryRpm, signal);
+    }
+  } else {
+    await waitForRateLimitModel(config.model, primaryRpm, signal);
+  }
 
   // Create a config copy with rotated key
-  const activeKey = getRotatedKey(config);
-  const rotatedConfig = { ...config, apiKey: activeKey };
+  const activeKey = getRotatedKey(activeConfig);
+  const rotatedConfig = { ...activeConfig, apiKey: activeKey };
 
   try {
-    switch (config.provider) {
+    switch (rotatedConfig.provider) {
       case 'anthropic':
         return await callAnthropic(rotatedConfig, system, user, signal, images);
       case 'google':

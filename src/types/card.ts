@@ -268,6 +268,14 @@ export interface ProxySettings {
   useStream: boolean;
   /** Enable expert mode: AI uses <thought_process>/<translation> XML reasoning for higher quality */
   expertMode: boolean;
+  /** Rate limit for primary model (requests/minute). Default 5. */
+  primaryModelRpm: number;
+  /** Secondary model name (e.g. gemini-2.0-flash) — used as overflow when primary is rate-limited */
+  secondaryModel: string;
+  /** Rate limit for secondary model (requests/minute). Default 17. */
+  secondaryModelRpm: number;
+  /** When true, auto-switch to secondaryModel when primary hits its RPM limit */
+  enableSecondaryModel: boolean;
 }
 
 export type ConnectionStatus = 'untested' | 'connected' | 'failed';

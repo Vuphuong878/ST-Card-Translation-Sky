@@ -295,6 +295,10 @@ export const useStore = create<AppState>((set) => ({
     useCorsProxy: LS.get('st-translator-use-cors-proxy', true),
     useStream: LS.get('st-translator-use-stream', true),
     expertMode: LS.get('st-translator-advanced-settings', { expertMode: false }).expertMode ?? false,
+    primaryModelRpm: LS.get('st-translator-advanced-settings', { primaryModelRpm: 5 }).primaryModelRpm ?? 5,
+    secondaryModel: LS.get('st-translator-advanced-settings', { secondaryModel: '' }).secondaryModel ?? '',
+    secondaryModelRpm: LS.get('st-translator-advanced-settings', { secondaryModelRpm: 17 }).secondaryModelRpm ?? 17,
+    enableSecondaryModel: LS.get('st-translator-advanced-settings', { enableSecondaryModel: false }).enableSecondaryModel ?? false,
   },
   setProxy: (partial) => {
     set((s) => {
@@ -323,6 +327,10 @@ export const useStore = create<AppState>((set) => ({
         minResponseRatio: next.minResponseRatio,
         systemPromptPrefix: next.systemPromptPrefix,
         expertMode: next.expertMode,
+        primaryModelRpm: next.primaryModelRpm,
+        secondaryModel: next.secondaryModel,
+        secondaryModelRpm: next.secondaryModelRpm,
+        enableSecondaryModel: next.enableSecondaryModel,
       });
       return { proxy: next };
     });
@@ -351,6 +359,10 @@ export const useStore = create<AppState>((set) => ({
       useCorsProxy: true,
       useStream: true,
       expertMode: false,
+      primaryModelRpm: 5,
+      secondaryModel: '',
+      secondaryModelRpm: 17,
+      enableSecondaryModel: false,
     };
     LS.set('st-translator-provider', defaultProxy.provider);
     LS.set('st-translator-proxy-url', defaultProxy.proxyUrl);
@@ -375,6 +387,10 @@ export const useStore = create<AppState>((set) => ({
       minResponseRatio: defaultProxy.minResponseRatio,
       systemPromptPrefix: defaultProxy.systemPromptPrefix,
       expertMode: defaultProxy.expertMode,
+      primaryModelRpm: defaultProxy.primaryModelRpm,
+      secondaryModel: defaultProxy.secondaryModel,
+      secondaryModelRpm: defaultProxy.secondaryModelRpm,
+      enableSecondaryModel: defaultProxy.enableSecondaryModel,
     });
     set({ proxy: defaultProxy, connectionStatus: 'untested' });
   },
