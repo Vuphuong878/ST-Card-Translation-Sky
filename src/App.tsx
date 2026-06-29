@@ -22,16 +22,12 @@ const AiCompanionPanel = lazy(() => import('./components/AiCompanionPanel'));
 const PresetPromptViewer = lazy(() => import('./components/PresetPromptViewer'));
 
 export default function App() {
-  const { toasts, removeToast, card, locale, setLocale, loadStateFromIDB } = useStore();
+  const { toasts, removeToast, card, locale, setLocale } = useStore();
   const t = useT();
   const [showEjsCreator, setShowEjsCreator] = useState(false);
   const [showRegexManager, setShowRegexManager] = useState(false);
   const [showAiCompanion, setShowAiCompanion] = useState(false);
   const [showPresetViewer, setShowPresetViewer] = useState(false);
-
-  useEffect(() => {
-    loadStateFromIDB();
-  }, [loadStateFromIDB]);
 
   if (showRegexManager) {
     return (

@@ -173,13 +173,7 @@ export const useStore = create<AppState>((set) => ({
     LS.set('st-translator-mvu-dict', {});
     LS.set('st-translator-ejs-entry-dict', {});
     LS.set('st-translator-ejs-keyword-dict', {});
-    // Card data and fields are NOT persisted to IDB — writing large JSON with embedded JS code
-    // to IDB causes Chrome to write temp files that Windows Defender scans (15-25 min freeze).
-    // Clean up any stale data from older versions of the app.
-    IDB.remove('st-translator-card-data');
-    IDB.remove('st-translator-fields-data');
-    IDB.remove('st-translator-image-buffer');
-    IDB.remove('st-translator-image-data');
+    // IDB is not used — opening it causes Windows Defender to scan old LevelDB files (freeze).
   },
   updateCard: (card) => {
     set({ card });
@@ -213,20 +207,10 @@ export const useStore = create<AppState>((set) => ({
     LS.set('st-translator-mvu-dict', {});
     LS.set('st-translator-ejs-entry-dict', {});
     LS.set('st-translator-ejs-keyword-dict', {});
-    IDB.remove('st-translator-card-data');
-    IDB.remove('st-translator-fields-data');
-    IDB.remove('st-translator-image-data');
-    IDB.remove('st-translator-image-buffer');
+    // IDB is not used — opening it causes Windows Defender to scan old LevelDB files (freeze).
   },
   loadStateFromIDB: async () => {
-    // Card/fields data is no longer persisted to IDB (embedded JS code triggered AV scan freeze).
-    // On first run after upgrade, purge any stale data from older app versions.
-    await Promise.all([
-      IDB.remove('st-translator-card-data'),
-      IDB.remove('st-translator-fields-data'),
-      IDB.remove('st-translator-image-buffer'),
-      IDB.remove('st-translator-image-data'),
-    ]);
+    // No-op: IDB is entirely disabled to prevent Windows Defender from scanning LevelDB files.
   },
 
   // ─── Proxy ───
@@ -809,8 +793,6 @@ export const useStore = create<AppState>((set) => ({
   deleteCurrentCardCache: async () => {
     const s = useStore.getState();
     if (s.cardFileName) {
-      // Remove cache key in IDB
-      await IDB.remove(`st-cache-${s.cardFileName}`);
       
       // Reset translation state of all fields in the active store
       const resetFields = s.fields.length > 0
@@ -853,9 +835,7 @@ export const useStore = create<AppState>((set) => ({
     }
   },
   deleteAllCaches: async () => {
-    // Remove all cache keys starting with 'st-cache-'
-    await IDB.clearPrefix('st-cache-');
-    
+
     const s = useStore.getState();
     const resetFields = s.fields.length > 0
       ? s.fields.map(f => ({
