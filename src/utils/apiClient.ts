@@ -512,6 +512,14 @@ async function postTranslationResidualCheck(
           .join('\n');
     }
 
+    // ═══ LINK PROTECTION ═══
+    // Mask URLs/links BEFORE sending to the cleanup agent. Otherwise, when an entry
+    // has both genuine residual Chinese AND a link that legitimately contains Chinese
+    // (e.g. https://cdn.com/骰子系统/stable.js), the cleanup agent "translates" the
+    // Chinese inside the link too — breaking the link. The earlier translateText pass
+    // unmasks URLs before this check runs, so we must re-mask here for safety.
+    const { maskedText: maskedResult, map: residualUrlMap } = maskUrls(currentResult);
+
     const cleanupSystem = `You are a translation cleanup agent. The text below was translated from ${sourceLang || 'Chinese'} to ${targetLang}, but some Chinese characters were left untranslated.
 
 Your ONLY job: Find ALL remaining Chinese text and translate it to ${targetLang}.
@@ -520,15 +528,16 @@ RULES:
 1. Output the COMPLETE text with ALL Chinese replaced by ${targetLang} translations.
 2. Do NOT change anything already in ${targetLang}, English, or code.
 3. Preserve ALL formatting, HTML, code, macros, EJS, regex patterns.
-4. Translate Chinese proper nouns (names, places) using Sino-Vietnamese reading. Japanese names use Romaji transliteration. All descriptive text → natural modern Vietnamese.
-5. Do NOT wrap output in markdown fences.
-6. Do NOT add explanations.
-7. Return the FULL text, not just the translated fragments.
+4. CRITICAL — DO NOT TOUCH LINKS: Never translate or modify URLs, web links, file paths, image sources, src/href values, or import() paths — even if they contain Chinese characters. Translating any part of a link breaks it (404). Any token of the form __PROTECTED_URL_<number>__ is a protected link placeholder: copy it through EXACTLY as-is — do not translate, edit, space-out, or remove it.
+5. Translate Chinese proper nouns (names, places) using Sino-Vietnamese reading. Japanese names use Romaji transliteration. All descriptive text → natural modern Vietnamese.
+6. Do NOT wrap output in markdown fences.
+7. Do NOT add explanations.
+8. Return the FULL text, not just the translated fragments.
 
 Chinese fragments that need translation:
 ${fragmentList}${mvuBlock}`;
 
-    const cleanupUser = `Translate ALL remaining Chinese text in the following to ${targetLang}. Return the COMPLETE corrected text:\n\n${currentResult}`;
+    const cleanupUser = `Translate ALL remaining Chinese text in the following to ${targetLang}. Return the COMPLETE corrected text:\n\n${maskedResult}`;
 
     try {
       const controller = new AbortController();
@@ -541,9 +550,11 @@ ${fragmentList}${mvuBlock}`;
       clearTimeout(timeout);
 
       if (cleanedResult && cleanedResult.trim()) {
-        const parsed = config.expertMode
+        const parsedRaw = config.expertMode
           ? (extractTranslationFromResponse(cleanedResult).translation || cleanedResult)
           : cleanedResult;
+        // Restore the protected links before re-counting / returning.
+        const parsed = unmaskUrls(parsedRaw, residualUrlMap);
         const newResidual = countChineseChars(parsed);
         if (newResidual < residualCount) {
           currentResult = parsed.trim();

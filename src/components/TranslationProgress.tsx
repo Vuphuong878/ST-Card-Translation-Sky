@@ -9,6 +9,7 @@ import {
   Pause,
   Square,
   Clock,
+  Timer,
   Zap,
   CheckCircle2,
   XCircle,
@@ -34,6 +35,32 @@ function MiniStat({ icon, value, label, color }: { icon: React.ReactNode; value:
       <span style={{ fontWeight: 600 }}>{value}</span>
       <span style={{ color: 'var(--text-muted)' }}>{label}</span>
     </div>
+  );
+}
+
+/** Live count-up timer: how long since translation started (wall-clock).
+ *  Ticks every second while translating/paused; freezes when done/cancelled. */
+function ElapsedTime({ color = 'var(--text-secondary)' }: { color?: string }) {
+  const { startTime, phase } = useStore();
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (phase !== 'translating' && phase !== 'paused') return;
+    const id = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  if (!startTime) return null;
+  const totalSec = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const label = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }} title="Thời gian đã dịch (từ lúc bắt đầu)">
+      <Timer size={12} /> Đã chạy: {label}
+    </span>
   );
 }
 
@@ -195,7 +222,8 @@ function ModModePanel() {
           <span style={{ color: modAccent }}>{t.modPanel}</span>
         </h3>
         {isTranslating && (
-          <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--text-secondary)', flexWrap: 'wrap', alignItems: 'center' }}>
+            <ElapsedTime color={modAccent} />
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Clock size={12} /> {t.eta}: {getETA()}
             </span>
@@ -516,7 +544,8 @@ function TranslationPanel() {
           {t.translation}
         </h3>
         {totalFields > 0 && (
-          <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--text-secondary)', flexWrap: 'wrap', alignItems: 'center' }}>
+            <ElapsedTime />
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Clock size={12} /> {t.eta}: {getETA()}
             </span>

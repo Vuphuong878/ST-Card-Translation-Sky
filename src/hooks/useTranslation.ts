@@ -18,6 +18,17 @@ import { CallMonitor } from '../utils/callMonitor';
 import type { FieldGroup, FieldGroupConfig, TranslationField } from '../types/card';
 
 /**
+ * An entry longer than this (in characters) is "too long" to translate safely inside a
+ * multi-item batch — `translateBatch` sends a multi-item batch as ONE un-chunked API call,
+ * so a long entry makes the whole call take many minutes and risks truncation/timeout.
+ * Such entries are isolated into their own batch and routed through `translateSingleField`,
+ * which splits them into ~12K-char chunks (with resume support) — far more reliable.
+ * Matches `chunkText`'s 12K hard cap in apiClient.ts (with margin so we only isolate
+ * entries that genuinely span multiple chunks, keeping normal entries batched for speed).
+ */
+const LONG_ENTRY_ISOLATE_CHARS = 16000;
+
+/**
  * Strip URL/link content from text before CJK residual detection.
  * Prevents false-positive retries when URLs intentionally contain CJK characters
  * (e.g., import('https://cdn.com/骰子系统/stable.js') should NOT trigger retry).
@@ -824,11 +835,25 @@ export function useTranslation() {
     // ═══ NATIVE ROUTING TO SINGLE STREAM ═══
     // For MVU/Controller scripts, they can be huge. If they are in a batch of 1,
     // explicitly route them through the single-translation flow to utilize adaptive chunking.
+    // ALSO route any oversized single entry (e.g. a very long lorebook.content) the same way:
+    // a multi-item batch is one un-chunked call, but translateSingleField chunks + can resume,
+    // which prevents the "entry dài quá" 10–20 min stalls / truncation.
     const isMvuCritical = batchFields[0].entryType === 'mvu_logic' || batchFields[0].entryType === 'controller' || batchFields[0].entryType === 'initvar';
-    if (batchFields.length === 1 && isMvuCritical) {
+    const isLongSingle = batchFields.length === 1 && batchFields[0].original.length > LONG_ENTRY_ISOLATE_CHARS;
+    if (batchFields.length === 1 && (isMvuCritical || isLongSingle)) {
+      if (isLongSingle && !isMvuCritical) {
+        store.addLog('info', `📏 Entry dài (${batchFields[0].original.length.toLocaleString()} ký tự) — dịch riêng & cắt nhỏ (chunk) thay vì gộp lô, để tránh lỗi/timeout: ${batchFields[0].label}`);
+      }
       const allCurrentFields = useStore.getState().fields;
       const fieldIdx = allCurrentFields.findIndex(sf => sf.path === batchFields[0].path);
-      const result = await translateSingleField(batchFields[0], fieldIdx >= 0 ? fieldIdx : 0, allCurrentFields);
+      // translateSingleField manages its own retry counter; loop on 'retry' (capped) like the
+      // main single-field loop does, so a flagged chunk actually gets re-attempted.
+      let result = await translateSingleField(batchFields[0], fieldIdx >= 0 ? fieldIdx : 0, allCurrentFields);
+      let guard = 0;
+      while (result === 'retry' && guard++ < 5) {
+        if (checkAbort()) throw new Error('Cancelled');
+        result = await translateSingleField(batchFields[0], fieldIdx >= 0 ? fieldIdx : 0, useStore.getState().fields);
+      }
       if (result === 'error') {
          throw new Error(`Single translation failed for ${batchFields[0].label}`);
       }
@@ -1713,6 +1738,13 @@ export function useTranslation() {
             let currentChars = 0;
 
             for (const f of typeFields) {
+              // Long entry → isolate into its own batch so translateOneBatch routes it
+              // through chunked single-field translation (avoids the un-chunked giant call).
+              if (f.original.length > LONG_ENTRY_ISOLATE_CHARS) {
+                if (currentBatch.length > 0) { subBatches.push(currentBatch); currentBatch = []; currentChars = 0; }
+                subBatches.push([f]);
+                continue;
+              }
               if (currentBatch.length >= typeBatchSize || (currentBatch.length > 0 && currentChars + f.original.length > MAX_BATCH_CHARS)) {
                 subBatches.push(currentBatch);
                 currentBatch = [];
@@ -1746,8 +1778,15 @@ export function useTranslation() {
             let currentBatch: TranslationField[] = [];
             let currentChars = 0;
             for (const f of modelFields) {
+              // Long entry → isolate into its own batch so it gets chunked single-field
+              // translation instead of being sent inside one un-chunked giant batch call.
+              if (f.original.length > LONG_ENTRY_ISOLATE_CHARS) {
+                if (currentBatch.length > 0) { subBatches.push(currentBatch); currentBatch = []; currentChars = 0; }
+                subBatches.push([f]);
+                continue;
+              }
               // Split when: count exceeds batchSize, OR char count exceeds soft cap
-              if (currentBatch.length >= batchSize || 
+              if (currentBatch.length >= batchSize ||
                   (currentBatch.length > 0 && currentChars + f.original.length > MAX_BATCH_CHARS) ||
                   (currentBatch.length > 0 && currentChars + f.original.length > SOFT_CHAR_CAP && currentBatch.length >= 3)) {
                 subBatches.push(currentBatch);
