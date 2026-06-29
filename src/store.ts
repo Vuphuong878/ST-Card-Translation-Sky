@@ -382,6 +382,7 @@ export const useStore = create<AppState>((set) => ({
     chunkSize: LS.get('st-translator-chunk-size', 0),
     parallelChunks: LS.get('st-translator-parallel-chunks', 1),
     enableJailbreak: LS.get('st-translator-jailbreak', true),
+    enableGomorrahNsfwRules: LS.get('st-translator-gomorrah-nsfw-rules', false),
     enableObjectiveMode: LS.get('st-translator-objective-mode', true),
     surgicalMode: LS.get('st-translator-surgical-mode', false),
     surgicalPrompt: LS.get('st-translator-surgical-prompt', ''),
@@ -433,6 +434,9 @@ export const useStore = create<AppState>((set) => ({
       }
       if ('enableJailbreak' in partial) {
         LS.set('st-translator-jailbreak', next.enableJailbreak);
+      }
+      if ('enableGomorrahNsfwRules' in partial) {
+        LS.set('st-translator-gomorrah-nsfw-rules', next.enableGomorrahNsfwRules);
       }
       if ('enableObjectiveMode' in partial) {
         LS.set('st-translator-objective-mode', next.enableObjectiveMode);
@@ -604,6 +608,7 @@ export const useStore = create<AppState>((set) => ({
       chunkSize: 0,
       parallelChunks: 1,
       enableJailbreak: true,
+      enableGomorrahNsfwRules: false,
       enableObjectiveMode: true,
       surgicalMode: false,
       surgicalPrompt: '',
@@ -656,6 +661,7 @@ export const useStore = create<AppState>((set) => ({
     LS.set('st-translator-chunk-size', defaultTranslationConfig.chunkSize);
     LS.set('st-translator-parallel-chunks', defaultTranslationConfig.parallelChunks);
     LS.set('st-translator-jailbreak', defaultTranslationConfig.enableJailbreak);
+    LS.set('st-translator-gomorrah-nsfw-rules', defaultTranslationConfig.enableGomorrahNsfwRules);
     LS.set('st-translator-objective-mode', defaultTranslationConfig.enableObjectiveMode);
     LS.set('st-translator-surgical-mode', defaultTranslationConfig.surgicalMode);
     LS.set('st-translator-mod-mode', defaultTranslationConfig.enableModMode);

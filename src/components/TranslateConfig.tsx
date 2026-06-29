@@ -369,6 +369,14 @@ export default function TranslateConfig() {
               </span>
             </label>
 
+            {/* Gomorrah NSFW Protection Rules */}
+            <label className="checkbox-wrapper" style={{ marginTop: '-4px' }}>
+              <input type="checkbox" checked={translationConfig.enableGomorrahNsfwRules || false} onChange={(e) => setTranslationConfig({ enableGomorrahNsfwRules: e.target.checked })} />
+              <span style={{ color: 'rgba(200,100,200,0.8)', fontSize: '0.8rem', fontWeight: 500 }}>
+                {locale === 'vi' ? 'Quy tắc NSFW Gomorrah (Tối ưu content, loại bỏ lọc thừa)' : 'Gomorrah NSFW Rules (Content quality, remove excess filters)'}
+              </span>
+            </label>
+
             {/* Objective Mode */}
             <label className="checkbox-wrapper" style={{ marginTop: '-4px' }}>
               <input type="checkbox" checked={translationConfig.enableObjectiveMode !== false} onChange={(e) => setTranslationConfig({ enableObjectiveMode: e.target.checked })} />

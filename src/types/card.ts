@@ -317,6 +317,7 @@ export interface TranslationConfig {
   chunkSize: number; // Tùy chỉnh kích thước chia chunk (số ký tự)
   parallelChunks: number; // Số chunk dịch song song (1 = tuần tự, 2+ = song song)
   enableJailbreak: boolean; // Enable Catbox Jailbreak for NSFW cards
+  enableGomorrahNsfwRules?: boolean; // Enable Gomorrah NSFW Protection Rules (content quality optimization)
   enableObjectiveMode: boolean; // Enable Bạch miêu (objective translation)
   surgicalMode: boolean; // Extract and translate only CJK substrings for code-heavy fields
   surgicalPrompt: string; // Custom instructions for surgical translation prompt

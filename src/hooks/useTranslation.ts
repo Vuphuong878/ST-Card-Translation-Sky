@@ -290,6 +290,7 @@ export function useTranslation() {
       const promptResult = buildEffectivePrompt({
         translationPrompt: store.translationConfig.translationPrompt,
         enableJailbreak: store.translationConfig.enableJailbreak,
+        enableGomorrahNsfwRules: store.translationConfig.enableGomorrahNsfwRules,
         enableObjectiveMode: store.translationConfig.enableObjectiveMode,
         enableMvuSync: store.translationConfig.enableMvuSync,
         enableRAGContext: store.translationConfig.enableRAGContext,
@@ -902,6 +903,7 @@ export function useTranslation() {
       const promptResult = buildEffectivePrompt({
         translationPrompt: store.translationConfig.translationPrompt,
         enableJailbreak: store.translationConfig.enableJailbreak,
+        enableGomorrahNsfwRules: store.translationConfig.enableGomorrahNsfwRules,
         enableObjectiveMode: store.translationConfig.enableObjectiveMode,
         enableMvuSync: store.translationConfig.enableMvuSync,
         enableRAGContext: store.translationConfig.enableRAGContext,
@@ -1924,6 +1926,7 @@ export function useTranslation() {
             const regexPromptResult = buildEffectivePrompt({
               translationPrompt: store.translationConfig.translationPrompt,
               enableJailbreak: store.translationConfig.enableJailbreak,
+        enableGomorrahNsfwRules: store.translationConfig.enableGomorrahNsfwRules,
               enableObjectiveMode: store.translationConfig.enableObjectiveMode,
               enableMvuSync: store.translationConfig.enableMvuSync,
               enableRAGContext: store.translationConfig.enableRAGContext,
@@ -2513,6 +2516,7 @@ export function useTranslation() {
       const promptResult = buildEffectivePrompt({
         translationPrompt: store.translationConfig.translationPrompt,
         enableJailbreak: store.translationConfig.enableJailbreak,
+        enableGomorrahNsfwRules: store.translationConfig.enableGomorrahNsfwRules,
         enableObjectiveMode: store.translationConfig.enableObjectiveMode,
         enableMvuSync: store.translationConfig.enableMvuSync,
         enableRAGContext: store.translationConfig.enableRAGContext,
@@ -3020,6 +3024,7 @@ export function useTranslation() {
       const promptResult = buildEffectivePrompt({
         translationPrompt: store.translationConfig.translationPrompt,
         enableJailbreak: store.translationConfig.enableJailbreak,
+        enableGomorrahNsfwRules: store.translationConfig.enableGomorrahNsfwRules,
         enableObjectiveMode: false,
         enableMvuSync: store.translationConfig.enableMvuSync,
         enableRAGContext: store.translationConfig.enableRAGContext,
@@ -3101,6 +3106,7 @@ export function useTranslation() {
             const fullPromptResult = buildEffectivePrompt({
               translationPrompt: store.translationConfig.translationPrompt,
               enableJailbreak: store.translationConfig.enableJailbreak,
+        enableGomorrahNsfwRules: store.translationConfig.enableGomorrahNsfwRules,
               enableObjectiveMode: false,
               enableMvuSync: store.translationConfig.enableMvuSync,
               enableRAGContext: store.translationConfig.enableRAGContext,
@@ -3441,6 +3447,7 @@ export function useTranslation() {
         const promptResult = buildEffectivePrompt({
           translationPrompt: store.translationConfig.translationPrompt,
           enableJailbreak: store.translationConfig.enableJailbreak,
+        enableGomorrahNsfwRules: store.translationConfig.enableGomorrahNsfwRules,
           enableObjectiveMode: false,
           enableMvuSync: store.translationConfig.enableMvuSync,
           enableRAGContext: store.translationConfig.enableRAGContext,
@@ -3516,6 +3523,7 @@ export function useTranslation() {
               const fullPromptResult = buildEffectivePrompt({
                 translationPrompt: store.translationConfig.translationPrompt,
                 enableJailbreak: store.translationConfig.enableJailbreak,
+        enableGomorrahNsfwRules: store.translationConfig.enableGomorrahNsfwRules,
                 enableObjectiveMode: false,
                 enableMvuSync: store.translationConfig.enableMvuSync,
                 enableRAGContext: store.translationConfig.enableRAGContext,
