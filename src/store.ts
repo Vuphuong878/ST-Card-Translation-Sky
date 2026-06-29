@@ -84,6 +84,12 @@ interface AppState {
   startTime: number | null;
   setStartTime: (t: number | null) => void;
 
+  // Pre-processing progress (Strategy B variable translation, conflict resolution,
+  // EJS entry/keyword translation) — steps that run BEFORE the main field loop and
+  // don't touch `fields`, so they need their own progress indicator.
+  preprocessProgress: { label: string; current: number; total: number } | null;
+  setPreprocessProgress: (p: { label: string; current: number; total: number } | null) => void;
+
   // Logs
   logs: LogEntry[];
   logFilter: LogFilter;
@@ -714,6 +720,8 @@ export const useStore = create<AppState>((set) => ({
     }),
   phase: 'idle',
   setPhase: (p) => set(() => ({ phase: p })),
+  preprocessProgress: null,
+  setPreprocessProgress: (p) => set({ preprocessProgress: p }),
   currentFieldIndex: 0,
   setCurrentFieldIndex: (i) => set({ currentFieldIndex: i }),
   startTime: null,

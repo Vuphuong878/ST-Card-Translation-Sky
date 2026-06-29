@@ -474,7 +474,7 @@ function ModModePanel() {
 // ═══════════════════════════════════════════════
 
 function TranslationPanel() {
-  const { fields, phase, logs, startTime, translationConfig } = useStore();
+  const { fields, phase, logs, startTime, translationConfig, preprocessProgress } = useStore();
   const { startTranslation, continueTranslation, pauseTranslation, resumeTranslation, cancelTranslation, retryAllErrors } = useTranslation();
   const t = useT();
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -523,6 +523,42 @@ function TranslationPanel() {
           </div>
         )}
       </div>
+
+      {/* Pre-processing progress bar (Strategy B variable translation, etc.) — shown
+          BEFORE the main field loop starts, so the user can see those long steps progress */}
+      {phase === 'translating' && preprocessProgress && (
+        <div style={{
+          marginBottom: '12px',
+          padding: '10px 12px',
+          background: 'rgba(124,106,240,0.06)',
+          border: '1px solid rgba(124,106,240,0.2)',
+          borderRadius: 'var(--radius-sm)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '6px' }}>
+            <span style={{ color: 'var(--accent-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Loader2 size={12} className="spin" /> {preprocessProgress.label}
+            </span>
+            <span style={{ fontWeight: 600, color: 'var(--accent-secondary)' }}>
+              {preprocessProgress.current} / {preprocessProgress.total}
+              {' '}({preprocessProgress.total > 0 ? Math.round((preprocessProgress.current / preprocessProgress.total) * 100) : 0}%)
+            </span>
+          </div>
+          <div className="progress-track">
+            <div
+              style={{
+                width: `${preprocessProgress.total > 0 ? (preprocessProgress.current / preprocessProgress.total) * 100 : 0}%`,
+                height: '100%',
+                background: 'linear-gradient(135deg, var(--accent-secondary), var(--accent-primary))',
+                borderRadius: 'inherit',
+                transition: 'width 0.3s ease',
+              }}
+            />
+          </div>
+          <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Đang chuẩn bị trước khi dịch từng trường — bước này gọi AI theo lô (mỗi lô 25 mục).
+          </div>
+        </div>
+      )}
 
       {/* Progress bar */}
       {totalFields > 0 && (

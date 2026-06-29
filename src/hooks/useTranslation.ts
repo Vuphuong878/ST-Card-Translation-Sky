@@ -1322,6 +1322,7 @@ export function useTranslation() {
     store.setPhase('translating');
     store.setStartTime(Date.now());
     store.clearLogs();
+    store.setPreprocessProgress(null);
 
     const logParts = [`Starting translation of ${fields.length} fields to ${store.translationConfig.targetLanguage}`];
     if (skippedCount > 0) logParts.push(`(${skippedCount} skipped — already in target language)`);
@@ -1419,7 +1420,16 @@ export function useTranslation() {
               undefined,
               undefined,
               store.translationConfig.mvuTranslationPrompt,
+              (done, total) => {
+                const passLabel = totalMvuPasses > 1 ? ` (Pass ${mvuPass + 1}/${totalMvuPasses})` : '';
+                store.setPreprocessProgress({
+                  label: `🔧 Dịch tên biến MVU${passLabel}`,
+                  current: done,
+                  total,
+                });
+              },
             );
+            store.setPreprocessProgress(null);
             
             const mergedDict = { ...existingDict };
             let addedCount = 0;
@@ -3202,6 +3212,7 @@ export function useTranslation() {
     store.setPhase('translating');
     store.setStartTime(Date.now());
     store.clearLogs();
+    store.setPreprocessProgress(null);
 
     store.addLog('info', `🔧 Applying Mod to ${targetFields.length} field(s) [Language: ${effectiveLang}]`);
     store.addLog('info', `📝 Mod instructions: "${modInstructions.slice(0, 100)}${modInstructions.length > 100 ? '...' : ''}"`);

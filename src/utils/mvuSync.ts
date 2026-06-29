@@ -1852,6 +1852,7 @@ export async function aiTranslateMvuKeys(
   modInstructions?: string,
   existingMappings?: Record<string, string>,
   customPrompt?: string,
+  onProgress?: (done: number, total: number) => void,
 ): Promise<Record<string, string>> {
   if (keys.length === 0) return {};
 
@@ -1917,6 +1918,10 @@ RESPOND in EXACT JSON format (no markdown): {"translations": {"original_key": "T
   for (let i = 0; i < keysToTranslate.length; i += BATCH_SIZE) {
     batches.push(keysToTranslate.slice(i, i + BATCH_SIZE));
   }
+
+  // Report initial progress so the UI shows a bar immediately (0 of N)
+  onProgress?.(0, keysToTranslate.length);
+  let translatedSoFar = 0;
 
   for (const batch of batches) {
     if (signal?.aborted) break;
@@ -2049,6 +2054,10 @@ ${currentVarList}${retryHint}`;
         }
       }
     }
+
+    // Report progress after each batch completes (success or exhausted retries)
+    translatedSoFar += batch.length;
+    onProgress?.(Math.min(translatedSoFar, keysToTranslate.length), keysToTranslate.length);
   } // end batch loop
 
   // ── POST-BATCH: Auto-dedup conflicting translations ──────────────────────
