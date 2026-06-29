@@ -1153,7 +1153,7 @@ async function callOpenAICompatible(
   if (!useStream) {
     const json = await res.json();
     const text = json.choices?.[0]?.message?.content || json.choices?.[0]?.text;
-    if (!text) throw new ApiError(`Empty response from API`);
+    if (!text) throw new ApiError(`Empty response from API`, undefined, true);
     return text.trim();
   }
 
@@ -1204,7 +1204,7 @@ async function callOpenAICompatible(
   }
 
   if (!fullContent) {
-    throw new ApiError(`Empty response from API`);
+    throw new ApiError(`Empty response from API`, undefined, true);
   }
   return fullContent.trim();
 }
@@ -1288,7 +1288,7 @@ async function callAnthropic(
   if (!useStream) {
     const json = await res.json();
     const text = json.content?.[0]?.text;
-    if (!text) throw new ApiError(`Empty response from Anthropic API`);
+    if (!text) throw new ApiError(`Empty response from Anthropic API`, undefined, true);
     return text.trim();
   }
 
@@ -1340,7 +1340,7 @@ async function callAnthropic(
   }
 
   if (!fullContent) {
-    throw new ApiError(`Empty response from Anthropic API`);
+    throw new ApiError(`Empty response from Anthropic API`, undefined, true);
   }
   return fullContent.trim();
 }
@@ -1430,7 +1430,7 @@ async function callGemini(
       throw new ApiError(`Gemini blocked this content (SAFETY filter). Try enabling Jailbreak mode or use Flash model which is less restrictive.`, 400);
     }
     const text = candidate?.content?.parts?.[0]?.text;
-    if (!text) throw new ApiError(`Empty response from Gemini API`);
+    if (!text) throw new ApiError(`Empty response from Gemini API`, undefined, true);
     return text.trim();
   }
 
@@ -1490,7 +1490,7 @@ async function callGemini(
     throw new ApiError(`Gemini blocked this content (SAFETY filter). Try enabling Jailbreak mode or use Flash model which is less restrictive.`, 400);
   }
   if (!fullContent) {
-    throw new ApiError(`Empty response from Gemini API`);
+    throw new ApiError(`Empty response from Gemini API`, undefined, true);
   }
   return fullContent.trim();
 }
