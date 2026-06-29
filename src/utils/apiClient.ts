@@ -3090,9 +3090,10 @@ export async function translateText(
     
     // ═══ SINGLE-CHUNK BLOAT GUARD ═══
     // MOD MODE: skip — mod output can legitimately be much larger than input
-    // CJK→Latin expansion can legitimately reach 1.5-2.0x, so only flag extreme bloat (>2x expected)
+    // CJK→Vietnamese is dense (1 Hanzi → several Latin chars) so faithful output reaches ~2x;
+    // the factor below reflects that so only true hallucination loops (>2.5x expected) get trimmed.
     const cjkRatioSingle = getCJKRatio(maskedText);
-    const expectedExpansionSingle = cjkRatioSingle > 0.3 ? 1.5 : (cjkRatioSingle > 0.1 ? 1.3 : 1.0);
+    const expectedExpansionSingle = cjkRatioSingle > 0.4 ? 2.2 : cjkRatioSingle > 0.2 ? 1.9 : cjkRatioSingle > 0.1 ? 1.5 : 1.2;
     const expectedFinalLenSingle = maskedText.length * expectedExpansionSingle;
     
     // Absolute max allowed length to prevent hallucinations (especially on short texts)
@@ -3100,7 +3101,7 @@ export async function translateText(
     const maxAllowedLen = Math.max(150, expectedFinalLenSingle * 2.5);
     
     if (!isModMode && cleaned.length > maxAllowedLen) {
-      console.error(`[translateText] ⚠️ SINGLE CHUNK BLOAT for ${fieldName}: ${cleaned.length} chars > allowed max ${Math.round(maxAllowedLen)} — trimming to prevent hallucination loops`);
+      console.warn(`[translateText] ⚠️ SINGLE CHUNK BLOAT for ${fieldName}: ${cleaned.length} chars > allowed max ${Math.round(maxAllowedLen)} — trimming to prevent hallucination loops`);
       cleaned = cleaned.slice(0, Math.floor(maxAllowedLen));
     }
 
@@ -3408,14 +3409,19 @@ export async function translateText(
   }
   
   // ═══ ULTIMATE BLOAT GUARD — last line of defense against content doubling ═══
-  // CJK→Latin expansion can legitimately reach 1.5-2.0x, so only flag extreme bloat (>3x expected)
+  // CJK→Vietnamese is VERY dense (1 Hanzi → several Latin chars), so a faithful translation
+  // routinely reaches ~2x the source char count. The expansion factor below makes "expected"
+  // reflect that, so only genuine content-doubling (output ≈ 2x of the already-expanded
+  // expectation) trips the guard — not normal CJK→VI growth.
   // MOD MODE: skip entirely — mod output can legitimately be much larger than input
   const cjkRatioFinal = getCJKRatio(maskedText);
-  const expectedExpansionFinal = cjkRatioFinal > 0.3 ? 1.5 : (cjkRatioFinal > 0.1 ? 1.3 : 1.0);
+  const expectedExpansionFinal = cjkRatioFinal > 0.4 ? 2.2 : cjkRatioFinal > 0.2 ? 1.9 : cjkRatioFinal > 0.1 ? 1.5 : 1.2;
   const expectedFinalLen = maskedText.length * expectedExpansionFinal;
   const bloatRatio = cleaned.length / Math.max(1, expectedFinalLen);
   if (!isModMode && bloatRatio > 2.0 && maskedText.length > 5000) {
-    console.error(`[translateText] ⚠️ BLOAT DETECTED for ${fieldName}: result ${cleaned.length} chars is ${(bloatRatio * 100).toFixed(0)}% of expected ${Math.round(expectedFinalLen)} chars — checking for duplication`);
+    // Not necessarily an error — could just be a large-but-faithful expansion. Use warn (not
+    // error) here; only escalate to error if the duplication check below CONFIRMS doubling.
+    console.warn(`[translateText] ℹ️ Possible bloat for ${fieldName}: result ${cleaned.length} chars is ${(bloatRatio * 100).toFixed(0)}% of expected ${Math.round(expectedFinalLen)} chars — checking for duplication`);
     // Try to find where the duplication starts by checking if the second half
     // is similar to the first half (common pattern: translation + original tail)
     const halfLen = Math.floor(cleaned.length / 2);
@@ -3437,8 +3443,9 @@ export async function translateText(
       console.error(`[translateText] BLOAT CONFIRMED: structural overlap at midpoint (${overlapLen}/${firstStructure.length}) — trimming duplicate`);
       cleaned = cleaned.slice(0, Math.floor(expectedFinalLen * 2.0));
     } else {
-      // Not a clear duplicate — CJK→Latin expansion is probably just large, log only
-      console.warn(`[translateText] BLOAT WARNING: no duplicate pattern found, keeping full translation (${cleaned.length} chars)`);
+      // Not a duplicate — just a large faithful CJK→Vietnamese expansion. This is the NORMAL
+      // outcome, not an error: keep the full translation. Plain log so it doesn't look alarming.
+      console.log(`[translateText] ✓ No duplication — large output is normal CJK→VI expansion, keeping full translation (${cleaned.length} chars)`);
     }
   } else if (isModMode && cleaned.length > maskedText.length * 1.8) {
     console.log(`[translateText] ℹ️ MOD MODE: output ${cleaned.length} chars is ${((cleaned.length / maskedText.length) * 100).toFixed(0)}% of original ${maskedText.length} — bloat guard skipped (mod mode allows larger output)`);

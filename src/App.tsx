@@ -10,6 +10,7 @@ import { useT } from './i18n/useLocale';
 import type { Locale } from './i18n/translations';
 import { Languages, X, Globe } from 'lucide-react';
 import PresetImportPanel from './components/PresetImportPanel';
+import { APP_VERSION, APP_VERSION_NOTE } from './version';
 
 // Lazy-load heavy components — only loaded after card is imported
 const FieldEditor = lazy(() => import('./components/FieldEditor'));
@@ -90,8 +91,18 @@ export default function App() {
             <Languages size={18} color="white" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
               {t.appTitle}
+              <span
+                title={APP_VERSION_NOTE}
+                style={{
+                  fontSize: '0.6rem', fontWeight: 700, color: 'var(--accent-secondary)',
+                  background: 'rgba(78,205,196,0.12)', border: '1px solid rgba(78,205,196,0.35)',
+                  padding: '1px 6px', borderRadius: '999px', letterSpacing: '0', whiteSpace: 'nowrap',
+                }}
+              >
+                v{APP_VERSION}
+              </span>
             </div>
             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
               {t.appSubtitle}
