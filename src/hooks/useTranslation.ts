@@ -14,6 +14,7 @@ import { parsePatchOutput, applyPatches, validatePatchResult } from '../utils/pa
 import { injectMvuZodSystem } from '../utils/mvuGenerator';
 import { detectEjsCard, extractEjsEntryNames, extractEjsKeywords, aiTranslateEjsEntries, validateEjsSync, autoFixEjsEntryNames, autoFixEjsKeywords, enforceEjsEntryName, enforceEjsCovariance, enforceEjsKeywordCasing, autoFixEjsKeywordsExtended } from '../utils/ejsSync';
 import { getActivePresetPromptContent } from '../utils/presetParser';
+import { CallMonitor } from '../utils/callMonitor';
 import type { FieldGroup, FieldGroupConfig, TranslationField } from '../types/card';
 
 /**
@@ -1323,6 +1324,7 @@ export function useTranslation() {
     store.setStartTime(Date.now());
     store.clearLogs();
     store.setPreprocessProgress(null);
+    CallMonitor.reset();
 
     const logParts = [`Starting translation of ${fields.length} fields to ${store.translationConfig.targetLanguage}`];
     if (skippedCount > 0) logParts.push(`(${skippedCount} skipped — already in target language)`);
@@ -3213,6 +3215,7 @@ export function useTranslation() {
     store.setStartTime(Date.now());
     store.clearLogs();
     store.setPreprocessProgress(null);
+    CallMonitor.reset();
 
     store.addLog('info', `🔧 Applying Mod to ${targetFields.length} field(s) [Language: ${effectiveLang}]`);
     store.addLog('info', `📝 Mod instructions: "${modInstructions.slice(0, 100)}${modInstructions.length > 100 ? '...' : ''}"`);

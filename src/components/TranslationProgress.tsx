@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
 import { useT } from '../i18n/useLocale';
 import type { LogFilter } from '../types/card';
+import ActiveCallsPanel from './ActiveCallsPanel';
 import {
   Play,
   Pause,
@@ -559,6 +560,9 @@ function TranslationPanel() {
           </div>
         </div>
       )}
+
+      {/* Live AI call monitor — model / entry / threads / combined RPM */}
+      <ActiveCallsPanel />
 
       {/* Progress bar */}
       {totalFields > 0 && (

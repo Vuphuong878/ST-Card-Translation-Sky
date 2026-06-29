@@ -8,6 +8,7 @@ import {
 } from './masterPrompt';
 import { LOREBOOK_GENERATION_PROMPT } from './promptBuilder';
 import { extractCJKTokens, reinsertTranslations, surgicalTranslate } from './surgical';
+import { CallMonitor } from './callMonitor';
 
 /* ─── Error types ─── */
 export class ApiError extends Error {
@@ -1486,19 +1487,27 @@ async function callGemini(
 /* ─── API Key Rotation ─── */
 let _keyIndex = 0;
 
-/** Get the next API key from rotation pool. Falls back to primary key. */
-function getRotatedKey(config: ProxySettings): string {
-  const pool = config.apiKeys.filter(k => k.trim());
-  if (pool.length === 0) return config.apiKey;
-
-  // Include primary key in the pool if not already there
+/** Collect the de-duplicated pool of usable API keys (primary + rotation pool). */
+function getUniqueKeys(config: ProxySettings): string[] {
+  const pool = (config.apiKeys || []).filter(k => k.trim());
   const allKeys = [config.apiKey, ...pool].filter(Boolean);
-  const uniqueKeys = [...new Set(allKeys)];
-  if (uniqueKeys.length === 0) return config.apiKey;
+  return [...new Set(allKeys)];
+}
 
-  const key = uniqueKeys[_keyIndex % uniqueKeys.length];
+/** Number of distinct API keys available — used to multiply the effective RPM. */
+export function getUniqueKeyCount(config: ProxySettings): number {
+  return getUniqueKeys(config).length || 1;
+}
+
+/** Get the next API key from rotation pool, with its index + pool size. */
+function getRotatedKey(config: ProxySettings): { key: string; index: number; count: number } {
+  const uniqueKeys = getUniqueKeys(config);
+  if (uniqueKeys.length === 0) return { key: config.apiKey, index: 0, count: 1 };
+
+  const index = _keyIndex % uniqueKeys.length;
+  const key = uniqueKeys[index];
   _keyIndex = (_keyIndex + 1) % uniqueKeys.length;
-  return key;
+  return { key, index, count: uniqueKeys.length };
 }
 
 /** Force advance to next key (e.g. after rate limit) */
@@ -1534,6 +1543,21 @@ function recordRateLimitRequest(model: string): void {
   const bucket = _getModelBucket(model);
   _pruneBucket(bucket, Date.now());
   bucket.push(Date.now());
+}
+
+/** How many requests each model has made in the current 60s window (for live UI). */
+export function getRateLimitUsage(): Record<string, number> {
+  const now = Date.now();
+  const out: Record<string, number> = {};
+  for (const [model, bucket] of _modelTimestamps) {
+    let count = 0;
+    for (let i = bucket.length - 1; i >= 0; i--) {
+      if (bucket[i] > now - RATE_LIMIT_WINDOW_MS) count++;
+      else break;
+    }
+    if (count > 0) out[model] = count;
+  }
+  return out;
 }
 
 /**
@@ -1576,14 +1600,20 @@ export async function callProvider(
   system: string,
   user: string,
   signal?: AbortSignal,
-  images?: string[]
+  images?: string[],
+  meta?: { label?: string }
 ): Promise<string> {
-  const primaryRpm = (config.primaryModelRpm && config.primaryModelRpm > 0) ? config.primaryModelRpm : 5;
+  // Effective RPM is multiplied by the number of distinct API keys: each key has
+  // its own per-minute quota, so N keys ≈ N× the throughput for the same model.
+  const keyCount = getUniqueKeyCount(config);
+  const basePrimaryRpm = (config.primaryModelRpm && config.primaryModelRpm > 0) ? config.primaryModelRpm : 5;
+  const primaryRpm = basePrimaryRpm * keyCount;
 
   // ═══ Dual-model overflow: if secondary is enabled and primary is saturated, use secondary ═══
   let activeConfig = config;
   if (config.enableSecondaryModel && config.secondaryModel?.trim()) {
-    const secondaryRpm = (config.secondaryModelRpm && config.secondaryModelRpm > 0) ? config.secondaryModelRpm : 17;
+    const baseSecondaryRpm = (config.secondaryModelRpm && config.secondaryModelRpm > 0) ? config.secondaryModelRpm : 17;
+    const secondaryRpm = baseSecondaryRpm * keyCount;
     if (hasRateLimitCapacity(config.model, primaryRpm)) {
       recordRateLimitRequest(config.model);
     } else if (hasRateLimitCapacity(config.secondaryModel, secondaryRpm)) {
@@ -1599,8 +1629,18 @@ export async function callProvider(
   }
 
   // Create a config copy with rotated key
-  const activeKey = getRotatedKey(activeConfig);
+  const { key: activeKey, index: keyIndex, count: keyTotal } = getRotatedKey(activeConfig);
   const rotatedConfig = { ...activeConfig, apiKey: activeKey };
+
+  // Register this call in the live monitor so the UI can show model + entry + thread count
+  const callId = crypto.randomUUID();
+  CallMonitor.start({
+    id: callId,
+    model: activeConfig.model,
+    keyLabel: keyTotal > 1 ? `Key #${keyIndex + 1}/${keyTotal}` : 'Key #1',
+    label: meta?.label || 'Đang dịch…',
+    startedAt: Date.now(),
+  });
 
   try {
     switch (rotatedConfig.provider) {
@@ -1619,6 +1659,8 @@ export async function callProvider(
       advanceKeyRotation();
     }
     throw err;
+  } finally {
+    CallMonitor.end(callId);
   }
 }
 
@@ -2091,7 +2133,9 @@ async function translateChunk(
         ? AbortSignal.any([signal, controller.signal])
         : controller.signal;
 
-      let result = await callProvider(config, systemPrompt, userPrompt, combinedSignal);
+      let result = await callProvider(config, systemPrompt, userPrompt, combinedSignal, undefined, {
+        label: totalChunks > 1 ? `${fieldName} (phần ${chunkIdx + 1}/${totalChunks})` : fieldName,
+      });
       clearTimeout(timeoutId);
 
       // ─── Token limit truncation detection ───
@@ -2199,7 +2243,9 @@ async function translateChunk(
               ? AbortSignal.any([signal, contController.signal])
               : contController.signal;
 
-            const continuation = await callProvider(config, systemPrompt, continuationPrompt, contSignal);
+            const continuation = await callProvider(config, systemPrompt, continuationPrompt, contSignal, undefined, {
+              label: `${fieldName} (tiếp nối)`,
+            });
             clearTimeout(contTimeout);
 
             if (continuation.trim()) {
@@ -3497,7 +3543,10 @@ ${sectionList}
         ? AbortSignal.any([signal, controller.signal])
         : controller.signal;
 
-      const rawResult = await callProvider(config, system, user, combinedSignal);
+      const firstName = items[0]?.fieldName.replace(/^Lorebook:\s*/i, '').slice(0, 40) || 'batch';
+      const rawResult = await callProvider(config, system, user, combinedSignal, undefined, {
+        label: items.length > 1 ? `Lô ${items.length} mục: ${firstName}…` : firstName,
+      });
       clearTimeout(timeoutId);
 
       // Parse response by delimiters (with name-matching support)

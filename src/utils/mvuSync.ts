@@ -1995,7 +1995,9 @@ ${currentVarList}${retryHint}`;
           ? AbortSignal.any([signal, timeoutController.signal])
           : timeoutController.signal;
 
-        const responseText = await callProvider(rotatedConfig, systemPrompt, currentUserPrompt, fetchSignal);
+        const responseText = await callProvider(rotatedConfig, systemPrompt, currentUserPrompt, fetchSignal, undefined, {
+          label: `Tên biến MVU (${currentBatchKeys.length} biến)`,
+        });
         clearTimeout(timeoutId);
 
         // Parse JSON response
