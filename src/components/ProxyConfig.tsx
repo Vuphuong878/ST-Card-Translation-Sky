@@ -396,6 +396,26 @@ export default function ProxyConfig() {
               <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
                 Gemini Pro: 5 RPM · Flash: 20 RPM (tạm đặt 17 để có buffer)
               </div>
+              {/* Threshold row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', flex: 1 }}>
+                  Dưới bao nhiêu ký tự thì dùng model phụ
+                </span>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  max={100000}
+                  value={proxy.secondaryModelThreshold ?? 0}
+                  onChange={(e) => setProxy({ secondaryModelThreshold: Math.max(0, parseInt(e.target.value) || 0) })}
+                  style={{ width: '70px', padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
+                  title="Dưới ngưỡng ký tự này → tự động dùng model phụ (0 = tắt)"
+                  placeholder="0"
+                />
+              </div>
+              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                0 = tắt · Ví dụ: 300 → field &lt; 300 ký tự dùng Flash cho nhanh
+              </div>
             </div>
           )}
         </div>

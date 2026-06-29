@@ -225,7 +225,14 @@ export function useTranslation() {
     const targetModel = store.translationConfig.enableModelRouting
       ? (store.translationConfig.entryModelRouting[field.path] || store.translationConfig.groupModelRouting[field.group] || store.proxy.model)
       : store.proxy.model;
-    const effectiveProxy = targetModel !== store.proxy.model ? { ...store.proxy, model: targetModel } : store.proxy;
+    // Threshold routing: fields shorter than threshold → secondary model directly (speed)
+    const resolvedModel = (
+      store.proxy.enableSecondaryModel &&
+      store.proxy.secondaryModel?.trim() &&
+      (store.proxy.secondaryModelThreshold ?? 0) > 0 &&
+      charCount <= store.proxy.secondaryModelThreshold
+    ) ? store.proxy.secondaryModel : targetModel;
+    const effectiveProxy = resolvedModel !== store.proxy.model ? { ...store.proxy, model: resolvedModel } : store.proxy;
 
     if (charCount > CHUNK_THRESHOLD) {
       const estimatedChunks = Math.ceil(charCount / CHUNK_THRESHOLD);
@@ -803,7 +810,15 @@ export function useTranslation() {
     const targetModel = store.translationConfig.enableModelRouting
       ? (store.translationConfig.entryModelRouting[batchFields[0].path] || store.translationConfig.groupModelRouting[batchFields[0].group] || store.proxy.model)
       : store.proxy.model;
-    const effectiveProxy = targetModel !== store.proxy.model ? { ...store.proxy, model: targetModel } : store.proxy;
+    // Threshold routing: batch total chars < threshold → secondary model directly
+    const batchCharCount = batchFields.reduce((sum, f) => sum + f.original.length, 0);
+    const resolvedModel = (
+      store.proxy.enableSecondaryModel &&
+      store.proxy.secondaryModel?.trim() &&
+      (store.proxy.secondaryModelThreshold ?? 0) > 0 &&
+      batchCharCount <= store.proxy.secondaryModelThreshold
+    ) ? store.proxy.secondaryModel : targetModel;
+    const effectiveProxy = resolvedModel !== store.proxy.model ? { ...store.proxy, model: resolvedModel } : store.proxy;
 
     // ═══ NATIVE ROUTING TO SINGLE STREAM ═══
     // For MVU/Controller scripts, they can be huge. If they are in a batch of 1,
