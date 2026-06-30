@@ -1965,6 +1965,86 @@ export function recoverTruncatedTail(original: string, translation: string): str
   return translation + tail;
 }
 
+/**
+ * Append closing tags the AI dropped from the END of the translation.
+ *
+ * The card uses CJK/Unicode pseudo-tags (e.g. <章节信息>…</章节信息>) which the
+ * ASCII-only tag-balance check ignores, so a dropped final </章节信息> slips through
+ * and the entry loses its closing tag in SillyTavern. This is a deterministic, low-risk
+ * repair: it ONLY appends a missing trailing closer, and ONLY when
+ *   - the ORIGINAL is balanced for that tag (opens === closes), and
+ *   - the TRANSLATION left it open (opens > closes), and
+ *   - the ORIGINAL actually contains that closing tag (so appending is correct).
+ */
+export function repairUnclosedTags(original: string, translation: string): string {
+  if (!original || !translation) return translation;
+
+  // Unicode-aware: tag name may start with ASCII letter or CJK/Kana/Hangul.
+  const TAG_RE = /<(\/?)([A-Za-z一-鿿぀-ヿ가-힯][\w一-鿿぀-ヿ가-힯-]*)(?:\s[^>]*)?(\/?)>/g;
+  const selfClosing = new Set(['br', 'img', 'hr', 'input', 'link', 'meta', 'col', 'embed', 'source', 'track', 'wbr']);
+
+  const openTagsInOrder = (str: string): string[] => {
+    // Returns the stack of still-open tag names, outermost first.
+    const stack: string[] = [];
+    let m: RegExpExecArray | null;
+    TAG_RE.lastIndex = 0;
+    while ((m = TAG_RE.exec(str)) !== null) {
+      const isClose = m[1] === '/';
+      const name = m[2];
+      const isSelf = m[3] === '/' || selfClosing.has(name.toLowerCase());
+      if (isSelf) continue;
+      if (isClose) {
+        // pop the nearest matching open
+        for (let k = stack.length - 1; k >= 0; k--) {
+          if (stack[k] === name) { stack.splice(k, 1); break; }
+        }
+      } else {
+        stack.push(name);
+      }
+    }
+    return stack;
+  };
+
+  const transOpen = openTagsInOrder(translation);
+  if (transOpen.length === 0) return translation;
+  const origOpen = openTagsInOrder(original);
+
+  // Only the tags that are unclosed in translation but were CLOSED in the original.
+  const origUnclosedCount: Record<string, number> = {};
+  for (const n of origOpen) origUnclosedCount[n] = (origUnclosedCount[n] || 0) + 1;
+
+  const toClose: string[] = [];
+  const transCount: Record<string, number> = {};
+  for (const n of transOpen) transCount[n] = (transCount[n] || 0) + 1;
+  for (const name of Object.keys(transCount)) {
+    const extra = transCount[name] - (origUnclosedCount[name] || 0);
+    // original closed this tag, translation left `extra` of them open
+    if (extra > 0 && original.includes(`</${name}>`)) {
+      for (let k = 0; k < extra; k++) toClose.push(name);
+    }
+  }
+  if (toClose.length === 0) return translation;
+
+  // Close in reverse of the translation's open order (innermost first)
+  const ordered = transOpen.filter(n => toClose.includes(n)).reverse();
+  const seen: Record<string, number> = {};
+  const suffixParts: string[] = [];
+  for (const name of ordered) {
+    seen[name] = (seen[name] || 0) + 1;
+    if (seen[name] <= toClose.filter(t => t === name).length) {
+      suffixParts.push(`</${name}>`);
+    }
+  }
+  if (suffixParts.length === 0) return translation;
+
+  // Mirror the original's newline-before-closing-tag formatting when present.
+  const firstName = ordered[0];
+  const nlBeforeClose = new RegExp(`\\n\\s*</${firstName}>`).test(original);
+  const sep = nlBeforeClose && !translation.endsWith('\n') ? '\n' : '';
+  console.log(`[repairUnclosedTags] Appended dropped closing tag(s): ${suffixParts.join('')}`);
+  return translation.replace(/\s+$/, '') + sep + suffixParts.join('');
+}
+
 export function detectStructuralTruncation(original: string, translation: string): StructuralCheckResult {
   if (!original || !translation) {
     return { isTruncated: false, reason: '' };
@@ -3079,7 +3159,10 @@ export async function translateText(
     let cleaned = cleanTranslationResponse(maskedText, result, isExpert, false);
     cleaned = unmaskUrls(cleaned, urlMap);  // Unmask URLs
     cleaned = unmaskSecrets(cleaned, secretMap); // Unmask secrets before residual check
-    
+
+    // Repair closing tags the AI dropped from the END (incl. CJK pseudo-tags like </章节信息>)
+    cleaned = repairUnclosedTags(maskedText, cleaned);
+
     if (isCodeHeavy) {
       const structuralTrunc = detectStructuralTruncation(maskedText, cleaned);
       if (structuralTrunc.isTruncated) {
@@ -3390,7 +3473,10 @@ export async function translateText(
   const rawResult = verifiedChunks.join(joiner);
   let cleaned = unmaskUrls(rawResult, urlMap);
   cleaned = unmaskSecrets(cleaned, secretMap);
-  
+
+  // Repair closing tags the AI dropped from the END (incl. CJK pseudo-tags like </章节信息>)
+  cleaned = repairUnclosedTags(maskedText, cleaned);
+
   if (isCodeHeavy) {
     const structuralTrunc = detectStructuralTruncation(maskedText, cleaned);
     if (structuralTrunc.isTruncated) {
