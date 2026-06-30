@@ -2666,6 +2666,37 @@ export function fixBrokenOptionalChaining(text: string): string {
 }
 
 /**
+ * Sửa lỗi cú pháp "dấu nháy đơn lồng dấu nháy đơn" (hoặc kép lồng kép) trong bracket notation.
+ *
+ *   setDeepValue(x, 'stat_data['Thế Giới.Chương Hiện Tại']', y)   ← VỠ: chuỗi kết thúc ở 'stat_data['
+ *   → setDeepValue(x, "stat_data['Thế Giới.Chương Hiện Tại']", y) ← đổi nháy NGOÀI sang nháy kép
+ *
+ * Xảy ra khi một key CJK có dấu chấm/khoảng trắng (vd 世界.当前章节) được dịch sang tiếng Việt
+ * ("Thế Giới.Chương Hiện Tại") — AI buộc phải chuyển dot→bracket notation ['...'] nhưng GIỮ NGUYÊN
+ * dấu nháy bao ngoài cùng loại → nháy đơn lồng nháy đơn làm vỡ chuỗi → Uncaught SyntaxError,
+ * cả kịch bản JS dừng chạy ngay khi card được nạp vào SillyTavern.
+ *
+ * Sửa ở MỨC CHUỖI, KHÔNG phụ thuộc tên hàm — nên bắt được setDeepValue/getDeepValue/Mvu.xxx/_.get…
+ * (các fix path cũ chỉ khớp _.get/_.set của lodash & bỏ qua field tavern_helper). An toàn: chỉ động
+ * vào đúng mẫu BỊ VỠ; chuỗi thường, arr['x'] đứng riêng, hay nháy đã escape \' đều không bị đụng.
+ */
+export function fixNestedQuoteBracketPaths(text: string): string {
+  if (!text || typeof text !== 'string') return text;
+  let result = text;
+  // Nháy ĐƠN bao ngoài chứa ['key'] dùng nháy đơn → đổi nháy ngoài thành nháy KÉP
+  result = result.replace(
+    /'([A-Za-z_$][\w$.]*)?((?:\[\s*'[^'\]]*'\s*\])+)'/g,
+    (m, prefix: string | undefined, brackets: string) => (m.includes('"') ? m : `"${prefix || ''}${brackets}"`)
+  );
+  // Nháy KÉP bao ngoài chứa ["key"] dùng nháy kép → đổi nháy ngoài thành nháy ĐƠN
+  result = result.replace(
+    /"([A-Za-z_$][\w$.]*)?((?:\[\s*"[^"\]]*"\s*\])+)"/g,
+    (m, prefix: string | undefined, brackets: string) => (m.includes("'") ? m : `'${prefix || ''}${brackets}'`)
+  );
+  return result;
+}
+
+/**
  * Chuẩn hoá dấu nháy "thông minh"/toàn rộng (smart / full-width quotes) về dấu nháy
  * thẳng ASCII bên trong MÃ NGUỒN. Các model AI (nhất là model train nhiều tiếng Trung)
  * hay xuất ra “ ” ‘ ’ ＂ ＇ thay cho " và ' — làm vỡ chuỗi JS, thuộc tính HTML và regex,
@@ -2731,6 +2762,9 @@ export function postProcessRegexHtml(html: string): string {
 
   // Sửa optional chaining bị lỗi: ?.Tiêu Đề → ?.['Tiêu Đề']
   result = fixBrokenOptionalChaining(result);
+
+  // Sửa nháy đơn lồng nháy đơn trong bracket notation: 'x['key']' → "x['key']"
+  result = fixNestedQuoteBracketPaths(result);
 
   return result;
 }

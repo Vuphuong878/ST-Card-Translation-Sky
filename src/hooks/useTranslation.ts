@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 import { useStore } from '../store';
 import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError } from '../utils/apiClient';
 import { extractTranslatableFields, applyTranslationsToCard, autoTranslateLorebookTriggerKeys, injectNewLorebookEntries } from '../utils/cardFields';
-import { syncMvuVariables, postProcessRegexHtml, normalizeSmartQuotesInCode, fixBrokenLodashPaths, fixDotNotationPaths, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency, enforceVariableCasing, fixZodSyntaxErrors, validateDictionaryConflicts, aiResolveMvuConflicts } from '../utils/mvuSync';
+import { syncMvuVariables, postProcessRegexHtml, normalizeSmartQuotesInCode, fixNestedQuoteBracketPaths, fixBrokenLodashPaths, fixDotNotationPaths, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency, enforceVariableCasing, fixZodSyntaxErrors, validateDictionaryConflicts, aiResolveMvuConflicts } from '../utils/mvuSync';
 import { shouldSkipTranslation, detectLanguage } from '../utils/langDetect';
 import { clearRAGCache } from '../utils/ragContext';
 import { storeTranslation, lookupTranslationMemory } from '../utils/translationMemory';
@@ -652,6 +652,9 @@ export function useTranslation() {
       // external custom code, pure-JS TavernHelper). Idempotent if already normalized.
       if (translated && (field.group === 'regex' || field.group === 'tavern_helper')) {
         translated = normalizeSmartQuotesInCode(translated);
+        // Sửa nháy đơn lồng nháy đơn trong bracket notation (vd setDeepValue(x,'a['key']',y))
+        // — lỗi này làm vỡ cả kịch bản JS; path-fixer cũ chỉ khớp _.get nên không bắt được.
+        translated = fixNestedQuoteBracketPaths(translated);
       }
 
       // ─── LODASH PATH FIX: Fix broken _.get/getvar paths for ALL code-containing fields ───
@@ -1200,6 +1203,7 @@ export function useTranslation() {
         // Smart-quote fix for code fields not covered above (fixes "lỗi dấu" breaking regex/JS)
         if (translated && (batchFields[j].group === 'regex' || batchFields[j].group === 'tavern_helper')) {
           translated = normalizeSmartQuotesInCode(translated);
+          translated = fixNestedQuoteBracketPaths(translated);
         }
 
         store.updateField(batchFields[j].path, { status: 'done', translated, retries: retryCount });
@@ -2637,6 +2641,7 @@ export function useTranslation() {
       // turns “ ” ‘ ’ ＂ ＇ back into straight " ' so the translated regex/JS actually runs.
       if (translated && (field.group === 'regex' || field.group === 'tavern_helper')) {
         translated = normalizeSmartQuotesInCode(translated);
+        translated = fixNestedQuoteBracketPaths(translated);
       }
 
       store.updateField(path, {
