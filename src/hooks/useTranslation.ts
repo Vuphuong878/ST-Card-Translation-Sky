@@ -142,6 +142,12 @@ export function useTranslation() {
   const pauseRef = useRef(false);
   // Track whether the main translation loop is actively running
   const runningRef = useRef(false);
+  // Monotonic run token: every startTranslation bumps it. Any older loop still alive
+  // bails out at its next checkpoint, so two loops can never translate concurrently.
+  const runIdRef = useRef(0);
+  // Paths currently being translated by SOME context. Prevents the same field from
+  // being translated twice at once (e.g. a zombie loop + a fresh resume loop).
+  const inFlightPaths = useRef<Set<string>>(new Set());
   // Per-field abort controllers: cancel previous in-flight translation for same field on retry
   const fieldAbortMap = useRef<Map<string, AbortController>>(new Map());
 
@@ -210,8 +216,8 @@ export function useTranslation() {
     return false; // not aborted
   };
 
-  /* ─── Translate a single field ─── */
-  const translateSingleField = async (field: TranslationField, index: number, fields: TranslationField[]) => {
+  /* ─── Translate a single field (inner — wrapped below with an in-flight lock) ─── */
+  const _translateSingleFieldInner = async (field: TranslationField, index: number, fields: TranslationField[]) => {
     store.setCurrentFieldIndex(index);
     store.updateField(field.path, { status: 'translating' });
     const charCount = field.original.length;
@@ -820,6 +826,23 @@ export function useTranslation() {
     }
   };
 
+  /* ─── In-flight lock wrapper ───
+   * Guarantees the same field is never translated by two contexts at once
+   * (e.g. a zombie loop whose API call is still hanging + a fresh resume loop).
+   * If the path is already being translated, this call is skipped. */
+  const translateSingleField = async (field: TranslationField, index: number, fields: TranslationField[]) => {
+    if (inFlightPaths.current.has(field.path)) {
+      store.addLog('warning', `⏭️ Bỏ qua dịch trùng: ${field.label} (đang được dịch ở luồng khác)`);
+      return 'skip';
+    }
+    inFlightPaths.current.add(field.path);
+    try {
+      return await _translateSingleFieldInner(field, index, fields);
+    } finally {
+      inFlightPaths.current.delete(field.path);
+    }
+  };
+
   /* ─── Helper: check if a field is MVU-critical (needs extra care) ─── */
   const isMvuCriticalField = (f: TranslationField) =>
     f.entryType === 'initvar' || f.entryType === 'controller' || f.entryType === 'mvu_logic';
@@ -1354,7 +1377,12 @@ export function useTranslation() {
       ctrl.abort();
     }
     fieldAbortMap.current.clear();
+    // Release any field locks held by a previous (now-superseded) run
+    inFlightPaths.current.clear();
 
+    // Bump the run token: any older loop still alive will see runIdRef change and bail
+    // out at its next checkpoint, so two loops can never run concurrently.
+    const myRunId = ++runIdRef.current;
     abortRef.current = new AbortController();
     pauseRef.current = false;
     runningRef.current = true;
@@ -1668,6 +1696,12 @@ export function useTranslation() {
     let i = 0;
 
     while (i < fields.length) {
+      // Superseded by a newer run → bail silently without touching shared phase state
+      if (runIdRef.current !== myRunId) {
+        store.addLog('info', 'Vòng dịch cũ dừng lại (đã có vòng mới thay thế)');
+        return;
+      }
+
       // Check abort
       if (checkAbort()) {
         runningRef.current = false;
@@ -2414,12 +2448,15 @@ export function useTranslation() {
   }, [store, startTranslation]);
 
   const cancelTranslation = useCallback(() => {
+    // Invalidate any running loop so it bails at its next checkpoint
+    runIdRef.current++;
     abortRef.current?.abort();
     // Also cancel any per-field in-flight translations
     for (const [, ctrl] of fieldAbortMap.current) {
       ctrl.abort();
     }
     fieldAbortMap.current.clear();
+    inFlightPaths.current.clear();
     pauseRef.current = false;
     runningRef.current = false;
     // Reset any fields stuck in 'translating' status back to 'pending'
