@@ -13,3 +13,6 @@ content_check.txt
 test-case-found.txt
 test-case-raw.txt
 
+
+# Local translation progress cache (per-card, filesystem)
+translation-progress/

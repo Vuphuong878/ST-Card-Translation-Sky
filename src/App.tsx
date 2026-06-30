@@ -5,7 +5,7 @@ import FileUpload from './components/FileUpload';
 import TranslateConfig from './components/TranslateConfig';
 import CardPreview from './components/CardPreview';
 import TranslationProgress from './components/TranslationProgress';
-import { useStore } from './store';
+import { useStore, flushProgressBeacon } from './store';
 import { useT } from './i18n/useLocale';
 import type { Locale } from './i18n/translations';
 import { Languages, X, Globe } from 'lucide-react';
@@ -29,6 +29,18 @@ export default function App() {
   const [showRegexManager, setShowRegexManager] = useState(false);
   const [showAiCompanion, setShowAiCompanion] = useState(false);
   const [showPresetViewer, setShowPresetViewer] = useState(false);
+
+  // Flush translation progress to the project folder when the tab is closed/hidden, so an
+  // accidental close within the auto-save window doesn't lose the last few seconds of work.
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') flushProgressBeacon(); };
+    window.addEventListener('beforeunload', flushProgressBeacon);
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      window.removeEventListener('beforeunload', flushProgressBeacon);
+      document.removeEventListener('visibilitychange', onHide);
+    };
+  }, []);
 
   if (showRegexManager) {
     return (

@@ -18,6 +18,7 @@ import type {
 import type { Worldbook } from './utils/worldbookParser';
 import { DEFAULT_FIELD_GROUPS, extractTranslatableFields } from './utils/cardFields';
 import { IDB } from './utils/idb';
+import { FsCache } from './utils/fsCache';
 import { clearRAGCache } from './utils/ragContext';
 import { clearTranslationMemory } from './utils/translationMemory';
 import type { MvuKeyMetadata } from './utils/mvuSync';
@@ -37,6 +38,41 @@ const LS = {
     localStorage.setItem(key, JSON.stringify(value));
   },
 };
+
+/* ─── Filesystem progress-cache write debounce ───
+ * saveTranslationCache() is called very frequently (after each batch / every few fields).
+ * Coalesce into at most one filesystem write per window so we don't hammer the disk. */
+let _fsSaveTimer: ReturnType<typeof setTimeout> | null = null;
+const FS_SAVE_DEBOUNCE_MS = 1500;
+
+/** Build the persisted progress snapshot from the current store state. */
+export function buildProgressSnapshot(cur: AppState) {
+  return {
+    savedAt: Date.now(),
+    cardFileName: cur.cardFileName,
+    contentType: cur.contentType,
+    phase: cur.phase,
+    currentFieldIndex: cur.currentFieldIndex,
+    fields: cur.fields,
+    mvuKeyMetadata: cur.mvuKeyMetadata,
+    dicts: {
+      mvuDictionary: cur.translationConfig.mvuDictionary,
+      ejsEntryNameDict: cur.translationConfig.ejsEntryNameDict,
+      ejsKeywordDict: cur.translationConfig.ejsKeywordDict,
+    },
+  };
+}
+
+/** Synchronous best-effort flush used on tab close / hide (beforeunload, visibilitychange). */
+export function flushProgressBeacon() {
+  try {
+    const cur = useStore.getState();
+    if (!cur.cardFileName || cur.fields.length === 0) return;
+    if (cur.phase !== 'translating' && cur.phase !== 'paused') return;
+    const payload = JSON.stringify({ key: cur.cardFileName, data: buildProgressSnapshot(cur) });
+    navigator.sendBeacon?.('/api/progress/save', new Blob([payload], { type: 'application/json' }));
+  } catch { /* best-effort */ }
+}
 
 /* ─── Translation State ─── */
 type TranslationPhase = 'idle' | 'translating' | 'paused' | 'done' | 'cancelled';
@@ -837,17 +873,45 @@ export const useStore = create<AppState>((set) => ({
     }
   },
 
-  // ─── Per-file Translation Cache ───
+  // ─── Per-file Translation Cache (filesystem — survives F5 / tab close / browser change) ───
   saveTranslationCache: () => {
-    // No-op: IDB writes with embedded JS code (TavernHelper scripts) trigger AV scan freeze
+    const s = useStore.getState();
+    if (!s.cardFileName || s.fields.length === 0) return;
+    // Debounce: one disk write per window, capturing the latest state at flush time.
+    if (_fsSaveTimer) return;
+    _fsSaveTimer = setTimeout(() => {
+      _fsSaveTimer = null;
+      const cur = useStore.getState();
+      if (!cur.cardFileName || cur.fields.length === 0) return;
+      FsCache.save(cur.cardFileName, buildProgressSnapshot(cur)).catch(() => { /* best-effort */ });
+    }, FS_SAVE_DEBOUNCE_MS);
   },
-  loadTranslationCache: async (_fileName: string): Promise<boolean> => {
-    return false;
+  loadTranslationCache: async (fileName: string): Promise<boolean> => {
+    const entry = await FsCache.load<any>(fileName);
+    const snap = entry?.data;
+    if (!snap || !Array.isArray(snap.fields) || snap.fields.length === 0) return false;
+
+    set((s) => ({
+      fields: snap.fields,
+      // A run was active when last saved → restore as 'paused' (never silently auto-run a loop)
+      phase: snap.phase === 'translating' ? ('paused' as TranslationPhase) : (snap.phase || 'idle'),
+      currentFieldIndex: snap.currentFieldIndex || 0,
+      mvuKeyMetadata: snap.mvuKeyMetadata || {},
+      translationConfig: {
+        ...s.translationConfig,
+        mvuDictionary: snap.dicts?.mvuDictionary ?? s.translationConfig.mvuDictionary,
+        ejsEntryNameDict: snap.dicts?.ejsEntryNameDict ?? s.translationConfig.ejsEntryNameDict,
+        ejsKeywordDict: snap.dicts?.ejsKeywordDict ?? s.translationConfig.ejsKeywordDict,
+      },
+    }));
+    return true;
   },
   deleteCurrentCardCache: async () => {
     const s = useStore.getState();
     if (s.cardFileName) {
-      
+      // Remove the on-disk progress file for this card
+      FsCache.remove(s.cardFileName).catch(() => { /* best-effort */ });
+
       // Reset translation state of all fields in the active store
       const resetFields = s.fields.length > 0
         ? s.fields.map(f => ({
@@ -889,6 +953,11 @@ export const useStore = create<AppState>((set) => ({
     }
   },
   deleteAllCaches: async () => {
+    // Remove ALL on-disk progress files
+    try {
+      const items = await FsCache.list();
+      await Promise.all(items.map(it => FsCache.remove(it.key)));
+    } catch { /* best-effort */ }
 
     const s = useStore.getState();
     const resetFields = s.fields.length > 0

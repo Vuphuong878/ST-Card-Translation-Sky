@@ -5,6 +5,22 @@ import tailwindcss from '@tailwindcss/vite'
 import httpProxy from 'http-proxy';
 import { exec } from 'child_process';
 import fs from 'fs';
+import path from 'path';
+
+// ─── Translation progress cache (filesystem, in the project folder) ───
+// Stored as plain JSON files so progress survives F5 / tab close / even switching
+// browsers — unlike browser storage which is per-browser. One file per card key.
+const PROGRESS_DIR = path.resolve(process.cwd(), 'translation-progress');
+const safeCacheName = (key: string) =>
+  (key || 'default').replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 200) + '.json';
+const ensureProgressDir = () => { try { fs.mkdirSync(PROGRESS_DIR, { recursive: true }); } catch { /* ignore */ } };
+const readJsonBody = (req: import('http').IncomingMessage): Promise<any> =>
+  new Promise((resolve) => {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => { try { resolve(body ? JSON.parse(body) : {}); } catch { resolve(null); } });
+    req.on('error', () => resolve(null));
+  });
 
 export default defineConfig({
   plugins: [
@@ -32,7 +48,61 @@ export default defineConfig({
           }
         });
 
-        server.middlewares.use((req, res, next) => {
+        server.middlewares.use(async (req, res, next) => {
+          // ─── Translation progress cache: save / load / list / delete (filesystem) ───
+          const url = req.url || '';
+          if (url.startsWith('/api/progress/')) {
+            try {
+              ensureProgressDir();
+              const sendJson = (code: number, obj: unknown) => {
+                res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
+                res.end(JSON.stringify(obj));
+              };
+
+              if (url === '/api/progress/save' && req.method === 'POST') {
+                const body = await readJsonBody(req);
+                if (!body || typeof body.key !== 'string') return sendJson(400, { ok: false, error: 'missing key' });
+                const file = path.join(PROGRESS_DIR, safeCacheName(body.key));
+                fs.writeFileSync(file, JSON.stringify({ key: body.key, savedAt: Date.now(), data: body.data }), 'utf8');
+                return sendJson(200, { ok: true });
+              }
+
+              if (url.startsWith('/api/progress/load') && req.method === 'GET') {
+                const key = new URL(url, 'http://localhost').searchParams.get('key') || '';
+                const file = path.join(PROGRESS_DIR, safeCacheName(key));
+                if (!fs.existsSync(file)) return sendJson(404, { ok: false });
+                const raw = fs.readFileSync(file, 'utf8');
+                return sendJson(200, { ok: true, ...JSON.parse(raw) });
+              }
+
+              if (url === '/api/progress/list' && req.method === 'GET') {
+                const files = fs.existsSync(PROGRESS_DIR) ? fs.readdirSync(PROGRESS_DIR).filter(f => f.endsWith('.json')) : [];
+                const items = files.map(f => {
+                  try {
+                    const raw = JSON.parse(fs.readFileSync(path.join(PROGRESS_DIR, f), 'utf8'));
+                    return { key: raw.key, savedAt: raw.savedAt };
+                  } catch { return null; }
+                }).filter(Boolean);
+                return sendJson(200, { ok: true, items });
+              }
+
+              if (url === '/api/progress/delete' && req.method === 'POST') {
+                const body = await readJsonBody(req);
+                if (body && typeof body.key === 'string') {
+                  const file = path.join(PROGRESS_DIR, safeCacheName(body.key));
+                  if (fs.existsSync(file)) fs.unlinkSync(file);
+                }
+                return sendJson(200, { ok: true });
+              }
+
+              return sendJson(404, { ok: false, error: 'unknown progress endpoint' });
+            } catch (err: any) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, error: err?.message || String(err) }));
+              return;
+            }
+          }
+
           if (req.url === '/api/dump-config' && req.method === 'POST') {
             let body = '';
             req.on('data', chunk => body += chunk);
