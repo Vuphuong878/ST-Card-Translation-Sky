@@ -4,6 +4,7 @@
  */
 
 import type { ProxyProfile, GenerationParams, ChatMessage } from '../../types';
+import { CallMonitor } from './callMonitor';
 
 /**
  * In dev mode, route external API calls through Vite's CORS proxy
@@ -25,6 +26,8 @@ export interface AICallOptions {
   messages: ChatMessage[];
   signal?: AbortSignal;
   useSecondary?: boolean; // Use secondary (Flash) model if configured
+  /** Optional short label shown in the live call monitor (e.g. "Lorebook batch 2/4"). */
+  label?: string;
 }
 
 export interface AICallResult {
@@ -106,6 +109,12 @@ export async function callAI(options: AICallOptions): Promise<AICallResult> {
     const onAbort = () => { clearTimeout(timeoutId); controller.abort(signal!.reason); };
     if (signal) signal.addEventListener('abort', onAbort, { once: true });
 
+    // Live monitor: register this in-flight call (model + which key) for the progress UI.
+    const dispModel = (useSecondary && profile.enableSecondaryModel && profile.secondaryModel)
+      ? profile.secondaryModel : profile.selectedModel;
+    const keyLabel = keys.length > 1 ? `Key #${((rrCounter - 1) % keys.length) + 1}` : 'Key';
+    const monId = CallMonitor.start({ model: dispModel || '?', keyLabel, label: options.label || '', startedAt: Date.now() });
+
     try {
       switch (profile.providerType) {
         case 'openai':
@@ -128,6 +137,7 @@ export async function callAI(options: AICallOptions): Promise<AICallResult> {
     } finally {
       clearTimeout(timeoutId);
       if (signal) signal.removeEventListener('abort', onAbort);
+      CallMonitor.end(monId);
     }
   }
   throw lastErr;

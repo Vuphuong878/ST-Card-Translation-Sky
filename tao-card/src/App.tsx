@@ -4,6 +4,7 @@ import { AppShell } from './components/layout/AppShell';
 import { CopilotPanel } from './components/copilot/CopilotPanel';
 import { useCardStore } from './store/cardStore';
 import { ToastContainer } from './components/common/ToastContainer';
+import AICallMonitor from './components/common/AICallMonitor';
 
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const CardEditorPage = lazy(() => import('./pages/CardEditorPage').then(m => ({ default: m.CardEditorPage })));
@@ -74,6 +75,7 @@ export default function App() {
       </Routes>
       <CopilotPanel />
       <ToastContainer />
+      <AICallMonitor />
     </BrowserRouter>
   );
 }
