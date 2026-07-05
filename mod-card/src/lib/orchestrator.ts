@@ -1,0 +1,387 @@
+import { CardV3 } from '../types/card';
+import { CardParser } from './parser';
+import { LLMConfig } from './llm';
+import { SYSTEM_PROMPT, ANALYZE_CARD_PROMPT, MOD_SECTION_PROMPT, MOD_SCRIPT_PROMPT, KEYWORD_SYNC_PROMPT, CONSISTENCY_AUDIT_PROMPT, VALIDATE_CARD_PROMPT, MVUZOD_NARRATIVE_MOD_PROMPT, MVUZOD_VALIDATE_PROMPT } from './prompts';
+
+export interface OrchestratorRule {
+  id: string;
+  name: string;
+  details: string;
+  keywords: string;
+  enabled: boolean;
+}
+
+async function fetchLLM(systemPrompt: string, userPrompt: string, config: LLMConfig) {
+  const res = await fetch('/api/llm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ systemPrompt, userPrompt, config })
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'LLM fetch failed');
+  }
+  const data = await res.json();
+  return data.result;
+}
+
+export interface CardSection {
+  section_id: string;
+  label: string;
+  field_path: string;
+  mirror_paths: string[];
+  content: string;
+  is_code: boolean;
+  content_type?: string;
+  entry_position?: string;
+}
+
+export const extractSections = (card: CardV3): CardSection[] => {
+  const sections: CardSection[] = [];
+  const CORE_FIELDS = [
+    { key: 'description', label: 'Mô tả nhân vật', mirror: 'data.description' },
+    { key: 'personality', label: 'Tính cách', mirror: 'data.personality' },
+    { key: 'scenario', label: 'Kịch bản', mirror: 'data.scenario' },
+    { key: 'first_mes', label: 'Tin nhắn đầu', mirror: 'data.first_mes' },
+    { key: 'mes_example', label: 'Tin nhắn mẫu', mirror: 'data.mes_example' },
+  ];
+
+  // Core fields
+  CORE_FIELDS.forEach(({ key, label, mirror }) => {
+    // Only looking at the root level for extraction
+    const val = (card as unknown as Record<string, string | undefined>)[key] || card.data[key]; 
+    if (val && typeof val === 'string' && val.trim()) {
+      sections.push({
+        section_id: key,
+        label,
+        field_path: key,
+        mirror_paths: [mirror],
+        content: val,
+        is_code: false,
+        content_type: 'text_narrative'
+      });
+    }
+  });
+
+  // System instructions
+  const sysPrompt = card.data.system_prompt;
+  if (sysPrompt && sysPrompt.trim()) {
+    sections.push({
+      section_id: 'system_prompt',
+      label: 'System Prompt',
+      field_path: 'data.system_prompt',
+      mirror_paths: [],
+      content: sysPrompt,
+      is_code: false,
+      content_type: 'system_instruction'
+    });
+  }
+
+  // Lorebook entries
+  const entries = card.data.character_book?.entries || [];
+  entries.forEach((entry, i) => {
+    if (entry.content && entry.content.trim()) {
+      const isEjs = entry.content.trim().startsWith('@@preprocessing');
+      sections.push({
+        section_id: `entry_${i}`,
+        label: isEjs ? `EJS Controller: ${entry.comment || `Entry #${i+1}`}` : `Lorebook: ${entry.comment || `Entry #${i+1}`}`,
+        field_path: `data.character_book.entries[${i}].content`,
+        mirror_paths: [],
+        content: entry.content,
+        is_code: isEjs,
+        content_type: isEjs ? 'template_code' : 'world_lore',
+        entry_position: entry.position !== undefined ? String(entry.position) : undefined
+      });
+    }
+  });
+
+  // Tavern Helper scripts (Protect MVU runtime CDN library)
+  const scripts = card.data.extensions?.tavern_helper?.scripts || [];
+  scripts.forEach((s, i) => {
+    // DO NOT extract or mod core MVU runtime script
+    const isMvuCore = s.content && (
+      s.content.includes('MagicalAstrogy/MagVarUpdate') ||
+      s.content.includes('MagVarUpdate/artifact/bundle.js')
+    );
+    if (isMvuCore) return;
+    
+    if (s.content && s.content.trim()) {
+      sections.push({
+        section_id: `script_${i}`,
+        label: `Script: ${s.name || `Script #${i+1}`}`,
+        field_path: `data.extensions.tavern_helper.scripts[${i}].content`,
+        mirror_paths: [],
+        content: s.content,
+        is_code: true,
+        content_type: 'template_code'
+      });
+    }
+  });
+
+  return sections;
+};
+
+const formatRules = (rules: OrchestratorRule[]) => {
+  return rules
+    .filter(r => r.enabled)
+    .map(r => `[ID: ${r.id}] ${r.name}: ${r.details} (Từ khóa: ${r.keywords})`)
+    .join('\n\n');
+};
+
+export const applyModification = (card: CardV3, fieldPath: string, newContent: string): CardV3 => {
+  const newCard = JSON.parse(JSON.stringify(card));
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const setField = (obj: any, path: string, val: any) => {
+    const keys = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+    let current = obj;
+    for (let i = 0; i < keys.length - 1; i++) {
+      current = current[keys[i]];
+      if (!current) return;
+    }
+    current[keys[keys.length - 1]] = val;
+  };
+
+  let finalContent = newContent;
+  // MVU Zod Protection: Auto re-inject <StatusPlaceHolderImpl/> in first_mes
+  if (fieldPath === 'data.first_mes' || fieldPath === 'first_mes') {
+    if (typeof finalContent === 'string' && !finalContent.includes('<StatusPlaceHolderImpl/>')) {
+      finalContent = finalContent + '\n\n<StatusPlaceHolderImpl/>';
+    }
+  }
+
+  setField(newCard, fieldPath, finalContent);
+
+  // Sync mirrors (Update the mirror if it exists, but don't recurse)
+  const MIRRORS: Record<string, string> = {
+    'description': 'data.description',
+    'data.description': 'description',
+    'personality': 'data.personality',
+    'data.personality': 'personality',
+    'scenario': 'data.scenario',
+    'data.scenario': 'scenario',
+    'first_mes': 'data.first_mes',
+    'data.first_mes': 'first_mes',
+    'mes_example': 'data.mes_example',
+    'data.mes_example': 'mes_example',
+  };
+
+  if (MIRRORS[fieldPath]) {
+    const mirrorPath = MIRRORS[fieldPath];
+    let mirrorContent = finalContent;
+    if (mirrorPath === 'data.first_mes' || mirrorPath === 'first_mes') {
+      if (typeof mirrorContent === 'string' && !mirrorContent.includes('<StatusPlaceHolderImpl/>')) {
+        mirrorContent = mirrorContent + '\n\n<StatusPlaceHolderImpl/>';
+      }
+    }
+    setField(newCard, mirrorPath, mirrorContent);
+  }
+
+  return newCard;
+};
+
+export class ModOrchestrator {
+  config: LLMConfig;
+  
+  constructor(config: LLMConfig) {
+    this.config = config;
+  }
+
+  async analyze(card: CardV3, rules: OrchestratorRule[]) {
+    // We sanitize avatar to save tokens
+    const sanitized = JSON.parse(JSON.stringify(card));
+    if (sanitized.avatar) sanitized.avatar = "[BASE64_IMAGE_OMITTED]";
+    if (sanitized.data?.extensions?.avatar) sanitized.data.extensions.avatar = "[OMITTED]";
+
+    const userPrompt = ANALYZE_CARD_PROMPT
+      .replace('{MOD_RULES}', formatRules(rules))
+      .replace('{CARD_JSON}', JSON.stringify(sanitized, null, 2));
+
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
+    
+    // Extract JSON array from markdown if present
+    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.error("LLM raw response:", response);
+      throw new Error(`Could not parse JSON array from LLM response. Raw response: ${response.substring(0, 300)}...`);
+    }
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      const err = e as Error;
+      console.error("LLM JSON parse error:", err, "JSON string:", jsonMatch[0]);
+      throw new Error(`JSON parse failed: ${err.message}. Content: ${jsonMatch[0].substring(0, 300)}...`);
+    }
+  }
+
+  async modSection(card: CardV3, section: CardSection, rules: OrchestratorRule[], context: string) {
+    const isMvuZod = CardParser.detectMvuZod(card);
+    const isCode = section.is_code;
+    const isSystemMvuEntry = section.label.includes('[mvu_update]') || section.label.includes('[initvar]') || section.section_id === 'system_prompt';
+
+    if (isMvuZod && !isCode && !isSystemMvuEntry) {
+      const entryIndex = section.section_id.startsWith('entry_') 
+        ? section.section_id.replace('entry_', '') 
+        : 'N/A';
+        
+      const userPrompt = MVUZOD_NARRATIVE_MOD_PROMPT
+        .replace('{ENTRY_INDEX}', entryIndex)
+        .replace('{ENTRY_COMMENT}', section.label)
+        .replace('{POSITION}', section.entry_position || 'N/A')
+        .replace('{ENTRY_KEYS}', '')
+        .replace('{MOD_RULES}', formatRules(rules))
+        .replace('{ORIGINAL_CONTENT}', section.content);
+
+      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
+      try {
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return parsed.modified_content || section.content;
+        }
+      } catch (err) {
+        console.warn("Could not parse JSON for MVU-Zod narrative mod, returning raw response", err);
+      }
+      return response;
+    }
+
+    const promptTemplate = isCode ? MOD_SCRIPT_PROMPT : MOD_SECTION_PROMPT;
+    
+    let userPrompt = promptTemplate
+      .replace('{SECTION_ID}', section.section_id)
+      .replace('{SECTION_LABEL}', section.label)
+      .replace('{FIELD_PATH}', section.field_path)
+      .replace('{MOD_RULES_APPLIED}', formatRules(rules))
+      .replace('{ORIGINAL_CONTENT}', section.content)
+      .replace('{ORIGINAL_SCRIPT}', section.content);
+
+    if (!isCode) {
+      userPrompt = userPrompt
+        .replace('{MIRROR_PATHS}', section.mirror_paths.join(', '))
+        .replace('{CONTENT_TYPE}', section.content_type || 'text_narrative')
+        .replace('{XML_TAGS}', 'auto-detect')
+        .replace('{CARD_LANGUAGE}', 'Vietnamese')
+        .replace('{IMPORTANCE_SCORE}', '90')
+        .replace('{PREVIOUSLY_MODIFIED_CONTEXT}', context || 'Chưa có context');
+    }
+
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
+    if (isCode) {
+      try {
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return parsed.modified_content || section.content;
+        }
+      } catch (err) {
+        console.warn("Could not parse JSON for script mod, returning raw response", err);
+      }
+    }
+    return response;
+  }
+
+  async syncKeywords(card: CardV3, rules: OrchestratorRule[], moddedEntries: { index: number; content: string }[]) {
+    if (!moddedEntries || moddedEntries.length === 0) return [];
+    
+    const userPrompt = KEYWORD_SYNC_PROMPT
+      .replace('{MOD_RULES}', formatRules(rules))
+      .replace('{MODIFIED_ENTRIES_JSON}', JSON.stringify(moddedEntries, null, 2));
+
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
+    
+    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.warn("Could not parse JSON array for keyword sync");
+      return [];
+    }
+    return JSON.parse(jsonMatch[0]);
+  }
+
+  async auditConsistency(card: CardV3, rules: OrchestratorRule[]) {
+    const sanitized = JSON.parse(JSON.stringify(card));
+    if (sanitized.avatar) sanitized.avatar = "[BASE64_IMAGE_OMITTED]";
+    if (sanitized.data?.extensions?.avatar) sanitized.data.extensions.avatar = "[OMITTED]";
+
+    const userPrompt = CONSISTENCY_AUDIT_PROMPT
+      .replace('{MOD_RULES}', formatRules(rules))
+      .replace('{MODIFIED_CARD_JSON}', JSON.stringify(sanitized, null, 2));
+
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
+    
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn("Could not parse JSON object for consistency audit");
+      return null;
+    }
+    return JSON.parse(jsonMatch[0]);
+  }
+
+  async validateCard(originalCard: CardV3, modifiedCard: CardV3, rules: OrchestratorRule[]) {
+    const isMvuZod = CardParser.detectMvuZod(modifiedCard);
+
+    if (isMvuZod) {
+      const sanitizeOriginal = JSON.parse(JSON.stringify(originalCard));
+      if (sanitizeOriginal.avatar) sanitizeOriginal.avatar = "[BASE64_IMAGE_OMITTED]";
+      const sanitizeModified = JSON.parse(JSON.stringify(modifiedCard));
+      if (sanitizeModified.avatar) sanitizeModified.avatar = "[BASE64_IMAGE_OMITTED]";
+      
+      const scripts = modifiedCard.data.extensions?.tavern_helper?.scripts || [];
+      const schemaScript = scripts[1]?.content || '';
+      
+      const entries = modifiedCard.data.character_book?.entries || [];
+      const updateRules = entries.find(e => e.comment?.includes('[mvu_update]'))?.content || '';
+      const ejsController = entries.find(e => e.content?.trim().startsWith('@@preprocessing'))?.content || '';
+      const initvar = entries.find(e => e.comment?.includes('[initvar]'))?.content || '';
+
+      const userPrompt = MVUZOD_VALIDATE_PROMPT
+        .replace('{MOD_SUMMARY}', formatRules(rules))
+        .replace('{SCHEMA_CONTENT}', schemaScript.substring(0, 2000))
+        .replace('{UPDATE_RULES_CONTENT}', updateRules.substring(0, 2000))
+        .replace('{EJS_CONTROLLER_PREVIEW}', ejsController.substring(0, 2000))
+        .replace('{INITVAR_CONTENT}', initvar.substring(0, 2000));
+
+      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
+      
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.warn("Could not parse JSON object for MVU-Zod validation");
+        return null;
+      }
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        status: parsed.validation_status || 'PASS',
+        stats: {
+          protected_fields_verified: (parsed.passed_checks?.length || 2) * 5
+        },
+        issues: parsed.issues?.map((issue: { severity?: string; check?: string; description?: string; fix?: string }) => ({
+          severity: issue.severity || 'MEDIUM',
+          category: issue.check || 'MVUZOD_INTEGRITY',
+          description: issue.description || '',
+          fix: issue.fix || ''
+        })) || []
+      };
+    }
+
+    const sanitizeOriginal = JSON.parse(JSON.stringify(originalCard));
+    if (sanitizeOriginal.avatar) sanitizeOriginal.avatar = "[BASE64_IMAGE_OMITTED]";
+    if (sanitizeOriginal.data?.extensions?.avatar) sanitizeOriginal.data.extensions.avatar = "[OMITTED]";
+
+    const sanitizeModified = JSON.parse(JSON.stringify(modifiedCard));
+    if (sanitizeModified.avatar) sanitizeModified.avatar = "[BASE64_IMAGE_OMITTED]";
+    if (sanitizeModified.data?.extensions?.avatar) sanitizeModified.data.extensions.avatar = "[OMITTED]";
+
+    const userPrompt = VALIDATE_CARD_PROMPT
+      .replace('{MOD_RULES}', formatRules(rules))
+      .replace('{ORIGINAL_CARD_JSON}', JSON.stringify(sanitizeOriginal, null, 2))
+      .replace('{MODIFIED_CARD_JSON}', JSON.stringify(sanitizeModified, null, 2));
+
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
+    
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn("Could not parse JSON object for validation");
+      return null;
+    }
+    return JSON.parse(jsonMatch[0]);
+  }
+}

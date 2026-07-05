@@ -35,4 +35,22 @@ export const FLOWS: FlowDef[] = [
     url: (import.meta as any).env?.VITE_CARD_TOOL_URL || 'http://localhost:5174',
     color: '#f59e0b',
   },
+  {
+    id: 'preset',
+    label: 'Tạo Preset',
+    emoji: '🎛️',
+    kind: 'iframe',
+    // preset-tool (Vite) on fixed port 5175.
+    url: (import.meta as any).env?.VITE_PRESET_TOOL_URL || 'http://localhost:5175',
+    color: '#22c55e',
+  },
+  {
+    id: 'mod-card',
+    label: 'Mod Card',
+    emoji: '🛠️',
+    kind: 'iframe',
+    // mod-card (Next.js) on fixed port 5176.
+    url: (import.meta as any).env?.VITE_MODCARD_TOOL_URL || 'http://localhost:5176',
+    color: '#a855f7',
+  },
 ];

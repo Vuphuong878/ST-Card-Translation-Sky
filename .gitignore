@@ -21,3 +21,6 @@ translation-progress/
 # so the in-app Update (git pull) can't touch work-in-progress. Matches at any depth,
 # incl. tao-card/card-progress/.
 card-progress/
+
+# Next.js build output (mod-card)
+.next/

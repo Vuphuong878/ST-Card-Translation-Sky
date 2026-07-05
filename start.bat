@@ -7,25 +7,12 @@ echo    SILLYTAVERN MULTI TOOLS  -  Launcher
 echo ==========================================================
 echo.
 
-REM -- Card-creator tool (vendored subfolder .\tao-card) --
-set "CARD_DIR=%~dp0tao-card"
-if not exist "%CARD_DIR%\package.json" goto no_card
+REM -- Launch each vendored sub-tool in its own minimized window --
+call :launch_tool "tao-card"    "Tao Card 5174"
+call :launch_tool "preset-tool" "Tao Preset 5175"
+call :launch_tool "mod-card"    "Mod Card 5176"
 
-if exist "%CARD_DIR%\node_modules" goto card_run
-echo [Tao Card] Cai dat lan dau (tao-card), doi mot chut...
-pushd "%CARD_DIR%"
-call npm install
-popd
-
-:card_run
-echo [Tao Card] Khoi dong server :5174 (cua so thu nho)...
-start "Card 5174 - de yen" /MIN /D "%CARD_DIR%" cmd /k npm run dev
-goto hub
-
-:no_card
-echo [Tao Card] Khong thay .\tao-card -- chi chay tool Dich.
-
-:hub
+REM -- Hub / tool Dich (this folder) - opens browser at http://localhost:5173 --
 echo.
 if not exist "node_modules" echo [Hub] Cai dat lan dau, doi mot chut...
 if not exist "node_modules" call npm install
@@ -36,3 +23,20 @@ call npm run dev
 echo.
 echo (Da dung.) Nhan phim bat ky de dong.
 pause >nul
+goto :eof
+
+REM ── Subroutine: launch_tool  %1=folder  %2=window-title ──
+:launch_tool
+set "TOOL_DIR=%~dp0%~1"
+if not exist "%TOOL_DIR%\package.json" goto :eof
+if not exist "%TOOL_DIR%\node_modules" call :install_tool "%TOOL_DIR%" "%~2"
+echo [%~2] Khoi dong (cua so thu nho)...
+start "%~2 - de yen" /MIN /D "%TOOL_DIR%" cmd /k npm run dev
+goto :eof
+
+:install_tool
+echo [%~2] Cai dat lan dau, doi mot chut...
+pushd "%~1"
+call npm install
+popd
+goto :eof
