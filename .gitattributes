@@ -1,0 +1,5 @@
+# Windows batch files MUST use CRLF, or cmd.exe mis-parses them (window flashes & closes).
+*.bat text eol=crlf
+*.cmd text eol=crlf
+# Shell scripts must stay LF.
+*.sh text eol=lf
