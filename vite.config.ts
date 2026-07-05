@@ -135,6 +135,33 @@ export default defineConfig({
             return;
           }
 
+          // ─── Check for updates: fetch quietly, report how many commits behind + their notes ───
+          if (req.url === '/api/check-update' && req.method === 'GET') {
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache');
+            // Unit separator (\x1f) between hash/subject, record separator (\x1e) between commits.
+            const cmd = 'git fetch --quiet && git log HEAD..@{u} --pretty=format:%h%x1f%s%x1e';
+            exec(cmd, { timeout: 20000, cwd: process.cwd() }, (err, stdout, stderr) => {
+              // Not a git repo / no upstream / offline → treat as "up to date" (never block the app).
+              if (err) {
+                res.end(JSON.stringify({ ok: true, behind: 0, commits: [], note: (stderr || err.message || '').trim().slice(0, 200) }));
+                return;
+              }
+              const commits = String(stdout)
+                .split('\x1e')
+                .map((s) => s.trim())
+                .filter(Boolean)
+                .map((rec) => {
+                  const [hash, subject] = rec.split('\x1f');
+                  return { hash: (hash || '').trim(), subject: (subject || '').trim() };
+                });
+              let currentVersion = '';
+              try { currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version || ''; } catch { /* ignore */ }
+              res.end(JSON.stringify({ ok: true, behind: commits.length, commits, currentVersion }));
+            });
+            return;
+          }
+
           if (req.url === '/api/update' && req.method === 'POST') {
             res.setHeader('Content-Type', 'text/plain; charset=utf-8');
             res.setHeader('Cache-Control', 'no-cache');
