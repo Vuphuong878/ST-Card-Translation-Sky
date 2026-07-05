@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import { useCardStore } from '../../store/cardStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { runBatchGeneration, type BatchGenConfig, type BatchProgress } from '../../lib/ai/batchGenerator';
+import { useBatchRunStore } from '../../store/batchRunStore';
+import { runBatchGeneration, type BatchGenConfig } from '../../lib/ai/batchGenerator';
 import { CompletionCriteriaPanel } from './CompletionCriteriaPanel';
 import type { CompletionCriteria, VerificationReport } from '../../lib/completionVerifier/criteria';
 import { DEFAULT_CRITERIA } from '../../lib/completionVerifier/criteria';
@@ -75,12 +76,12 @@ export function BatchGeneratorPanel() {
   const [maxConsecErrors, setMaxConsecErrors] = useState(3);
   const [modelOverride, setModelOverride] = useState('');
 
-  // ─── Run state ──────────────────────────────────────────────────────
-  const [isRunning, setIsRunning] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [progress, setProgress] = useState<BatchProgress | null>(null);
-  const [logs, setLogs] = useState<string[]>([]);
-  const ctxRef = useRef<{ paused: boolean; stopped: boolean }>({ paused: false, stopped: false });
+  // ─── Run state (persistent store → không mất khi chuyển tab/trang giữa chừng) ───
+  const isRunning = useBatchRunStore(s => s.isRunning);
+  const isPaused = useBatchRunStore(s => s.isPaused);
+  const progress = useBatchRunStore(s => s.progress);
+  const logs = useBatchRunStore(s => s.logs);
+  const addLog = useBatchRunStore(s => s.addLog);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   // ─── Completion Verification state ──────────────────────────────────
@@ -111,10 +112,6 @@ export function BatchGeneratorPanel() {
     return getSchemaPreviewSummary(mvuzodSchema);
   }, [mvuzodSchema]);
 
-  const addLog = useCallback((msg: string) => {
-    setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
-  }, []);
-
   // ─── Handlers ───────────────────────────────────────────────────────
 
   const handleStart = useCallback(async (runAll: boolean) => {
@@ -132,14 +129,13 @@ export function BatchGeneratorPanel() {
       return;
     }
 
-    setIsRunning(true);
-    setProgress(null);
-    setLogs([]);
-    ctxRef.current = { paused: false, stopped: false };
+    const run = useBatchRunStore.getState();
+    run.beginRun();
+    run.setIsRunning(true);
 
     try {
       for (let i = 0; i < tabsToRun.length; i++) {
-        if (ctxRef.current.stopped) break;
+        if (useBatchRunStore.getState().stopped) break;
         
         const tab = tabsToRun[i];
         if (tabsToRun.length > 1) {
@@ -172,22 +168,22 @@ export function BatchGeneratorPanel() {
           card: structuredClone(useCardStore.getState().card),
           profile: activeProfile,
           generationParams: settings.generationParams,
-          get paused() { return ctxRef.current.paused; },
-          get stopped() { return ctxRef.current.stopped; },
+          get paused() { return useBatchRunStore.getState().isPaused; },
+          get stopped() { return useBatchRunStore.getState().stopped; },
           log: addLog,
-          onProgress: setProgress,
+          onProgress: run.setProgress,
           appendEntry: (entry) => { addEntry(entry); },
         });
 
         // Run verification after batch if enabled
-        if (criteria.enabled && !ctxRef.current.stopped) {
+        if (criteria.enabled && !useBatchRunStore.getState().stopped) {
           setIsVerifying(true);
           addLog(`\n🎯 Bắt đầu Completion Verification cho tab: ${tab.label}...`);
           const report = await runWithVerification(config, criteria, {
             card: structuredClone(useCardStore.getState().card),
             profile: activeProfile,
             generationParams: settings.generationParams,
-            get stopped() { return ctxRef.current.stopped; },
+            get stopped() { return useBatchRunStore.getState().stopped; },
             log: addLog,
             onReport: setVerifyReport,
             appendEntry: (entry) => { addEntry(entry); },
@@ -200,21 +196,21 @@ export function BatchGeneratorPanel() {
       addLog(`💥 Lỗi nghiêm trọng: ${err instanceof Error ? err.message : String(err)}`);
     }
     
-    setIsRunning(false);
+    useBatchRunStore.getState().setIsRunning(false);
     setIsVerifying(false);
   }, [activeProfile, prompts, activeTab, TABS, useCardContext, useWebSearch, useSchemaContext, mvuzodSchema, totalEntries, entriesPerBatch, concurrentBatches,
       defaultPosition, insertionOrderMode, insertionOrderStart, maxRetries,
       maxConsecErrors, modelOverride, autoConfig, tokensPerEntry, settings.generationParams, addEntry, addLog, criteria]);
 
   const handlePause = useCallback(() => {
-    const next = !ctxRef.current.paused;
-    ctxRef.current.paused = next;
-    setIsPaused(next);
+    const run = useBatchRunStore.getState();
+    const next = !run.isPaused;
+    run.setPaused(next);
     addLog(next ? '⏸ Tạm dừng...' : '▶️ Tiếp tục...');
   }, [addLog]);
 
   const handleStop = useCallback(() => {
-    ctxRef.current.stopped = true;
+    useBatchRunStore.getState().setStopped(true);
     addLog('⏹ Dừng hẳn...');
   }, [addLog]);
 
