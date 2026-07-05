@@ -38,6 +38,12 @@ export function DocExtractPanel() {
   const [insertionOrderStart, setInsertionOrderStart] = useState(100);
   const [entryCategory, setEntryCategory] = useState<EntryCategory>('custom');
   const [cardType, setCardType] = useState<CardType>('single');
+  // Số ký tự mỗi chunk (mặc định cũ 15k quá nhỏ — cho chỉnh; càng lớn càng ít call API
+  // nhưng cần model có context lớn hơn). Nhớ giữa các phiên qua localStorage.
+  const [chunkSize, setChunkSize] = useState<number>(() => {
+    const v = Number(localStorage.getItem('doc-extract-chunk-size'));
+    return v >= 2000 ? v : 30000;
+  });
 
   // Run state
   const [isRunning, setIsRunning] = useState(false);
@@ -47,6 +53,12 @@ export function DocExtractPanel() {
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [logs]);
+
+  // Đổi kích thước chunk → lưu lại + cập nhật số chunk hiển thị
+  useEffect(() => {
+    localStorage.setItem('doc-extract-chunk-size', String(chunkSize));
+    setFileInfo(prev => prev ? { ...prev, chunks: splitDocument(prev.text, { chunkSize }).length } : prev);
+  }, [chunkSize]);
 
   const activeProfile = settings.profiles.find(p => p.id === settings.activeProfileId);
 
@@ -64,12 +76,12 @@ export function DocExtractPanel() {
     const reader = new FileReader();
     reader.onload = () => {
       const text = reader.result as string;
-      const chunks = splitDocument(text);
+      const chunks = splitDocument(text, { chunkSize });
       setFileInfo({ name: file.name, size: file.size, text, chunks: chunks.length });
-      addLog(`📂 Đã nạp "${file.name}" (${(file.size / 1024).toFixed(1)} KB, ~${chunks.length} chunks)`);
+      addLog(`📂 Đã nạp "${file.name}" (${(file.size / 1024).toFixed(1)} KB, ~${chunks.length} chunks @ ${chunkSize.toLocaleString()} ký tự/chunk)`);
     };
     reader.readAsText(file);
-  }, [addLog]);
+  }, [addLog, chunkSize]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -98,7 +110,7 @@ export function DocExtractPanel() {
     setProgress(null);
     stoppedRef.current = false;
 
-    const chunks = splitDocument(fileInfo.text);
+    const chunks = splitDocument(fileInfo.text, { chunkSize });
     const config: DocExtractConfig = {
       additionalInstructions: instructions,
       useCardContext,
@@ -125,7 +137,7 @@ export function DocExtractPanel() {
       addLog(`💥 Lỗi: ${err instanceof Error ? err.message : String(err)}`);
     }
     setIsRunning(false);
-  }, [fileInfo, activeProfile, instructions, useCardContext, defaultPosition, insertionOrderStart, card, settings.generationParams, addEntry, addLog, entryCategory, cardType]);
+  }, [fileInfo, activeProfile, instructions, useCardContext, defaultPosition, insertionOrderStart, card, settings.generationParams, addEntry, addLog, entryCategory, cardType, chunkSize]);
 
   return (
     <div className="space-y-5 p-5 max-w-2xl mx-auto">
@@ -161,6 +173,18 @@ export function DocExtractPanel() {
         <textarea value={instructions} onChange={e => setInstructions(e.target.value)}
           rows={3} className="settings-input text-sm resize-y" disabled={isRunning}
           placeholder="Ví dụ: Tập trung vào nhân vật và kỹ năng, bỏ qua đoạn quảng cáo..." />
+      </div>
+
+      {/* Chunk size — số ký tự mỗi lần quét (mỗi chunk = 1 call API) */}
+      <div>
+        <label className="settings-label">Kích thước chunk (ký tự mỗi lần quét = 1 call API)</label>
+        <input type="number" value={chunkSize} min={2000} max={500000} step={5000}
+          onChange={e => setChunkSize(Math.max(2000, Number(e.target.value) || 30000))}
+          className="settings-input" disabled={isRunning} />
+        <p className="text-xs text-muted-foreground mt-1">
+          Càng lớn → càng ÍT call API (nhanh/rẻ hơn) nhưng cần model có context lớn. 15.000 thường quá nhỏ; thử 30.000–60.000.
+          {fileInfo && <> Tài liệu hiện tại ≈ <b>{fileInfo.chunks}</b> chunk = <b>{fileInfo.chunks}</b> call/bước.</>}
+        </p>
       </div>
 
       <label className="flex items-center gap-2 text-sm cursor-pointer">
