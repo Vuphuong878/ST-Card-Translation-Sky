@@ -1,0 +1,1094 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Bảng Trạng Thái - Kỷ Nguyên Sụp Đổ</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap');
+
+        /* ==========================================================================
+           ROOT VARIABLES & THEME DEFINITION
+           ========================================================================== */
+        :root {
+            --egypt-sand-light: #f9f6ef;
+            --egypt-sand: #f0e6d2;
+            --egypt-sand-dark: #d8c3a5;
+            --egypt-sand-shadow: #bcaaa4;
+            
+            --egypt-gold: #d4af37;
+            --egypt-gold-light: #f3e5ab;
+            --egypt-gold-dark: #aa8627;
+            --egypt-gold-glow: rgba(212, 175, 55, 0.6);
+            
+            --egypt-lapis: #195190;
+            --egypt-lapis-light: #2b70c4;
+            --egypt-lapis-dark: #0f3562;
+            
+            --egypt-turquoise: #40e0d0;
+            --egypt-turquoise-dark: #20b2aa;
+            
+            --egypt-terracotta: #e2725b;
+            --egypt-crimson: #8b0000;
+            
+            --egypt-nile: #2ca02c;
+            --egypt-nile-dark: #006400;
+
+            --text-dark: #2b1d0e;
+            --text-muted: #5c4d3c;
+            --text-inverse: #f9f6ef;
+            
+            --border-ornament: 3px double var(--egypt-gold);
+            --border-solid: 2px solid var(--egypt-lapis);
+            --border-thin: 1px solid var(--egypt-sand-dark);
+            
+            --shadow-subtle: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-heavy: 0 8px 16px rgba(0, 0, 0, 0.2);
+            --shadow-inset: inset 0 0 10px rgba(0, 0, 0, 0.05);
+
+            --radius-sm: 2px;
+            --radius-md: 4px;
+            --radius-lg: 8px;
+            
+            --transition-speed: 0.3s;
+        }
+
+        /* ==========================================================================
+           RESET & TYPOGRAPHY
+           ========================================================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: 'Noto Serif', serif;
+            background-color: transparent;
+            color: var(--text-dark);
+            font-size: 14px;
+            line-height: 1.5;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Cinzel', serif;
+            margin: 0;
+            font-weight: 700;
+        }
+
+        /* ==========================================================================
+           MAIN CONTAINER & LAYOUT
+           ========================================================================== */
+        .egypt-dashboard {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--egypt-sand);
+            background-image: url('data:image/svg+xml;utf8,<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="M20 0l20 20-20 20L0 20z" fill="rgba(212,175,55,0.03)"/></svg>');
+            border: var(--border-ornament);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-heavy);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .egypt-dashboard::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 1px solid var(--egypt-lapis);
+            margin: 4px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ==========================================================================
+           HEADER COMPONENT
+           ========================================================================== */
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--egypt-lapis-dark) 0%, var(--egypt-lapis) 50%, var(--egypt-lapis-dark) 100%);
+            color: var(--egypt-gold-light);
+            padding: 20px 15px;
+            text-align: center;
+            border-bottom: 4px solid var(--egypt-gold);
+            position: relative;
+            z-index: 2;
+        }
+
+        .dashboard-header::after {
+            content: '𓋹 𓍹 𓍻 𓋹'; /* Ankh symbols */
+            display: block;
+            font-size: 18px;
+            color: var(--egypt-gold);
+            margin-top: 10px;
+            letter-spacing: 15px;
+            text-shadow: 0 0 5px var(--egypt-gold-glow);
+        }
+
+        .header-title {
+            font-size: 28px;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            text-transform: uppercase;
+        }
+
+        .header-meta {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            font-size: 13px;
+            margin-top: 8px;
+            opacity: 0.9;
+            font-family: 'Cinzel', serif;
+        }
+
+        .world-event-banner {
+            background-color: var(--egypt-crimson);
+            color: var(--text-inverse);
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 2px solid var(--egypt-gold);
+            letter-spacing: 1px;
+            animation: pulse-danger 2s infinite;
+        }
+
+        @keyframes pulse-danger {
+            0% { background-color: var(--egypt-crimson); }
+            50% { background-color: #a51c1c; }
+            100% { background-color: var(--egypt-crimson); }
+        }
+
+        /* ==========================================================================
+           SECTION PANELS (ACCORDIONS)
+           ========================================================================== */
+        .panel {
+            margin: 10px 15px;
+            background: var(--egypt-sand-light);
+            border: var(--border-thin);
+            border-top: 2px solid var(--egypt-lapis);
+            box-shadow: var(--shadow-subtle);
+            position: relative;
+            z-index: 2;
+            transition: all var(--transition-speed);
+        }
+
+        .panel-header {
+            background: linear-gradient(to right, var(--egypt-sand-dark), var(--egypt-sand));
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            transition: background var(--transition-speed);
+        }
+
+        .panel-header:hover {
+            background: linear-gradient(to right, var(--egypt-gold-light), var(--egypt-sand));
+        }
+
+        .panel-title {
+            font-size: 16px;
+            color: var(--egypt-lapis-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-toggle {
+            font-size: 12px;
+            color: var(--egypt-lapis);
+            transition: transform var(--transition-speed);
+        }
+
+        .panel.collapsed .panel-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .panel-content {
+            padding: 15px;
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .panel.collapsed .panel-content {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ==========================================================================
+           GRID SYSTEMS & DATA DISPLAYS
+           ========================================================================== */
+        .data-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .data-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+        .data-card {
+            background: var(--egypt-sand);
+            border: 1px dashed var(--egypt-gold-dark);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .data-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0; right: 0;
+            width: 10px; height: 10px;
+            border-bottom: 2px solid var(--egypt-lapis);
+            border-right: 2px solid var(--egypt-lapis);
+        }
+
+        .data-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .data-value {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--egypt-lapis-dark);
+        }
+        
+        .data-value.highlight { color: var(--egypt-terracotta); }
+        .data-value.gold {
+            color: var(--egypt-gold-dark);
+            text-shadow: 0 0 2px rgba(212, 175, 55, 0.3);
+        }
+
+        /* ==========================================================================
+           PROGRESS BARS & GAUGES
+           ========================================================================== */
+        .bar-container {
+            width: 100%;
+            background-color: #e0d8c8;
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #c2b59b;
+            margin-top: 5px;
+            position: relative;
+            box-shadow: var(--shadow-inset);
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+        }
+
+        .bar-hp { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+        .bar-maat { background: linear-gradient(90deg, var(--egypt-gold-dark), var(--egypt-gold)); }
+        .bar-mil { background: linear-gradient(90deg, var(--egypt-lapis-dark), var(--egypt-lapis-light)); }
+        .bar-food { background: linear-gradient(90deg, var(--egypt-nile-dark), var(--egypt-nile)); }
+        .bar-stress { background: linear-gradient(90deg, #8e44ad, #9b59b6); }
+
+        /* ==========================================================================
+           LISTS & TABLES
+           ========================================================================== */
+        .hieroglyph-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .hieroglyph-list li {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--egypt-sand-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .hieroglyph-list li:hover {
+            background-color: rgba(212, 175, 55, 0.1);
+        }
+
+        .hieroglyph-list li:last-child {
+            border-bottom: none;
+        }
+
+        .list-primary {
+            font-weight: bold;
+            color: var(--egypt-lapis-dark);
+        }
+
+        .list-secondary {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .list-badge {
+            background: var(--egypt-gold);
+            color: var(--text-dark);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* ==========================================================================
+           MODALS & POPUPS
+           ========================================================================== */
+        .papyrus-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(2px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .papyrus-modal {
+            background-color: var(--egypt-sand-light);
+            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23noise)" opacity="0.05"/></svg>');
+            border: 4px solid var(--egypt-gold-dark);
+            outline: 2px solid var(--egypt-lapis-dark);
+            outline-offset: -8px;
+            width: 90%;
+            max-width: 450px;
+            max-height: 85vh;
+            border-radius: 0;
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            position: relative;
+            overflow-y: auto;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .papyrus-modal.active {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            color: var(--egypt-crimson);
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .modal-title-decor {
+            text-align: center;
+            color: var(--egypt-lapis-dark);
+            font-size: 22px;
+            border-bottom: 2px solid var(--egypt-gold);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .modal-title-decor::after {
+            content: '𓃻'; /* Egyptian hieroglyph decoration */
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--egypt-sand-light);
+            padding: 0 10px;
+            color: var(--egypt-gold-dark);
+            font-size: 16px;
+        }
+
+        /* ==========================================================================
+           SCROLLBARS & UTILITIES
+           ========================================================================== */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--egypt-sand-dark); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--egypt-lapis); border-radius: 4px; border: 1px solid var(--egypt-sand-light); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--egypt-gold-dark); }
+
+        .interactive-row {
+            cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+        .interactive-row:hover {
+            border-left-color: var(--egypt-gold);
+            background: linear-gradient(to right, rgba(212, 175, 55, 0.15), transparent);
+        }
+
+        .badge-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
+        }
+        .badge-good { background-color: var(--egypt-nile); }
+        .badge-warn { background-color: var(--egypt-terracotta); }
+        .badge-danger { background-color: var(--egypt-crimson); }
+
+        .text-narrative {
+            font-style: italic;
+            color: var(--text-muted);
+            padding: 10px;
+            background: rgba(255,255,255,0.4);
+            border-left: 3px solid var(--egypt-gold);
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        
+        .tag {
+            display: inline-block;
+            background: var(--egypt-lapis-light);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin: 2px;
+        }
+        
+        .section-divider {
+            color: var(--egypt-lapis-dark);
+            margin-top: 15px;
+            border-bottom: 1px solid var(--egypt-sand-shadow);
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="egypt-dashboard" id="main-dashboard">
+        <!-- HEADER -->
+        <div class="world-event-banner" id="ui-world-event">
+            Sự kiện: Các đế chế sụp đổ, dân tị nạn khắp nơi do sự trỗi dậy của Hải nhân.
+        </div>
+        <div class="dashboard-header">
+            <h1 class="header-title">Vương Quốc Hai Vùng Đất</h1>
+            <div class="header-meta">
+                <span id="ui-world-time">Năm 1177 TCN</span> | 
+                <span id="ui-world-location">Hoàng cung Thebes</span>
+            </div>
+        </div>
+
+        <!-- PHARAOH PANEL -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span>👑 Pharaoh <span id="ui-pharaoh-name">Ramesses III</span></span></div>
+                <div class="panel-toggle">▼</div>
+            </div>
+            <div class="panel-content">
+                <div class="data-grid-3" style="grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                    <div class="data-card" style="padding:6px; text-align:center; align-items:center;">
+                        <span class="data-label" style="font-size:9px;">Tuổi</span>
+                        <span class="data-value" id="ui-pharaoh-age" style="font-size:14px;">45</span>
+                    </div>
+                    <div class="data-card" style="padding:6px; text-align:center; align-items:center;">
+                        <span class="data-label" style="font-size:9px;">Vương Triều</span>
+                        <span class="data-value gold" id="ui-pharaoh-dynasty" style="font-size:11px;">Thứ 20</span>
+                    </div>
+                    <div class="data-card" style="padding:6px; text-align:center; align-items:center;">
+                        <span class="data-label" style="font-size:9px;">Uy Tín</span>
+                        <span class="data-value" id="ui-pharaoh-prestige" style="font-size:14px;">90</span>
+                    </div>
+                    <div class="data-card" style="padding:6px; text-align:center; align-items:center;">
+                        <span class="data-label" style="font-size:9px;">Trạng Thái</span>
+                        <span class="data-value highlight" id="ui-pharaoh-status" style="font-size:11px;">Khỏe mạnh</span>
+                    </div>
+                </div>
+                <div class="data-grid-3" style="margin-top:10px;">
+                    <div class="data-card">
+                        <span class="data-label">Sinh lực</span>
+                        <div class="bar-container"><div class="bar-fill bar-hp" id="bar-pharaoh-hp" style="width: 95%;"></div></div>
+                        <span class="data-value" id="val-pharaoh-hp" style="text-align:right; display:block; font-size:12px; margin-top:2px;">95/100</span>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Maat (Trật Tự)</span>
+                        <div class="bar-container"><div class="bar-fill bar-maat" id="bar-pharaoh-maat" style="width: 80%;"></div></div>
+                        <span class="data-value" id="val-pharaoh-maat" style="text-align:right; display:block; font-size:12px; margin-top:2px;">80/100</span>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Sức Mạnh Quân Sự</span>
+                        <div class="bar-container"><div class="bar-fill bar-mil" id="bar-pharaoh-mil" style="width: 85%;"></div></div>
+                        <span class="data-value" id="val-pharaoh-mil" style="text-align:right; display:block; font-size:12px; margin-top:2px;">85/100</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PLAYER PANEL -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span>Hồ Sơ Của Bạn: <span id="ui-player-name" class="data-value gold">{user}</span></span></div>
+                <div class="panel-toggle">▼</div>
+            </div>
+            <div class="panel-content">
+                <div class="data-grid-3" style="grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                    <div class="data-card" style="padding:6px; text-align:center; align-items:center;">
+                        <span class="data-label" style="font-size:9px;">Thân Phận</span>
+                        <span class="data-value" id="ui-player-role" style="font-size:12px;">Cận thần</span>
+                    </div>
+                    <div class="data-card" style="padding:6px; text-align:center; align-items:center;">
+                        <span class="data-label" style="font-size:9px;">Tuổi</span>
+                        <span class="data-value" id="ui-player-age" style="font-size:12px;">25</span>
+                    </div>
+                    <div class="data-card" style="padding:6px; text-align:center; align-items:center;">
+                        <span class="data-label" style="font-size:9px;">Phe Tham Gia</span>
+                        <span class="data-value gold" id="ui-player-faction" style="font-size:12px;">Triều đình</span>
+                    </div>
+                    <div class="data-card" style="padding:6px; text-align:center; align-items:center;">
+                        <span class="data-label" style="font-size:9px;">Trạng Thái</span>
+                        <span class="data-value highlight" id="ui-player-health" style="font-size:12px;">Khỏe mạnh</span>
+                    </div>
+                </div>
+                <div class="data-card" style="margin-top:10px; width:100%;">
+                    <span class="data-label">Sinh Lực</span>
+                    <div class="bar-container"><div class="bar-fill bar-hp" id="bar-player-hp" style="width: 100%;"></div></div>
+                    <span class="data-value" id="val-player-hp" style="text-align:right; display:block; font-size:12px; margin-top:2px;">100/100</span>
+                </div>
+
+                <h4 class="section-divider">Chỉ Số Cá Nhân</h4>
+                <div class="data-grid-3" style="grid-template-columns: repeat(5, 1fr); gap: 5px;">
+                    <div class="data-card" style="padding: 5px; text-align: center; align-items: center;">
+                        <span class="data-label" style="font-size: 9px; margin-bottom: 2px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%;">Dũng Vũ</span>
+                        <span class="data-value" id="ui-attr-strength" style="font-size: 14px;">50</span>
+                    </div>
+                    <div class="data-card" style="padding: 5px; text-align: center; align-items: center;">
+                        <span class="data-label" style="font-size: 9px; margin-bottom: 2px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%;">Trí Tuệ</span>
+                        <span class="data-value" id="ui-attr-intelligence" style="font-size: 14px;">50</span>
+                    </div>
+                    <div class="data-card" style="padding: 5px; text-align: center; align-items: center;">
+                        <span class="data-label" style="font-size: 9px; margin-bottom: 2px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%;">Chiến Lược</span>
+                        <span class="data-value" id="ui-attr-tactics" style="font-size: 14px;">50</span>
+                    </div>
+                    <div class="data-card" style="padding: 5px; text-align: center; align-items: center;">
+                        <span class="data-label" style="font-size: 9px; margin-bottom: 2px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%;">Hậu Cần</span>
+                        <span class="data-value" id="ui-attr-logistics" style="font-size: 14px;">50</span>
+                    </div>
+                    <div class="data-card" style="padding: 5px; text-align: center; align-items: center;">
+                        <span class="data-label" style="font-size: 9px; margin-bottom: 2px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%;">Ngoại Giao</span>
+                        <span class="data-value" id="ui-attr-diplomacy" style="font-size: 14px;">50</span>
+                    </div>
+                </div>
+
+                <div class="data-grid-3" style="margin-top: 15px; gap: 10px;">
+                    <div class="data-card">
+                        <span class="data-label">Maat Cá Nhân</span>
+                        <div class="bar-container"><div class="bar-fill bar-maat" id="bar-player-maat" style="width: 50%;"></div></div>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Sự Ưu Ái</span>
+                        <div class="bar-container"><div class="bar-fill bar-maat" id="bar-player-favor" style="width: 50%;"></div></div>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Uy Tín Triều Đình</span>
+                        <div class="bar-container"><div class="bar-fill bar-lapis" style="background: var(--egypt-lapis); width: 30%;" id="bar-player-rep"></div></div>
+                    </div>
+                </div>
+                
+                <h4 class="section-divider">Hành Trang</h4>
+                <div id="ui-player-inventory" style="font-size: 13px; color: var(--text-muted); display:flex; flex-wrap:wrap; gap: 5px;"></div>
+
+                <h4 class="section-divider">Bẩm Phú Đặc Biệt</h4>
+                <div id="ui-player-traits" style="font-size: 13px; color: var(--text-muted); display:flex; flex-wrap:wrap; gap: 5px;"></div>
+
+                <h4 class="section-divider">Đặc Quyền Bẩm Phú</h4>
+                <div id="ui-player-perks" style="font-size: 13px; color: var(--text-muted); display:flex; flex-wrap:wrap; gap: 5px;"></div>
+
+                <h4 class="section-divider">Khủng Hoảng Đối Mặt</h4>
+                <div id="ui-player-crisis" style="font-size: 14px; color: var(--egypt-crimson); font-weight: bold; font-style: italic;">Không có</div>
+
+                <h4 class="section-divider">Thông Tin Quan Chức</h4>
+                <ul class="hieroglyph-list">
+                    <li><span class="list-secondary">Chức vụ</span><span class="list-primary" id="ui-player-title">Chưa được phong tước</span></li>
+                    <li><span class="list-secondary">Phẩm cấp</span><span class="list-primary" id="ui-player-rank">Không có</span></li>
+                    <li><span class="list-secondary">Thực quyền</span><span class="list-primary" style="font-size:12px;" id="ui-player-power">Không có đặc quyền</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- FACTIONS PANEL -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span>Thế Lực & Phe Phái</span></div>
+                <div class="panel-toggle">▼</div>
+            </div>
+            <div class="panel-content">
+                <div class="text-narrative" id="ui-faction-desc">Pharaoh nắm quyền tối cao nhưng các phe phái đang ngấm ngầm tranh giành ảnh hưởng.</div>
+                
+                <ul class="hieroglyph-list" id="faction-list">
+                    <!-- Populated by JS -->
+                </ul>
+
+                <h4 class="section-divider">Thế Lực Tự Lập (Do Người Chơi Lập Ra)</h4>
+                <ul class="hieroglyph-list" id="ind-faction-list">
+                    <!-- Populated by JS -->
+                </ul>
+
+                <h4 class="section-divider">Thế Lực Đã Gia Nhập</h4>
+                <ul class="hieroglyph-list" id="joined-faction-list">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- CHARACTERS PANEL -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span>Nhân Vật Phụ</span></div>
+                <div class="panel-toggle">▼</div>
+            </div>
+            <div class="panel-content">
+                <div class="text-narrative" id="ui-char-desc">Các quan chức và phu nhân trong triều đang theo dõi sát sao.</div>
+                <ul class="hieroglyph-list" id="char-list">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- HAREM PANEL -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span>Hậu Cung Hoàng Gia</span></div>
+                <div class="panel-toggle">▼</div>
+            </div>
+            <div class="panel-content">
+                <div class="text-narrative" id="ui-harem-desc">Bề ngoài bình yên nhưng các mỹ nhân đang ngấm ngầm ganh đua.</div>
+                <div class="data-grid-2">
+                    <div class="data-card">
+                        <span class="data-label">Đại Hoàng Phi</span>
+                        <span class="data-value gold" id="ui-harem-queen">Đang để trống</span>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Mức Độ Căng Thẳng</span>
+                        <div class="bar-container"><div class="bar-fill bar-stress" id="bar-harem-stress" style="width: 40%;"></div></div>
+                        <span class="data-value" id="val-harem-stress" style="text-align:right; display:block; font-size:12px; margin-top:2px;">40/100</span>
+                    </div>
+                </div>
+                <h4 class="section-divider">Danh Sách Phi Tần Nổi Bật</h4>
+                <ul class="hieroglyph-list" id="harem-list">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- BUREAUCRACY PANEL -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span>Hệ Thống Quan Chế</span></div>
+                <div class="panel-toggle">▼</div>
+            </div>
+            <div class="panel-content">
+                <div class="text-narrative" id="ui-bur-desc">Hệ thống quan liêu phân tầng phức tạp từ Tể tướng đến thư lại.</div>
+                <ul class="hieroglyph-list" id="bur-list">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- NATIONAL RESOURCES & LOCATIONS -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span>Tài Nguyên & Địa Danh</span></div>
+                <div class="panel-toggle">▼</div>
+            </div>
+            <div class="panel-content">
+                <div class="data-grid-2">
+                    <div class="data-card">
+                        <span class="data-label">Lương Thực Tổng</span>
+                        <div class="bar-container"><div class="bar-fill bar-food" id="bar-res-food" style="width: 80%;"></div></div>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Ngân Khố</span>
+                        <div class="bar-container"><div class="bar-fill bar-maat" id="bar-res-gold" style="width: 75%;"></div></div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; font-size: 13px;">
+                    <b>Lũ sông Nile:</b> <span id="ui-nile-status" class="badge-status badge-good">Bình thường</span><br>
+                    <div style="margin-top: 5px;"><b>Tình trạng tiếp tế:</b> <span id="ui-supply-status">Ổn định</span></div>
+                </div>
+                
+                <h4 class="section-divider">Kiểm Soát Lãnh Thổ</h4>
+                <div class="text-narrative" id="ui-loc-desc">Lãnh thổ Ai Cập trải dài từ châu thổ sông Nile đến Hạ Nubia.</div>
+                <ul class="hieroglyph-list" id="loc-list">
+                    <!-- Populated by JS -->
+                </ul>
+
+                <h4 class="section-divider">Thành Trì & Di Tích</h4>
+                <ul class="hieroglyph-list" id="city-list">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP -->
+    <div class="papyrus-modal-overlay" id="info-modal">
+        <div class="papyrus-modal" id="info-modal-content">
+            <button class="modal-close-btn" onclick="closeModal()">×</button>
+            <h2 class="modal-title-decor" id="modal-title">Tiêu Đề</h2>
+            <div id="modal-body" style="line-height: 1.6; font-size: 14px; color: var(--text-dark);">
+                Nội dung chi tiết.
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT FOR DYNAMIC DATA AND INTERACTIVITY -->
+    <script>
+        // --- Accordion Logic ---
+        document.querySelectorAll('.panel-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.parentElement.classList.toggle('collapsed');
+            });
+        });
+
+        // --- Modal Logic ---
+        const modalOverlay = document.getElementById('info-modal');
+        const modalContent = document.getElementById('info-modal-content');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+
+        window.openModal = function(title, contentHTML) {
+            modalTitle.innerHTML = title;
+            modalBody.innerHTML = contentHTML;
+            modalOverlay.style.display = 'flex';
+            setTimeout(() => { modalContent.classList.add('active'); }, 10);
+        }
+
+        window.closeModal = function() {
+            modalContent.classList.remove('active');
+            setTimeout(() => { modalOverlay.style.display = 'none'; }, 300);
+        }
+
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeModal();
+        });
+
+        // --- Data Binding Logic ---
+        function getSafe(obj, path, def) {
+            let current = obj;
+            for (let key of path) {
+                if (current === undefined || current === null) return def;
+                current = current[key];
+            }
+            return current !== undefined ? current : def;
+        }
+
+        function formatArmyDetailsHtml(title, army) {
+            const power = getSafe(army, ['Sức mạnh'], 50);
+            const loyal = getSafe(army, ['Trung thành'], 50);
+            const num = getSafe(army, ['Tổng quân số'], 0);
+            const food = getSafe(army, ['Lương thảo quân đội'], 100);
+            const wounded = getSafe(army, ['Tổng bị thương'], 0);
+            const morale = getSafe(army, ['Sĩ khí trung bình'], 50);
+            const weapon = getSafe(army, ['Tình trạng vũ khí'], 50);
+            const consume = getSafe(army, ['Tổng tiêu hao mỗi tháng'], 0);
+            const troops = getSafe(army, ['Binh chủng'], {});
+            
+            let html = `<b>Sức mạnh:</b> ${power}% | <b>Trung thành:</b> ${loyal}%<br>`;
+            html += `<b>Tổng quân số:</b> ${num.toLocaleString()}<br>`;
+            html += `<b>Tổng bị thương:</b> ${wounded.toLocaleString()}<br>`;
+            html += `<b>Sĩ khí TB:</b> ${morale}/100<br>`;
+            html += `<b>Lương thảo quân đội:</b> ${food}%<br>`;
+            html += `<b>Tình trạng vũ khí:</b> ${weapon}%<br>`;
+            html += `<b>Tiêu hao/tháng:</b> ${consume.toLocaleString()} hekat lúa mì<br><br>`;
+            
+            html += `<table style="width:100%; font-size:12px; border-collapse:collapse; text-align:left;">`;
+            html += `<tr style="background:var(--egypt-lapis-dark); color:var(--egypt-gold-light);"><th style="padding:4px;">Binh chủng</th><th>Quân số</th><th>Vũ khí</th><th>% TBị</th><th>Thương</th><th>Sĩ khí</th><th>KN</th><th>Hao/ng</th></tr>`;
+            for (let [tName, tData] of Object.entries(troops)) {
+                if (typeof tData === 'object' && tData !== null) {
+                    const qs = tData['Quân số'] || 0;
+                    const vk = tData['Vũ khí'] || '-';
+                    const tlvk = tData['Tỷ lệ có vũ khí'] || 0;
+                    const bt = tData['Bị thương'] || 0;
+                    const sk = tData['Sĩ khí'] || 0;
+                    const kn = tData['Kinh nghiệm'] || '-';
+                    const th = tData['Tiêu hao lương thực'] || 0;
+                    const skColor = sk >= 70 ? 'var(--egypt-nile)' : sk >= 40 ? 'var(--egypt-terracotta)' : 'var(--egypt-crimson)';
+                    html += `<tr style="border-bottom:1px solid var(--egypt-sand-dark);"><td style="padding:3px; font-weight:bold;">${tName}</td><td>${qs.toLocaleString()}</td><td style="font-size:10px;">${vk}</td><td>${tlvk}%</td><td>${bt.toLocaleString()}</td><td style="color:${skColor}; font-weight:bold;">${sk}</td><td style="font-size:10px;">${kn}</td><td>${th}</td></tr>`;
+                } else {
+                    html += `<tr style="border-bottom:1px solid var(--egypt-sand-dark);"><td style="padding:3px;">${tName}</td><td colspan="7">${tData}</td></tr>`;
+                }
+            }
+            html += `</table>`;
+            return html;
+        }
+
+        function updateDashboard(allVariables) {
+            try {
+                const data = allVariables || {};
+
+                // 1. World State
+                document.getElementById('ui-world-time').innerText = getSafe(data, ['Trạng thái thế giới', 'Thời gian'], 'Năm 1177 TCN');
+                document.getElementById('ui-world-location').innerText = getSafe(data, ['Trạng thái thế giới', 'Địa điểm'], 'Hoàng cung Thebes');
+                document.getElementById('ui-world-event').innerText = "Sự kiện: " + getSafe(data, ['Trạng thái thế giới', '_Sự_kiện_lớn'], 'Các đế chế sụp đổ, dân tị nạn khắp nơi do sự trỗi dậy của Hải nhân.');
+                const nile = getSafe(data, ['Trạng thái thế giới', 'Tình trạng lũ sông Nile'], 'Bình thường (Đủ nước tưới tiêu)');
+                const nileEl = document.getElementById('ui-nile-status');
+                nileEl.innerText = nile;
+                if (nile.includes('Đại hồng thủy') || nile.includes('Cạn kiệt')) { nileEl.className = 'badge-status badge-danger'; }
+                else if (nile.includes('Mực nước thấp')) { nileEl.className = 'badge-status badge-warn'; }
+                else { nileEl.className = 'badge-status badge-good'; }
+
+                // 2. Pharaoh
+                document.getElementById('ui-pharaoh-name').innerText = getSafe(data, ['Pharaoh', 'Tên'], 'Ramesses III');
+                document.getElementById('ui-pharaoh-age').innerText = getSafe(data, ['Pharaoh', 'Tuổi'], 45);
+                document.getElementById('ui-pharaoh-dynasty').innerText = getSafe(data, ['Pharaoh', 'Vương triều'], 'Vương triều thứ 20');
+                document.getElementById('ui-pharaoh-prestige').innerText = getSafe(data, ['Pharaoh', 'Uy tín'], 90);
+                document.getElementById('ui-pharaoh-status').innerText = getSafe(data, ['Pharaoh', 'Trạng thái'], 'Khỏe mạnh');
+                const pHP = getSafe(data, ['Pharaoh', 'Sinh lực'], 95);
+                document.getElementById('bar-pharaoh-hp').style.width = pHP + '%';
+                document.getElementById('val-pharaoh-hp').innerText = pHP + '/100';
+                const pMaat = getSafe(data, ['Pharaoh', 'Maat'], 80);
+                document.getElementById('bar-pharaoh-maat').style.width = pMaat + '%';
+                document.getElementById('val-pharaoh-maat').innerText = pMaat + '/100';
+                const pMil = getSafe(data, ['Pharaoh', 'Sức mạnh quân sự'], 85);
+                document.getElementById('bar-pharaoh-mil').style.width = pMil + '%';
+                document.getElementById('val-pharaoh-mil').innerText = pMil + '/100';
+
+                // 3. Player
+                document.getElementById('ui-player-name').innerText = getSafe(data, ['Người chơi', 'Tên'], 'Người Dùng');
+                document.getElementById('ui-player-role').innerText = getSafe(data, ['Người chơi', 'Thân phận'], 'Cận thần');
+                document.getElementById('ui-player-age').innerText = getSafe(data, ['Người chơi', 'Tuổi'], 25);
+                document.getElementById('ui-player-faction').innerText = getSafe(data, ['Phe phái', 'Phe tham gia'], 'Triều đình');
+                document.getElementById('ui-player-health').innerText = getSafe(data, ['Người chơi', 'Trạng thái'], 'Khỏe mạnh');
+                
+                const plHP = getSafe(data, ['Chỉ số cá nhân', 'Sinh Lực'], 100);
+                document.getElementById('bar-player-hp').style.width = plHP + '%';
+                document.getElementById('val-player-hp').innerText = plHP + '/100';
+
+                document.getElementById('ui-attr-strength').innerText = getSafe(data, ['Chỉ số cá nhân', 'Dũng Vũ'], 50);
+                document.getElementById('ui-attr-intelligence').innerText = getSafe(data, ['Chỉ số cá nhân', 'Trí Tuệ'], 50);
+                document.getElementById('ui-attr-tactics').innerText = getSafe(data, ['Chỉ số cá nhân', 'Chiến Lược'], 50);
+                document.getElementById('ui-attr-logistics').innerText = getSafe(data, ['Chỉ số cá nhân', 'Hậu Cần'], 50);
+                document.getElementById('ui-attr-diplomacy').innerText = getSafe(data, ['Chỉ số cá nhân', 'Ngoại Giao'], 50);
+
+                document.getElementById('bar-player-maat').style.width = getSafe(data, ['Người chơi', 'Maat'], 50) + '%';
+                document.getElementById('bar-player-favor').style.width = getSafe(data, ['Người chơi', 'Sự ưu ái'], 50) + '%';
+                document.getElementById('bar-player-rep').style.width = getSafe(data, ['Người chơi', 'Uy tín triều đình'], 30) + '%';
+                
+                const inv = getSafe(data, ['Người chơi', 'Hành trang'], {});
+                let invHtml = Object.keys(inv).length ? '' : '<i>Trống rỗng</i>';
+                for (let [item, amt] of Object.entries(inv)) { invHtml += `<span class="tag">${item}: ${amt}</span>`; }
+                document.getElementById('ui-player-inventory').innerHTML = invHtml;
+
+                const traits = getSafe(data, ['Người chơi', 'Bẩm phú'], []);
+                let traitsHtml = traits.length ? '' : '<i>Không có</i>';
+                traits.forEach(t => { traitsHtml += `<span class="tag" style="background:var(--egypt-crimson);">${t}</span>`; });
+                document.getElementById('ui-player-traits').innerHTML = traitsHtml;
+
+                const perks = getSafe(data, ['Đặc quyền Bẩm phú'], {});
+                let perksHtml = Object.keys(perks).length ? '' : '<i>Không có</i>';
+                for (let [pName, pDesc] of Object.entries(perks)) {
+                    perksHtml += `<span class="tag" style="background:var(--egypt-gold); color:var(--egypt-lapis-dark); border:1px solid var(--egypt-gold); font-weight:bold;">${pName}: ${pDesc}</span>`;
+                }
+                document.getElementById('ui-player-perks').innerHTML = perksHtml;
+
+                document.getElementById('ui-player-crisis').innerText = getSafe(data, ['Người chơi', 'Khủng hoảng'], 'Không có');
+
+                const offInfo = getSafe(data, ['Người chơi', 'Thông tin Quan chức'], {});
+                document.getElementById('ui-player-title').innerText = offInfo['Chức vụ thực tế'] || 'Chưa được phong';
+                document.getElementById('ui-player-rank').innerText = offInfo['Phẩm cấp'] || 'Không có';
+                document.getElementById('ui-player-power').innerText = offInfo['Thực quyền'] || 'Không có';
+
+                // 4. Factions
+                document.getElementById('ui-faction-desc').innerText = getSafe(data, ['Phe phái', 'Tình hình chung'], 'Phe phái đang giằng co.');
+                
+                let facHtml = '';
+                const amunPower = getSafe(data, ['Phe phái', 'Giới Tư Tế Amun', 'Quyền lực'], 80);
+                const amunLoyal = getSafe(data, ['Phe phái', 'Giới Tư Tế Amun', 'Trung thành'], 60);
+                facHtml += `<li class="interactive-row" onclick="openModal('Giới Tư Tế Amun', 'Quyền lực: ${amunPower}%<br>Trung thành: ${amunLoyal}%')">
+                                <span class="list-primary">Giới Tư Tế Amun</span><span class="list-badge">Quyền lực: ${amunPower}</span>
+                            </li>`;
+                
+                const noblePower = getSafe(data, ['Phe phái', 'Quý tộc và Thống đốc', 'Quyền lực'], 55);
+                const nobleLoyal = getSafe(data, ['Phe phái', 'Quý tộc và Thống đốc', 'Trung thành'], 70);
+                facHtml += `<li class="interactive-row" onclick="openModal('Quý Tộc & Thống Đốc', 'Quyền lực: ${noblePower}%<br>Trung thành: ${nobleLoyal}%')">
+                                <span class="list-primary">Quý Tộc & Thống Đốc</span><span class="list-badge">Quyền lực: ${noblePower}</span>
+                            </li>`;
+
+                const royalArmy = getSafe(data, ['Phe phái', 'Quân đội'], {});
+                const armyNum = getSafe(royalArmy, ['Tổng quân số'], 120000);
+                const armyMorale = getSafe(royalArmy, ['Sĩ khí trung bình'], 82);
+                const troopHtml = formatArmyDetailsHtml('⚔️ Quân Đội', royalArmy);
+                facHtml += `<li class="interactive-row" onclick="openModal('⚔️ Quân Đội', '${troopHtml.replace(/'/g, "\\'").replace(/"/g, "&quot;")}')"> 
+                                <span class="list-primary">Quân Đội</span><span class="list-badge" style="background:var(--egypt-crimson);">Quân: ${armyNum.toLocaleString()} | Sĩ khí: ${armyMorale}</span>
+                            </li>`;
+                
+                const courtPwr = getSafe(data, ['Phe phái', 'Triều đình và Quan lại', 'Quyền lực'], 65);
+                const courtCorrupt = getSafe(data, ['Phe phái', 'Triều đình và Quan lại', 'Tham nhũng'], 40);
+                facHtml += `<li class="interactive-row" onclick="openModal('Triều Đình & Quan Lại', 'Quyền lực: ${courtPwr}%<br>Tham nhũng: ${courtCorrupt}%')">
+                                <span class="list-primary">Triều Đình & Quan Lại</span><span class="list-badge" style="background:var(--egypt-lapis);">Quyền lực: ${courtPwr}</span>
+                            </li>`;
+                document.getElementById('faction-list').innerHTML = facHtml;
+
+                let indFacHtml = '';
+                const indFac = getSafe(data, ['Phe phái', 'Thế lực tự lập'], {});
+                const indStats = getSafe(data, ['Phe phái', 'Thông số Thế lực tự lập'], {});
+                if (Object.keys(indFac).length > 0) {
+                    for (let [fName, fDesc] of Object.entries(indFac)) {
+                        const indArmy = getSafe(indStats, ['Chi tiết lực lượng'], {});
+                        const armyDetailHtml = formatArmyDetailsHtml(`Thế lực tự lập: ${fName}`, indArmy);
+                        let indDetails = `<b>${fName}</b>: ${fDesc}<br><br>Ảnh hưởng triều chính: ${indStats['Ảnh hưởng triều chính']||0}%<br>Đe dọa quân sự: ${indStats['Đe dọa quân sự']||0}%<br>Thành trì chiếm giữ: ${indStats['Số lượng thành trì']||0}<br>Lương thực dự trữ: ${indStats['Dự trữ lương thực']||0}%<br><br><b>Chi Tiết Lực Lượng:</b><br>${armyDetailHtml}`;
+                        indFacHtml += `<li class="interactive-row" onclick="openModal('Thế lực tự lập: ${fName}', '${indDetails.replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">
+                                            <span class="list-primary">${fName}</span><span class="list-secondary">Chi tiết</span>
+                                         </li>`;
+                    }
+                }
+                document.getElementById('ind-faction-list').innerHTML = indFacHtml || '<li class="list-secondary">Chưa lập ra thế lực nào.</li>';
+
+                let joinFacHtml = '';
+                const joinFac = getSafe(data, ['Phe phái', 'Thế lực đã gia nhập'], {});
+                const joinStats = getSafe(data, ['Phe phái', 'Thông số Thế lực gia nhập'], {});
+                if (Object.keys(joinFac).length > 0) {
+                    for (let [fName, fDesc] of Object.entries(joinFac)) {
+                        const joinArmy = getSafe(joinStats, ['Chi tiết lực lượng'], {});
+                        const armyDetailHtml = formatArmyDetailsHtml(`Thế lực đã gia nhập: ${fName}`, joinArmy);
+                        let joinDetails = `<b>${fName}</b>: ${fDesc}<br><br>Thành trì kiểm soát: ${joinStats['Số lượng thành trì']||0}<br>Lương thực cung ứng: ${joinStats['Dự trữ lương thực']||0}%<br><br><b>Chi Tiết Lực Lượng:</b><br>${armyDetailHtml}`;
+                        joinFacHtml += `<li class="interactive-row" onclick="openModal('Thế lực đã gia nhập: ${fName}', '${joinDetails.replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">
+                                            <span class="list-primary">${fName}</span><span class="list-secondary" style="color:var(--egypt-nile);">Chi tiết</span>
+                                         </li>`;
+                    }
+                }
+                document.getElementById('joined-faction-list').innerHTML = joinFacHtml || '<li class="list-secondary">Chưa gia nhập thế lực nào.</li>';
+
+                // 5. Minor Characters
+                document.getElementById('ui-char-desc').innerText = getSafe(data, ['Nhân vật phụ', 'Tình hình chung'], 'Quan chức và phu nhân trong triều.');
+                const cBase = getSafe(data, ['Nhân vật phụ', 'Thông tin cơ bản'], {});
+                const cAtt = getSafe(data, ['Nhân vật phụ', 'Thái độ với Người chơi'], {});
+                const cLyl = getSafe(data, ['Nhân vật phụ', 'Độ trung thành với Pharaoh'], {});
+                const cFac = getSafe(data, ['Nhân vật phụ', 'Quản lý Phe phái'], {});
+                const cInf = getSafe(data, ['Nhân vật phụ', 'Tầm ảnh hưởng'], {});
+                let charHtml = '';
+                for (let cName of Object.keys(cBase)) {
+                    let desc = `<b>Thông tin:</b> ${cBase[cName]||''}<br><b>Thái độ với bạn:</b> ${cAtt[cName]||''}<br><b>Trung thành với Pharaoh:</b> ${cLyl[cName]||''}<br><b>Quản lý phe phái:</b> ${cFac[cName]||''}<br><b>Tầm ảnh hưởng:</b> ${cInf[cName]||''}`;
+                    charHtml += `<li class="interactive-row" onclick="openModal('Nhân Vật: ${cName}', '${desc}')">
+                                    <span class="list-primary">${cName}</span><span class="list-secondary">Chi tiết</span>
+                                 </li>`;
+                }
+                document.getElementById('char-list').innerHTML = charHtml || '<li class="list-secondary">Chưa có dữ liệu nhân vật phụ.</li>';
+
+                // 6. Harem
+                document.getElementById('ui-harem-desc').innerText = getSafe(data, ['Hậu cung', 'Tình hình chung'], 'Hậu cung ngầm ganh đua.');
+                document.getElementById('ui-harem-queen').innerText = getSafe(data, ['Hậu cung', 'Đại Hoàng Phi'], 'Đang để trống');
+                const hStress = getSafe(data, ['Hậu cung', 'Chỉ số căng thẳng'], 40);
+                document.getElementById('bar-harem-stress').style.width = hStress + '%';
+                document.getElementById('val-harem-stress').innerText = hStress + '/100';
+
+                const wivesList = getSafe(data, ['Hậu cung', 'Danh sách phi tần'], {});
+                const wFavor = getSafe(data, ['Hậu cung', 'Độ sủng ái'], {});
+                const wPower = getSafe(data, ['Hậu cung', 'Thế lực hậu thuẫn'], {});
+                let haremHtml = '';
+                for (let wName of Object.keys(wivesList)) {
+                    let wDesc = `<b>Thông tin:</b> ${wivesList[wName]||''}<br><b>Độ sủng ái:</b> ${wFavor[wName]||''}<br><b>Thế lực hậu thuẫn:</b> ${wPower[wName]||''}`;
+                    haremHtml += `<li class="interactive-row" onclick="openModal('Phi Tần: ${wName}', '${wDesc}')">
+                                    <span class="list-primary">${wName}</span><span class="list-secondary">Chi tiết</span>
+                                 </li>`;
+                }
+                document.getElementById('harem-list').innerHTML = haremHtml || '<li class="list-secondary">Chưa có dữ liệu phi tần.</li>';
+
+                // 7. Bureaucracy
+                document.getElementById('ui-bur-desc').innerText = getSafe(data, ['Hệ thống Quan chế', 'Tình hình Vận hành'], 'Hệ thống quan liêu phân tầng phức tạp.');
+                const bPriv = getSafe(data, ['Hệ thống Quan chế', 'Tác dụng Đặc quyền'], {});
+                const bPow = getSafe(data, ['Hệ thống Quan chế', 'Quyền lực Chức quan'], {});
+                const bLand = getSafe(data, ['Hệ thống Quan chế', 'Bổng lộc và Đất đai'], {});
+                let burHtml = '';
+                // Gather all keys
+                const bKeys = new Set([...Object.keys(bPriv), ...Object.keys(bPow), ...Object.keys(bLand)]);
+                for (let bName of bKeys) {
+                    let bDesc = `<b>Đặc quyền:</b> ${bPriv[bName]||''}<br><b>Quyền lực:</b> ${bPow[bName]||''}<br><b>Bổng lộc:</b> ${bLand[bName]||''}`;
+                    burHtml += `<li class="interactive-row" onclick="openModal('Quan Chức: ${bName}', '${bDesc}')">
+                                    <span class="list-primary">${bName}</span><span class="list-secondary">Chi tiết</span>
+                                 </li>`;
+                }
+                document.getElementById('bur-list').innerHTML = burHtml || '<li class="list-secondary">Chưa có dữ liệu quan chế.</li>';
+
+                // 8. Resources & Locations
+                document.getElementById('bar-res-food').style.width = getSafe(data, ['Tài nguyên quốc gia', 'Dự trữ lương thực tổng'], 80) + '%';
+                document.getElementById('bar-res-gold').style.width = getSafe(data, ['Tài nguyên quốc gia', 'Ngân khố hoàng gia'], 75) + '%';
+                document.getElementById('ui-supply-status').innerText = getSafe(data, ['Tài nguyên quốc gia', 'Tình trạng tiếp tế'], 'Ổn định');
+
+                document.getElementById('ui-loc-desc').innerText = getSafe(data, ['Hệ thống Địa danh', 'Tình hình bản đồ'], 'Lãnh thổ Ai Cập trải dài từ châu thổ sông Nile đến Hạ Nubia.');
+                
+                const upStat = getSafe(data, ['Hệ thống Địa danh', 'Thượng Ai Cập', 'Tình trạng chung'], 'Trung tâm tôn giáo.');
+                const upSec = getSafe(data, ['Hệ thống Địa danh', 'Thượng Ai Cập', 'Độ an ninh'], 85);
+                const downStat = getSafe(data, ['Hệ thống Địa danh', 'Hạ Ai Cập', 'Tình trạng chung'], 'Khu vực kinh tế sầm uất.');
+                const downSec = getSafe(data, ['Hệ thống Địa danh', 'Hạ Ai Cập', 'Độ an ninh'], 40);
+                
+                let locHtml = `<li class="interactive-row" onclick="openModal('Thượng Ai Cập', '<b>Tình trạng:</b> ${upStat}<br><b>An ninh:</b> ${upSec}%')">
+                                    <span class="list-primary">Thượng Ai Cập (Thebes)</span><span class="list-secondary">An ninh: ${upSec}%</span>
+                               </li>
+                               <li class="interactive-row" onclick="openModal('Hạ Ai Cập', '<b>Tình trạng:</b> ${downStat}<br><b>An ninh:</b> ${downSec}%')">
+                                    <span class="list-primary">Hạ Ai Cập (Memphis)</span><span class="list-secondary" style="color:var(--egypt-crimson); font-weight:bold;">An ninh: ${downSec}%</span>
+                               </li>`;
+                document.getElementById('loc-list').innerHTML = locHtml;
+
+                const cList = getSafe(data, ['Hệ thống Địa danh', 'Danh sách Thành trì'], {});
+                const cCtrl = getSafe(data, ['Hệ thống Địa danh', 'Mức độ Kiểm soát'], {});
+                const cRelic = getSafe(data, ['Hệ thống Địa danh', 'Di tích và Đền đài'], {});
+                let cityHtml = '';
+                const cKeys = new Set([...Object.keys(cList), ...Object.keys(cCtrl), ...Object.keys(cRelic)]);
+                for (let cName of cKeys) {
+                    let cDesc = `<b>Thông tin:</b> ${cList[cName]||''}<br><b>Kiểm soát:</b> ${cCtrl[cName]||''}<br><b>Di tích/Đền đài:</b> ${cRelic[cName]||''}`;
+                    cityHtml += `<li class="interactive-row" onclick="openModal('Địa Điểm: ${cName}', '${cDesc}')">
+                                    <span class="list-primary">${cName}</span><span class="list-secondary">Chi tiết</span>
+                                 </li>`;
+                }
+                document.getElementById('city-list').innerHTML = cityHtml || '<li class="list-secondary">Chưa có dữ liệu thành trì/di tích.</li>';
+
+            } catch (e) {
+                console.error("Dashboard update error:", e);
+            }
+        }
+
+        // Init simulation (To be hooked up with actual Mvu event listeners)
+        document.addEventListener("DOMContentLoaded", () => {
+            // 1. Initial State Fetch
+            let initialState = {};
+            if (window.MVU && typeof window.MVU.getState === 'function') {
+                initialState = window.MVU.getState();
+            } else if (typeof window.getAllVariables === 'function') {
+                initialState = window.getAllVariables();
+            }
+            updateDashboard(initialState);
+
+            // 2. Real-time Render via mvu:update Event
+            window.addEventListener('mvu:update', (event) => {
+                const state = (event && event.detail) || (window.MVU && typeof window.MVU.getState === 'function' && window.MVU.getState()) || (typeof window.getAllVariables === 'function' && window.getAllVariables());
+                if (state) {
+                    updateDashboard(state);
+                }
+            });
+
+            // 3. Fallback/Legacy MVU events
+            if (typeof window.eventOn === 'function' && window.Mvu) {
+                window.eventOn(window.Mvu.events.VARIABLE_UPDATE_ENDED, () => {
+                    const state = (window.MVU && typeof window.MVU.getState === 'function' && window.MVU.getState()) || (typeof window.getAllVariables === 'function' && window.getAllVariables());
+                    updateDashboard(state || {});
+                });
+            }
+        });
+
+    </script>
+</body>
+</html>

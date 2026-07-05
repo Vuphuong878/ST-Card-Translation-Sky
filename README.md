@@ -1,6 +1,10 @@
-# ST Card Translator Sky Fix
+# SillyTavern Multi Tools
 
-> Công cụ dịch **thẻ nhân vật (character card) của SillyTavern** sang Tiếng Việt (và nhiều ngôn ngữ khác) bằng AI — giữ nguyên HTML/CSS/JS, regex, lorebook, macro `{{char}}` `{{user}}`. Chạy hoàn toàn trên máy bạn.
+> Bộ công cụ nhiều luồng cho **SillyTavern**, chạy hoàn toàn trên máy bạn. Hub (thanh chuyển bên trái) gộp các tool lại; đổi qua lại **không ngắt** tiến trình:
+> - **🌐 Dịch Card** — dịch thẻ nhân vật sang Tiếng Việt (và nhiều ngôn ngữ) bằng AI, giữ nguyên HTML/CSS/JS, regex, lorebook, macro `{{char}}` `{{user}}`.
+> - **🃏 Tạo Card** — studio tạo/sửa thẻ, lorebook, regex, MVU/ZOD, EJS (nhúng từ thư mục `tao-card/`).
+>
+> **Chạy:** double-click **`start.bat`** — tự cài đặt lần đầu rồi mở Hub ở http://localhost:5173.
 
 Hỗ trợ mọi nhà cung cấp AI tương thích OpenAI: **OpenAI, Claude (Anthropic), Gemini, DeepSeek, Qwen**, hoặc proxy/local tự host.
 

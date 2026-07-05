@@ -1,0 +1,226 @@
+import type { EntryCategory, CardType } from '../lib/worldbook/worldbookConfig';
+
+// ═══ Phương pháp Pipeline ═══
+export type PipelineMethod = 'standard' | 'minh_nguyet';
+
+// ═══ Các bước pipeline — Standard ═══
+export type AutoCreatorStep =
+  | 'basic_info'        // Name, Description, Personality, Scenario
+  | 'lorebook'          // Lorebook entries
+  | 'regex'             // Regex scripts
+  | 'mvuzod'            // MVUZOD schema + system entries
+  | 'system_prompt'     // System prompt + Depth prompt
+  | 'first_message'     // First message + alternate greetings
+  | 'mes_example';      // Message examples
+
+// ═══ Các bước pipeline — Minh Nguyệt ═══
+export type MinhNguyetStep =
+  | 'worldview'              // Thế giới quan (Đường A/B/C)
+  | 'character_basic'        // Nhân vật cơ sở
+  | 'color_palette'          // Bảng điều sắc tính cách
+  | 'three_faces'            // Ba diện tính (tùy chọn)
+  | 'secondary_explanation'  // Tái diễn giải
+  | 'wardrobe'               // Tủ quần áo
+  | 'nsfw_palette'           // Bảng NSFW (tùy chọn)
+  | 'npc_creation'           // Tạo NPC (tùy chọn)
+  | 'character_overview'     // Xem lướt nhân vật
+  | 'opening';               // Khai bạch
+
+/** Union step type cho cả 2 phương pháp */
+export type AnyPipelineStep = AutoCreatorStep | MinhNguyetStep;
+
+export type StepStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped';
+
+/** v3: Mỗi bước có 3 phase: generate → preview → apply */
+export type StepPhase = 'idle' | 'generating' | 'previewing' | 'applied' | 'error';
+
+// ═══ Prompt override ═══
+export type PromptMode = 'default' | 'append' | 'replace';
+
+// ═══ Đường thế giới quan (Minh Nguyệt) ═══
+export type WorldviewPath = 'real_background' | 'small_world' | 'large_world';
+
+// ═══ Config từng bước (user tùy chỉnh) ═══
+export interface LorebookStepConfig {
+  totalEntries: number;        // Tổng số entry muốn tạo (5-100, default 20)
+  entriesPerBatch: number;     // Entries mỗi batch (1-10, default 5)
+  concurrentBatches: number;   // Batch song song (1-5, default 1)
+  category: EntryCategory;     // Loại entry
+  cardType: CardType;          // Thẻ đơn/nhiều NV
+  useWebSearch: boolean;       // Có dùng web search không
+  promptOverride?: string;
+  promptMode: PromptMode;
+}
+
+export interface RegexStepConfig {
+  count: number;               // Số regex scripts (1-10, default 3)
+  types: string[];             // Loại regex muốn tạo
+  promptOverride?: string;
+  promptMode: PromptMode;
+}
+
+export interface MvuzodStepConfig {
+  autoDetect: boolean;         // Tự phân tích lorebook → schema
+  createInitVar: boolean;      // Tạo entry [initvar]
+  createVarList: boolean;      // Tạo entry biến list
+  createUpdateRules: boolean;  // Tạo entry update rules
+  promptOverride?: string;
+  promptMode: PromptMode;
+}
+
+export interface BasicInfoStepConfig {
+  includePersonality: boolean; // default true
+  includeScenario: boolean;    // default true
+  language: 'vi' | 'en' | 'zh' | 'ja'; // Ngôn ngữ content
+  promptOverride?: string;
+  promptMode: PromptMode;
+}
+
+export interface SystemPromptStepConfig {
+  includeDepthPrompt: boolean; // default true
+  depthValue: number;          // default 4
+  promptOverride?: string;
+  promptMode: PromptMode;
+}
+
+export interface FirstMessageStepConfig {
+  alternateGreetings: number;  // Số alternate greetings (0-5, default 2)
+  promptOverride?: string;
+  promptMode: PromptMode;
+}
+
+export interface MesExampleStepConfig {
+  exampleCount: number;        // Số ví dụ hội thoại (1-5, default 2)
+  promptOverride?: string;
+  promptMode: PromptMode;
+}
+
+// ═══ Config Minh Nguyệt Global ═══
+export interface MinhNguyetGlobalConfig {
+  worldviewPath: WorldviewPath;    // Đường A/B/C
+  cardType: CardType;              // Thẻ đơn/nhiều NV
+  includeThreeFaces: boolean;      // Có ba diện tính không
+  includeNsfw: boolean;            // Có bảng NSFW không
+  includeNpc: boolean;             // Có NPC không
+  autoTag: boolean;                // Tự động gán tag <tên_idN>
+  npcCount?: number;
+  alternateGreetings?: number;
+  promptMode?: PromptMode;
+}
+
+// ═══ Config Minh Nguyệt cho từng bước ═══
+export interface MnBaseStepConfig {
+  promptOverride?: string;
+  promptMode: PromptMode;
+}
+
+export interface MnNpcStepConfig extends MnBaseStepConfig {
+  npcCount: number;
+}
+
+export interface MnOpeningStepConfig extends MnBaseStepConfig {
+  alternateGreetings: number;
+}
+
+export interface MnStepConfigs {
+  worldview: MnBaseStepConfig;
+  character_basic: MnBaseStepConfig;
+  color_palette: MnBaseStepConfig;
+  three_faces: MnBaseStepConfig;
+  secondary_explanation: MnBaseStepConfig;
+  wardrobe: MnBaseStepConfig;
+  nsfw_palette: MnBaseStepConfig;
+  npc_creation: MnNpcStepConfig;
+  character_overview: MnBaseStepConfig;
+  opening: MnOpeningStepConfig;
+}
+
+// ═══ Config tổng thể ═══
+export interface AutoCreatorConfig {
+  idea: string;                          // Ý tưởng chính
+  pipelineMethod: PipelineMethod;        // 'standard' | 'minh_nguyet'
+  selectedSteps: AutoCreatorStep[];      // Các bước đã bật — Standard
+  selectedMnSteps: MinhNguyetStep[];     // Các bước đã bật — Minh Nguyệt
+  autoApplyAll: boolean;                 // true = apply ngay, false = dừng ở preview
+  presetId?: string;                     // Preset đang dùng
+  stepConfigs: {
+    basic_info: BasicInfoStepConfig;
+    lorebook: LorebookStepConfig;
+    regex: RegexStepConfig;
+    mvuzod: MvuzodStepConfig;
+    system_prompt: SystemPromptStepConfig;
+    first_message: FirstMessageStepConfig;
+    mes_example: MesExampleStepConfig;
+  };
+  mnConfig: MinhNguyetGlobalConfig;      // Config chung cho Minh Nguyệt
+  mnStepConfigs: MnStepConfigs;          // Config riêng cho từng bước Minh Nguyệt
+}
+
+// ═══ Step Preview (v3) ═══
+export interface StepPreview {
+  rawOutput: string;           // JSON thô từ AI
+  parsedData: unknown;         // Đã parse
+  editedData?: unknown;        // User đã chỉnh sửa (nếu có)
+  tokenEstimate?: number;      // Ước lượng token
+}
+
+// ═══ Card Blueprint (Phase 0) ═══
+export interface CardBlueprint {
+  characterProfile: {
+    name: string;
+    origin: string;
+    appearance: string;
+    personality: string;
+    abilities: string[];
+    relationships: string[];
+  };
+  worldStructure: {
+    genre: string;
+    setting: string;
+    systems: string[];         // ma thuật, RPG, chiến đấu...
+    factions: string[];
+  };
+  suggestedEntryTopics: BlueprintEntryTopic[];
+  suggestedVariables: BlueprintVariable[];
+  toneAndStyle: {
+    narrativeVoice: string;    // ngôi kể
+    language: string;
+    mood: string;
+  };
+  estimatedComplexity: 'simple' | 'medium' | 'complex';
+}
+
+export interface BlueprintEntryTopic {
+  category: 'worldview' | 'character' | 'npc' | 'location' | 'system' | 'event';
+  title: string;
+  description: string;
+  priority: number;            // 1-10
+  suggestedPosition: number;   // SillyTavern position
+  suggestedConstant: boolean;
+}
+
+export interface BlueprintVariable {
+  path: string;                // e.g. "/角色/HP"
+  type: 'number' | 'string' | 'boolean';
+  defaultValue: unknown;
+  description: string;
+  group: string;               // e.g. "角色", "世界"
+}
+
+// ═══ Preset ═══
+export interface AutoCreatorPreset {
+  id: string;
+  label: string;
+  icon: string;
+  description: string;
+  config: Partial<AutoCreatorConfig>;
+}
+
+// ═══ Log entry ═══
+export interface PipelineLog {
+  id: string;
+  timestamp: number;
+  step: AnyPipelineStep | 'system' | 'blueprint';
+  level: 'info' | 'success' | 'warning' | 'error';
+  message: string;
+}

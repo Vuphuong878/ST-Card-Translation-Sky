@@ -1,0 +1,59 @@
+{
+  "Trạng thái thế giới": {
+    "Thời gian": "Năm 1177 TCN (Kỷ nguyên sụp đổ)",
+    "Địa điểm": "Hoàng cung Thebes, Ai Cập",
+    "_Sự_kiện_lớn": "Các đế chế sụp đổ, dân tị nạn khắp nơi do sự trỗi dậy của Hải nhân (Sea Peoples).",
+    "Tình trạng lũ sông Nile": "Bình thường (Đủ nước tưới tiêu)"
+  },
+  "Pharaoh": {
+    "Tên": "Ramesses",
+    "Sinh lực": 100,
+    "Maat": 80,
+    "Sức mạnh quân sự": 50
+  },
+  "Người chơi": {
+    "Tên": "{user}",
+    "Tuổi": 25,
+    "Thân phận": "Bạch Đinh",
+    "Sự ưu ái": 50,
+    "Uy tín triều đình": 30,
+    "Trạng thái": "Khỏe mạnh",
+    "Hành trang": {},
+    "Maat": 50,
+    "Thông tin Quan chức": {
+      "Chức vụ thực tế": "Chưa được phong tước",
+      "Phẩm cấp": "Không có",
+      "Thực quyền": "Không có đặc quyền hành chính."
+    }
+  },
+  "Chỉ số cá nhân": {
+    "Sinh Lực": 50,
+    "Dũng Vũ": 50,
+    "Trí Tuệ": 50,
+    "Chiến Lược": 50,
+    "Hậu Cần": 50,
+    "Ngoại Giao": 50
+  },
+  "Đặc quyền Bẩm phú": {},
+  "Phe phái": {
+    "Phe tham gia": "Triều đình",
+    "Tình hình chung": "Pharaoh nắm quyền tối cao nhưng các phe phái đang ngấm ngầm tranh giành ảnh hưởng để thủ thân trước Kỷ nguyên sụp đổ.",
+    "Giới Tư Tế Amun": {
+      "Quyền lực": 80,
+      "Trung thành": 60
+    },
+    "Quý tộc và Thống đốc": {
+      "Quyền lực": 55,
+      "Trung thành": 70
+    },
+    "Quân đội hoàng gia": {
+      "Sức mạnh": 75,
+      "Trung thành": 80
+    }
+  },
+  "Tài nguyên quốc gia": {
+    "Dự trữ lương thực tổng": 80,
+    "Ngân khố hoàng gia": 75,
+    "Tình trạng tiếp tế": "Ổn định, các tuyến đường bộ và đường thủy an toàn"
+  }
+}

@@ -1,0 +1,65 @@
+import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
+
+export const Schema = z.object({
+  "Trạng thái thế giới": z.object({
+    "Thời gian": z.string().prefault("Năm 1177 TCN (Kỷ nguyên sụp đổ)"),
+    "Địa điểm": z.string().prefault("Hoàng cung Thebes, Ai Cập"),
+    "_Sự_kiện_lớn": z.string().prefault("Các đế chế sụp đổ, dân tị nạn khắp nơi do sự trỗi dậy của Hải nhân (Sea Peoples)."),
+    "Tình trạng lũ sông Nile": z.enum(['Đại hồng thủy (Ngập lụt phá hoại)', 'Dồi dào (Mùa màng bội thu)', 'Bình thường (Đủ nước tưới tiêu)', 'Mực nước thấp (Mất mùa cục bộ)', 'Cạn kiệt (Nguy cơ nạn đói trầm trọng)']).prefault("Bình thường (Đủ nước tưới tiêu)"),
+  }),
+  "Pharaoh": z.object({
+    "Tên": z.string().prefault("Ramesses"),
+    "Sinh lực": z.number().transform(v => _.clamp(v, 0, 100)).prefault(100),
+    "Maat": z.number().transform(v => _.clamp(v, 0, 100)).prefault(80),
+    "Sức mạnh quân sự": z.number().transform(v => _.clamp(v, 0, 100)).prefault(50),
+  }),
+  "Người chơi": z.object({
+    "Tên": z.string().prefault("{user}"),
+    "Tuổi": z.number().transform(v => _.clamp(v, 10, 100)).prefault(25),
+    "Thân phận": z.string().prefault("Bạch Đinh"),
+    "Sự ưu ái": z.number().transform(v => _.clamp(v, 0, 100)).prefault(50),
+    "Uy tín triều đình": z.number().transform(v => _.clamp(v, 0, 100)).prefault(30),
+    "Trạng thái": z.string().prefault("Khỏe mạnh"),
+    "Hành trang": z.record(z.string(), z.string()).prefault({}),
+    "Maat": z.number().transform(v => _.clamp(v, 0, 100)).prefault(50),
+    "Thông tin Quan chức": z.object({
+      "Chức vụ thực tế": z.string().prefault("Chưa được phong tước"),
+      "Phẩm cấp": z.string().prefault("Không có"),
+      "Thực quyền": z.string().prefault("Không có đặc quyền hành chính."),
+    }),
+  }),
+  "Chỉ số cá nhân": z.object({
+    "Sinh Lực": z.number().transform(v => _.clamp(v, 0, 100)).prefault(50),
+    "Dũng Vũ": z.number().transform(v => _.clamp(v, 0, 100)).prefault(50),
+    "Trí Tuệ": z.number().transform(v => _.clamp(v, 0, 100)).prefault(50),
+    "Chiến Lược": z.number().transform(v => _.clamp(v, 0, 100)).prefault(50),
+    "Hậu Cần": z.number().transform(v => _.clamp(v, 0, 100)).prefault(50),
+    "Ngoại Giao": z.number().transform(v => _.clamp(v, 0, 100)).prefault(50),
+  }),
+  "Đặc quyền Bẩm phú": z.record(z.string(), z.string()).prefault({}),
+  "Phe phái": z.object({
+    "Phe tham gia": z.string().prefault("Triều đình"),
+    "Tình hình chung": z.string().prefault("Pharaoh nắm quyền tối cao nhưng các phe phái đang ngấm ngầm tranh giành ảnh hưởng để thủ thân trước Kỷ nguyên sụp đổ."),
+    "Giới Tư Tế Amun": z.object({
+      "Quyền lực": z.number().transform(v => _.clamp(v, 0, 100)).prefault(80),
+      "Trung thành": z.number().transform(v => _.clamp(v, 0, 100)).prefault(60),
+    }),
+    "Quý tộc và Thống đốc": z.object({
+      "Quyền lực": z.number().transform(v => _.clamp(v, 0, 100)).prefault(55),
+      "Trung thành": z.number().transform(v => _.clamp(v, 0, 100)).prefault(70),
+    }),
+    "Quân đội hoàng gia": z.object({
+      "Sức mạnh": z.number().transform(v => _.clamp(v, 0, 100)).prefault(75),
+      "Trung thành": z.number().transform(v => _.clamp(v, 0, 100)).prefault(80),
+    }),
+  }),
+  "Tài nguyên quốc gia": z.object({
+    "Dự trữ lương thực tổng": z.number().transform(v => _.clamp(v, 0, 100)).prefault(80),
+    "Ngân khố hoàng gia": z.number().transform(v => _.clamp(v, 0, 100)).prefault(75),
+    "Tình trạng tiếp tế": z.string().prefault("Ổn định, các tuyến đường bộ và đường thủy an toàn"),
+  })
+});
+
+$(() => {
+  registerMvuSchema(Schema);
+});
