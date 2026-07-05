@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import App from './App';
 import { FLOWS, type FlowDef } from './flows';
 import { RotateCw, ExternalLink } from 'lucide-react';
-import UpdateNotifier from './components/UpdateNotifier';
+import HubUpdateButton from './components/HubUpdateButton';
 
 const RAIL_WIDTH = 66;
 const LS_KEY = 'hub-active-flow';
@@ -33,8 +33,6 @@ export default function AppHub() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
-      {/* On-load "new commits available" popup */}
-      <UpdateNotifier />
       {/* ─── Flow rail ─── */}
       <nav
         style={{
@@ -52,6 +50,9 @@ export default function AppHub() {
         {FLOWS.map((f) => (
           <RailButton key={f.id} flow={f} active={active === f.id} onClick={() => select(f.id)} />
         ))}
+        {/* Update button pinned to the bottom — visible in every flow */}
+        <div style={{ marginTop: 'auto' }} />
+        <HubUpdateButton />
       </nav>
 
       {/* ─── Content ─── */}
