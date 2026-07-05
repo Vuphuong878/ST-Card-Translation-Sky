@@ -1,5 +1,18 @@
 import { ChatMessage, APISettings } from '../types';
 
+// ─── Multi-key support (giống tool Dịch) ──────────────────────────────────────
+// Nhập nhiều API key (mỗi dòng 1, hoặc cách nhau bằng dấu phẩy) → mỗi lần gọi luân
+// phiên (round-robin) một key để rải đều rate limit giữa các key.
+export function parseKeys(raw: string): string[] {
+  return (raw || '').split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+}
+let _rr = 0;
+function pickKey(raw: string): string {
+  const keys = parseKeys(raw);
+  if (keys.length <= 1) return raw.trim();
+  return keys[(_rr++) % keys.length];
+}
+
 /**
  * Unified System Prompt — context-aware, supports both preset and regex work
  * 
@@ -128,7 +141,7 @@ export async function callAI(
     }
 
     const modelName = settings.selectedModel || 'gemini-2.5-pro';
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${settings.apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${pickKey(settings.apiKey)}`;
 
     // Map history to Gemini format (roles must be alternate user/model)
     const contents: { role: string; parts: { text: string }[] }[] = [];
@@ -192,7 +205,7 @@ export async function callAI(
       'Content-Type': 'application/json',
     };
     if (settings.proxyKey) {
-      headers['Authorization'] = `Bearer ${settings.proxyKey}`;
+      headers['Authorization'] = `Bearer ${pickKey(settings.proxyKey)}`;
     }
 
     const messages = [];
