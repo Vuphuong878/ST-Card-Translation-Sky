@@ -522,7 +522,9 @@ export async function runBatchGeneration(config: BatchGenConfig, ctx: BatchRunCo
   }
   
   const totalBatches = Math.ceil(config.totalEntries / config.entriesPerBatch);
-  const concurrency = Math.max(1, Math.min(config.concurrentBatches ?? 1, 10));
+  // Cho phép tới 24 luồng song song (Flash 17 RPM cần ~17; nhân thêm nếu nhiều key).
+  // RPM limiter kiểu chốt-giờ-bắt-đầu ở client.ts đảm bảo không vượt trần 429.
+  const concurrency = Math.max(1, Math.min(config.concurrentBatches ?? 1, 24));
   let created = 0;
   let consecutiveErrors = 0;
   const seen: Array<{ comment: string; keys: string[] }> = (

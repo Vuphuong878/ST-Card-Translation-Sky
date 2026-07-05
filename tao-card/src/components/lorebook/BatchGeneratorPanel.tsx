@@ -338,9 +338,9 @@ export function BatchGeneratorPanel() {
             title="Số token mục tiêu cho mỗi entry. 0 = không giới hạn." />
         </div>
         <div>
-          <label className="settings-label">Batch song song</label>
-          <input type="number" value={concurrentBatches} onChange={e => setConcurrentBatches(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
-            className="settings-input" min={1} max={10} disabled={isRunning} />
+          <label className="settings-label">Batch song song (Pro ~5, Flash ~17)</label>
+          <input type="number" value={concurrentBatches} onChange={e => setConcurrentBatches(Math.max(1, Math.min(24, parseInt(e.target.value) || 1)))}
+            className="settings-input" min={1} max={24} disabled={isRunning} />
         </div>
       </div>
 

@@ -37,22 +37,32 @@ export interface AICallResult {
   finishReason?: string;
 }
 
+// Bộ giới hạn RPM kiểu "chốt giờ BẮT ĐẦU" (tham khảo app 3107): chỉ giãn cách thời điểm
+// bắt đầu mỗi request tối thiểu interval = 60000/rpm (ms). Vì chỉ gate lúc bắt đầu nên các
+// request VẪN CHẠY CHỒNG (overlap) → đạt throughput tối đa = rpm mà không vượt trần (429).
+// Nhờ vậy Pro 5 RPM chạy ~5 luồng chồng, Flash 17 RPM chạy ~17 luồng chồng.
 class RPMLimiter {
-  private lastCalls: number[] = [];
+  private intervalMs = 12000;
+  private lastStart = 0;
+  private queue: Array<() => void> = [];
+  private timer: ReturnType<typeof setTimeout> | null = null;
 
   async waitIfNecessary(rpm: number) {
     if (rpm <= 0) return;
-    const now = Date.now();
-    this.lastCalls = this.lastCalls.filter(t => now - t < 60000);
+    // +5% biên an toàn tránh đụng trần do lệch đồng hồ / latency.
+    this.intervalMs = Math.ceil((60000 / Math.max(1, Math.floor(rpm))) * 1.05);
+    return new Promise<void>((resolve) => { this.queue.push(resolve); this.pump(); });
+  }
 
-    if (this.lastCalls.length >= rpm) {
-      const oldestCall = this.lastCalls[0];
-      const waitTime = 60000 - (now - oldestCall) + 200; // 200ms padding
-      if (waitTime > 0) {
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
-    }
-    this.lastCalls.push(Date.now());
+  private pump() {
+    if (this.timer || this.queue.length === 0) return;
+    const wait = Math.max(0, this.lastStart + this.intervalMs - Date.now());
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this.lastStart = Date.now();
+      this.queue.shift()?.();
+      this.pump();
+    }, wait);
   }
 }
 
