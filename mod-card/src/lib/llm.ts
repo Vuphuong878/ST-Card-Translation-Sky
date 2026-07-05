@@ -7,28 +7,42 @@ export interface LLMConfig {
   temperature?: number;
 }
 
+// ─── Multi-key support (giống tool Dịch) ───
+// Nhập nhiều API key (mỗi dòng 1, hoặc cách nhau bằng dấu phẩy) → mỗi lần gọi luân phiên
+// (round-robin) một key để rải đều rate limit / chạy nhanh hơn khi mod nhiều bước.
+export const parseKeys = (raw: string): string[] =>
+  (raw || '').split(/[\n,]+/).map((k) => k.trim()).filter(Boolean);
+let _rr = 0;
+const pickKey = (raw: string): string => {
+  const keys = parseKeys(raw);
+  return keys.length <= 1 ? raw.trim() : keys[(_rr++) % keys.length];
+};
+
 /**
- * Basic abstract LLM caller. 
+ * Basic abstract LLM caller.
  * Needs to be implemented with actual SDKs or fetch calls.
  */
 export const callLLM = async (
-  systemPrompt: string, 
-  userPrompt: string, 
+  systemPrompt: string,
+  userPrompt: string,
   config: LLMConfig
 ): Promise<string> => {
   if (!config.apiKey) {
     throw new Error("API Key is required");
   }
 
-  // Placeholder for real API calls
-  console.log(`Calling ${config.provider} with model ${config.model}...`);
-  
-  if (config.provider === 'openai') {
-    return await callOpenAI(systemPrompt, userPrompt, config);
-  } else if (config.provider === 'anthropic') {
-    return await callAnthropic(systemPrompt, userPrompt, config);
-  } else if (config.provider === 'gemini') {
-    return await callGemini(systemPrompt, userPrompt, config);
+  // Round-robin sang key kế nếu nhập nhiều key.
+  const key = pickKey(config.apiKey);
+  const cfg: LLMConfig = key === config.apiKey ? config : { ...config, apiKey: key };
+
+  console.log(`Calling ${cfg.provider} with model ${cfg.model}...`);
+
+  if (cfg.provider === 'openai') {
+    return await callOpenAI(systemPrompt, userPrompt, cfg);
+  } else if (cfg.provider === 'anthropic') {
+    return await callAnthropic(systemPrompt, userPrompt, cfg);
+  } else if (cfg.provider === 'gemini') {
+    return await callGemini(systemPrompt, userPrompt, cfg);
   }
 
   throw new Error("Unsupported provider");

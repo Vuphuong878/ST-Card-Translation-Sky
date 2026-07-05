@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseKeys } from '@/lib/llm';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { provider, apiKey, customUrl } = body;
+    const { provider, customUrl } = body;
+    // Multi-key: quét model chỉ dùng key ĐẦU TIÊN (không gửi cả chuỗi nhiều key).
+    const apiKey = parseKeys(body.apiKey)[0] || (body.apiKey || '');
 
     if (!apiKey) {
       return NextResponse.json({ error: 'API key is required' }, { status: 400 });
