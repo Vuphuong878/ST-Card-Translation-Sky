@@ -327,25 +327,34 @@ ${activeProfile.masterInstruction || ''}`;
                         } />
                     </div>
 
-                    {/* API Key */}
+                    {/* API Key (multi-key: mỗi key 1 dòng, hoặc cách nhau bằng dấu phẩy) */}
                     <div>
                       <label className="settings-label">API Key</label>
                       <div className="relative">
-                        <input
-                          type={showApiKey ? 'text' : 'password'}
+                        <textarea
                           value={activeProfile.apiKey}
                           onChange={e => updateField('apiKey', e.target.value)}
-                          className="settings-input pr-10"
-                          placeholder="sk-..." />
+                          rows={Math.min(6, Math.max(1, activeProfile.apiKey.split('\n').length))}
+                          spellCheck={false}
+                          className="settings-input pr-10 resize-y font-mono"
+                          style={{ WebkitTextSecurity: showApiKey ? 'none' : 'disc' } as React.CSSProperties}
+                          placeholder={'sk-key1\nsk-key2  (mỗi key 1 dòng → chạy song song nhiều luồng)'} />
                         <button onClick={() => setShowApiKey(!showApiKey)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground transition-colors">
+                          className="absolute right-2 top-2 p-1 rounded text-muted-foreground hover:text-foreground transition-colors">
                           {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" />
-                        Chỉ lưu trên máy bạn (localStorage).
-                      </p>
+                      {(() => {
+                        const n = activeProfile.apiKey.split(/[\n,]+/).map(k => k.trim()).filter(Boolean).length;
+                        return (
+                          <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1 flex-wrap">
+                            <AlertTriangle className="w-3 h-3" />
+                            Chỉ lưu trên máy bạn (localStorage).
+                            {n > 1 && <span className="text-primary font-medium">· {n} key → chạy {n} luồng song song (RPM ×{n}).</span>}
+                            {n <= 1 && <span>· Dán nhiều key (mỗi dòng 1 key) để chạy nhanh hơn.</span>}
+                          </p>
+                        );
+                      })()}
                     </div>
 
                     {/* Session-only key */}

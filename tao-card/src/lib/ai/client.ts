@@ -36,12 +36,12 @@ export interface AICallResult {
 
 class RPMLimiter {
   private lastCalls: number[] = [];
-  
+
   async waitIfNecessary(rpm: number) {
     if (rpm <= 0) return;
     const now = Date.now();
     this.lastCalls = this.lastCalls.filter(t => now - t < 60000);
-    
+
     if (this.lastCalls.length >= rpm) {
       const oldestCall = this.lastCalls[0];
       const waitTime = 60000 - (now - oldestCall) + 200; // 200ms padding
@@ -53,8 +53,25 @@ class RPMLimiter {
   }
 }
 
-const primaryLimiter = new RPMLimiter();
-const secondaryLimiter = new RPMLimiter();
+// ─── Multi-key support (phân luồng API — giống tool Dịch) ─────────────────────
+// Nhập NHIỀU API key (mỗi key 1 dòng, hoặc cách nhau bằng dấu phẩy) vào ô API Key.
+// Mỗi request luân phiên (round-robin) 1 key và mỗi key có "ngân sách" RPM RIÊNG →
+// tổng throughput = RPM × số key. Gặp 429/quá tải thì tự xoay sang key kế rồi thử lại.
+export function parseApiKeys(raw: string): string[] {
+  return (raw || '').split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+}
+
+const keyLimiters = new Map<string, RPMLimiter>();
+function getKeyLimiter(id: string): RPMLimiter {
+  let l = keyLimiters.get(id);
+  if (!l) { l = new RPMLimiter(); keyLimiters.set(id, l); }
+  return l;
+}
+let rrCounter = 0;
+
+export function getUniqueKeyCount(profile: ProxyProfile): number {
+  return Math.max(1, new Set(parseApiKeys(profile.apiKey)).size);
+}
 
 /**
  * Gọi AI chat-completion theo provider type.
@@ -64,49 +81,56 @@ export async function callAI(options: AICallOptions): Promise<AICallResult> {
   const { profile, params, messages, signal, useSecondary } = options;
   const base = profile.baseUrl.replace(/\/+$/, '');
 
-  // Rate Limiter
-  const rpm = useSecondary && profile.enableSecondaryModel
-    ? (profile.secondaryRpm ?? 10)
-    : (profile.primaryRpm ?? 5);
+  const keys = parseApiKeys(profile.apiKey);
+  const tier = useSecondary && profile.enableSecondaryModel ? 's' : 'p';
+  const rpm = tier === 's' ? (profile.secondaryRpm ?? 10) : (profile.primaryRpm ?? 5);
 
-  if (rpm > 0) {
-    const limiter = useSecondary && profile.enableSecondaryModel ? secondaryLimiter : primaryLimiter;
-    await limiter.waitIfNecessary(rpm);
-  }
+  // Thử tối đa qua vài key khác nhau nếu gặp lỗi tạm thời (429/5xx/overloaded).
+  const attempts = Math.max(1, Math.min(keys.length || 1, 3));
+  let lastErr: unknown;
 
-  // Smart AbortController with 30min hard timeout (large lorebooks need time)
-  const timeoutMs = 1800_000;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    controller.abort(new Error(`Timeout: Yêu cầu AI vượt quá ${timeoutMs / 1000} giây.`));
-  }, timeoutMs);
+  for (let a = 0; a < attempts; a++) {
+    if (signal?.aborted) throw signal.reason || new Error('Aborted');
 
-  if (signal) {
-    if (signal.aborted) {
+    const key = keys.length ? keys[(rrCounter++) % keys.length] : profile.apiKey;
+    // Rate-limit RIÊNG cho từng key + tier → nhiều key = nhiều luồng thật.
+    if (rpm > 0) await getKeyLimiter(`${tier}:${key || 'default'}`).waitIfNecessary(rpm);
+    const effProfile: ProxyProfile = (keys.length > 0 && key !== profile.apiKey) ? { ...profile, apiKey: key } : profile;
+
+    // Smart AbortController with 30min hard timeout (large lorebooks need time)
+    const timeoutMs = 1800_000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort(new Error(`Timeout: Yêu cầu AI vượt quá ${timeoutMs / 1000} giây.`));
+    }, timeoutMs);
+    const onAbort = () => { clearTimeout(timeoutId); controller.abort(signal!.reason); };
+    if (signal) signal.addEventListener('abort', onAbort, { once: true });
+
+    try {
+      switch (profile.providerType) {
+        case 'openai':
+        case 'custom':
+          return await callOpenAICompatible(base, effProfile, params, messages, controller.signal, useSecondary);
+        case 'claude':
+          return await callClaude(base, effProfile, params, messages, controller.signal, useSecondary);
+        case 'gemini':
+          return await callGemini(base, effProfile, params, messages, controller.signal, useSecondary);
+        default:
+          throw new Error(`Provider không được hỗ trợ: ${profile.providerType}`);
+      }
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      const retriable = /\b(429|500|502|503|529)\b/.test(msg) || /rate.?limit|overloaded|quá tải/i.test(msg);
+      // Còn key khác + lỗi tạm thời → xoay key, thử lại.
+      if (a < attempts - 1 && keys.length > 1 && retriable && !signal?.aborted) continue;
+      throw err;
+    } finally {
       clearTimeout(timeoutId);
-      throw signal.reason || new Error('Aborted');
+      if (signal) signal.removeEventListener('abort', onAbort);
     }
-    signal.addEventListener('abort', () => {
-      clearTimeout(timeoutId);
-      controller.abort(signal.reason);
-    });
   }
-
-  try {
-    switch (profile.providerType) {
-      case 'openai':
-      case 'custom':
-        return await callOpenAICompatible(base, profile, params, messages, controller.signal, useSecondary);
-      case 'claude':
-        return await callClaude(base, profile, params, messages, controller.signal, useSecondary);
-      case 'gemini':
-        return await callGemini(base, profile, params, messages, controller.signal, useSecondary);
-      default:
-        throw new Error(`Provider không được hỗ trợ: ${profile.providerType}`);
-    }
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  throw lastErr;
 }
 
 // ─── OpenAI-Compatible ──────────────────────────────────────────────────────
