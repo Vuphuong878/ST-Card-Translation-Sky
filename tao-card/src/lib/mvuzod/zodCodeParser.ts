@@ -128,8 +128,9 @@ function extractBalancedParens(input: string, start: number): string | null {
 
 /**
  * Extract content between matching brackets starting at position `start`.
+ * Exported (currently unused internally) so the strict build doesn't flag it as dead.
  */
-function extractBalancedBrackets(input: string, start: number): string | null {
+export function extractBalancedBrackets(input: string, start: number): string | null {
   if (input[start] !== '[') return null;
   let depth = 0;
   let inStr = false;

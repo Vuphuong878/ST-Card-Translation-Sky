@@ -46,19 +46,25 @@ async function fetchViaProxy(targetUrl: string, customProxy?: string, timeoutMs:
     proxies.push((url: string) => `${customProxy.trim()}${encodeURIComponent(url)}`);
   }
 
-  // Thêm Vite dev proxy làm ưu tiên số 1 (chỉ hoạt động ở Dev, bypass CORS)
-  if (import.meta.env && !import.meta.env.PROD) {
+  // Vite dev proxy là ƯU TIÊN SỐ 1 khi chạy dev: server-side, KHÔNG dính CORS, ổn định.
+  // (Chạy qua start.bat = luôn ở chế độ dev nên proxy này luôn có.)
+  const hasLocalProxy = Boolean(import.meta.env && !import.meta.env.PROD);
+  if (hasLocalProxy) {
     proxies.push((url: string) => `/api/cors-proxy/${encodeURIComponent(url)}`);
   }
 
-  // Thêm proxy mặc định
+  // Proxy công cộng để dự phòng (hay chết/đổi API → chỉ dùng khi không có proxy local)
   proxies.push(...CORS_PROXIES);
 
-  // Thử direct trước (cho các API có CORS headers)
-  try {
-    const res = await fetchWithTimeout(targetUrl, timeoutMs);
-    if (res.ok) return await res.text();
-  } catch { /* direct failed, try proxies */ }
+  // Chỉ thử fetch TRỰC TIẾP khi KHÔNG có proxy local (bản build prod). Ở dev, fetch trực
+  // tiếp tới API cross-origin (DuckDuckGo/Fandom...) chỉ tổ đổ CORS đỏ đầy Console mà luôn
+  // fail → bỏ qua, đi thẳng qua proxy local cho sạch & nhanh.
+  if (!hasLocalProxy) {
+    try {
+      const res = await fetchWithTimeout(targetUrl, timeoutMs);
+      if (res.ok) return await res.text();
+    } catch { /* direct failed, try proxies */ }
+  }
 
   for (const makeUrl of proxies) {
     try {
