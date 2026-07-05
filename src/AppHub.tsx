@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import App from './App';
 import { FLOWS, type FlowDef } from './flows';
 import { RotateCw, ExternalLink } from 'lucide-react';
@@ -111,10 +111,31 @@ function RailButton({ flow, active, onClick }: { flow: FlowDef; active: boolean;
 function IframeFlow({ flow, active }: { flow: FlowDef; active: boolean }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [nonce, setNonce] = useState(0);
+  const [ready, setReady] = useState(false);
   const url = flow.url || '';
 
+  // The tool's dev server may still be booting when the Hub opens (start.bat launches both
+  // at once). Poll the URL until it's reachable, THEN mount the iframe — so the user never
+  // sees a permanent "refused to connect" and doesn't have to reload manually.
+  useEffect(() => {
+    if (ready || !url) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const check = async () => {
+      try {
+        await fetch(url, { mode: 'no-cors', cache: 'no-store' });
+        if (!cancelled) setReady(true); // server answered → up
+      } catch {
+        if (!cancelled) timer = setTimeout(check, 1500); // connection refused → retry
+      }
+    };
+    check();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [url, ready]);
+
   const reload = () => {
-    // Bump the key-ish nonce to force a fresh load (cheap, avoids cross-origin contentWindow access)
+    // Re-probe + remount the iframe (also recovers if the tool server was restarted).
+    setReady(false);
     setNonce((n) => n + 1);
   };
 
@@ -143,7 +164,7 @@ function IframeFlow({ flow, active }: { flow: FlowDef; active: boolean }) {
         }}
       >
         <span style={{ fontWeight: 700, color: flow.color || 'var(--accent-primary)' }}>{flow.emoji} {flow.label}</span>
-        <span style={{ opacity: 0.8 }}>Nếu trống → đảm bảo tool này đang chạy (start.bat).</span>
+        <span style={{ opacity: 0.8 }}>{ready ? 'Nếu trống → bấm Tải lại.' : 'Đang chờ server khởi động…'}</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
           <button onClick={reload} title="Tải lại" style={toolbarBtn}>
             <RotateCw size={13} /> Tải lại
@@ -153,13 +174,24 @@ function IframeFlow({ flow, active }: { flow: FlowDef; active: boolean }) {
           </a>
         </div>
       </div>
-      <iframe
-        key={nonce}
-        ref={ref}
-        src={url}
-        title={flow.label}
-        style={{ flex: 1, width: '100%', border: 0, background: 'var(--bg-primary, #0f0f14)' }}
-      />
+      {ready ? (
+        <iframe
+          key={nonce}
+          ref={ref}
+          src={url}
+          title={flow.label}
+          style={{ flex: 1, width: '100%', border: 0, background: 'var(--bg-primary, #0f0f14)' }}
+        />
+      ) : (
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: 12, color: 'var(--text-muted, #9b98ae)', fontSize: '0.85rem',
+        }}>
+          <RotateCw size={22} className="spin" style={{ color: flow.color || 'var(--accent-primary)' }} />
+          <div>Đang chờ server <b>{flow.label}</b> khởi động ({url.replace('http://', '')})…</div>
+          <div style={{ fontSize: '0.72rem', opacity: 0.8 }}>Lần đầu chạy start.bat có thể mất ~30s để cài đặt.</div>
+        </div>
+      )}
     </div>
   );
 }

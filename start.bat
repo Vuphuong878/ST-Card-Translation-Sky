@@ -10,8 +10,16 @@ echo.
 REM -- Card-creator tool (vendored subfolder .\tao-card) --
 set "CARD_DIR=%~dp0tao-card"
 if not exist "%CARD_DIR%\package.json" goto no_card
+
+if exist "%CARD_DIR%\node_modules" goto card_run
+echo [Tao Card] Cai dat lan dau (tao-card), doi mot chut...
+pushd "%CARD_DIR%"
+call npm install
+popd
+
+:card_run
 echo [Tao Card] Khoi dong server :5174 (cua so thu nho)...
-start "Card server 5174 - de yen" /MIN /D "%CARD_DIR%" cmd /k "if not exist node_modules npm install & npm run dev"
+start "Card 5174 - de yen" /MIN /D "%CARD_DIR%" cmd /k npm run dev
 goto hub
 
 :no_card
