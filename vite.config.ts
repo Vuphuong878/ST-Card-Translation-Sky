@@ -204,6 +204,11 @@ export default defineConfig({
     }
   ],
   server: {
+    // Fixed port so the Hub (this app) is always reachable at a stable URL and the
+    // combined start.bat can open it deterministically. strictPort => fail instead of
+    // silently hopping to 5175/etc. (which would break the card-tool iframe URL).
+    port: 5173,
+    strictPort: true,
     open: true,
     // ─── CORS Proxy ───
     // These proxies let the browser call /api-proxy/openai/... etc.

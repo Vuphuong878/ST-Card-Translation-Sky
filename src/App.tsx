@@ -44,7 +44,7 @@ export default function App() {
 
   if (showRegexManager) {
     return (
-      <div style={{ width: '100vw', height: '100vh', background: 'var(--bg-primary)' }}>
+      <div style={{ width: '100%', height: '100vh', background: 'var(--bg-primary)' }}>
         <Suspense fallback={<LazyFallback />}>
           <RegexManagerPanel onClose={() => setShowRegexManager(false)} isFullscreen />
         </Suspense>
