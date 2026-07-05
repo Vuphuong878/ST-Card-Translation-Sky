@@ -5,6 +5,76 @@ import { exec } from 'child_process'
 import { request as httpRequest } from 'http'
 import { request as httpsRequest } from 'https'
 import type { IncomingMessage, ServerResponse } from 'http'
+import fs from 'fs'
+import path from 'path'
+
+// ─── Card project cache (filesystem, in the project folder) ───────────────────
+// Mirror of each project as a JSON file so work survives F5 / tab close / even
+// switching browsers (IndexedDB is per-browser; these files are not). One file per
+// project id. This folder is gitignored, so the in-app "Update" (git pull) never
+// touches it — code updates only, user data stays put.
+const CARD_CACHE_DIR = path.resolve(process.cwd(), 'card-progress')
+const safeCacheName = (key: string) =>
+  (key || 'default').replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 200) + '.json'
+const ensureCacheDir = () => { try { fs.mkdirSync(CARD_CACHE_DIR, { recursive: true }) } catch { /* ignore */ } }
+const readCacheBody = (req: IncomingMessage): Promise<any> =>
+  new Promise((resolve) => {
+    let body = ''
+    req.on('data', (c) => { body += c })
+    req.on('end', () => { try { resolve(body ? JSON.parse(body) : {}) } catch { resolve(null) } })
+    req.on('error', () => resolve(null))
+  })
+
+const cardCachePlugin = () => ({
+  name: 'card-cache',
+  configureServer(server: ViteDevServer) {
+    server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+      const url = req.url || ''
+      if (!url.startsWith('/api/card-cache/')) return next()
+      const sendJson = (code: number, obj: unknown) => {
+        res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' })
+        res.end(JSON.stringify(obj))
+      }
+      try {
+        ensureCacheDir()
+        if (url === '/api/card-cache/save' && req.method === 'POST') {
+          const body = await readCacheBody(req)
+          if (!body || typeof body.key !== 'string') return sendJson(400, { ok: false, error: 'missing key' })
+          fs.writeFileSync(path.join(CARD_CACHE_DIR, safeCacheName(body.key)),
+            JSON.stringify({ key: body.key, savedAt: Date.now(), data: body.data }), 'utf8')
+          return sendJson(200, { ok: true })
+        }
+        if (url.startsWith('/api/card-cache/load') && req.method === 'GET') {
+          const key = new URL(url, 'http://localhost').searchParams.get('key') || ''
+          const file = path.join(CARD_CACHE_DIR, safeCacheName(key))
+          if (!fs.existsSync(file)) return sendJson(404, { ok: false })
+          return sendJson(200, { ok: true, ...JSON.parse(fs.readFileSync(file, 'utf8')) })
+        }
+        if (url === '/api/card-cache/list' && req.method === 'GET') {
+          const files = fs.existsSync(CARD_CACHE_DIR) ? fs.readdirSync(CARD_CACHE_DIR).filter(f => f.endsWith('.json')) : []
+          const items = files.map(f => {
+            try {
+              const raw = JSON.parse(fs.readFileSync(path.join(CARD_CACHE_DIR, f), 'utf8'))
+              return { key: raw.key, savedAt: raw.savedAt }
+            } catch { return null }
+          }).filter(Boolean)
+          return sendJson(200, { ok: true, items })
+        }
+        if (url === '/api/card-cache/delete' && req.method === 'POST') {
+          const body = await readCacheBody(req)
+          if (body && typeof body.key === 'string') {
+            const file = path.join(CARD_CACHE_DIR, safeCacheName(body.key))
+            if (fs.existsSync(file)) fs.unlinkSync(file)
+          }
+          return sendJson(200, { ok: true })
+        }
+        return sendJson(404, { ok: false, error: 'unknown card-cache endpoint' })
+      } catch (err: any) {
+        return sendJson(500, { ok: false, error: err?.message || String(err) })
+      }
+    })
+  },
+})
 
 // ─── CORS Proxy Plugin ──────────────────────────────────────────────────────
 // Forwards /api/cors-proxy/<encoded-url> to the real URL, bypassing CORS.
@@ -133,7 +203,7 @@ const appUpdaterPlugin = () => ({
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), corsProxyPlugin(), appUpdaterPlugin()],
+  plugins: [react(), corsProxyPlugin(), appUpdaterPlugin(), cardCachePlugin()],
   server: {
     // Fixed port so the Hub (Dịch Card app) can embed this tool at a stable iframe URL.
     // strictPort => fail loudly instead of hopping ports and breaking the iframe.

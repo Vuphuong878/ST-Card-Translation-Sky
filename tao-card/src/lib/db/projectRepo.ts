@@ -6,8 +6,20 @@ import { v4 as uuidv4 } from 'uuid';
 import { db, type ProjectRecord, type SnapshotRecord } from './db';
 import type { CharacterCardV3 } from '../../types';
 import { createEmptyCard } from '../converters/cardDefaults';
+import { mirrorProject, removeProjectMirror } from './folderCache';
 
 const MAX_AUTO_SNAPSHOTS = 20;
+
+/** Fire-and-forget mirror of a project's current state to the folder cache. */
+async function mirrorById(id: string): Promise<void> {
+  const rec = await db.projects.get(id);
+  if (rec) mirrorProject(rec);
+}
+
+/** Import a full project record (used to restore from the folder cache into IndexedDB). */
+export async function putProjectRecord(record: ProjectRecord): Promise<void> {
+  await db.projects.put(record);
+}
 
 // ========== PROJECTS ==========
 
@@ -30,18 +42,22 @@ export async function createProject(name?: string): Promise<ProjectRecord> {
     updatedAt: now,
   };
   await db.projects.put(project);
+  mirrorProject(project);
   return project;
 }
 
 export async function saveProject(id: string, card: CharacterCardV3): Promise<void> {
   await db.projects.update(id, { card, updatedAt: Date.now() });
+  await mirrorById(id);
 }
 
 export async function renameProject(id: string, name: string): Promise<void> {
   await db.projects.update(id, { name, updatedAt: Date.now() });
+  await mirrorById(id);
 }
 
 export async function deleteProject(id: string): Promise<void> {
+  removeProjectMirror(id);
   await db.transaction('rw', db.projects, db.snapshots, async () => {
     await db.snapshots.where('projectId').equals(id).delete();
     await db.projects.delete(id);
@@ -60,6 +76,7 @@ export async function duplicateProject(id: string): Promise<ProjectRecord | unde
     updatedAt: now,
   };
   await db.projects.put(copy);
+  mirrorProject(copy);
   return copy;
 }
 

@@ -16,3 +16,8 @@ test-case-raw.txt
 
 # Local translation progress cache (per-card, filesystem)
 translation-progress/
+
+# Local card-creator project cache (per-project, filesystem) — user data, never committed
+# so the in-app Update (git pull) can't touch work-in-progress. Matches at any depth,
+# incl. tao-card/card-progress/.
+card-progress/

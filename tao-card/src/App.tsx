@@ -20,7 +20,28 @@ function AppInit() {
   useEffect(() => {
     const init = async () => {
       await refreshProjectList();
-      const allProjects = useCardStore.getState().projects;
+      let allProjects = useCardStore.getState().projects;
+
+      // Fresh browser (empty IndexedDB) → try restoring from the folder cache so work done
+      // in another browser / before a data wipe isn't lost. Only runs when empty, so it can
+      // never overwrite existing local projects.
+      if (allProjects.length === 0) {
+        try {
+          const { listFolderProjects, loadFolderProject } = await import('./lib/db/folderCache');
+          const { putProjectRecord } = await import('./lib/db/projectRepo');
+          const items = await listFolderProjects();
+          let restored = 0;
+          for (const it of items) {
+            const rec = await loadFolderProject(it.key);
+            if (rec && rec.id && rec.card) { await putProjectRecord(rec); restored++; }
+          }
+          if (restored > 0) {
+            await refreshProjectList();
+            allProjects = useCardStore.getState().projects;
+          }
+        } catch { /* folder cache unavailable — fall through to a new project */ }
+      }
+
       if (allProjects.length === 0) {
         await createNewProject('New Character');
       } else {

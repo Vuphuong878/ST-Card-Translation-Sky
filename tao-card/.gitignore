@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Local project cache (filesystem) — user work-in-progress, never committed
+card-progress/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
