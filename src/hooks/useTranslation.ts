@@ -148,6 +148,11 @@ export function useTranslation() {
   // Paths currently being translated by SOME context. Prevents the same field from
   // being translated twice at once (e.g. a zombie loop + a fresh resume loop).
   const inFlightPaths = useRef<Set<string>>(new Set());
+  // Which flow last ran, so Resume (after a hard pause) continues the correct one.
+  const lastRunModeRef = useRef<'translate' | 'mod'>('translate');
+  // Late-bound reference to applyModToAllFields (defined later in this hook) so Resume
+  // can call it without a use-before-define / dep-array TDZ issue.
+  const applyModRef = useRef<((isContinue: boolean) => void) | null>(null);
   // Per-field abort controllers: cancel previous in-flight translation for same field on retry
   const fieldAbortMap = useRef<Map<string, AbortController>>(new Map());
 
@@ -1390,9 +1395,16 @@ export function useTranslation() {
     abortRef.current = new AbortController();
     pauseRef.current = false;
     runningRef.current = true;
+    lastRunModeRef.current = 'translate';
     store.setPhase('translating');
-    store.setStartTime(Date.now());
-    store.clearLogs();
+    // Fresh start resets the elapsed timer + logs. CONTINUE (incl. Resume after a hard
+    // pause) keeps them so the timer keeps counting and log history is preserved.
+    if (!continueMode) {
+      store.setStartTime(Date.now());
+      store.clearLogs();
+    } else if (!useStore.getState().startTime) {
+      store.setStartTime(Date.now());
+    }
     store.setPreprocessProgress(null);
     CallMonitor.reset();
 
@@ -1443,13 +1455,13 @@ export function useTranslation() {
           for (let mvuPass = 0; mvuPass < totalMvuPasses; mvuPass++) {
             if (checkAbort()) {
               runningRef.current = false;
-              store.setPhase('cancelled');
+              store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
               store.addLog('warning', 'Translation cancelled by user');
               return;
             }
             if (await waitForPause()) {
               runningRef.current = false;
-              store.setPhase('cancelled');
+              store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
               return;
             }
 
@@ -1531,7 +1543,7 @@ export function useTranslation() {
         const mvuMsg = mvuErr instanceof Error ? mvuErr.message : String(mvuErr);
         if (mvuMsg === 'Cancelled' || checkAbort()) {
           runningRef.current = false;
-          store.setPhase('cancelled');
+          store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
           return;
         }
         store.addLog('warning', `⚠️ MVU auto-detect failed (non-critical): ${mvuMsg}`);
@@ -1549,7 +1561,7 @@ export function useTranslation() {
         if (conflicts.length > 0) {
           if (checkAbort()) {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             return;
           }
           store.addLog('active', `⚠️ Strategy B: Detected ${conflicts.length} translation conflict(s). Calling AI to resolve conflicts before proceeding...`);
@@ -1595,7 +1607,7 @@ export function useTranslation() {
         const conflictMsg = conflictErr instanceof Error ? conflictErr.message : String(conflictErr);
         if (conflictMsg === 'Cancelled' || checkAbort()) {
           runningRef.current = false;
-          store.setPhase('cancelled');
+          store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
           return;
         }
         store.addLog('warning', `⚠️ MVU conflict resolution failed: ${conflictMsg}`);
@@ -1617,13 +1629,13 @@ export function useTranslation() {
         for (let ejsPass = 0; ejsPass < totalEjsPasses; ejsPass++) {
           if (checkAbort()) {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             store.addLog('warning', 'Translation cancelled by user');
             return;
           }
           if (await waitForPause()) {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             return;
           }
 
@@ -1688,7 +1700,7 @@ export function useTranslation() {
         const ejsMsg = ejsErr instanceof Error ? ejsErr.message : String(ejsErr);
         if (ejsMsg === 'Cancelled' || checkAbort()) {
           runningRef.current = false;
-          store.setPhase('cancelled');
+          store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
           return;
         }
         store.addLog('warning', `⚠️ EJS auto-detect failed (non-critical): ${ejsMsg}`);
@@ -1709,7 +1721,7 @@ export function useTranslation() {
       // Check abort
       if (checkAbort()) {
         runningRef.current = false;
-        store.setPhase('cancelled');
+        store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
         store.addLog('warning', 'Translation cancelled by user');
         return;
       }
@@ -1717,7 +1729,7 @@ export function useTranslation() {
       // Handle pause
       if (await waitForPause()) {
         runningRef.current = false;
-        store.setPhase('cancelled');
+        store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
         return;
       }
 
@@ -1861,7 +1873,7 @@ export function useTranslation() {
         while (batchIdx < subBatches.length) {
           if (checkAbort()) {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             store.addLog('warning', 'Translation cancelled');
             return;
           }
@@ -1869,7 +1881,7 @@ export function useTranslation() {
           // Handle pause inside batch loop
           if (await waitForPause()) {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             return;
           }
 
@@ -1887,7 +1899,7 @@ export function useTranslation() {
                 const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
                 if (msg === 'Cancelled' || checkAbort()) {
                   runningRef.current = false;
-                  store.setPhase('cancelled');
+                  store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
                   store.addLog('warning', 'Translation cancelled');
                   return;
                 }
@@ -1895,7 +1907,7 @@ export function useTranslation() {
             }
           } catch {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             store.addLog('warning', 'Translation cancelled');
             return;
           }
@@ -1933,7 +1945,7 @@ export function useTranslation() {
           // Check abort
           if (checkAbort()) {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             store.addLog('warning', 'Translation cancelled by user');
             return;
           }
@@ -1941,7 +1953,7 @@ export function useTranslation() {
           // Handle pause
           if (await waitForPause()) {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             return;
           }
 
@@ -2138,7 +2150,7 @@ export function useTranslation() {
             const msg = err instanceof Error ? err.message : String(err);
             if (msg === 'Cancelled' || msg === 'The operation was aborted' || msg === 'The user aborted a request.' || checkAbort()) {
               runningRef.current = false;
-              store.setPhase('cancelled');
+              store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
               store.addLog('warning', 'Translation cancelled');
               return;
             }
@@ -2287,7 +2299,7 @@ export function useTranslation() {
       } catch {
         // Cancel was thrown
         runningRef.current = false;
-        store.setPhase('cancelled');
+        store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
         store.addLog('warning', 'Translation cancelled');
         return;
       }
@@ -2421,32 +2433,48 @@ export function useTranslation() {
   }, [prepareFields, store]);
 
   const pauseTranslation = useCallback(() => {
+    // ═══ HARD, RESUMABLE PAUSE ═══
+    // The user usually pauses to EDIT an entry. A cooperative pause would let the
+    // in-flight entry (and concurrent batches) finish and advance first — that was the
+    // "vừa dừng mà vẫn tự chạy tiếp 1 entry" bug. So we stop hard: supersede the loop,
+    // abort in-flight work, and reset any mid-flight field to pending. Nothing runs again
+    // until the user presses Tiếp tục/Start (which continues via startTranslation(true),
+    // preserving logs + the elapsed timer, and re-doing the reset fields from cached chunks).
     pauseRef.current = true;
+    runIdRef.current++;                 // any live loop bails silently at its next checkpoint
+    abortRef.current?.abort();          // stop in-flight field/batch translations
+    for (const [, ctrl] of fieldAbortMap.current) ctrl.abort();
+    fieldAbortMap.current.clear();
+    inFlightPaths.current.clear();
+    runningRef.current = false;
+    const stuck = useStore.getState().fields.filter(f => f.status === 'translating');
+    for (const f of stuck) store.updateField(f.path, { status: 'pending' });
     store.setPhase('paused');
     store.saveTranslationCache();
-    store.addLog('warning', 'Translation paused');
+    store.addLog('warning', '⏸ Đã tạm dừng. Cứ sửa entry thoải mái — nó sẽ KHÔNG tự chạy; bấm Tiếp tục/Start mới chạy lại.');
   }, [store]);
 
   const resumeTranslation = useCallback(() => {
     pauseRef.current = false;
     if (runningRef.current) {
-      // The translation loop is still alive (paused in waitForPause),
-      // just flip the flag and it will continue on its own.
+      // Loop still alive (cooperative pause) — just flip the flag and it continues.
       store.setPhase('translating');
       store.addLog('info', 'Translation resumed');
     } else {
-      // The translation loop has exited (e.g., API error during pause killed it).
-      // We need to restart via continueTranslation to pick up where we left off.
-      store.addLog('info', 'Translation loop was not active — restarting via continue...');
-      // Reset any fields stuck in 'translating' status back to 'pending'
+      // Hard pause (or an error) killed the loop → restart in CONTINUE mode, picking up
+      // pending fields. Route to the SAME flow that was running (translate vs mod).
+      store.addLog('info', '▶ Tiếp tục...');
       const stuckFields = useStore.getState().fields.filter(f => f.status === 'translating');
       for (const f of stuckFields) {
         store.updateField(f.path, { status: 'pending' });
       }
       store.setPhase('translating');
-      // Use setTimeout to avoid calling startTranslation synchronously inside this callback
       setTimeout(() => {
-        startTranslation(true);
+        if (lastRunModeRef.current === 'mod' && applyModRef.current) {
+          applyModRef.current(true);
+        } else {
+          startTranslation(true);
+        }
       }, 0);
     }
   }, [store, startTranslation]);
@@ -2468,7 +2496,7 @@ export function useTranslation() {
     for (const f of stuckFields) {
       store.updateField(f.path, { status: 'pending' });
     }
-    store.setPhase('cancelled');
+    store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
   }, [store]);
 
   const cancelFieldTranslation = useCallback((path: string) => {
@@ -2754,13 +2782,13 @@ export function useTranslation() {
       // Check abort/pause between fields
       if (checkAbort()) {
         runningRef.current = false;
-        store.setPhase('cancelled');
+        store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
         store.addLog('warning', 'Retry cancelled by user');
         return;
       }
       if (await waitForPause()) {
         runningRef.current = false;
-        store.setPhase('cancelled');
+        store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
         return;
       }
 
@@ -2864,7 +2892,7 @@ export function useTranslation() {
             store.updateField(field.path, { status: 'error', error: 'Cancelled' });
             fieldAbortMap.current.delete(field.path);
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             store.addLog('warning', 'Retry cancelled by user');
             return;
           }
@@ -3314,9 +3342,14 @@ export function useTranslation() {
     abortRef.current = new AbortController();
     pauseRef.current = false;
     runningRef.current = true;
+    lastRunModeRef.current = 'mod';
     store.setPhase('translating');
-    store.setStartTime(Date.now());
-    store.clearLogs();
+    if (!isContinue) {
+      store.setStartTime(Date.now());
+      store.clearLogs();
+    } else if (!useStore.getState().startTime) {
+      store.setStartTime(Date.now());
+    }
     store.setPreprocessProgress(null);
     CallMonitor.reset();
 
@@ -3393,7 +3426,7 @@ export function useTranslation() {
         const mvuMsg = mvuErr instanceof Error ? mvuErr.message : String(mvuErr);
         if (mvuMsg === 'Cancelled' || checkAbort()) {
           runningRef.current = false;
-          store.setPhase('cancelled');
+          store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
           return;
         }
         store.addLog('warning', `⚠️ MVU rename failed (non-critical): ${mvuMsg}`);
@@ -3694,7 +3727,7 @@ export function useTranslation() {
       // Check abort
       if (checkAbort()) {
         runningRef.current = false;
-        store.setPhase('cancelled');
+        store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
         store.addLog('warning', '🔧 Mod cancelled by user');
         return;
       }
@@ -3702,7 +3735,7 @@ export function useTranslation() {
       // Handle pause
       if (await waitForPause()) {
         runningRef.current = false;
-        store.setPhase('cancelled');
+        store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
         return;
       }
 
@@ -3797,7 +3830,7 @@ export function useTranslation() {
         while (batchIdx < subBatches.length) {
           if (checkAbort()) {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             store.addLog('warning', '🔧 Mod cancelled');
             return;
           }
@@ -3805,7 +3838,7 @@ export function useTranslation() {
           // Handle pause inside mod batch loop
           if (await waitForPause()) {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             return;
           }
 
@@ -3822,7 +3855,7 @@ export function useTranslation() {
                 const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
                 if (msg === 'Cancelled' || checkAbort()) {
                   runningRef.current = false;
-                  store.setPhase('cancelled');
+                  store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
                   store.addLog('warning', '🔧 Mod cancelled');
                   return;
                 }
@@ -3830,7 +3863,7 @@ export function useTranslation() {
             }
           } catch {
             runningRef.current = false;
-            store.setPhase('cancelled');
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             store.addLog('warning', '🔧 Mod cancelled');
             return;
           }
@@ -3873,7 +3906,7 @@ export function useTranslation() {
       } catch {
         // Cancel was thrown
         runningRef.current = false;
-        store.setPhase('cancelled');
+        store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
         store.addLog('warning', '🔧 Mod cancelled');
         return;
       }
@@ -3961,6 +3994,8 @@ export function useTranslation() {
       `Mod applied: ${successCount}/${targetFields.length} fields${autoFixCount > 0 ? ` (${autoFixCount} auto-fixed)` : ''}`
     );
   }, [store, prepareFields]);
+  // Late-bind so resumeTranslation (defined earlier) can continue a paused mod run.
+  applyModRef.current = applyModToAllFields;
 
   const continueMod = useCallback(async () => {
     await applyModToAllFields(true);
