@@ -10,6 +10,7 @@ import {
   X, ChevronDown, ChevronUp, ChevronRight, Copy,
 } from 'lucide-react';
 import { useCardStore } from '../store/cardStore';
+import StagePersonaButton from '../components/StagePersonaButton';
 
 // ─── Token estimator ────────────────────────────────────────────────────────
 const estimateTokens = (text: string) => Math.ceil((text || '').length / 4);
@@ -254,6 +255,12 @@ function TabPersonality({ data, updateField }: TabProps) {
   return (
     <>
       <SectionCard title="Mô tả nhân vật (Description)">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <StagePersonaButton
+            currentDescription={data.description}
+            onInsert={(v) => updateField('data.description', v)}
+          />
+        </div>
         <TextareaWithMacros value={data.description} rows={12}
           onChange={v => updateField('data.description', v)}
           placeholder="Mô tả chi tiết nhân vật: ngoại hình, tính cách, quá khứ, khả năng..." />
