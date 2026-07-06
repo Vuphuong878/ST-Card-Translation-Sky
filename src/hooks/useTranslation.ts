@@ -1658,7 +1658,7 @@ export function useTranslation() {
             break;
           }
 
-          store.addLog('active', `🤖 Calling AI to translate ${newEntryNames.length} entry names + ${newKeywords.length} keywords...`);
+          store.addLog('active', `🤖 Calling AI to translate ${newEntryNames.length} entry names + ${newKeywords.length} keywords (chia lô + đa luồng)...`);
 
           const ejsContext = (store.card!.data?.character_book?.entries || [])
             .filter((e: any) => e.content && /<%[\s\S]*?%>/.test(e.content))
@@ -1666,6 +1666,9 @@ export function useTranslation() {
             .join('\n\n')
             .slice(0, 3000);
 
+          // Chạy đa luồng như MVU: chia lô nhỏ, bắn song song (callProvider tự gate RPM + xoay
+          // key), tự retry item sót. Log tiến độ mỗi ~25% cho card bự.
+          let lastPct = 0;
           const { entryTranslations, keywordTranslations } = await aiTranslateEjsEntries(
             newEntryNames,
             newKeywords,
@@ -1674,6 +1677,16 @@ export function useTranslation() {
             abortRef.current?.signal,
             ejsContext,
             store.translationConfig.ejsTranslationPrompt,
+            {
+              concurrency: Math.max(6, store.translationConfig.concurrentBatches || 0),
+              onProgress: (done, total) => {
+                const pct = Math.floor((done / Math.max(1, total)) * 100);
+                if (pct - lastPct >= 25 || done >= total) {
+                  lastPct = pct;
+                  store.addLog('info', `   ⏳ EJS: ${done}/${total} mục (${pct}%)`);
+                }
+              },
+            },
           );
 
           const mergedEntryDict = { ...existingEntryDict, ...entryTranslations };

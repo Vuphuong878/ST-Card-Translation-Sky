@@ -576,40 +576,16 @@ export function extractAllDecorators(card: CharacterCard): EjsDecorator[] {
    AI TRANSLATION — Translate entry names + keywords via AI
    ═══════════════════════════════════════════════════════════════════ */
 
-/**
- * Use AI to translate EJS entry names and keywords.
- * Groups them into a single API call for efficiency.
- */
-export async function aiTranslateEjsEntries(
-  entryNames: string[],
-  keywords: string[],
-  targetLang: string,
-  proxy: ProxySettings,
-  signal?: AbortSignal,
-  cardContext?: string,
-  customPrompt?: string,
-): Promise<{ entryTranslations: Record<string, string>; keywordTranslations: Record<string, string> }> {
-  const allItems = [
-    ...entryNames.map(n => ({ text: n, type: 'entry_name' })),
-    ...keywords.map(k => ({ text: k, type: 'keyword' })),
-  ];
+type EjsItem = { text: string; type: 'entry_name' | 'keyword' };
 
-  if (allItems.length === 0) {
-    return { entryTranslations: {}, keywordTranslations: {} };
-  }
-
-  const entryList = allItems.map((item, i) => `${i + 1}. [${item.type}] "${item.text}"`).join('\n');
-
-  let contextBlock = '';
-  if (cardContext) {
-    contextBlock = `\n\nCONTEXT (EJS code from the card for reference):\n${cardContext.slice(0, 3000)}`;
-  }
-
+/** Build the system prompt for ONE batch of items. */
+function buildEjsBatchSystemPrompt(items: EjsItem[], targetLang: string, cardContext?: string, customPrompt?: string): string {
+  const entryList = items.map((item, i) => `${i + 1}. [${item.type}] "${item.text}"`).join('\n');
+  const contextBlock = cardContext ? `\n\nCONTEXT (EJS code from the card for reference):\n${cardContext.slice(0, 3000)}` : '';
   const customPromptBlock = customPrompt?.trim()
     ? `\n\n═══ USER CUSTOM TRANSLATION RULES (HIGHEST PRIORITY) ═══\n${customPrompt.trim()}\n═══ END CUSTOM RULES ═══`
     : '';
-
-  const systemPrompt = `You are a specialized translator for SillyTavern EJS character cards.
+  return `You are a specialized translator for SillyTavern EJS character cards.
 You must translate the following items from their original language into ${targetLang}.
 
 ITEMS TO TRANSLATE:
@@ -624,42 +600,116 @@ RULES:
 5. Short system/technical terms should remain concise after translation.
 6. NEVER translate technical tokens (variable names, function names, CSS selectors).${customPromptBlock}
 
-OUTPUT FORMAT — STRICT JSON object mapping original → translated:
+OUTPUT FORMAT — STRICT JSON object mapping original → translated. You MUST include EVERY item above:
 {
   "original text 1": "translated text 1",
   "original text 2": "translated text 2"
 }
 
 Output ONLY the JSON object. No markdown, no explanation.`;
+}
 
-  const userPrompt = `Translate these items to ${targetLang}:\n${entryList}`;
+export interface EjsTranslateOptions {
+  /** Số item mỗi call. Nhỏ = an toàn (không tràn output token). Mặc định 50. */
+  batchSize?: number;
+  /** Số lô chạy song song. callProvider tự gate RPM + xoay key nên cứ bắn nhiều lane. Mặc định 6. */
+  concurrency?: number;
+  /** Số vòng retry cho item còn sót. Mặc định 2. */
+  maxRetryRounds?: number;
+  onProgress?: (done: number, total: number) => void;
+}
 
-  try {
-    const responseText = await callProvider(proxy, systemPrompt, userPrompt, signal);
+/**
+ * Dịch entry names + keywords của EJS bằng AI.
+ *
+ * KHÁC bản cũ (nhồi TẤT CẢ vào 1 call → card bự tràn output token → sót hàng loạt, phải chạy
+ * 2-3 lần): nay CHIA LÔ nhỏ + chạy SONG SONG nhiều lane (callProvider tự gate RPM & xoay key,
+ * y như Chiến Lược MVU) + TỰ RETRY riêng những item chưa có bản dịch → nhanh và không bỏ sót.
+ */
+export async function aiTranslateEjsEntries(
+  entryNames: string[],
+  keywords: string[],
+  targetLang: string,
+  proxy: ProxySettings,
+  signal?: AbortSignal,
+  cardContext?: string,
+  customPrompt?: string,
+  opts?: EjsTranslateOptions,
+): Promise<{ entryTranslations: Record<string, string>; keywordTranslations: Record<string, string> }> {
+  const allItems: EjsItem[] = [
+    ...entryNames.map(n => ({ text: n, type: 'entry_name' as const })),
+    ...keywords.map(k => ({ text: k, type: 'keyword' as const })),
+  ];
+  if (allItems.length === 0) return { entryTranslations: {}, keywordTranslations: {} };
 
-    const parsed = parseJsonFromAi(responseText);
-    const translations = parsed.translations || parsed;
+  const batchSize = Math.max(1, opts?.batchSize ?? 50);
+  const concurrency = Math.max(1, opts?.concurrency ?? 6);
+  const maxRetryRounds = opts?.maxRetryRounds ?? 2;
+  const total = allItems.length;
 
-    const entryTranslations: Record<string, string> = {};
-    const keywordTranslations: Record<string, string> = {};
-
-    for (const item of allItems) {
-      const translated = translations[item.text];
-      if (translated && typeof translated === 'string' && translated.trim()) {
-        if (item.type === 'entry_name') {
-          entryTranslations[item.text] = translated.trim();
-        } else {
-          keywordTranslations[item.text] = translated.trim();
-        }
+  const entryTranslations: Record<string, string> = {};
+  const keywordTranslations: Record<string, string> = {};
+  const has = (it: EjsItem) => !!(it.type === 'entry_name' ? entryTranslations : keywordTranslations)[it.text];
+  const apply = (items: EjsItem[], map: Record<string, any>) => {
+    for (const it of items) {
+      const t = map?.[it.text];
+      if (t && typeof t === 'string' && t.trim()) {
+        (it.type === 'entry_name' ? entryTranslations : keywordTranslations)[it.text] = t.trim();
       }
     }
+  };
 
-    return { entryTranslations, keywordTranslations };
-  } catch (err) {
-    if (err instanceof Error && (err.message === 'Cancelled' || signal?.aborted)) throw err;
-    console.error('AI EJS translation error:', err);
-    throw err;
+  // Dịch 1 lô qua callProvider (đã tự gate RPM + xoay key + hiện ở monitor như 1 lane).
+  const translateBatch = async (items: EjsItem[], label: string): Promise<void> => {
+    if (signal?.aborted) throw new Error('Cancelled');
+    const system = buildEjsBatchSystemPrompt(items, targetLang, cardContext, customPrompt);
+    const user = `Translate these items to ${targetLang}:\n${items.map((it, i) => `${i + 1}. [${it.type}] "${it.text}"`).join('\n')}`;
+    const responseText = await callProvider(proxy, system, user, signal, undefined, { label });
+    const parsed = parseJsonFromAi(responseText);
+    apply(items, parsed.translations || parsed);
+  };
+
+  // Chạy 1 danh sách lô với concurrency window (pool). Lỗi 1 lô không giết cả mẻ — để retry lo.
+  const runBatches = async (batches: EjsItem[][], phase: string): Promise<void> => {
+    let next = 0;
+    let done = 0;
+    const workers = Array.from({ length: Math.min(concurrency, batches.length) }, async () => {
+      for (;;) {
+        if (signal?.aborted) throw new Error('Cancelled');
+        const idx = next++;
+        if (idx >= batches.length) return;
+        const items = batches[idx];
+        try {
+          await translateBatch(items, `EJS ${phase} · lô ${idx + 1}/${batches.length} (${items.length} mục)`);
+        } catch (err) {
+          if (err instanceof Error && (err.message === 'Cancelled' || signal?.aborted)) throw err;
+          // để item sót cho vòng retry
+        }
+        done += items.length;
+        opts?.onProgress?.(Math.min(done, total), total);
+      }
+    });
+    await Promise.all(workers);
+  };
+
+  const makeBatches = (items: EjsItem[], size: number): EjsItem[][] => {
+    const out: EjsItem[][] = [];
+    for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+    return out;
+  };
+
+  // Vòng chính.
+  await runBatches(makeBatches(allItems, batchSize), 'chính');
+
+  // Retry riêng những item chưa có bản dịch (lô nhỏ hơn cho chắc) — thay cho việc phải chạy tay 2-3 lần.
+  for (let round = 1; round <= maxRetryRounds; round++) {
+    if (signal?.aborted) throw new Error('Cancelled');
+    const missing = allItems.filter(it => !has(it));
+    if (missing.length === 0) break;
+    await runBatches(makeBatches(missing, Math.max(15, Math.floor(batchSize / 2))), `retry ${round}`);
   }
+
+  return { entryTranslations, keywordTranslations };
 }
 
 /* ═══════════════════════════════════════════════════════════════════
