@@ -126,8 +126,9 @@ export async function callAI(options: AICallOptions): Promise<AICallResult> {
   const tier = useSecondary && profile.enableSecondaryModel ? 's' : 'p';
   const rpm = tier === 's' ? (profile.secondaryRpm ?? 10) : (profile.primaryRpm ?? 5);
 
-  // Thử tối đa qua vài key khác nhau nếu gặp lỗi tạm thời (429/5xx/overloaded).
-  const attempts = Math.max(1, Math.min(keys.length || 1, 3));
+  // Retry lỗi TẠM THỜI (timeout/mạng/429/5xx/overload) — KHÔNG phụ thuộc số key (api kẹt thì cứ thử lại).
+  // Nhiều key ⇒ mỗi lần xoay key khác; 1 key ⇒ thử lại chính key đó (hang thường là tạm thời).
+  const attempts = 4;
   let lastErr: unknown;
 
   for (let a = 0; a < attempts; a++) {
@@ -168,9 +169,13 @@ export async function callAI(options: AICallOptions): Promise<AICallResult> {
     } catch (err) {
       lastErr = err;
       const msg = err instanceof Error ? err.message : String(err);
-      const retriable = /\b(429|500|502|503|529)\b/.test(msg) || /rate.?limit|overloaded|quá tải/i.test(msg);
-      // Còn key khác + lỗi tạm thời → xoay key, thử lại.
-      if (a < attempts - 1 && keys.length > 1 && retriable && !signal?.aborted) continue;
+      const retriable = /\b(408|409|425|429|500|502|503|504|509|520|521|522|523|524|529)\b/.test(msg)
+        || /rate.?limit|overloaded|quá tải|timeout|quá hạn|vượt quá .* giây|failed to fetch|load failed|network|econnreset|fetch failed|socket hang up|the operation was aborted due to timeout/i.test(msg);
+      // Lỗi tạm thời (api kẹt/timeout/5xx) → chờ backoff rồi thử lại (không cần nhiều key).
+      if (a < attempts - 1 && retriable && !signal?.aborted) {
+        await new Promise(r => setTimeout(r, Math.min(1200 * (a + 1), 8000)));
+        continue;
+      }
       throw err;
     } finally {
       clearTimeout(timeoutId);

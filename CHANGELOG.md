@@ -2,6 +2,14 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.33.0 — Đồng bộ retry chống "API kẹt" cho cả 5 app
+Áp cơ chế retry (như đã làm cho Trích Card) sang 4 app còn lại — API kẹt/treo/timeout/5xx thì **cứ thử lại**, lỗi không sửa được thì dừng ngay:
+- **Dịch Card:** thêm **TIMEOUT** cho request dịch (OpenAI/Claude/Gemini) — proxy chết/treo sẽ bị **abort → thử lại** thay vì kẹt vĩnh viễn (trước đây fetch không có timeout nên treo là đứng luôn). `maxRetries` mặc định **3→5**. (429/5xx/rỗng vốn đã retry.)
+- **Tạo Card:** trước chỉ thử lại khi có **≥2 API key**; nay **retry cả khi 1 key**, và bắt thêm timeout/504/mạng/quá tải, có backoff.
+- **Preset:** trước **không có retry** nào; nay thêm hẳn **retry + timeout** (xoay provider mỗi lần thử).
+- **Mod Card:** tăng lượt (3→5) + bắt thêm timeout tiếng Việt/rỗng.
+- Tất cả: lỗi **không sửa được** (sai API key, HTTP 400/401) **dừng ngay**, không thử lại vô ích.
+
 ## v1.32.2 — Trích Card: tăng retry + tối ưu bộ lọc NSFW
 Theo log client (đoạn bị **timeout** và đoạn bị **bộ lọc chặn (trả rỗng)** đều **fail luôn không thử lại**):
 - **Timeout nay được thử lại:** trước đây thông báo timeout tiếng Việt ("Yêu cầu quá hạn…") **không khớp** điều kiện retry (chỉ khớp "timeout"/tiếng Trung) → bỏ luôn. Nay khớp → **thử lại**.

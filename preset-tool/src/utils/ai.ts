@@ -13,6 +13,20 @@ function pickKey(raw: string): string {
   return keys[(_rr++) % keys.length];
 }
 
+// fetch có TIMEOUT: quá hạn thì abort để không treo mãi (lỗi timeout → được retry ở callAI).
+async function fetchWithTimeout(url: string, opts: RequestInit, ms = 180000): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(new Error(`Timeout: quá ${ms / 1000}s không phản hồi`)), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } catch (e) {
+    if (ctrl.signal.aborted) throw new Error(`Timeout: API quá ${ms / 1000}s không phản hồi, sẽ thử lại`);
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 /**
  * Unified System Prompt — context-aware, supports both preset and regex work
  * 
@@ -137,7 +151,37 @@ function pickProvider(s: APISettings): APISettings {
   return { ...s, useProxy: e.useProxy, apiKey: e.apiKey, proxyUrl: e.proxyUrl, proxyKey: e.proxyKey, selectedModel: e.selectedModel };
 }
 
+// ─── Retry: api kẹt/timeout/5xx/quá tải → cứ thử lại (backoff); lỗi không sửa được thì dừng ───
+function _presetRetryable(msg: string): boolean {
+  if (/401|403|api key không hợp lệ|proxy key không hợp lệ|chưa nhập|invalid api key/i.test(msg)) return false;
+  return /\b(408|409|425|429|500|502|503|504|509|520|521|522|523|524|529)\b/.test(msg)
+    || /rate.?limit|overloaded|quá tải|timeout|quá hạn|failed to fetch|load failed|network|fetch failed|econnreset|socket hang up|proxy không phản hồi|lỗi api|rỗng|không xuất ra|the operation was aborted/i.test(msg);
+}
 export async function callAI(
+  userMessage: string,
+  history: ChatMessage[],
+  settings0: APISettings,
+  projectContext: string,
+  referencedContext: string
+): Promise<string> {
+  const tries = 4;
+  let lastErr: unknown;
+  for (let a = 0; a < tries; a++) {
+    try {
+      return await callAIOnce(userMessage, history, settings0, projectContext, referencedContext);
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      if (a < tries - 1 && _presetRetryable(msg)) {
+        await new Promise(r => setTimeout(r, Math.min(1200 * (a + 1), 8000)));
+        continue;   // pickProvider xoay provider mỗi lần → thử lại thường sang nguồn/model khác
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+async function callAIOnce(
   userMessage: string,
   history: ChatMessage[],
   settings0: APISettings,
@@ -176,7 +220,7 @@ export async function callAI(
       parts: [{ text: userMessage }]
     });
 
-    const response = await fetch(endpoint, {
+    const response = await fetchWithTimeout(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -243,7 +287,7 @@ export async function callAI(
       endpoint = endpoint.replace(/\/$/, '') + '/chat/completions';
     }
 
-    const response = await fetch(endpoint, {
+    const response = await fetchWithTimeout(endpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify({

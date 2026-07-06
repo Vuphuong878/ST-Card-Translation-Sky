@@ -43,6 +43,26 @@ export function summarizeErrorBody(body: string, maxLen = 200): string {
 }
 
 /**
+ * Kết hợp signal người dùng với TIMEOUT: nếu API "kẹt" (không phản hồi) quá `ms`, abort request để
+ * ném lỗi timeout (retryable) → vòng retry sẽ thử lại thay vì treo vĩnh viễn. `clear()` gọi sau khi
+ * nhận xong response. `timedOut()` cho biết có phải abort do hết giờ (để phân biệt với user bấm dừng).
+ */
+function withTimeout(userSignal: AbortSignal | undefined, ms: number): { signal: AbortSignal | undefined; clear: () => void; timedOut: () => boolean } {
+  if (!ms || ms <= 0 || typeof AbortController === 'undefined') return { signal: userSignal, clear: () => {}, timedOut: () => false };
+  const ctrl = new AbortController();
+  let to = false;
+  const timer = setTimeout(() => { to = true; ctrl.abort(); }, ms);
+  let signal: AbortSignal = ctrl.signal;
+  if (userSignal) {
+    const anyFn = (AbortSignal as unknown as { any?: (s: AbortSignal[]) => AbortSignal }).any;
+    if (anyFn) signal = anyFn([userSignal, ctrl.signal]);
+    else if (userSignal.aborted) ctrl.abort();
+    else userSignal.addEventListener('abort', () => ctrl.abort(), { once: true });
+  }
+  return { signal, clear: () => clearTimeout(timer), timedOut: () => to };
+}
+
+/**
  * ChunkError — thrown when a multi-chunk translation fails partway through.
  * Carries the successfully translated chunks so the caller can save partial progress.
  */
@@ -1144,17 +1164,21 @@ async function callOpenAICompatible(
     headers['Authorization'] = `Bearer ${config.apiKey}`;
   }
 
+  const _to = withTimeout(signal, Math.max(config.requestTimeout || 0, 300000));
   let res: Response;
   try {
     res = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-      signal,
+      signal: _to.signal,
     });
   } catch (err) {
+    _to.clear();
+    if (_to.timedOut() && !signal?.aborted) throw new ApiError('API không phản hồi (bị kẹt/timeout) — sẽ thử lại', undefined, true);
     throw wrapCorsError(err, rawUrl, config.useCorsProxy);
   }
+  _to.clear();
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
@@ -1279,17 +1303,21 @@ async function callAnthropic(
     headers['anthropic-dangerous-direct-browser-access'] = 'true';
   }
 
+  const _to = withTimeout(signal, Math.max(config.requestTimeout || 0, 300000));
   let res: Response;
   try {
     res = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-      signal,
+      signal: _to.signal,
     });
   } catch (err) {
+    _to.clear();
+    if (_to.timedOut() && !signal?.aborted) throw new ApiError('API không phản hồi (bị kẹt/timeout) — sẽ thử lại', undefined, true);
     throw wrapCorsError(err, rawUrl, config.useCorsProxy);
   }
+  _to.clear();
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
@@ -1413,17 +1441,21 @@ async function callGemini(
     ],
   };
 
+  const _to = withTimeout(signal, Math.max(config.requestTimeout || 0, 300000));
   let res: Response;
   try {
     res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal,
+      signal: _to.signal,
     });
   } catch (err) {
+    _to.clear();
+    if (_to.timedOut() && !signal?.aborted) throw new ApiError('API không phản hồi (bị kẹt/timeout) — sẽ thử lại', undefined, true);
     throw wrapCorsError(err, rawUrl, config.useCorsProxy);
   }
+  _to.clear();
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');

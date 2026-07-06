@@ -20,7 +20,7 @@ const pickKey = (raw: string): string => {
 
 // ─── Chống TREO: timeout mỗi call + auto-retry ───
 const REQUEST_TIMEOUT_MS = 180_000; // 3 phút/call — call treo sẽ bị abort thay vì kẹt vĩnh viễn
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5; // api kẹt/timeout/5xx thì cứ thử lại (qua backoff + xoay key)
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /** fetch có timeout (AbortController) — hết giờ thì abort để không treo. */
@@ -42,7 +42,7 @@ async function fetchWithTimeout(url: string, opts: RequestInit, ms = REQUEST_TIM
 /** Lỗi có nên retry không: timeout/mạng/429/5xx/overload → có; 4xx khác (key sai…) → không. */
 function isRetryable(err: unknown): boolean {
   const msg = String((err as Error)?.message || err);
-  return /timeout|aborted|network|fetch failed|ECONNRESET|ETIMEDOUT|socket|\b429\b|rate.?limit|quota|\b5\d\d\b|overload|unavailable|Empty response/i.test(msg);
+  return /timeout|quá hạn|aborted|network|fetch failed|failed to fetch|ECONNRESET|ETIMEDOUT|socket|\b429\b|rate.?limit|quota|\b5\d\d\b|overload|quá tải|unavailable|Empty response|rỗng|bộ lọc/i.test(msg);
 }
 
 /**
