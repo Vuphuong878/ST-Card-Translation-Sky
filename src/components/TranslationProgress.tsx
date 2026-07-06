@@ -504,7 +504,7 @@ function ModModePanel() {
 
 function TranslationPanel() {
   const { fields, phase, logs, startTime, translationConfig, preprocessProgress } = useStore();
-  const { startTranslation, continueTranslation, pauseTranslation, resumeTranslation, cancelTranslation, retryAllErrors } = useTranslation();
+  const { startTranslation, continueTranslation, pauseTranslation, resumeTranslation, cancelTranslation, retryAllErrors, prepareFields } = useTranslation();
   const t = useT();
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -644,6 +644,15 @@ function TranslationPanel() {
             <Play size={14} /> {t.startTranslation}
           </button>
         )}
+        {isIdle && totalFields === 0 && (
+          <button
+            className="btn btn-secondary"
+            onClick={() => prepareFields(false)}
+            title="Liệt kê tất cả trường trước khi dịch — để bạn BỎ TICK những trường muốn tự dịch tay (không gọi API)"
+          >
+            <FileText size={14} /> Xem/chọn trường (bỏ dịch)
+          </button>
+        )}
         {(isCancelled || isDone) && (
           <>
             <button className="btn btn-primary" onClick={() => continueTranslation()}>
@@ -676,6 +685,14 @@ function TranslationPanel() {
         )}
 
       </div>
+
+      {/* Gợi ý: bỏ dịch từng trường trước khi bắt đầu */}
+      {isIdle && totalFields > 0 && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '14px', padding: '8px 10px', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 'var(--radius-sm)' }}>
+          <Ban size={13} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
+          <span>Muốn tự dịch tay trường nào? <b>Bỏ tick</b> ô của trường đó ở bảng <b>Field Editor</b> bên dưới (hoặc bấm nút ⊘) rồi bấm Bắt đầu — trường đó sẽ KHÔNG gọi API, bạn gõ bản dịch thẳng vào ô của nó.</span>
+        </div>
+      )}
 
       {/* Logs */}
       <LogPanel logEndRef={logEndRef} />
