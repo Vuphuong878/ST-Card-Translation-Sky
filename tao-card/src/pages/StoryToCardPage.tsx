@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Loader2, ScanLine, Sparkles, User, Wand2, Users, BookOpen, Settings2, Merge } from 'lucide-react';
+import { Loader2, ScanLine, Sparkles, User, Wand2, Users, BookOpen, Settings2, Merge, Trash2 } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
 import { useCardStore } from '../store/cardStore';
 import { useToastStore } from '../store/toastStore';
+import { usePersistedState } from '../lib/usePersistedState';
 import { DEFAULT_ENTRY_EXT, type LorebookEntry } from '../types/lorebook.types';
 import {
   scanCharacters, generateCardFromStory, generateCardsForMany,
@@ -22,43 +23,46 @@ export function StoryToCardPage() {
   const getNextEntryId = useCardStore((s) => s.getNextEntryId);
   const toast = useToastStore();
 
-  const [story, setStory] = useState('');
-  const [opts, setOpts] = useState<StoryCardOptions>({ detail: 'vừa phải', nsfw: false, template: 'chuẩn', splitByStage: true, autoContinue: true });
+  // Persist inputs + outputs qua localStorage → F5 / đóng tab / đổi tab không mất việc.
+  const [story, setStory] = usePersistedState('s2c.story', '');
+  const [opts, setOpts] = usePersistedState<StoryCardOptions>('s2c.opts', { detail: 'vừa phải', nsfw: false, template: 'chuẩn', splitByStage: true, autoContinue: true });
   // Tuỳ chọn quét
-  const [chunkSize, setChunkSize] = useState(40000);
-  const [maxChunks, setMaxChunks] = useState(12);
-  const [includeIdentity, setIncludeIdentity] = useState(true);
+  const [chunkSize, setChunkSize] = usePersistedState('s2c.chunkSize', 40000);
+  const [maxChunks, setMaxChunks] = usePersistedState('s2c.maxChunks', 12);
+  const [includeIdentity, setIncludeIdentity] = usePersistedState('s2c.includeIdentity', true);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [scanning, setScanning] = useState(false);
   const [scanProg, setScanProg] = useState<{ d: number; t: number } | null>(null);
-  const [roster, setRoster] = useState<ScannedCharacter[]>([]);
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [manualName, setManualName] = useState('');
+  const [roster, setRoster] = usePersistedState<ScannedCharacter[]>('s2c.roster', []);
+  const [checked, setChecked] = usePersistedState<string[]>('s2c.checked', []);
+  const [manualName, setManualName] = usePersistedState('s2c.manualName', '');
 
   const [generating, setGenerating] = useState(false);
   const [batchProg, setBatchProg] = useState<{ d: number; t: number; name: string } | null>(null);
-  const [card, setCard] = useState<GeneratedStoryCard | null>(null);
-  const [batch, setBatch] = useState<BatchCardResult[]>([]);
+  const [card, setCard] = usePersistedState<GeneratedStoryCard | null>('s2c.card', null);
+  const [batch, setBatch] = usePersistedState<BatchCardResult[]>('s2c.batch', []);
 
   const profile = settings.profiles.find((p) => p.id === settings.activeProfileId);
   const set = (patch: Partial<StoryCardOptions>) => setOpts((o) => ({ ...o, ...patch }));
+
+  const clearWork = () => {
+    if (!confirm('Xoá toàn bộ truyện, roster và thẻ đã tạo trong trang này?')) return;
+    setStory(''); setRoster([]); setChecked([]); setManualName(''); setCard(null); setBatch([]);
+  };
 
   const requireApi = () => {
     if (!profile?.apiKey) { toast.error('Chưa cấu hình API. Vào Cài đặt.'); return false; }
     return true;
   };
 
-  const toggleCheck = (name: string) => setChecked((prev) => {
-    const n = new Set(prev);
-    n.has(name) ? n.delete(name) : n.add(name);
-    return n;
-  });
+  const toggleCheck = (name: string) => setChecked((prev) =>
+    prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]);
 
   const runScan = async () => {
     if (!requireApi()) return;
     if (!story.trim()) { toast.error('Dán nội dung truyện trước.'); return; }
-    setScanning(true); setRoster([]); setCard(null); setBatch([]); setChecked(new Set()); setScanProg({ d: 0, t: 1 });
+    setScanning(true); setRoster([]); setCard(null); setBatch([]); setChecked([]); setScanProg({ d: 0, t: 1 });
     try {
       const chars = await scanCharacters(story, profile!, settings.generationParams, {
         chunkSize, maxChunks, includeIdentity,
@@ -66,7 +70,7 @@ export function StoryToCardPage() {
       });
       if (chars.length === 0) toast.error('Không quét được nhân vật. Thử lại hoặc nhập tên thủ công.');
       setRoster(chars);
-      if (chars[0]) setChecked(new Set([chars[0].name]));
+      if (chars[0]) setChecked([chars[0].name]);
     } catch (e) { toast.error(e instanceof Error ? e.message : String(e)); }
     finally { setScanning(false); setScanProg(null); }
   };
@@ -75,13 +79,13 @@ export function StoryToCardPage() {
   const mergeChecked = () => {
     const names = [...checked];
     if (names.length < 2) { toast.error('Tick ít nhất 2 mục để gộp.'); return; }
-    const picks = roster.filter((c) => checked.has(c.name));
+    const picks = roster.filter((c) => checked.includes(c.name));
     const primary = picks[0];
     const mergedAliases = Array.from(new Set(picks.flatMap((c) => [c.name, ...c.aliases]).filter((a) => a !== primary.name)));
     const mergedBrief = picks.map((c) => c.brief).filter(Boolean).sort((a, b) => b.length - a.length)[0] || '';
     const merged: ScannedCharacter = { name: primary.name, aliases: mergedAliases, brief: mergedBrief };
-    setRoster((r) => [merged, ...r.filter((c) => !checked.has(c.name))]);
-    setChecked(new Set([primary.name]));
+    setRoster((r) => [merged, ...r.filter((c) => !checked.includes(c.name))]);
+    setChecked([primary.name]);
     toast.success(`Đã gộp ${names.length} mục vào "${primary.name}".`);
   };
 
@@ -139,7 +143,7 @@ export function StoryToCardPage() {
     toast.success('Đã áp dụng vào thẻ hiện tại. Xem tab Card Editor.');
   };
 
-  const multi = checked.size + (manualName.trim() ? 1 : 0) > 1;
+  const multi = checked.length + (manualName.trim() ? 1 : 0) > 1;
 
   return (
     <div className="p-5 max-w-3xl mx-auto space-y-5">
@@ -147,6 +151,14 @@ export function StoryToCardPage() {
         <Wand2 className="w-5 h-5 text-primary" />
         <h1 className="text-lg font-bold">Tạo thẻ từ truyện</h1>
         <span className="text-xs text-muted-foreground">Quét nhân vật (chunk) → sinh thẻ theo mô-đun</span>
+        <span className="ml-auto text-[11px] text-muted-foreground flex items-center gap-2">
+          <span title="Truyện, roster và thẻ được tự lưu — F5 không mất">💾 tự lưu</span>
+          {(story || roster.length > 0 || card || batch.length > 0) && (
+            <button onClick={clearWork} className="inline-flex items-center gap-1 hover:text-red-400" title="Xoá việc trong trang này">
+              <Trash2 className="w-3.5 h-3.5" /> Xoá
+            </button>
+          )}
+        </span>
       </div>
 
       {/* 01 — Truyện + tùy chọn */}
@@ -230,18 +242,18 @@ export function StoryToCardPage() {
       {(roster.length > 0 || manualName) && (
         <section className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
           <div className="text-sm font-semibold flex items-center justify-between">
-            <span className="flex items-center gap-2"><Users className="w-4 h-4" /> 02 · Chọn nhân vật {checked.size > 0 && <span className="text-xs text-primary">({checked.size} đã chọn)</span>}</span>
+            <span className="flex items-center gap-2"><Users className="w-4 h-4" /> 02 · Chọn nhân vật {checked.length > 0 && <span className="text-xs text-primary">({checked.length} đã chọn)</span>}</span>
             {roster.length > 0 && (
               <div className="flex items-center gap-3 text-xs font-normal">
-                <button onClick={() => setChecked(new Set(roster.map((c) => c.name)))} className="text-muted-foreground hover:text-foreground">Chọn hết</button>
-                <button onClick={() => setChecked(new Set())} className="text-muted-foreground hover:text-foreground">Bỏ chọn</button>
-                {checked.size >= 2 && <button onClick={mergeChecked} className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300"><Merge className="w-3.5 h-3.5" /> Gộp mục đã chọn</button>}
+                <button onClick={() => setChecked(roster.map((c) => c.name))} className="text-muted-foreground hover:text-foreground">Chọn hết</button>
+                <button onClick={() => setChecked([])} className="text-muted-foreground hover:text-foreground">Bỏ chọn</button>
+                {checked.length >= 2 && <button onClick={mergeChecked} className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300"><Merge className="w-3.5 h-3.5" /> Gộp mục đã chọn</button>}
               </div>
             )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {roster.map((c) => {
-              const on = checked.has(c.name);
+              const on = checked.includes(c.name);
               return (
                 <button key={c.name} onClick={() => toggleCheck(c.name)}
                   className="text-left p-2.5 rounded-lg border flex gap-2"
@@ -262,7 +274,7 @@ export function StoryToCardPage() {
             style={{ background: generating ? '#3a3352' : '#a855f7', border: 'none', cursor: generating ? 'default' : 'pointer' }}>
             {generating
               ? <><Loader2 className="w-4 h-4 animate-spin" /> {batchProg ? `Đang tạo ${batchProg.d}/${batchProg.t}${batchProg.name ? ` · ${batchProg.name}` : ''}` : 'Đang tạo thẻ...'}</>
-              : <><Sparkles className="w-4 h-4" /> {multi ? `Tạo ${checked.size + (manualName.trim() ? 1 : 0)} thẻ (song song)` : 'Tạo thẻ nhân vật'}</>}
+              : <><Sparkles className="w-4 h-4" /> {multi ? `Tạo ${checked.length + (manualName.trim() ? 1 : 0)} thẻ (song song)` : 'Tạo thẻ nhân vật'}</>}
           </button>
         </section>
       )}

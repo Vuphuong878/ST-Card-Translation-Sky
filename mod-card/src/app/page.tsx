@@ -5,6 +5,7 @@ import FileUploader from '@/components/FileUploader';
 import ModRulesManager, { ModRule } from '@/components/ModRulesManager';
 import { CardV3 } from '@/types/card';
 import { LLMConfig } from '@/lib/llm';
+import { usePersistedState } from '@/lib/usePersistedState';
 import { CardParser } from '@/lib/parser';
 import { ModOrchestrator, extractSections, applyModification, OrchestratorRule } from '@/lib/orchestrator';
 
@@ -29,11 +30,12 @@ interface ValidationResult {
 }
 
 export default function Home() {
-  const [card, setCard] = useState<CardV3 | null>(null);
-  const [rules, setRules] = useState<ModRule[]>([]);
-  const [activeTab, setActiveTab] = useState<'upload' | 'workspace' | 'diff' | 'settings'>('upload');
+  // Các state là "việc của user" → lưu localStorage để F5 / đóng tab không mất.
+  const [card, setCard] = usePersistedState<CardV3 | null>('modcard.card', null);
+  const [rules, setRules] = usePersistedState<ModRule[]>('modcard.rules', []);
+  const [activeTab, setActiveTab] = usePersistedState<'upload' | 'workspace' | 'diff' | 'settings'>('modcard.activeTab', 'upload');
 
-  const [llmConfig, setLlmConfig] = useState<LLMConfig>({
+  const [llmConfig, setLlmConfig] = usePersistedState<LLMConfig>('modcard.llmConfig', {
     provider: 'gemini',
     apiKey: '',
     model: 'gemini-1.5-pro-latest',
@@ -42,7 +44,7 @@ export default function Home() {
 
   const [scannedModels, setScannedModels] = useState<string[]>([]);
   const [isScanningModels, setIsScanningModels] = useState(false);
-  const [customPrompt, setCustomPrompt] = useState<string>('');
+  const [customPrompt, setCustomPrompt] = usePersistedState<string>('modcard.customPrompt', '');
   const [manualModelInput, setManualModelInput] = useState(false);
 
   const handleProviderChange = (provider: 'openai' | 'anthropic' | 'gemini') => {
@@ -64,12 +66,13 @@ export default function Home() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState<string>('');
-  const [analysisResult, setAnalysisResult] = useState<AnalysisItem[] | null>(null);
-  const [moddedCard, setModdedCard] = useState<CardV3 | null>(null);
-  const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-  const [isMvuCard, setIsMvuCard] = useState<boolean>(false);
-  const [mvuVariables, setMvuVariables] = useState<string[]>([]);
+  // Kết quả cũng lưu lại để xem lại sau khi F5.
+  const [analysisResult, setAnalysisResult] = usePersistedState<AnalysisItem[] | null>('modcard.analysisResult', null);
+  const [moddedCard, setModdedCard] = usePersistedState<CardV3 | null>('modcard.moddedCard', null);
+  const [auditResult, setAuditResult] = usePersistedState<AuditResult | null>('modcard.auditResult', null);
+  const [validationResult, setValidationResult] = usePersistedState<ValidationResult | null>('modcard.validationResult', null);
+  const [isMvuCard, setIsMvuCard] = usePersistedState<boolean>('modcard.isMvuCard', false);
+  const [mvuVariables, setMvuVariables] = usePersistedState<string[]>('modcard.mvuVariables', []);
 
   const handleCardLoaded = (loadedCard: CardV3) => {
     setCard(loadedCard);
