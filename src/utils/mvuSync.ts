@@ -1879,7 +1879,7 @@ export async function aiTranslateMvuKeys(
     ? `\n\n═══ USER CUSTOM TRANSLATION RULES (HIGHEST PRIORITY) ═══\nThe user has provided custom instructions for how variable names should be translated. Follow these instructions ABOVE ALL other rules:\n${customPrompt.trim()}\n═══ END CUSTOM RULES ═══`
     : '';
 
-  const systemPrompt = `Translate CJK (Chinese/Japanese/Korean) variable names to ${targetLang}. Do NOT translate English or ASCII names. Chinese proper nouns (names, places) → Sino-Vietnamese (Hán Việt). Japanese proper nouns → Romaji. Do NOT translate English. Keep consistency with MVU Schema.
+  const systemPrompt = `Translate CJK (Chinese/Japanese/Korean) variable names to ${targetLang}. Do NOT translate English or ASCII names. Chinese proper nouns (names, places) → Sino-Vietnamese (Hán Việt). Japanese proper nouns → Romaji. Korean proper nouns → Standard Revised Romanization (e.g. 金泰亨→Kim Tae-hyung), NOT Sino-Vietnamese. Do NOT translate English. Keep consistency with MVU Schema.
 
 You are a variable name translator for SillyTavern character cards.
 Your job: translate variable names from the source language to ${targetLang}.
@@ -1892,7 +1892,7 @@ STRICT RULES:
    - All stat variables should follow the same pattern
 4. If a key is already in Latin/ASCII or English, keep it AS IS. Do NOT translate English.
 5. Chinese proper nouns (character names, places, dynasties) → Sino-Vietnamese (Hán Việt) reading. Examples: 清河→Thanh Hà, 慕容冲→Mộ Dung Xung, 洛阳→Lạc Dương.
-6. Japanese proper nouns → Romaji transliteration (e.g. 田中→Tanaka, 桜→Sakura). Do NOT apply Sino-Vietnamese to Japanese names.
+6. Japanese proper nouns → Romaji transliteration (e.g. 田中→Tanaka, 桜→Sakura). Korean proper nouns → Standard Revised Romanization (e.g. 金泰亨→Kim Tae-hyung, 仁川→Incheon). Do NOT apply Sino-Vietnamese to Japanese/Korean names.
 7. Western/Fantasy names transcribed into CJK (e.g. 维拉→Vera, 塞勒涅→Selene) → restore original Latin spelling.
    Follow user custom rules if provided (custom prompt overrides these defaults).
 8. Keep numeric suffixes and prefixes intact (e.g. \"攻击力2\" → \"Sức Tấn Công 2\").
@@ -2197,7 +2197,7 @@ export async function aiResolveMvuConflicts(
     })
     .join('\n');
 
-  const systemPrompt = `Translate CJK (Chinese/Japanese/Korean) variable names to ${targetLang}. Do NOT translate English or ASCII names. Chinese proper nouns → Sino-Vietnamese (Hán Việt). Japanese proper nouns → Romaji. Keep consistency with MVU Schema.
+  const systemPrompt = `Translate CJK (Chinese/Japanese/Korean) variable names to ${targetLang}. Do NOT translate English or ASCII names. Chinese proper nouns → Sino-Vietnamese (Hán Việt). Japanese proper nouns → Romaji. Korean proper nouns → Standard Revised Romanization (NOT Sino-Vietnamese). Keep consistency with MVU Schema.
 
 You are a variable name translator for SillyTavern character cards.
 Your job: translate variable names from the source language to ${targetLang}.
@@ -2206,7 +2206,7 @@ STRICT RULES:
 1. Use natural, readable formatting with diacritics (e.g. Vietnamese: Độ Hảo Cảm, Sức Tấn Công). CONSISTENCY is the only formatting rule.
 2. Keep the names SHORT but meaningful (2-4 words max).
 3. If a key is already in Latin/ASCII or English, keep it AS IS.
-4. Chinese proper nouns (names, places) → Sino-Vietnamese (Hán Việt). Japanese proper nouns → Romaji. Western/Fantasy names in CJK → restore original Latin spelling.
+4. Chinese proper nouns (names, places) → Sino-Vietnamese (Hán Việt). Japanese proper nouns → Romaji. Korean proper nouns → Standard Revised Romanization (e.g. 金泰亨→Kim Tae-hyung), NOT Sino-Vietnamese. Western/Fantasy names in CJK → restore original Latin spelling.
 5. Every DIFFERENT source key MUST produce a DIFFERENT translated name.
 6. Do NOT repeat the same translation. If you produce duplicate translations for different source keys, the system will crash.
 

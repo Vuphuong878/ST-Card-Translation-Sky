@@ -2,6 +2,15 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.28.0 — Dịch Card: quy tắc phiên âm tên riêng tiếng Hàn (áp cho A/B/C)
+Theo yêu cầu client (PhatSiz), bổ sung **quy tắc phiên âm DANH TỪ RIÊNG** đầy đủ 4 nhóm, đặc biệt **tiếng Hàn** (trước đây thiếu):
+- **Trung** → âm Hán Việt cho tên riêng (vd 李明 → Lý Minh), không dùng Pinyin.
+- **Nhật** → Romaji (vd 田中 → Tanaka), không dùng Hán Việt.
+- **Hàn (MỚI)** → Standard Revised Romanization (vd 金泰亨 → Kim Tae-hyung, 濟州島 → Đảo Jeju, 仁川 → Incheon), **không** dùng Hán Việt kể cả khi viết bằng Hanja.
+- **Tây/Fantasy** phiên âm sang CJK (vd 维拉→Vera, 亚瑟→Arthur) → khôi phục chữ Latin gốc.
+
+Áp dụng cho **cả 3 chiến lược dịch**: **A** (dịch chính), **B** (Sync MVU — dịch tên biến), **C** (Sync EJS — dịch tên entry/keyword). Gom 4 rule vào 1 hằng số dùng chung (`PROPER_NOUN_RULES`) để về sau sửa 1 nơi là đồng bộ mọi chiến lược.
+
 ## v1.27.0 — Audit: củng cố bảo mật + độ bền (không đổi tính năng)
 Rà soát toàn bộ Project + 5 app, sửa các điểm rủi ro/nợ kỹ thuật:
 - **Bảo mật dev-server (chống CSRF):** các endpoint gây side-effect (`/api/update`, `/api/downgrade`, `/api/dump-config`, `/api/debug-log`, `/api/progress/save|delete`, `/api-proxy/custom`) nay **chỉ chấp nhận request same-origin**. Trước đây một website bất kỳ đang mở trong cùng trình duyệt có thể lén gọi `git reset --hard` (mất việc chưa commit) — nay bị chặn.

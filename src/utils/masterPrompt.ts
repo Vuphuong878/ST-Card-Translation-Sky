@@ -11,6 +11,19 @@
 
 import type { GlossaryEntry } from '../types/card';
 
+/* ─── Quy tắc phiên âm DANH TỪ RIÊNG (dùng CHUNG cho cả 3 chiến lược dịch) ───
+   Nguồn: yêu cầu client (PhatSiz). Dùng cho:
+     - Chiến lược A (dịch chính, narrative/mixed) — buildNarrativeRules
+     - Chiến lược B (Sync MVU: dịch tên biến) — utils/mvuSync.ts
+     - Chiến lược C (Sync EJS: dịch tên entry/keyword) — utils/ejsSync.ts
+   Đặt ở đây (module leaf) để mọi nơi import 1 nguồn duy nhất → luôn nhất quán.
+   Lưu ý: quy tắc HÀN (Revised Romanization) là bổ sung mới trước đây bị thiếu. */
+export const PROPER_NOUN_RULES = `PROPER NOUN TRANSLITERATION (names & places only):
+    - Chinese proper nouns (names, places) → Sino-Vietnamese reading for names only (e.g. 李明 → Lý Minh). Do NOT use Pinyin.
+    - Japanese proper nouns (names, places) → standard Romaji transliteration (e.g. 田中 → Tanaka). Do NOT apply Sino-Vietnamese to Japanese names.
+    - Korean proper nouns (names, places) → Standard Revised Romanization of Korean (e.g. 金泰亨 → Kim Tae-hyung, 濟州島 → Đảo Jeju, 仁川 → Incheon). Do NOT apply Sino-Vietnamese to Korean names.
+    - WESTERN/FANTASY NAMES: Non-Chinese names phonetically transcribed into CJK (e.g. 维拉→Vera, 亚瑟→Arthur) → restore to original Latin spelling.`;
+
 /* ─── Field Type Classification ─── */
 export type TranslationFieldType =
   | 'narrative'   // Pure prose: description, personality, first_mes, etc.
@@ -143,6 +156,7 @@ function buildNarrativeRules(sourceLang: string, targetLang: string): string {
   const isVietnamese = targetLang.toLowerCase().includes('việt') || targetLang.toLowerCase().includes('vietnamese');
   const isChinese = sourceLang.includes('中') || sourceLang.toLowerCase().includes('chinese');
   const isJapanese = sourceLang.includes('日') || sourceLang.toLowerCase().includes('japanese');
+  const isKorean = sourceLang.includes('한') || sourceLang.includes('韓') || sourceLang.includes('조선') || sourceLang.toLowerCase().includes('korean');
 
   let rules = `
 TRANSLATION PRINCIPLES (NARRATIVE):
@@ -180,13 +194,23 @@ Do NOT apply Sino-Vietnamese to Japanese names — even if they use Kanji charac
   - Mixed Kanji names: use the Japanese reading (On'yomi/Kun'yomi), NOT the Chinese reading.`;
   }
 
+  if (isKorean && isVietnamese) {
+    rules += `
+P1 — Korean Proper Nouns (Revised Romanization):
+When source is Korean, ALL proper nouns MUST use the Standard Revised Romanization of Korean. Do NOT apply Sino-Vietnamese (Hán Việt) — even if the name is written in Hanja (漢字) that looks identical to Chinese.
+  - Personal names:  金泰亨 → Kim Tae-hyung (NOT: Kim Thái Hanh), 이지은 → Lee Ji-eun
+  - Place names:     仁川 → Incheon (NOT: Nhân Xuyên), 濟州島 → Đảo Jeju, 서울 → Seoul
+  - Honorifics (-ssi, -oppa, -unnie, -sunbae) can be kept as-is or mapped to Vietnamese equivalents by context.`;
+  }
+
   // ── Fallback for mixed-language or auto-detect cards ──
-  if (isVietnamese && !isChinese && !isJapanese) {
+  if (isVietnamese && !isChinese && !isJapanese && !isKorean) {
     rules += `
 P1 — Proper Noun Transliteration (Mixed/Auto-detect Source):
   - Chinese proper nouns (中文) → Sino-Vietnamese reading for names only. Do NOT use Pinyin.
   - Japanese proper nouns (日本語) → standard Romaji transliteration. Do NOT apply Sino-Vietnamese to Japanese names.
-  - Distinguish by context: if a character card is clearly Japanese-themed (school life, Japanese cities, -san/-chan), use Romaji for all names.
+  - Korean proper nouns (한국어) → Standard Revised Romanization (e.g. 金泰亨 → Kim Tae-hyung, 仁川 → Incheon). Do NOT apply Sino-Vietnamese to Korean names.
+  - Distinguish by context: if a character card is clearly Japanese-themed (school life, Japanese cities, -san/-chan), use Romaji; if clearly Korean-themed (-ssi/-oppa, Korean cities), use Revised Romanization.
   - All descriptive text → translate into natural, modern Vietnamese.
   - WESTERN/FANTASY NAMES EXCEPTION: For non-Chinese names phonetically transcribed into CJK (e.g., 维拉→Vera, 塞勒涅→Selene, 亚瑟→Arthur), restore them to their original Latin spelling.`;
   }
@@ -291,12 +315,12 @@ P5 — YAML-like Structured Data:
 
 RULE C2 — JSON Key Translation Integrity:
   When translating JSON structures used for MVU (Multi-Variable Update) state tracking, the keys themselves are variable names.
-  Dịch MỌI chữ CJK (Hán/Nhật/Hàn) ở JSON key, bảo toàn ngoặc kép và cú pháp kỹ thuật. Dịch phù hợp quy tắc mvu và đồng biến với Schema. Nếu là tên riêng tiếng nhật thì dịch ra theo dạng phiên âm Romaji.
+  Dịch MỌI chữ CJK (Hán/Nhật/Hàn) ở JSON key, bảo toàn ngoặc kép và cú pháp kỹ thuật. Dịch phù hợp quy tắc mvu và đồng biến với Schema. Tên riêng tiếng Nhật → phiên âm Romaji; tên riêng tiếng Hàn → Revised Romanization (vd 金泰亨 → Kim Tae-hyung), KHÔNG dùng Hán Việt cho tên Nhật/Hàn.
   RULES FOR KEYS:
     - Use natural, readable formatting. The ONLY rule is EXACT CONSISTENCY — same variable = identical string everywhere in the card.
     - Must be consistent. If "修为" is translated as "Tu Vi" in one place, it must be "Tu Vi" everywhere.
     - Do NOT translate English keys.
-    - Japanese proper nouns should use Romaji transliteration.
+    - Japanese proper nouns → Romaji transliteration; Korean proper nouns → Revised Romanization. Do NOT apply Sino-Vietnamese to Japanese/Korean names.
   Example (Before):
     { "角色状态": "健康", "精神力": 100 }
   Example (After - CORRECT):

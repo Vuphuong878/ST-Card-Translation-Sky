@@ -595,7 +595,7 @@ ${contextBlock}
 RULES:
 1. [entry_name] items are lorebook entry titles used in getwi() calls. The translated name MUST be used consistently wherever this entry is referenced.
 2. [keyword] items are EJS trigger keywords, NPC/location aliases, or comparison strings. Translate naturally but consistently.
-3. Chinese proper nouns (character names, places) → Sino-Vietnamese (Hán Việt) reading. Japanese proper nouns → Romaji. Do NOT translate English. Follow user custom rules if provided.
+3. Chinese proper nouns (character names, places) → Sino-Vietnamese (Hán Việt) reading. Japanese proper nouns → Romaji. Korean proper nouns → Standard Revised Romanization (e.g. 金泰亨 → Kim Tae-hyung, 仁川 → Incheon), NOT Sino-Vietnamese. Do NOT translate English. Follow user custom rules if provided.
 4. Western/Fantasy names transcribed into CJK → restore to original Latin spelling.
 5. Short system/technical terms should remain concise after translation.
 6. NEVER translate technical tokens (variable names, function names, CSS selectors).${customPromptBlock}

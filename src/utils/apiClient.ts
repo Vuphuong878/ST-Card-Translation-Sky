@@ -3,6 +3,7 @@ import {
   buildMasterSystemPrompt,
   extractTranslationFromResponse,
   fieldGroupToFieldType,
+  PROPER_NOUN_RULES,
   type TranslationFieldType,
   type MasterPromptOptions,
 } from './masterPrompt';
@@ -136,6 +137,7 @@ export function getDefaultTranslationPrompt(sourceLang: string, targetLang: stri
     ? `\n15. VIETNAMESE SPECIFIC RULES:
     - Translate Chinese names (characters, places) into Sino-Vietnamese reading for names only.
     - For Japanese proper nouns (names, places), use standard Romaji transliteration (e.g. 田中 → Tanaka, 桜 → Sakura). Do NOT apply Sino-Vietnamese to Japanese names.
+    - For Korean proper nouns (names, places), use Standard Revised Romanization of Korean (e.g. 金泰亨 → Kim Tae-hyung, 仁川 → Incheon). Do NOT apply Sino-Vietnamese to Korean names.
     - WESTERN/FANTASY NAMES EXCEPTION: For non-Chinese names phonetically transcribed into Chinese characters (e.g., 维拉→Vera, 亚瑟→Arthur), restore to original Latin spelling.
     - All descriptive text, traits, abilities, UI labels → translate into natural, modern Vietnamese. Do NOT use archaic Sino-Vietnamese for descriptions.
     - Use natural roleplay pronouns (e.g., tôi/bạn, anh/em, hắn/nàng/y) suitable for the context, avoiding rigid direct translation of pronouns (like 'ngươi/ta' unless it's a historical setting).
@@ -166,10 +168,7 @@ STRICT RULES:
    - Variable placeholders like {{char}}, {{user}}, {{random}}: Keep exactly as-is, do NOT translate.
    - Text inside angle brackets like <角色名>, <设定>: Keep the bracket structure, translate the content inside.
 10. Maintain consistent terminology. If you translate a term one way, use that same translation throughout.
-11. PROPER NOUN TRANSLITERATION RULES:
-    - Chinese proper nouns (names, places) → Sino-Vietnamese reading for names only (e.g. 李明 → Lý Minh). Do NOT use Pinyin.
-    - Japanese proper nouns (names, places) → standard Romaji transliteration (e.g. 田中 → Tanaka). Do NOT apply Sino-Vietnamese to Japanese names.
-    - WESTERN/FANTASY NAMES: Non-Chinese names phonetically transcribed into CJK (e.g., 维拉→Vera, 亚瑟→Arthur) → restore to original Latin spelling.
+11. ${PROPER_NOUN_RULES}
     - All descriptive text → translate into natural, modern Vietnamese.
     - Keep honorifics as-is or map to Vietnamese equivalents based on context (-san, -chan, -sama).
 12. CRITICAL: The output must contain ONLY the translated text in ${targetLang}. Do NOT include source language text. Do NOT pair original text with translation. Do NOT use arrows (→) or colons (:) to show before/after.
@@ -346,7 +345,7 @@ CHUNK RULES:
       ? `\n    - VIETNAMESE SPECIFIC: Use Sino-Vietnamese reading for Chinese proper nouns only. Translate all descriptive text into natural modern Vietnamese. Use natural roleplay pronouns. Ensure smooth literary flow.`
       : '';
 
-    const safetyRule = `\n\nCRITICAL RULE: ABSOLUTELY NO untranslated source language characters (e.g., Chinese Hanzi, Japanese Kanji) should remain in the final output. You MUST translate every single word into ${targetLang} unless it is a specific system variable name (like {{char}}).${vietnameseSafetyRule}\n    - PROPER NOUN RULE: Chinese proper nouns → Sino-Vietnamese reading for names. Japanese proper nouns → Romaji. Western/Fantasy names transcribed into CJK → restore to original Latin spelling. Do NOT mix up these systems.`;
+    const safetyRule = `\n\nCRITICAL RULE: ABSOLUTELY NO untranslated source language characters (e.g., Chinese Hanzi, Japanese Kanji) should remain in the final output. You MUST translate every single word into ${targetLang} unless it is a specific system variable name (like {{char}}).${vietnameseSafetyRule}\n    - PROPER NOUN RULE: Chinese proper nouns → Sino-Vietnamese reading for names. Japanese proper nouns → Romaji. Korean proper nouns → Standard Revised Romanization (e.g. 金泰亨 → Kim Tae-hyung, 仁川 → Incheon), NOT Sino-Vietnamese. Western/Fantasy names transcribed into CJK → restore to original Latin spelling. Do NOT mix up these systems.`;
 
     let regexInstruction = '';
     if (fieldName.includes('findRegex') || fieldName.includes('replaceString')) {
@@ -529,7 +528,7 @@ RULES:
 2. Do NOT change anything already in ${targetLang}, English, or code.
 3. Preserve ALL formatting, HTML, code, macros, EJS, regex patterns.
 4. CRITICAL — DO NOT TOUCH LINKS: Never translate or modify URLs, web links, file paths, image sources, src/href values, or import() paths — even if they contain Chinese characters. Translating any part of a link breaks it (404). Any token of the form __PROTECTED_URL_<number>__ is a protected link placeholder: copy it through EXACTLY as-is — do not translate, edit, space-out, or remove it.
-5. Translate Chinese proper nouns (names, places) using Sino-Vietnamese reading. Japanese names use Romaji transliteration. All descriptive text → natural modern Vietnamese.
+5. Translate Chinese proper nouns (names, places) using Sino-Vietnamese reading. Japanese names use Romaji transliteration. Korean names use Standard Revised Romanization (e.g. 金泰亨 → Kim Tae-hyung, 仁川 → Incheon), NOT Sino-Vietnamese. All descriptive text → natural modern Vietnamese.
 6. Do NOT wrap output in markdown fences.
 7. Do NOT add explanations.
 8. Return the FULL text, not just the translated fragments.
