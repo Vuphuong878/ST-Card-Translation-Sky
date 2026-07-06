@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useStore } from '../store';
-import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError, setExtraProviders, resetProviderPool } from '../utils/apiClient';
+import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError, ApiError, setExtraProviders, resetProviderPool } from '../utils/apiClient';
 import { extractTranslatableFields, applyTranslationsToCard, autoTranslateLorebookTriggerKeys, injectNewLorebookEntries } from '../utils/cardFields';
 import { syncMvuVariables, postProcessRegexHtml, normalizeSmartQuotesInCode, fixNestedQuoteBracketPaths, fixBrokenLodashPaths, fixDotNotationPaths, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency, enforceVariableCasing, fixZodSyntaxErrors, validateDictionaryConflicts, aiResolveMvuConflicts } from '../utils/mvuSync';
 import { shouldSkipTranslation, detectLanguage } from '../utils/langDetect';
@@ -818,17 +818,28 @@ export function useTranslation() {
         return 'error';
       }
 
-      // If it's a standard error but the field is chunk-eligible (meaning first chunk failed or single-chunk error on a large field)
+      // Auto-retry ở CẤP FIELD:
+      //  - field lớn (chunk-eligible): chunk đầu lỗi → thử lại (như cũ).
+      //  - LỖI TẠM THỜI (proxy/CDN 5xx như 524, timeout, mất mạng): thử lại DÙ field nhỏ,
+      //    thay vì skip luôn. Trước đây field nhỏ (không chunk) không được retry cấp field
+      //    nên gặp 524 là bỏ qua ngay — đúng lỗi user báo.
       const isChunked = charCount > CHUNK_THRESHOLD;
-      if (isChunked && currentRetries < maxChunkRetries) {
+      const isTransient =
+        (err instanceof ApiError && err.retryable) ||
+        /server error 5\d\d|http 5\d\d|\b52\d\b|timeout|timed out|fetch failed|failed to fetch|network|bodystreambuffer|econnreset|ngắt kết nối/i.test(msg);
+      if ((isChunked || isTransient) && currentRetries < maxChunkRetries) {
         store.updateField(field.path, { retries: currentRetries + 1 });
-        store.addLog('retry', `⚠️ Chunk translation failed at chunk 1. Auto-retrying (Attempt ${currentRetries + 1}/${maxChunkRetries})...`);
-        await new Promise((r) => setTimeout(r, store.proxy.retryDelay || 1000));
+        const why = isChunked ? 'Chunk 1 lỗi' : 'Lỗi tạm thời (proxy/mạng)';
+        store.addLog('retry', `⚠️ ${field.label}: ${why}. Tự thử lại (lần ${currentRetries + 1}/${maxChunkRetries})...`);
+        // Backoff tăng dần — cho proxy/CDN thời gian hồi phục khi bị 5xx/timeout.
+        await new Promise((r) => setTimeout(r, (store.proxy.retryDelay || 1000) * (currentRetries + 1)));
         return 'retry';
       }
 
-      store.updateField(field.path, { status: 'error', error: msg, retries: currentRetries + 1 });
-      store.addLog('error', `Failed: ${field.label} — ${msg}`);
+      // Cắt ngắn message trước khi log/lưu (phòng lỗi không phải ApiError vẫn dài).
+      const shortMsg = msg.length > 240 ? msg.replace(/\s+/g, ' ').slice(0, 240) + '…' : msg;
+      store.updateField(field.path, { status: 'error', error: shortMsg, retries: currentRetries + 1 });
+      store.addLog('error', `Failed: ${field.label} — ${shortMsg}`);
       store.addToast('error', `Failed: ${field.label}`);
       return 'error';
     }

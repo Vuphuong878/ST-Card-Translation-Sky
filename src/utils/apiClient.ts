@@ -26,6 +26,23 @@ export class ApiError extends Error {
 }
 
 /**
+ * Rút gọn body lỗi HTTP để hiển thị/log không bị nguyên trang HTML (vd trang lỗi 5xx của
+ * Cloudflare/CDN) làm xổ dài cả màn hình. Trang HTML → chỉ lấy <title> làm tóm tắt; JSON/text
+ * → gộp về 1 dòng và cắt ngắn.
+ */
+export function summarizeErrorBody(body: string, maxLen = 200): string {
+  if (!body) return '';
+  const trimmed = body.trim();
+  if (/^<(?:!doctype|html)\b/i.test(trimmed) || /<title[\s>]/i.test(trimmed)) {
+    const m = trimmed.match(/<title[^>]*>([^<]{1,120})<\/title>/i);
+    const title = m ? m[1].trim().replace(/\s+/g, ' ') : 'trang lỗi HTML';
+    return `${title} — proxy/CDN (đã lược bỏ HTML)`;
+  }
+  const oneLine = trimmed.replace(/\s+/g, ' ');
+  return oneLine.length > maxLen ? oneLine.slice(0, maxLen) + '…' : oneLine;
+}
+
+/**
  * ChunkError — thrown when a multi-chunk translation fails partway through.
  * Carries the successfully translated chunks so the caller can save partial progress.
  */
@@ -1143,8 +1160,8 @@ async function callOpenAICompatible(
     const errText = await res.text().catch(() => '');
     if (res.status === 401) throw new ApiError('Invalid API key', 401);
     if (res.status === 429) throw new ApiError('Rate limited (429)', 429, true);
-    if (res.status >= 500) throw new ApiError(`Server error ${res.status}: ${errText}`, res.status, true);
-    throw new ApiError(`HTTP ${res.status}: ${errText}`, res.status);
+    if (res.status >= 500) throw new ApiError(`Server error ${res.status}: ${summarizeErrorBody(errText)}`, res.status, true);
+    throw new ApiError(`HTTP ${res.status}: ${summarizeErrorBody(errText)}`, res.status);
   }
 
   if (!res.body) throw new ApiError('No response body from API');
@@ -1278,8 +1295,8 @@ async function callAnthropic(
     const errText = await res.text().catch(() => '');
     if (res.status === 401) throw new ApiError('Invalid API key', 401);
     if (res.status === 429) throw new ApiError('Rate limited (429)', 429, true);
-    if (res.status >= 500) throw new ApiError(`Server error ${res.status}: ${errText}`, res.status, true);
-    throw new ApiError(`HTTP ${res.status}: ${errText}`, res.status);
+    if (res.status >= 500) throw new ApiError(`Server error ${res.status}: ${summarizeErrorBody(errText)}`, res.status, true);
+    throw new ApiError(`HTTP ${res.status}: ${summarizeErrorBody(errText)}`, res.status);
   }
 
   if (!res.body) throw new ApiError('No response body from Anthropic API');
@@ -1412,8 +1429,8 @@ async function callGemini(
     const errText = await res.text().catch(() => '');
     if (res.status === 401 || res.status === 403) throw new ApiError('Invalid API key', res.status);
     if (res.status === 429) throw new ApiError('Rate limited (429)', 429, true);
-    if (res.status >= 500) throw new ApiError(`Server error ${res.status}: ${errText}`, res.status, true);
-    throw new ApiError(`HTTP ${res.status}: ${errText}`, res.status);
+    if (res.status >= 500) throw new ApiError(`Server error ${res.status}: ${summarizeErrorBody(errText)}`, res.status, true);
+    throw new ApiError(`HTTP ${res.status}: ${summarizeErrorBody(errText)}`, res.status);
   }
 
   if (!res.body) throw new ApiError('No response body from Gemini API');
@@ -4183,7 +4200,7 @@ export async function fetchModelsFromProxy(config: ProxySettings): Promise<strin
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
     if (res.status === 401) throw new ApiError('Invalid API key', 401);
-    throw new ApiError(`HTTP ${res.status}: ${errText || res.statusText}`, res.status);
+    throw new ApiError(`HTTP ${res.status}: ${summarizeErrorBody(errText) || res.statusText}`, res.status);
   }
 
   const data = await res.json();

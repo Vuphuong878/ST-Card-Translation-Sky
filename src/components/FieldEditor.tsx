@@ -856,11 +856,16 @@ const VirtualFieldTableRow = memo(({
             </div>
             {field.error && (
               <div
+                title={field.error}
                 style={{
                   fontSize: '0.65rem',
                   color: 'var(--accent-danger)',
                   marginTop: '4px',
                   wordBreak: 'break-word',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
                 }}
               >
                 {field.error}
@@ -1321,7 +1326,7 @@ const VirtualFieldCardRow = memo(({
         <RegexSimulatorToggle regexStr={field.translated || field.original} />
       )}
       {field.error && (
-        <div style={{ fontSize: '0.65rem', color: 'var(--accent-danger)', marginTop: '6px' }}>
+        <div title={field.error} style={{ fontSize: '0.65rem', color: 'var(--accent-danger)', marginTop: '6px', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {field.error}
         </div>
       )}

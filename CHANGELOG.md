@@ -2,6 +2,11 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.29.0 — Dịch Card: gọn hiển thị lỗi 5xx + tự retry (không skip)
+Sửa 2 vấn đề user báo khi proxy trả lỗi **524 (Cloudflare timeout)**:
+- **Hiển thị lỗi bị xổ dài:** trước đây nhồi nguyên trang HTML lỗi của Cloudflare vào dòng lỗi → xổ dài cả màn hình. Nay message lỗi HTTP được **rút gọn ở nguồn** (trang HTML → chỉ lấy tiêu đề, vd `524: A timeout occurred`), cộng **line-clamp 3 dòng** + tooltip đầy đủ khi rê chuột.
+- **Gặp 524 là skip luôn, không thử lại:** trước đây chỉ field lớn (chia chunk) mới auto-retry ở cấp field; field nhỏ gặp lỗi tạm thời là bỏ qua ngay. Nay **mọi lỗi tạm thời** (5xx/timeout/mất mạng) đều **tự thử lại** (kể cả field nhỏ), có log rõ + **backoff tăng dần** để proxy/CDN kịp hồi.
+
 ## v1.28.0 — Dịch Card: quy tắc phiên âm tên riêng tiếng Hàn (áp cho A/B/C)
 Theo yêu cầu client (PhatSiz), bổ sung **quy tắc phiên âm DANH TỪ RIÊNG** đầy đủ 4 nhóm, đặc biệt **tiếng Hàn** (trước đây thiếu):
 - **Trung** → âm Hán Việt cho tên riêng (vd 李明 → Lý Minh), không dùng Pinyin.
