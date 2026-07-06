@@ -135,29 +135,46 @@ export default defineConfig({
             return;
           }
 
-          // ─── Check for updates: fetch quietly, report how many commits behind + their notes ───
+          // ─── Check for updates ───
+          // QUAN TRỌNG: KHÔNG được nuốt lỗi git thành "đã mới nhất". Nếu không phải git clone,
+          // hoặc fetch lỗi, hoặc upstream chưa set → phải BÁO ĐÚNG lý do (ok:false) để UI hiển thị,
+          // nếu không client cứ tưởng đang ở bản mới nhất trong khi thực ra không kiểm tra được.
           if (req.url === '/api/check-update' && req.method === 'GET') {
             res.setHeader('Content-Type', 'application/json; charset=utf-8');
             res.setHeader('Cache-Control', 'no-cache');
-            // Unit separator (\x1f) between hash/subject, record separator (\x1e) between commits.
-            const cmd = 'git fetch --quiet && git log HEAD..@{u} --pretty=format:%h%x1f%s%x1e';
-            exec(cmd, { timeout: 20000, cwd: process.cwd() }, (err, stdout, stderr) => {
-              // Not a git repo / no upstream / offline → treat as "up to date" (never block the app).
+            const fail = (error: string) => res.end(JSON.stringify({ ok: false, behind: 0, commits: [], error }));
+
+            // B1: xác nhận là git repo + fetch origin (lấy ref mới nhất).
+            exec('git rev-parse --is-inside-work-tree && git fetch --quiet origin', { timeout: 25000, cwd: process.cwd() }, (err, _o, stderr) => {
               if (err) {
-                res.end(JSON.stringify({ ok: true, behind: 0, commits: [], note: (stderr || err.message || '').trim().slice(0, 200) }));
+                const reason = (stderr || err.message || '').trim();
+                if (/not a git repository/i.test(reason)) {
+                  fail('Thư mục này KHÔNG phải bản git clone (có thể bạn tải ZIP) → không thể tự cập nhật. Hãy dùng "git clone" hoặc tải lại bản mới nhất.');
+                } else if (/could not resolve host|network|timed out|unable to access|connection/i.test(reason)) {
+                  fail('Không kết nối được GitHub để kiểm tra cập nhật (mạng?). Chi tiết: ' + reason.slice(0, 200));
+                } else {
+                  fail('Không kiểm tra được cập nhật (git fetch lỗi): ' + reason.slice(0, 240));
+                }
                 return;
               }
-              const commits = String(stdout)
-                .split('\x1e')
-                .map((s) => s.trim())
-                .filter(Boolean)
-                .map((rec) => {
-                  const [hash, subject] = rec.split('\x1f');
-                  return { hash: (hash || '').trim(), subject: (subject || '').trim() };
+              // B2: xác định nhánh so sánh — upstream nếu có, không thì fallback origin/main.
+              exec('git rev-parse --abbrev-ref --symbolic-full-name "@{u}"', { cwd: process.cwd() }, (uErr, uOut) => {
+                const upstream = (!uErr && uOut.trim()) ? uOut.trim() : 'origin/main';
+                // B3: liệt kê commit local đang thiếu so với upstream.
+                const logCmd = `git log HEAD..${upstream} --pretty=format:%h%x1f%s%x1e`;
+                exec(logCmd, { timeout: 15000, cwd: process.cwd() }, (lErr, lOut, lStderr) => {
+                  if (lErr) {
+                    fail(`Không so sánh được với ${upstream}: ` + (lStderr || lErr.message || '').trim().slice(0, 200));
+                    return;
+                  }
+                  const commits = String(lOut)
+                    .split('\x1e').map((s) => s.trim()).filter(Boolean)
+                    .map((rec) => { const [hash, subject] = rec.split('\x1f'); return { hash: (hash || '').trim(), subject: (subject || '').trim() }; });
+                  let currentVersion = '';
+                  try { currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version || ''; } catch { /* ignore */ }
+                  res.end(JSON.stringify({ ok: true, behind: commits.length, commits, currentVersion, upstream }));
                 });
-              let currentVersion = '';
-              try { currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version || ''; } catch { /* ignore */ }
-              res.end(JSON.stringify({ ok: true, behind: commits.length, commits, currentVersion }));
+              });
             });
             return;
           }
@@ -167,7 +184,9 @@ export default defineConfig({
             res.setHeader('Cache-Control', 'no-cache');
             
             res.write('Đang tải bản mới nhất từ GitHub...\n');
-            const child = exec('git pull && npm install');
+            // Dùng "git pull origin main" (thay vì "git pull" trơn) để không phụ thuộc upstream
+            // đã set hay chưa — nhánh mặc định của repo là main.
+            const child = exec('git pull origin main && npm install');
             
             child.stdout?.on('data', (data) => {
               res.write(data);

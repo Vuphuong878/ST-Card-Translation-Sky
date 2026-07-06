@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, X, RefreshCw, Sparkles, Check } from 'lucide-react';
+import { Download, X, RefreshCw, Sparkles, Check, AlertTriangle } from 'lucide-react';
 import { APP_VERSION } from '../version';
 
 interface Commit { hash: string; subject: string; }
@@ -21,6 +21,7 @@ export default function HubUpdateButton() {
   const [behind, setBehind] = useState(0);
   const [checking, setChecking] = useState(false);
   const [log, setLog] = useState('');
+  const [error, setError] = useState('');
   const checkedOnce = useRef(false);
 
   const check = async (opts?: { openIfFound?: boolean; openAlways?: boolean }) => {
@@ -30,13 +31,22 @@ export default function HubUpdateButton() {
       if (r.ok) {
         const data = await r.json();
         if (data?.ok) {
+          setError('');
           setBehind(data.behind || 0);
           setCommits(Array.isArray(data.commits) ? data.commits : []);
           if (opts?.openAlways || (opts?.openIfFound && data.behind > 0)) setPhase('open');
           return data.behind || 0;
         }
+        // ok:false → không kiểm tra được (không phải git clone / fetch lỗi / offline). BÁO RÕ.
+        setError(String(data?.error || 'Không kiểm tra được cập nhật.'));
+        setBehind(0); setCommits([]);
+        if (opts?.openAlways) setPhase('open');
+        return 0;
       }
-    } catch { /* dev server not present */ }
+    } catch {
+      setError('Không gọi được API kiểm tra cập nhật (server dev chưa chạy?).');
+      if (opts?.openAlways) setPhase('open');
+    }
     finally { setChecking(false); }
     return 0;
   };
@@ -81,7 +91,7 @@ export default function HubUpdateButton() {
       {/* ─── Rail button ─── */}
       <button
         onClick={() => check({ openAlways: true })}
-        title={hasUpdate ? `Có ${behind} cập nhật mới — bấm để xem` : 'Kiểm tra cập nhật'}
+        title={hasUpdate ? `Có ${behind} cập nhật mới — bấm để xem` : error ? `Không kiểm tra được: ${error}` : 'Kiểm tra cập nhật'}
         style={{
           position: 'relative',
           width: 64,
@@ -126,7 +136,7 @@ export default function HubUpdateButton() {
               <Sparkles size={18} style={{ color: 'var(--accent-secondary, #4ecdc4)' }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary, #f1f0f7)' }}>
-                  {phase === 'updating' ? 'Đang cập nhật…' : phase === 'done' ? 'Cập nhật xong' : hasUpdate ? `Có ${behind} cập nhật mới` : 'Đã là bản mới nhất'}
+                  {phase === 'updating' ? 'Đang cập nhật…' : phase === 'done' ? 'Cập nhật xong' : hasUpdate ? `Có ${behind} cập nhật mới` : error ? 'Không kiểm tra được cập nhật' : 'Đã là bản mới nhất'}
                 </div>
                 <div style={{ fontSize: '0.68rem', color: 'var(--text-muted, #9b98ae)' }}>Bản hiện tại: v{APP_VERSION} · cập nhật 1 lần cho cả 5 tool</div>
               </div>
@@ -145,9 +155,19 @@ export default function HubUpdateButton() {
                   ))}
                 </ul>
               )}
-              {phase === 'open' && !hasUpdate && (
+              {phase === 'open' && !hasUpdate && !error && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary, #c8c5d8)', fontSize: '0.85rem' }}>
                   <Check size={16} style={{ color: '#22c55e' }} /> Không có commit mới. Bạn đang ở bản mới nhất.
+                </div>
+              )}
+              {phase === 'open' && !hasUpdate && !!error && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.82rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, color: '#fbbf24' }}>
+                    <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} /> <span>{error}</span>
+                  </div>
+                  <div style={{ color: 'var(--text-muted, #b6b2c9)', fontSize: '0.75rem', lineHeight: 1.5 }}>
+                    Cách xử lý: mở thư mục cài đặt, chạy <code style={{ color: 'var(--accent-secondary)' }}>git pull origin main</code> một lần rồi khởi động lại. Nếu chưa từng <code style={{ color: 'var(--accent-secondary)' }}>git clone</code> (tải ZIP) thì nút cập nhật không hoạt động được.
+                  </div>
                 </div>
               )}
               {(phase === 'updating' || phase === 'done') && (
