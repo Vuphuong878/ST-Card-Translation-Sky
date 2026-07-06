@@ -431,6 +431,35 @@ OUTPUT FORMAT (JSON):
 }
 `;
 
+export const MVUZOD_VAR_REMAP_PROMPT = `
+Bạn đang MOD một card MVU-ZOD. Nhiệm vụ: theo YÊU CẦU người dùng, ĐỔI TÊN và/hoặc ĐỔI NGHĨA (mô tả) các BIẾN trong schema cho phù hợp.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+YÊU CẦU NGƯỜI DÙNG:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{USER_REQUEST}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DANH SÁCH BIẾN HIỆN CÓ (key | type | mô tả | enum):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{VARIABLE_LIST}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUY TẮC:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- CHỈ đổi biến THỰC SỰ cần theo yêu cầu; biến không liên quan → BỎ QUA (không liệt kê).
+- Tên mới phải HỢP LỆ với code (không dấu cách/ký tự lạ; nên dùng chữ/số/gạch dưới). Giữ nguyên type.
+- Nghĩa mới (describe) ngắn gọn, rõ. Nếu chỉ đổi nghĩa mà giữ tên → new_name = tên cũ.
+- KHÔNG bịa biến mới không có trong danh sách.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — CHỈ XUẤT ĐÚNG KHỐI XML dưới đây (không giải thích, KHÔNG JSON, KHÔNG markdown):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<remap>
+<var><old>ten_key_cu</old><new_name>ten_key_moi</new_name><new_desc>mô tả mới (để trống nếu không đổi nghĩa)</new_desc></var>
+</remap>
+`;
+
 export const MVUZOD_VALIDATE_PROMPT = `
 Kiểm tra toàn vẹn MVU-ZOD card sau khi mod. Phát hiện inconsistency giữa các layers.
 

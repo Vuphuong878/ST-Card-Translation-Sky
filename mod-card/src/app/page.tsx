@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import FileUploader from '@/components/FileUploader';
 import ModRulesManager, { ModRule } from '@/components/ModRulesManager';
+import VarRemapPanel from '@/components/VarRemapPanel';
 import { CardV3 } from '@/types/card';
 import { LLMConfig } from '@/lib/llm';
 import { usePersistedState } from '@/lib/usePersistedState';
@@ -303,6 +304,18 @@ export default function Home() {
                 ))}
               </div>
             </div>
+          )}
+
+          {isMvuCard && card && (
+            <VarRemapPanel
+              card={card}
+              llmConfig={llmConfig}
+              onApplied={(newCard, count) => {
+                setModdedCard(newCard);
+                setProcessStatus(`Đã đổi ${count} biến MVU-Zod. Xem tab So sánh / Xuất file.`);
+                setActiveTab('diff');
+              }}
+            />
           )}
 
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">

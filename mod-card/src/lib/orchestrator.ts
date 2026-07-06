@@ -1,7 +1,24 @@
 import { CardV3 } from '../types/card';
-import { CardParser } from './parser';
+import { CardParser, VariableRemap } from './parser';
 import { LLMConfig } from './llm';
-import { SYSTEM_PROMPT, ANALYZE_CARD_PROMPT, MOD_SECTION_PROMPT, MOD_SCRIPT_PROMPT, KEYWORD_SYNC_PROMPT, CONSISTENCY_AUDIT_PROMPT, VALIDATE_CARD_PROMPT, MVUZOD_NARRATIVE_MOD_PROMPT, MVUZOD_VALIDATE_PROMPT } from './prompts';
+import { SYSTEM_PROMPT, ANALYZE_CARD_PROMPT, MOD_SECTION_PROMPT, MOD_SCRIPT_PROMPT, KEYWORD_SYNC_PROMPT, CONSISTENCY_AUDIT_PROMPT, VALIDATE_CARD_PROMPT, MVUZOD_NARRATIVE_MOD_PROMPT, MVUZOD_VALIDATE_PROMPT, MVUZOD_VAR_REMAP_PROMPT } from './prompts';
+
+/** Parse khoan dung khối <remap> XML từ AI → danh sách đổi biến. */
+function parseRemapXml(text: string): VariableRemap[] {
+  const block = /<remap>([\s\S]*?)<\/remap>/i.exec(text)?.[1] ?? text;
+  const tag = (s: string, t: string) => new RegExp(`<${t}>([\\s\\S]*?)</${t}>`, 'i').exec(s)?.[1]?.trim() ?? '';
+  const out: VariableRemap[] = [];
+  const re = /<var>([\s\S]*?)<\/var>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(block)) !== null) {
+    const oldKey = tag(m[1], 'old');
+    if (!oldKey) continue;
+    const newName = tag(m[1], 'new_name');
+    const newDesc = tag(m[1], 'new_desc');
+    out.push({ oldKey, newKey: newName || oldKey, newDescribe: newDesc || undefined });
+  }
+  return out;
+}
 
 export interface OrchestratorRule {
   id: string;
@@ -278,6 +295,31 @@ export class ModOrchestrator {
       }
     }
     return response;
+  }
+
+  /**
+   * MOD BIẾN MVU-ZOD: gom biến schema → AI đề xuất đổi tên/nghĩa theo yêu cầu (output XML, chia lô).
+   * Trả về danh sách remap để user duyệt; áp bằng CardParser.applyVariableRemap (deterministic).
+   */
+  async remapMvuVariables(card: CardV3, userRequest: string): Promise<VariableRemap[]> {
+    const infos = CardParser.extractVariableInfos(card);
+    if (infos.length === 0) return [];
+    const BATCH = 60;
+    const results: VariableRemap[] = [];
+    for (let i = 0; i < infos.length; i += BATCH) {
+      const batch = infos.slice(i, i + BATCH);
+      const list = batch
+        .map(v => `- ${v.key} | ${v.type} | ${v.describe || '(chưa có mô tả)'}${v.enumValues.length ? ' | enum: ' + v.enumValues.join(', ') : ''}`)
+        .join('\n');
+      const userPrompt = MVUZOD_VAR_REMAP_PROMPT
+        .replace('{USER_REQUEST}', userRequest)
+        .replace('{VARIABLE_LIST}', list);
+      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
+      results.push(...parseRemapXml(response));
+    }
+    // Chỉ giữ remap có oldKey là biến THẬT + thực sự thay đổi.
+    const valid = new Set(infos.map(v => v.key));
+    return results.filter(r => valid.has(r.oldKey) && ((r.newKey && r.newKey !== r.oldKey) || r.newDescribe));
   }
 
   async syncKeywords(card: CardV3, rules: OrchestratorRule[], moddedEntries: { index: number; content: string }[]) {
