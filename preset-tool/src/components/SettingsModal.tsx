@@ -246,6 +246,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   </button>
                 </div>
               </div>
+
+              {/* Provider phụ (xoay vòng qua nhiều account) */}
+              <div className="pt-4 border-t border-gray-700">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-gray-300">🔀 Provider phụ (xoay vòng)</label>
+                  <button
+                    onClick={() => setSettings(p => ({ ...p, extraProviders: [...(p.extraProviders || []), { enabled: true, useProxy: p.useProxy, apiKey: '', proxyUrl: p.proxyUrl, proxyKey: '', selectedModel: '' }] }))}
+                    className="text-xs text-purple-400 font-bold hover:text-purple-300">+ Thêm</button>
+                </div>
+                <p className="text-[11px] text-gray-500 mb-2 leading-snug">Rải call round-robin cùng provider chính → dàn rate-limit qua nhiều account. (Chat tuần tự nên không tăng tốc song song.)</p>
+                {(settings.extraProviders || []).map((e, i) => {
+                  const upd = (patch: Partial<typeof e>) => setSettings(p => ({ ...p, extraProviders: (p.extraProviders || []).map((x, idx) => idx === i ? { ...x, ...patch } : x) }));
+                  const del = () => setSettings(p => ({ ...p, extraProviders: (p.extraProviders || []).filter((_, idx) => idx !== i) }));
+                  const inp = "w-full text-xs bg-gray-900 border border-gray-600 rounded px-2 py-1 text-gray-100 placeholder-gray-500";
+                  return (
+                    <div key={i} className="border border-gray-700 rounded-lg p-2 mb-2 space-y-1.5 bg-gray-800/40">
+                      <div className="flex items-center gap-2 text-xs">
+                        <input type="checkbox" checked={e.enabled} onChange={ev => upd({ enabled: ev.target.checked })} />
+                        <span className="font-bold text-gray-300">Provider #{i + 2}</span>
+                        <label className="flex items-center gap-1 ml-2 text-gray-400 cursor-pointer"><input type="checkbox" checked={e.useProxy} onChange={ev => upd({ useProxy: ev.target.checked })} /> Proxy</label>
+                        <button onClick={del} className="ml-auto text-red-400 font-bold hover:text-red-300">Xoá</button>
+                      </div>
+                      {e.useProxy ? (
+                        <>
+                          <input value={e.proxyUrl} onChange={ev => upd({ proxyUrl: ev.target.value })} placeholder="Proxy URL (…/v1)" className={inp} />
+                          <input type="password" value={e.proxyKey} onChange={ev => upd({ proxyKey: ev.target.value })} placeholder="Proxy Key" className={inp} />
+                        </>
+                      ) : (
+                        <input type="password" value={e.apiKey} onChange={ev => upd({ apiKey: ev.target.value })} placeholder="Gemini API Key" className={inp} />
+                      )}
+                      <input value={e.selectedModel} onChange={ev => upd({ selectedModel: ev.target.value })} placeholder="Model (vd gemini-2.5-flash)" className={inp} />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

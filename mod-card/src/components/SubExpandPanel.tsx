@@ -9,9 +9,10 @@ import { ModOrchestrator, extractSections, applyModification } from '@/lib/orche
  * Đào sâu 1 PHẦN NHỎ trong 1 section (vd mở rộng chi tiết block <Appearance> trong Mô tả).
  * Tự chứa: chọn section → nêu phần cần đào sâu + yêu cầu → xem trước → áp vào thẻ.
  */
-export default function SubExpandPanel({ card, llmConfig, onApplied }: {
+export default function SubExpandPanel({ card, llmConfig, extraProviders = [], onApplied }: {
   card: CardV3;
   llmConfig: LLMConfig;
+  extraProviders?: LLMConfig[];
   onApplied: (newCard: CardV3) => void;
 }) {
   const sections = useMemo(() => extractSections(card).filter(s => !s.is_code), [card]);
@@ -30,7 +31,7 @@ export default function SubExpandPanel({ card, llmConfig, onApplied }: {
     if (!subMarker.trim()) { setError('Nêu phần cần đào sâu (vd: <Appearance> hoặc "Ngoại hình").'); return; }
     setLoading(true); setError(''); setResult('');
     try {
-      const out = await new ModOrchestrator(llmConfig).expandSubSection(card, section.content, subMarker.trim(), instruction.trim());
+      const out = await new ModOrchestrator(llmConfig, extraProviders).expandSubSection(card, section.content, subMarker.trim(), instruction.trim());
       setResult(out);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

@@ -71,6 +71,16 @@ export interface ChatMessage {
   }[];
 }
 
+/** Provider PHỤ (xoay vòng cùng provider chính) — chỉ field nhận diện provider. */
+export interface ExtraProvider {
+  enabled: boolean;
+  useProxy: boolean;
+  apiKey: string;
+  proxyUrl: string;
+  proxyKey: string;
+  selectedModel: string;
+}
+
 export interface APISettings {
   useProxy: boolean;
   apiKey: string;
@@ -82,6 +92,9 @@ export interface APISettings {
   keepContext: boolean;
   systemPromptAddition: string;
   customModels: string[];
+  // Đa provider: rải call round-robin cùng provider chính (mỗi lượt chat đổi provider → rải
+  // rate-limit qua nhiều account). Chat tuần tự nên chỉ tăng sức chứa, không tăng tốc song song.
+  extraProviders?: ExtraProvider[];
 }
 
 export interface Project {

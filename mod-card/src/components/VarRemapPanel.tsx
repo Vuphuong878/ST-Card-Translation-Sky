@@ -12,9 +12,10 @@ interface Row extends VariableRemap { include: boolean; }
  * MOD BIẾN MVU-ZOD: nhập yêu cầu → AI đề xuất đổi tên/nghĩa biến → duyệt/sửa từng dòng → áp dụng
  * (đổi đồng bộ schema + getvar + initvar + mvu_update). Áp deterministic (không nhờ AI ghép JSON lớn).
  */
-export default function VarRemapPanel({ card, llmConfig, onApplied }: {
+export default function VarRemapPanel({ card, llmConfig, extraProviders = [], onApplied }: {
   card: CardV3;
   llmConfig: LLMConfig;
+  extraProviders?: LLMConfig[];
   onApplied: (newCard: CardV3, count: number) => void;
 }) {
   const [request, setRequest] = useState('');
@@ -30,7 +31,7 @@ export default function VarRemapPanel({ card, llmConfig, onApplied }: {
     if (!request.trim()) { setError('Nhập yêu cầu đổi tên/nghĩa biến trước.'); return; }
     setLoading(true); setError(''); setRows([]); setApplied(false);
     try {
-      const remaps = await new ModOrchestrator(llmConfig).remapMvuVariables(card, request.trim());
+      const remaps = await new ModOrchestrator(llmConfig, extraProviders).remapMvuVariables(card, request.trim());
       if (remaps.length === 0) { setError('AI không đề xuất đổi biến nào (yêu cầu không khớp biến, hoặc parse rỗng). Thử diễn đạt lại.'); }
       setRows(remaps.map(r => ({ ...r, include: true })));
     } catch (e) {

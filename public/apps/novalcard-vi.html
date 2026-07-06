@@ -641,7 +641,16 @@ function gbase(){
   if(!b) throw new Error("Vui lòng điền Base URL trước");
   return b.replace(/\/v1beta$/,"").replace(/\/v1$/,"");
 }
-function gheaders(){ return { "Content-Type":"application/json", "x-goog-api-key":els.apiKey.value.trim() }; }
+// Đa-key: nhập nhiều key (cách nhau bằng dấu phẩy hoặc xuống dòng) → mỗi call xoay vòng 1 key
+// → rải rate-limit qua nhiều key/account (tương đương "đa luồng" bên các app kia).
+let _keyRR=0;
+function pickApiKey(){
+  const raw=els.apiKey.value||"";
+  const keys=raw.split(/[\n,]+/).map(k=>k.trim()).filter(Boolean);
+  if(keys.length<=1) return raw.trim();
+  return keys[(_keyRR++)%keys.length];
+}
+function gheaders(){ return { "Content-Type":"application/json", "x-goog-api-key":pickApiKey() }; }
 // 夹取 max_tokens：填得过大（如几百万）某些接口会直接返回空/报错，这里限到合理上限
 function clampTok(n){ n=parseInt(n)||1500; if(n<256) n=256; if(n>200000) n=200000; return n; }
 function toGemini(messages,maxTokens){
@@ -695,7 +704,7 @@ async function chat(messages, {maxTokens=1500, signal}={}){
   if(fmt()==="gemini") return geminiChat(messages,{maxTokens,signal});
   const res=await fetchWithTimeout(endpoint(),{
     method:"POST",signal,
-    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+els.apiKey.value.trim() },
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+pickApiKey() },
     body:JSON.stringify({
       model:els.model.value.trim(),
       messages,
@@ -828,12 +837,12 @@ $("fetchModels").onclick=async()=>{
   try{
     let ids;
     if(fmt()==="gemini"){
-      const res=await fetch(gbase()+"/v1beta/models", { headers:{ "x-goog-api-key":els.apiKey.value.trim() } });
+      const res=await fetch(gbase()+"/v1beta/models", { headers:{ "x-goog-api-key":pickApiKey() } });
       if(!res.ok){ let t=""; try{t=await res.text();}catch(e){} throw new Error("HTTP "+res.status+" "+t.slice(0,200)); }
       const data=await res.json();
       ids=(data.models||[]).map(m=>(m.name||"").replace(/^models\//,"")).filter(Boolean);
     }else{
-      const res=await fetch(modelsEndpoint(),{ headers:{ "Authorization":"Bearer "+els.apiKey.value.trim() } });
+      const res=await fetch(modelsEndpoint(),{ headers:{ "Authorization":"Bearer "+pickApiKey() } });
       if(!res.ok){ let t=""; try{t=await res.text();}catch(e){} throw new Error("HTTP "+res.status+" "+t.slice(0,200)); }
       const data=await res.json();
       let list = Array.isArray(data) ? data : (data.data || data.models || []);
@@ -1490,7 +1499,7 @@ async function chatStream(messages,{maxTokens=4000,onDelta,signal}={}){
   if(fmt()==="gemini") return geminiStream(messages,{maxTokens,onDelta,signal});
   const res=await fetchWithTimeout(endpoint(),{
     method:"POST",signal,
-    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+els.apiKey.value.trim() },
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+pickApiKey() },
     body:JSON.stringify({
       model:els.model.value.trim(), messages,
       temperature:parseFloat(els.temp.value)||0.4,

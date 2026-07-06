@@ -5,6 +5,7 @@ import FileUploader from '@/components/FileUploader';
 import ModRulesManager, { ModRule } from '@/components/ModRulesManager';
 import VarRemapPanel from '@/components/VarRemapPanel';
 import SubExpandPanel from '@/components/SubExpandPanel';
+import ExtraProvidersPanel from '@/components/ExtraProvidersPanel';
 import { CardV3 } from '@/types/card';
 import { LLMConfig } from '@/lib/llm';
 import { usePersistedState } from '@/lib/usePersistedState';
@@ -43,6 +44,8 @@ export default function Home() {
     model: 'gemini-1.5-pro-latest',
     customUrl: ''
   });
+  // Đa provider: các provider PHỤ chạy song song với llmConfig (rải call round-robin).
+  const [extraProviders, setExtraProviders] = usePersistedState<LLMConfig[]>('modcard.extraProviders', []);
 
   const [scannedModels, setScannedModels] = useState<string[]>([]);
   const [isScanningModels, setIsScanningModels] = useState(false);
@@ -166,7 +169,7 @@ export default function Home() {
     }
 
     try {
-      const orchestrator = new ModOrchestrator(llmConfig);
+      const orchestrator = new ModOrchestrator(llmConfig, extraProviders);
       
       // Step 2: Analyze
       setProcessStatus('Giai đoạn 2: Đang gọi LLM phân tích thẻ (Analyze Phase)...');
@@ -316,6 +319,7 @@ export default function Home() {
             <VarRemapPanel
               card={card}
               llmConfig={llmConfig}
+              extraProviders={extraProviders}
               onApplied={(newCard, count) => {
                 setModdedCard(newCard);
                 setProcessStatus(`Đã đổi ${count} biến MVU-Zod. Xem tab So sánh / Xuất file.`);
@@ -341,6 +345,7 @@ export default function Home() {
             <SubExpandPanel
               card={moddedCard || card}
               llmConfig={llmConfig}
+              extraProviders={extraProviders}
               onApplied={(newCard) => {
                 setModdedCard(newCard);
                 setProcessStatus('Đã đào sâu 1 phần. Xem tab So sánh / Xuất file.');
@@ -688,6 +693,8 @@ export default function Home() {
                         />
                       </div>
                     </div>
+
+                    <ExtraProvidersPanel providers={extraProviders} onChange={setExtraProviders} />
 
                   </div>
                 </div>

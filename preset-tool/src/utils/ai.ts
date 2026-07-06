@@ -124,13 +124,27 @@ HƯỚNG DẪN OUTPUT:
 ${customAddition}
 `;
 
+// ─── Đa provider: rải call round-robin cùng provider chính + các extraProviders bật ───
+let _providerCursor = 0;
+function pickProvider(s: APISettings): APISettings {
+  const extras = (s.extraProviders || []).filter(e => e.enabled && (e.apiKey?.trim() || e.proxyKey?.trim()) && e.selectedModel?.trim());
+  if (extras.length === 0) return s;
+  const pool = extras.length + 1; // +1 = provider chính
+  const idx = _providerCursor % pool;
+  _providerCursor = (_providerCursor + 1) % pool;
+  if (idx === 0) return s;
+  const e = extras[idx - 1];
+  return { ...s, useProxy: e.useProxy, apiKey: e.apiKey, proxyUrl: e.proxyUrl, proxyKey: e.proxyKey, selectedModel: e.selectedModel };
+}
+
 export async function callAI(
   userMessage: string,
   history: ChatMessage[],
-  settings: APISettings,
+  settings0: APISettings,
   projectContext: string,
   referencedContext: string
 ): Promise<string> {
+  const settings = pickProvider(settings0);
   const isDirect = !settings.useProxy;
   const systemPrompt = buildSystemPrompt(projectContext, referencedContext, settings.systemPromptAddition);
 
