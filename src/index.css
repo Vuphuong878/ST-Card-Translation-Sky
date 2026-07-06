@@ -13,11 +13,11 @@
   --border-default: #363650;
   --border-strong: #4a4a6a;
 
-  --text-primary: #f1f0f7;
+  --text-primary: #f4f3f9;
   /* Brightened for legibility on the dark UI — the old values (#a09cb5 / #6b6880)
      were hard to read in the live translation panels (RPM, call labels, stats). */
-  --text-secondary: #c8c5d8;
-  --text-muted: #9b98ae;
+  --text-secondary: #d6d3e4;
+  --text-muted: #b6b2c9;
   --text-inverse: #0f0f14;
 
   --accent-primary: #7c6af0;

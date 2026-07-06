@@ -91,3 +91,8 @@ body {
   animation: none !important;
   scroll-behavior: auto !important;
 }
+
+/* Legibility: chữ mờ (gray-400/500) trên nền tối quá tối — làm sáng cho dễ đọc.
+   Đồng bộ với việc làm sáng muted ở các app khác. */
+.text-gray-500 { color: #9aa4b3 !important; }
+.text-gray-400 { color: #b8c0cc !important; }

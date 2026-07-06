@@ -5,7 +5,7 @@ import { RotateCw, ExternalLink } from 'lucide-react';
 import HubUpdateButton from './components/HubUpdateButton';
 import { APP_VERSION } from './version';
 
-const RAIL_WIDTH = 66;
+const RAIL_WIDTH = 78;
 const LS_KEY = 'hub-active-flow';
 
 /**
@@ -94,11 +94,11 @@ function GlobalHeader({ activeFlow }: { activeFlow?: FlowDef }) {
     <header
       style={{
         flexShrink: 0,
-        height: 46,
+        height: 54,
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        padding: '0 16px',
+        gap: 13,
+        padding: '0 18px',
         background: 'linear-gradient(90deg, var(--bg-secondary, #16161e) 0%, #191826 100%)',
         borderBottom: '1px solid var(--border-subtle, #2a2a3e)',
         fontFamily: 'var(--font-sans)',
@@ -107,27 +107,27 @@ function GlobalHeader({ activeFlow }: { activeFlow?: FlowDef }) {
       {/* Logo mark */}
       <div
         style={{
-          width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+          width: 32, height: 32, borderRadius: 8, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 15, fontWeight: 800, color: '#0f0f14',
+          fontSize: 17, fontWeight: 800, color: '#0f0f14',
           background: 'linear-gradient(135deg, #7c6af0, #4ecdc4)',
-          boxShadow: '0 0 10px rgba(124,106,240,0.5)',
+          boxShadow: '0 0 12px rgba(124,106,240,0.55)',
         }}
       >
         ST
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-        <span style={{ fontSize: '0.98rem', fontWeight: 800, letterSpacing: 0.3, whiteSpace: 'nowrap',
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, minWidth: 0 }}>
+        <span style={{ fontSize: '1.18rem', fontWeight: 800, letterSpacing: 0.3, whiteSpace: 'nowrap',
           background: 'linear-gradient(90deg, #a99cff, #4ecdc4)', WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
           Silly Tavern Multitools
         </span>
-        <span style={{ fontSize: '0.66rem', color: 'var(--text-muted, #9b98ae)' }}>v{APP_VERSION}</span>
+        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted, #b6b2c9)' }}>v{APP_VERSION}</span>
       </div>
       {activeFlow && (
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6,
-          fontSize: '0.72rem', color: activeFlow.color || 'var(--text-secondary, #a09cb5)', fontWeight: 600 }}>
-          <span style={{ fontSize: '0.95rem' }}>{activeFlow.emoji}</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7,
+          fontSize: '0.86rem', color: activeFlow.color || 'var(--text-secondary, #d6d3e4)', fontWeight: 600 }}>
+          <span style={{ fontSize: '1.2rem' }}>{activeFlow.emoji}</span>
           <span>{activeFlow.label}</span>
         </div>
       )}
@@ -158,8 +158,8 @@ function RailButton({ flow, active, onClick }: { flow: FlowDef; active: boolean;
       onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--bg-hover, #2a2a3e)'; }}
       onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
     >
-      <span style={{ fontSize: '1.15rem', lineHeight: 1 }}>{flow.emoji}</span>
-      <span style={{ fontSize: '0.55rem', fontWeight: 700, textAlign: 'center', lineHeight: 1.1 }}>{flow.label}</span>
+      <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{flow.emoji}</span>
+      <span style={{ fontSize: '0.68rem', fontWeight: 700, textAlign: 'center', lineHeight: 1.15 }}>{flow.label}</span>
     </button>
   );
 }
@@ -210,23 +210,25 @@ function IframeFlow({ flow, active }: { flow: FlowDef; active: boolean }) {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          padding: '5px 10px',
+          gap: '12px',
+          padding: '8px 14px',
           borderBottom: '1px solid var(--border-subtle, #2a2a3e)',
           background: 'var(--bg-secondary, #16161e)',
-          fontSize: '0.68rem',
-          color: 'var(--text-muted, #9b98ae)',
+          fontSize: '0.85rem',
+          color: 'var(--text-muted, #b6b2c9)',
           flexShrink: 0,
         }}
       >
-        <span style={{ fontWeight: 700, color: flow.color || 'var(--accent-primary)' }}>{flow.emoji} {flow.label}</span>
-        <span style={{ opacity: 0.8 }}>{ready ? 'Nếu trống → bấm Tải lại.' : 'Đang chờ server khởi động…'}</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: flow.color || 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: '1.15rem' }}>{flow.emoji}</span> {flow.label}
+        </span>
+        <span style={{ opacity: 0.85 }}>{ready ? 'Nếu trống → bấm Tải lại.' : 'Đang chờ server khởi động…'}</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
           <button onClick={reload} title="Tải lại" style={toolbarBtn}>
-            <RotateCw size={13} /> Tải lại
+            <RotateCw size={16} /> Tải lại
           </button>
           <a href={url} target="_blank" rel="noreferrer" title="Mở tab mới" style={{ ...toolbarBtn, textDecoration: 'none' }}>
-            <ExternalLink size={13} /> Tab mới
+            <ExternalLink size={16} /> Tab mới
           </a>
         </div>
       </div>
@@ -241,11 +243,11 @@ function IframeFlow({ flow, active }: { flow: FlowDef; active: boolean }) {
       ) : (
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: 12, color: 'var(--text-muted, #9b98ae)', fontSize: '0.85rem',
+          gap: 12, color: 'var(--text-muted, #b6b2c9)', fontSize: '0.95rem',
         }}>
-          <RotateCw size={22} className="spin" style={{ color: flow.color || 'var(--accent-primary)' }} />
+          <RotateCw size={24} className="spin" style={{ color: flow.color || 'var(--accent-primary)' }} />
           <div>Đang chờ server <b>{flow.label}</b> khởi động ({url.replace('http://', '')})…</div>
-          <div style={{ fontSize: '0.72rem', opacity: 0.8 }}>Lần đầu chạy start.bat có thể mất ~30s để cài đặt.</div>
+          <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>Lần đầu chạy start.bat có thể mất ~30s để cài đặt.</div>
         </div>
       )}
     </div>
@@ -255,13 +257,13 @@ function IframeFlow({ flow, active }: { flow: FlowDef; active: boolean }) {
 const toolbarBtn: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '4px',
-  padding: '3px 8px',
-  fontSize: '0.66rem',
+  gap: '6px',
+  padding: '6px 12px',
+  fontSize: '0.82rem',
   fontWeight: 600,
   border: '1px solid var(--border-subtle, #2a2a3e)',
-  borderRadius: 6,
+  borderRadius: 7,
   background: 'var(--bg-elevated, #252536)',
-  color: 'var(--text-secondary, #a09cb5)',
+  color: 'var(--text-secondary, #d6d3e4)',
   cursor: 'pointer',
 };

@@ -84,12 +84,12 @@ export default function HubUpdateButton() {
         title={hasUpdate ? `Có ${behind} cập nhật mới — bấm để xem` : 'Kiểm tra cập nhật'}
         style={{
           position: 'relative',
-          width: 52,
-          padding: '8px 2px',
+          width: 64,
+          padding: '9px 2px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: 3,
+          gap: 4,
           border: '1.5px solid ' + (hasUpdate ? '#39ff14' : '#00e5ff'),
           borderRadius: 10,
           background: hasUpdate ? 'rgba(57,255,20,0.15)' : 'rgba(0,229,255,0.10)',
@@ -104,9 +104,9 @@ export default function HubUpdateButton() {
         className={hasUpdate ? 'hub-update-pulse' : 'hub-update-glow'}
       >
         {checking
-          ? <RefreshCw size={18} className="spin" />
-          : <Download size={18} />}
-        <span style={{ fontSize: '0.52rem', fontWeight: 700, lineHeight: 1.1 }}>
+          ? <RefreshCw size={20} className="spin" />
+          : <Download size={20} />}
+        <span style={{ fontSize: '0.62rem', fontWeight: 700, lineHeight: 1.15 }}>
           {hasUpdate ? 'Có bản mới' : 'Cập nhật'}
         </span>
         {hasUpdate && (
