@@ -927,13 +927,17 @@ async function chat(messages, {maxTokens=1500, signal, charCount, conn, meta}={}
   const data=await res.json();
   const choice=data?.choices?.[0];
   const msg=choice?.message?.content;
-  if(msg==null){
+  const fr0=(choice?.finish_reason||"").toString();
+  const textOut = msg==null ? "" : (Array.isArray(msg)? msg.map(p=>p.text||"").join("") : String(msg));
+  if(msg==null || textOut.trim()===""){
     if(choice?.message?.reasoning_content!=null)
       throw new Error("Mô hình chỉ phản hồi suy nghĩ (Thinking), không có văn bản chính — Có thể max_tokens quá nhỏ đã bị dùng hết cho phần suy nghĩ. Vui lòng tăng max_tokens (Mô hình suy nghĩ nên đặt trên 10,000) hoặc đổi sang mô hình không suy nghĩ (như dòng Flash).");
-    throw new Error("Phản hồi rỗng: "+JSON.stringify(data).slice(0,200));
+    // Rỗng — thường do bộ lọc an toàn / kiểm duyệt chặn (nhất là nội dung NSFW). Ném lỗi "bị lọc"
+    // để retry() thử lại (qua pool sẽ đổi lane/model → có thể lọt).
+    throw new Error("Phản hồi RỖNG (có thể bị bộ lọc an toàn chặn"+(/content_filter|safety|prohibited/i.test(fr0)?(" — "+fr0):"")+"). Đang thử lại…");
   }
-  const fin=choice?.finish_reason||""; lastFinish=fin; if(meta) meta.finish=fin;
-  return Array.isArray(msg)? msg.map(p=>p.text||"").join("") : msg;
+  const fin=fr0; lastFinish=fin; if(meta) meta.finish=fin;
+  return textOut;
 }
 
 // 记录上一次请求的结束原因（用于检测 max_tokens 截断）
@@ -979,18 +983,22 @@ function setRunning(btn,on){
   }
 }
 function isAbort(e,signal){ return (signal&&signal.aborted) || (e&&(e.name==="AbortError"||/abort/i.test(e.message||""))); }
-async function retry(fn,{tries=3,onWait}={}){
+async function retry(fn,{tries=6,onWait}={}){
   let last;
   for(let i=0;i<tries;i++){
     try{ return await fn(); }
     catch(e){
       last=e;
       if(isAbort(e)) throw e;                                   // 用户中止：不重试
-      const httpm=/HTTP (429|5\d\d)/.exec(e.message||"");
-      const neterr = e.name==="TypeError" || /failed to fetch|load failed|network\s*error|请求超时|timeout/i.test(e.message||"");
-      if((!httpm && !neterr) || i===tries-1) throw e;           // 非可重试错误 / 已到上限
-      const code = httpm? httpm[1] : "Lỗi mạng";
-      const wait=2000*(i+1);
+      const msg=e.message||"";
+      const httpm=/HTTP (429|5\d\d)/.exec(msg);
+      // Lỗi mạng / TIMEOUT (kể cả "quá hạn" tiếng Việt) / quá tải / giới hạn tần suất.
+      const neterr = e.name==="TypeError" || /failed to fetch|load failed|network\s*error|请求超时|timeout|quá hạn|quá tải|overload|rate ?limit|giới hạn tần suất/i.test(msg);
+      // Phản hồi RỖNG / bị BỘ LỌC AN TOÀN chặn → thử lại: qua pool sẽ đổi lane/model, thường lọt.
+      const filtered = /phản hồi rỗng|nội dung rỗng|trả về rỗng|(?:^|[^a-z])rỗng|\btrống\b|bộ lọc an toàn|bị chặn|blocked|safety|prohibited_content|recitation|không trả về nội dung|no candidates|empty response|finishreason/i.test(msg);
+      if((!httpm && !neterr && !filtered) || i===tries-1) throw e;   // không thể thử lại / đã hết lượt
+      const code = httpm? httpm[1] : (/quá hạn|timeout/i.test(msg)?"Timeout":(filtered?"Bị lọc":"Lỗi mạng"));
+      const wait=Math.min(1500*(i+1), 10000);
       onWait && onWait(i+1, code, wait);
       await sleep(wait);
     }
@@ -1142,7 +1150,7 @@ $("scanBtn").onclick=async()=>{
         ? "Nếu một nhân vật có các giai đoạn cuộc đời rõ rệt trong văn bản (như thiếu niên/thanh niên/trung niên, hoặc trước và sau biến cố lớn), hãy liệt kê riêng từng giai đoạn và ghi rõ giai đoạn đó trong dấu ngoặc sau tên, ví dụ: \u201cTrần Văn A (Thiếu niên)\u201d, \u201cTrần Văn A (Trưởng thành)\u201d; các nhân vật không có giai đoạn rõ ràng thì liệt kê bình thường.\n"
         : "";
       const nameViRule = "Trường \"name\" giữ NGUYÊN VĂN đúng như chữ viết xuất hiện trong văn bản gốc (không dịch, dùng để dò lại đúng đoạn văn). Thêm trường \"vi\": tên đó viết bằng tiếng Việt để hiển thị cho người đọc — nếu là tên gốc Hán thì chuyển sang âm Hán Việt (ví dụ 夏冬→Hạ Đông), nếu là danh xưng/biệt hiệu có nghĩa thì dịch nghĩa (ví dụ 旺旺→Vượng Vượng, 疯狗→Cẩu Điên), nếu đã là tên phiên âm Latin/tiếng Anh sẵn trong văn bản thì giữ nguyên. Phải dùng nhất quán cùng một cách phiên âm/dịch cho cùng một nhân vật trong toàn bộ các lần liệt kê.\n";
-      const nsfwScan = $("nsfw").checked ? "Truyện có thể chứa nội dung người lớn/nhạy cảm (NSFW); vẫn liệt kê ĐẦY ĐỦ mọi nhân vật, không né tránh và không bỏ sót nhân vật vì lý do nội dung nhạy cảm.\n" : "";
+      const nsfwScan = $("nsfw").checked ? "[LƯU Ý] Đây là tác vụ TRÍCH XUẤT SIÊU DỮ LIỆU trung lập — chỉ liệt kê TÊN nhân vật, KHÔNG sinh/miêu tả nội dung nhạy cảm. Truyện có thể chứa yếu tố người lớn/bạo lực (NSFW): vẫn liệt kê ĐẦY ĐỦ, KHÁCH QUAN mọi nhân vật; tuyệt đối KHÔNG từ chối, KHÔNG bỏ sót, KHÔNG chèn cảnh báo hay lời từ chối. Chỉ cần trả về đúng mảng JSON như yêu cầu.\n" : "";
       const prompt = withRole
         ? "Dưới đây là một đoạn văn bản tiểu thuyết. Hãy liệt kê các nhân vật có tên xuất hiện trong đó.\n"+nsfwScan+stageLine+nameViRule+
           "Với MỖI nhân vật, xác định thêm 2 thông tin:\n"+
@@ -2085,7 +2093,7 @@ async function wbExtractCore(signal){
   }
 
   const nsfwLine = $("wbNsfw").checked
-    ? "Có thể bao gồm các bối cảnh/thiết lập người lớn (NSFW), chỉ dựa theo nguyên tác, không tự bịa."
+    ? "[LƯU Ý] Đây là tác vụ TRÍCH XUẤT SIÊU DỮ LIỆU/thiết lập trung lập từ tác phẩm hư cấu; có thể bao gồm bối cảnh/thiết lập người lớn (NSFW), chỉ dựa theo nguyên tác, không tự bịa. Tuyệt đối KHÔNG từ chối, KHÔNG bỏ sót, KHÔNG chèn cảnh báo — chỉ trả về đúng mảng JSON như yêu cầu."
     : "Không trích xuất nội dung người lớn/nhạy cảm liên quan đến tình dục.";
 
   if(!wbState.okArr) wbState.okArr=new Array(cap).fill(false);
