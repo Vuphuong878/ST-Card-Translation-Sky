@@ -25,6 +25,7 @@ import type { MVUZODSchema, MVUZODField, MVUZODConstraints } from '../../types/m
 import type { LorebookEntry, CardExtensions } from '../../types';
 import { MVUZOD_TEMPLATES, type MVUZODTemplate } from '../../lib/mvuzod/templateLibrary';
 import { analyzeLorebookForSchema, buildMinimalSchemaFromReport, parseSchemaInferenceResponse, schemaToZodCode } from '../../lib/mvuzod/schemaInferencer';
+import { parseZodCodeToSchema, isMvuSchemaScript } from '../../lib/mvuzod/zodCodeParser';
 import { buildMVUZODScripts } from '../../lib/mvuzod/tavernScriptBuilder';
 import { useSettingsStore } from '../../store/settingsStore';
 import { callAI } from '../../lib/ai/client';
@@ -125,6 +126,26 @@ function sanitizeJsonInput(raw: string): string {
   }
 
   return extractMatchedBraces(input);
+}
+
+/**
+ * Nhận diện + parse MỌI kiểu nội dung schema mà user dán/import:
+ *  - Zod schema JS (mvu_zod native: `import { registerMvuSchema }...; export const Schema = z.object({...})`)
+ *    → dùng parseZodCodeToSchema (JSON.parse KHÔNG xử lý được `z.object(`/`z.enum(` → đây là lỗi user gặp).
+ *  - JSON thuần / state JSON / card V3 → sanitize + JSON.parse + extractSchemaFromJson.
+ * Trả MVUZODSchema hợp lệ hoặc null.
+ */
+function parseSchemaInputText(raw: string, sourceName = ''): MVUZODSchema | null {
+  const text = (raw || '').trim();
+  if (!text) throw new Error('Nội dung trống.');
+  const looksZod = isMvuSchemaScript(sourceName, text) || /\bz\s*\.\s*object\s*\(/.test(text) || /registerMvuSchema/.test(text);
+  if (looksZod) {
+    const s = parseZodCodeToSchema(text);
+    if (s && s.fields && s.fields.length) return s;
+    // Nếu parse Zod thất bại, thử tiếp đường JSON bên dưới (không chặn cứng).
+  }
+  const parsed = JSON.parse(sanitizeJsonInput(text));
+  return extractSchemaFromJson(parsed);
 }
 
 /** Find the matching closing } for the opening { at position 0 */
@@ -1224,17 +1245,15 @@ CHỈ trả về JSON, KHÔNG giải thích.`;
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json,application/json"
+            accept=".json,.js,.ts,.txt,application/json,text/javascript"
             className="hidden"
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
               try {
                 const rawText = await file.text();
-                const cleanJson = sanitizeJsonInput(rawText);
-                const parsed = JSON.parse(cleanJson);
-                const schema: MVUZODSchema | null = extractSchemaFromJson(parsed);
-                if (!schema || !schema.fields) throw new Error(`File "${file.name}" không chứa schema hợp lệ.\nHỗ trợ: schema trực tiếp, state values JSON, {schema:{...}}, hoặc character card V3`);
+                const schema: MVUZODSchema | null = parseSchemaInputText(rawText, file.name);
+                if (!schema || !schema.fields) throw new Error(`File "${file.name}" không chứa schema hợp lệ.\nHỗ trợ: Zod schema (.js registerMvuSchema), schema JSON, state values JSON, {schema:{...}}, hoặc character card V3`);
                 await onApplyInferred(schema);
                 setError(null);
               } catch (err) {
@@ -1261,7 +1280,7 @@ CHỈ trả về JSON, KHÔNG giải thích.`;
             <textarea
               value={jsonInput}
               onChange={e => setJsonInput(e.target.value)}
-              placeholder={'Paste JSON vào đây. Hỗ trợ:\n• State JSON: {"Nhân vật chính": {"HP": 100, ...}}\n• Schema: {"version":"1.0","fields":[...]}\n• Full card V3: {"data":{"extensions":{"mvuzod":...}}}'}
+              placeholder={'Paste JSON hoặc Zod schema (.js) vào đây. Hỗ trợ:\n• Zod schema: import { registerMvuSchema }...; export const Schema = z.object({...})\n• State JSON: {"Nhân vật chính": {"HP": 100, ...}}\n• Schema: {"version":"1.0","fields":[...]}\n• Full card V3: {"data":{"extensions":{"mvuzod":...}}}'}
               rows={8}
               className="w-full px-3 py-2 text-[10px] font-mono rounded-lg border border-border bg-background
                 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-y"
@@ -1270,10 +1289,8 @@ CHỈ trả về JSON, KHÔNG giải thích.`;
               <button
                 onClick={async () => {
                   try {
-                    const cleanJson = sanitizeJsonInput(jsonInput);
-                    const parsed = JSON.parse(cleanJson);
-                    const schema: MVUZODSchema | null = extractSchemaFromJson(parsed);
-                    if (!schema || !schema.fields) throw new Error('JSON không chứa schema hợp lệ.\nHỗ trợ: schema trực tiếp, state values JSON, {schema:{...}}, hoặc character card V3');
+                    const schema: MVUZODSchema | null = parseSchemaInputText(jsonInput);
+                    if (!schema || !schema.fields) throw new Error('Nội dung không chứa schema hợp lệ.\nHỗ trợ: Zod schema (registerMvuSchema / z.object), schema JSON, state values JSON, {schema:{...}}, hoặc character card V3');
                     await onApplyInferred(schema);
                     setShowJsonImport(false);
                     setJsonInput('');

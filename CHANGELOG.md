@@ -2,6 +2,15 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.30.0 — 4 fix theo báo lỗi client (Dịch Card + Tạo Card)
+**Dịch Card:**
+- **Ngưỡng model phụ đo bằng SỐ KÝ TỰ** (không phải token). Trước đây path đa-provider quy đổi token ≈ ký tự/4, nên đặt ngưỡng 800 thì entry ~2.200 ký tự (~550 token) vẫn lọt → bị dịch bằng model phụ (flash) ngoài ý muốn. Nay so thẳng số ký tự; nhãn đổi thành "Ngưỡng ký tự".
+- **Làm rõ 2 nút sửa** trong Kiểm Tra Lỗi Dịch: 🟢 **Sửa nhanh** = hàm của app (tức thì, KHÔNG tốn API); 🟣 **AI Sửa** = gọi AI cho lỗi phức tạp (tốn quota). Thêm dòng chú thích + tooltip cho từng nút.
+
+**Tạo Card (MVUZOD Studio):**
+- **Import/Paste nhận cả Zod schema `.js`** (định dạng gốc `import { registerMvuSchema }...; export const Schema = z.object({...})`), không chỉ JSON. Trước đây dán file schema `.js` báo lỗi "Unexpected token 'z'"; file input cũng chỉ hiện `.json`. Nay tự nhận diện Zod-code → parse đúng (đã test 2 file mẫu ra 17 fields), và mở rộng chọn `.js/.ts/.txt`.
+- **Entry `[initvar]` nhúng vào card có `disable=true`** (field ST-native). Trước chỉ đặt `enabled=false` mà thiếu `disable`, khiến SillyTavern coi entry là **bật**. *(Cần kiểm tra lại trong ST để xác nhận.)*
+
 ## v1.29.1 — Dịch Card: chống giật khi dịch card lớn (giới hạn log)
 - Mảng log trong bộ nhớ trước đây **phình vô hạn** (mỗi field/chunk/retry thêm 1 dòng → hàng nghìn dòng với card lớn). Mỗi lần thêm phải copy + lọc cả mảng → **O(n²)**, khiến app **giật dần** về cuối lượt dịch và ăn RAM. Nay **giữ tối đa 800 dòng gần nhất** (panel vốn chỉ hiển thị 300 dòng cuối) → mượt đều, RAM ổn định.
 

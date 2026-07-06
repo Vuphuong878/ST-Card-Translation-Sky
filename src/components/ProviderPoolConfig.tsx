@@ -155,7 +155,7 @@ function ProviderCard({ p, index, onChange, onRemove }: { p: ProviderConfig; ind
             <input type="number" min={1} max={1000} value={p.secondaryModelRpm} onChange={(e) => onChange({ secondaryModelRpm: Math.max(1, +e.target.value || 1) })} style={inputStyle} />
           </div>
           <div>
-            <label style={lbl} title="Entry ngắn hơn ngưỡng (token ước lượng) → dùng model phụ cho nhanh (0 = tắt)">Ngưỡng token</label>
+            <label style={lbl} title="Entry ngắn hơn ngưỡng (số KÝ TỰ) → dùng model phụ cho nhanh (0 = tắt)">Ngưỡng ký tự</label>
             <input type="number" min={0} value={p.secondaryModelThreshold} onChange={(e) => onChange({ secondaryModelThreshold: Math.max(0, +e.target.value || 0) })} style={inputStyle} />
           </div>
         </div>

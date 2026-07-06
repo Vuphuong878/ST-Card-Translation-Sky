@@ -772,11 +772,21 @@ export default function VerifyPanel() {
         </div>
       )}
 
-      {/* Auto-fix all button */}
+      {/* Chú thích phân biệt 2 nút sửa: xanh = hàm app (miễn phí), tím = gọi AI (tốn quota) */}
+      {(autoFixableCount > 0 || fieldIssues.length > 0 || (verifyResult && verifyResult.issues.length > 0)) && (
+        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '6px' }}>
+          {isVi
+            ? <>🟢 <b>Sửa nhanh</b> = hàm của app (tức thì, KHÔNG tốn API): cân ngoặc, bỏ ký tự thừa, khôi phục macro/format cơ bản. &nbsp;🟣 <b>AI Sửa</b> = gọi AI cho các lỗi phức tạp còn lại (tốn quota).</>
+            : <>🟢 <b>Quick Fix</b> = app function (instant, NO API cost): balance brackets, strip junk, restore basic macros/format. &nbsp;🟣 <b>AI Fix</b> = calls AI for the remaining complex issues (uses quota).</>}
+        </div>
+      )}
+
+      {/* Auto-fix all button (deterministic, no AI) */}
       {autoFixableCount > 0 && (
         <button className="btn btn-primary" onClick={handleFixAll}
+          title={isVi ? 'Sửa tức thì bằng hàm của app — KHÔNG gọi AI, không tốn quota (cân ngoặc, bỏ ký tự thừa, khôi phục macro/format cơ bản).' : 'Instant deterministic fix by app function — NO AI, no quota (balance brackets, strip junk, restore basic macros/format).'}
           style={{ width: '100%', padding: '8px', fontSize: '0.78rem', marginBottom: '6px', background: 'var(--accent-success)', border: 'none' }}>
-          <Wrench size={14} /> {t.verifyAutoFixAll.replace('{count}', String(autoFixableCount))}
+          <Wrench size={14} /> {t.verifyAutoFixAll.replace('{count}', String(autoFixableCount))}{isVi ? ' · không AI' : ' · no AI'}
         </button>
       )}
 
@@ -784,6 +794,7 @@ export default function VerifyPanel() {
       {(fieldIssues.length > 0 || (verifyResult && verifyResult.issues.length > 0)) && (
         <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
           <button className="btn btn-primary" onClick={handleAIFix} disabled={isAIFixing || isVerifying}
+            title={isVi ? 'Nhờ AI sửa các lỗi phức tạp mà nút Sửa nhanh không xử lý được — CÓ gọi AI, tốn quota (tối đa 3 vòng).' : 'Ask AI to fix complex issues the Quick Fix cannot — calls AI, uses quota (up to 3 rounds).'}
             style={{ flex: 1, padding: '8px', fontSize: '0.78rem',
               background: 'linear-gradient(135deg, var(--accent-primary), #a78bfa)', border: 'none', opacity: isAIFixing ? 0.8 : 1 }}>
             {isAIFixing

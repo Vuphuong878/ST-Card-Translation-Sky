@@ -218,6 +218,9 @@ export function generateWorldbookEntries(
       selective: false,
       insertion_order: spec.insertionOrder,
       enabled: spec.enabled,
+      // Đồng bộ field ST-native: [initvar] (enabled=false) phải có disable=true để ST TẮT thật
+      // khi import card. Thiếu disable → ST coi entry là bật (đúng lỗi user báo).
+      disable: !spec.enabled,
       position: spec.position === 0 ? 'before_char' : 'after_char',
       use_regex: true,
       extensions: {

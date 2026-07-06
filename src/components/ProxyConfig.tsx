@@ -400,7 +400,7 @@ export default function ProxyConfig() {
               {/* Threshold row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', flex: 1 }}>
-                  Dưới bao nhiêu token thì dùng model phụ
+                  Dưới bao nhiêu ký tự thì dùng model phụ
                 </span>
                 <input
                   className="input"
@@ -410,7 +410,7 @@ export default function ProxyConfig() {
                   value={proxy.secondaryModelThreshold ?? 0}
                   onChange={(e) => setProxy({ secondaryModelThreshold: Math.max(0, parseInt(e.target.value) || 0) })}
                   style={{ width: '70px', padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
-                  title="Entry dưới ngưỡng token này (ước lượng) → tự động dùng model phụ cho nhanh (0 = tắt)"
+                  title="Entry dưới ngưỡng SỐ KÝ TỰ này → tự động dùng model phụ cho nhanh (0 = tắt)"
                   placeholder="0"
                 />
               </div>

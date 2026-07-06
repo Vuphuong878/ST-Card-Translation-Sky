@@ -1655,15 +1655,16 @@ function _toPoolProvider(id: string, c: { provider: AIProvider; proxyUrl: string
 function buildPool(base: ProxySettings): PoolProvider[] {
   return [_toPoolProvider('default', base), ..._extraProviders.map((p) => _toPoolProvider(p.id, p))];
 }
-/** Thứ tự lane ưu tiên của 1 provider: entry NGẮN (≤ ngưỡng TOKEN) → ưu tiên model phụ cho nhanh.
- *  Ngưỡng do user đặt theo token; ước lượng token ≈ ceil(ký tự / 4). */
+/** Thứ tự lane ưu tiên của 1 provider: entry NGẮN (≤ ngưỡng KÝ TỰ) → ưu tiên model phụ cho nhanh.
+ *  Ngưỡng đo theo SỐ KÝ TỰ để đồng nhất với UI + path không-pool (useTranslation so charCount trực
+ *  tiếp). Trước đây path pool quy đổi token ≈ ceil(ký tự/4) nên entry 2200 ký tự (~550 token) vẫn
+ *  lọt ngưỡng 800 → dùng nhầm model phụ; nay so thẳng số ký tự. */
 function laneOrder(p: PoolProvider, charCount?: number): { model: string; rpm: number }[] {
   const kc = Math.max(1, p.keys.length || 1);
   const primary = { model: p.primaryModel, rpm: p.primaryRpm * kc };
   if (!p.enableSecondary) return [primary];
   const secondary = { model: p.secondaryModel, rpm: p.secondaryRpm * kc };
-  const estTokens = charCount != null ? Math.ceil(charCount / 4) : null;
-  if (p.secondaryThreshold > 0 && estTokens != null && estTokens <= p.secondaryThreshold) return [secondary, primary];
+  if (p.secondaryThreshold > 0 && charCount != null && charCount <= p.secondaryThreshold) return [secondary, primary];
   return [primary, secondary];
 }
 /** Chọn lane kế tiếp (round-robin đều) còn RPM; nếu tất cả đầy thì chờ lane con trỏ. */

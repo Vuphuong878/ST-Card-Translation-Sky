@@ -17,6 +17,10 @@ export interface LorebookEntry {
   selective: boolean;
   insertion_order: number;
   enabled: boolean;
+  /** Field ST-native (world_info). ST đọc `disable` khi import lorebook nhúng trong card, nên
+   *  với entry cần TẮT (vd [initvar]) phải set disable=true, không chỉ enabled=false — nếu thiếu,
+   *  ST coi như bật. Giữ đồng biến với `enabled`. */
+  disable?: boolean;
   position: 'before_char' | 'after_char';
   use_regex: boolean;
   extensions: LorebookEntryExt;
