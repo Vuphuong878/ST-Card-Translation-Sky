@@ -997,7 +997,7 @@ async function retry(fn,{tries=6,onWait}={}){
       // Phản hồi RỖNG / bị BỘ LỌC AN TOÀN chặn → thử lại: qua pool sẽ đổi lane/model, thường lọt.
       const filtered = /phản hồi rỗng|nội dung rỗng|trả về rỗng|(?:^|[^a-z])rỗng|\btrống\b|bộ lọc an toàn|bị chặn|blocked|safety|prohibited_content|recitation|không trả về nội dung|no candidates|empty response|finishreason/i.test(msg);
       if((!httpm && !neterr && !filtered) || i===tries-1) throw e;   // không thể thử lại / đã hết lượt
-      const code = httpm? httpm[1] : (/quá hạn|timeout/i.test(msg)?"Timeout":(filtered?"Bị lọc":"Lỗi mạng"));
+      const code = httpm? ("HTTP "+httpm[1]) : (/quá hạn|timeout/i.test(msg)?"Timeout":(filtered?"Bị lọc":"Lỗi mạng"));
       const wait=Math.min(1500*(i+1), 10000);
       onWait && onWait(i+1, code, wait);
       await sleep(wait);
@@ -1162,7 +1162,7 @@ $("scanBtn").onclick=async()=>{
       try{
         rawText=await retry(
           ()=>chat(userMsgs(prompt),{maxTokens:withRole?8000:4000,signal,charCount:(chunks[i]||"").length}),
-          {onWait:(n,code,w)=>logTo("scanLog","Đoạn "+(i+1)+" gặp lỗi HTTP "+code+"，thử lại sau "+(w/1000)+"s (lần "+n+")","e")}
+          {onWait:(n,code,w)=>logTo("scanLog","Đoạn "+(i+1)+": "+code+" → thử lại sau "+(w/1000)+"s (lần "+n+")","e")}
         );
       }
       catch(err){
@@ -1909,7 +1909,7 @@ $("genBtn").onclick=async()=>{
         $("output").value=(base?base+"\n\n\n":"")+header+stripThink(cur); $("output").scrollTop=$("output").scrollHeight;
       } : null;
 
-      const onWait=(n,code,w)=>logTo("genLog",nm+" gặp lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e");
+      const onWait=(n,code,w)=>logTo("genLog",nm+": "+code+" → thử lại sau "+(w/1000)+"s (lần "+n+")","e");
       const maxCont=$("autoCont").checked?5:0;
       const raw=await generate(messages,{maxTokens:maxT,useStream:streamThis&&useStream,signal,onText:render||undefined,onWait,maxCont,logEl:"genLog",label:nm,charCount:ctx.length});
       genDone[nm]=applyUserReplace(finalizeCard(stripFence(stripThink(raw)).trim(), dispName));
@@ -1975,7 +1975,7 @@ $("contBtn").onclick=async()=>{
     (ref? ("Tham khảo nguyên tác (Đoạn trích liên quan):\n"+ref+"\n\n") : "")+
     "Vui lòng viết tiếp trực tiếp từ đoạn bị cắt, chỉ xuất nội dung viết tiếp, không lặp lại nội dung cũ.";
   const messages=[{role:"system",content:withSys(sys)},{role:"user",content:user}];
-  const onWait=(n,code,w)=>logTo("genLog","Viết tiếp gặp lỗi HTTP "+code+", thử lại sau (lần "+n+")","e");
+  const onWait=(n,code,w)=>logTo("genLog","Viết tiếp lỗi: "+code+" → thử lại (lần "+n+")","e");
   const base=cur.replace(/\s+$/,"");
   const render=f=>{ $("output").value=base+"\n"+stripThink(f); $("output").scrollTop=$("output").scrollHeight; };
 
@@ -2003,7 +2003,7 @@ $("reviseBtn").onclick=async()=>{
   const useStream=$("stream").checked;
   const maxT=parseInt(els.maxTok.value)||4000;
   const maxCont=$("autoCont").checked?5:0;
-  const onWait=(n,code,w)=>flash($("reviseMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  const onWait=(n,code,w)=>flash($("reviseMsg"),code+" → thử lại sau (lần "+n+")",true);
   const sys="Bạn là một biên tập viên thẻ nhân vật nghiêm túc. Hãy chỉnh sửa dựa trên thẻ nhân vật hiện tại của người dùng theo yêu cầu của họ, giữ nguyên cấu trúc trường mẫu, dựa theo nguyên tác và logic thông thường, tuyệt đối không bịa đặt thiết lập.";
 
   // 把多角色输出按 "# ===== 角色名 =====" 拆成若干张卡；单角色则整体为一张
@@ -2115,7 +2115,7 @@ async function wbExtractCore(signal){
       let raw="";
       try{
         raw=await retry(()=>chat(userMsgs(prompt),{maxTokens:8000,signal,charCount:(chunks[i]||"").length}),
-          {onWait:(n,code,w)=>logTo("wbLog","Đoạn "+(i+1)+" lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e")});
+          {onWait:(n,code,w)=>logTo("wbLog","Đoạn "+(i+1)+": "+code+" → thử lại sau "+(w/1000)+"s (lần "+n+")","e")});
       }catch(err){
         if(isAbort(err,signal)) return;
         logTo("wbLog","Đoạn "+(i+1)+" yêu cầu thất bại: "+err.message,"e"); return;
@@ -2274,7 +2274,7 @@ $("wbReviseBtn").onclick=async()=>{
     (ref?("Tham khảo nguyên tác (Đoạn trích để đối chiếu/bổ sung):\n"+ref+"\n\n"):"")+
     "Vui lòng sửa đổi dựa theo yêu cầu trên, xuất ra danh sách mục Lorebook 【hoàn chỉnh】 sau khi sửa, không giải thích thêm, không dùng block code.\n\n"+WB_FMT;
   const messages=[{role:"system",content:sys},{role:"user",content:user}];
-  const onWait=(n,code,w)=>flash($("wbReviseMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  const onWait=(n,code,w)=>flash($("wbReviseMsg"),code+" → thử lại sau (lần "+n+")",true);
   const render=f=>{ $("wbOut").value=stripThink(f); $("wbOut").scrollTop=$("wbOut").scrollHeight; };
   try{
     const raw=await generate(messages,{maxTokens:maxT,useStream,signal,onText:render,onWait,maxCont,logEl:"wbLog",label:"Sửa đổi Lorebook"});
@@ -2306,7 +2306,7 @@ $("wbContBtn").onclick=async()=>{
     (ref?("Tham khảo nguyên tác (Đoạn trích):\n"+ref+"\n\n"):"")+
     "Vui lòng tiếp tục bổ sung các mục thiết lập có xuất hiện trong truyện nhưng chưa được ghi nhận ở trên (Thế giới quan/Thế lực/Địa điểm/Thiết lập/Lịch sử/Vật phẩm, v.v.), hoặc hoàn thành các mục đang bị cắt ngang. Tuyệt đối không lặp lại các mục hiện có, chỉ xuất ra phần bổ sung hoặc phần hoàn thiện, tuân thủ nghiêm ngặt định dạng bên dưới, không giải thích thêm, không dùng block code.\n\n"+WB_FMT;
   const messages=[{role:"system",content:sys},{role:"user",content:user}];
-  const onWait=(n,code,w)=>flash($("wbMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  const onWait=(n,code,w)=>flash($("wbMsg"),code+" → thử lại sau (lần "+n+")",true);
   const base=cur.replace(/\s+$/,"");
   const render=f=>{ $("wbOut").value=base+"\n\n"+stripThink(f); $("wbOut").scrollTop=$("wbOut").scrollHeight; };
   try{
@@ -2349,7 +2349,7 @@ async function wbPlotCore(signal){
       let raw="";
       try{
         raw=await retry(()=>chat(userMsgs(prompt),{maxTokens:16000,signal}),
-          {onWait:(n,code,w)=>logTo("wbLog","Đoạn "+(i+1)+" lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e")});
+          {onWait:(n,code,w)=>logTo("wbLog","Đoạn "+(i+1)+": "+code+" → thử lại sau "+(w/1000)+"s (lần "+n+")","e")});
       }catch(err){
         if(isAbort(err,signal)){ logTo("wbLog","Đã dừng","e"); break; }
         logTo("wbLog","Đoạn "+(i+1)+" yêu cầu thất bại: "+err.message,"e"); continue;
@@ -2384,7 +2384,7 @@ async function wbMinorCore(signal){
   const sample=sampleForStyle(text);
   const cap=Math.max(1, parseInt($("minorCap").value)||20);
   const list=characters.map(c=>"· "+(c.vi||c.name)+(c.vi&&c.vi!==c.name?(" [nguyên tác: "+c.name+"]"):"")+(c.aliases&&c.aliases.length?("（"+c.aliases.join("、")+"）"):"")+(c.role?("："+c.role):"")).join("\n");
-  const onWait=(n,code,w)=>flash($("wbMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  const onWait=(n,code,w)=>flash($("wbMsg"),code+" → thử lại sau (lần "+n+")",true);
   try{
     if(mode==="each"){
       // 每个配角单独一条绿灯条目
@@ -2438,7 +2438,7 @@ async function wbConstantEntry(signal, kind){
   $("wbMsg").innerHTML='<span class="spinner"></span>'+(kind==="chars"?"Đang tạo danh sách nhân vật…":"Đang tạo đại cương cốt truyện…");
   const maxT=Math.max(6000,parseInt(els.maxTok.value)||4000);
   const sample=sampleForStyle(text);
-  const onWait=(n,code,w)=>flash($("wbMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  const onWait=(n,code,w)=>flash($("wbMsg"),code+" → thử lại sau (lần "+n+")",true);
   let prompt, title;
   if(kind==="chars"){
     title="Danh sách nhân vật";
@@ -2592,7 +2592,7 @@ async function wbBgCore(signal){
     "Đọc kỹ đoạn trích tiểu thuyết dưới đây, đúc kết bối cảnh thời đại, môi trường thế giới, quy tắc xã hội, trải nghiệm tập thể và thiết lập bối cảnh chung của tất cả các nhân vật — tuyệt đối không viết hồ sơ riêng của bất kỳ cá nhân nào.\n"+
     "Tóm tắt cô đọng thành một đoạn bối cảnh đại cương thích hợp để làm một mục \u201cThường trú (Constant)\u201d trong Lorebook, giúp AI luôn nắm được khung thế giới chung của truyện mà không cần lặp lại thông tin này trên mỗi thẻ nhân vật.\n"+
     "Chỉ dựa trên nguyên tác, ngắn gọn chính xác, không tự bịa đặt. Trực tiếp xuất ra đoạn bối cảnh đại cương này, không đặt tiêu đề, không giải thích thêm, không dùng block code.\n\n=== Đoạn trích tiểu thuyết ===\n"+sample;
-  const onWait=(n,code,w)=>flash($("wbMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  const onWait=(n,code,w)=>flash($("wbMsg"),code+" → thử lại sau (lần "+n+")",true);
   const raw=await generate(userMsgs(prompt),{maxTokens:maxT,useStream:$("stream").checked,signal,onText:f=>{$("wbOut").value=stripThink(f);},onWait,maxCont:$("autoCont").checked?5:0,logEl:"wbLog",label:"Bối cảnh chung"});
   const content=stripFence(stripThink(raw)).trim();
   if(!content){ logTo("wbLog","Bối cảnh chung: Không trích xuất được nội dung","e"); return; }
@@ -2879,7 +2879,7 @@ $("checkRunBtn").onclick=async()=>{
   setRunning(btn,true); clearLog("checkLog"); $("checkOut").value="";
   const signal=runSignal();
   const useStream=$("stream").checked, maxT=Math.max(4000,parseInt(els.maxTok.value)||4000), maxCont=$("autoCont").checked?5:0;
-  const onWait=(n,code,w)=>logTo("checkLog","Lỗi HTTP "+code+", thử lại sau (lần "+n+")","e");
+  const onWait=(n,code,w)=>logTo("checkLog",code+" → thử lại sau (lần "+n+")","e");
   const results=[];
   try{
     for(let i=0;i<picks.length;i++){
@@ -2966,7 +2966,7 @@ $("styleBtn").onclick=async()=>{
     "\n## Prompt Phong cách tái sử dụng\n（Viết một chỉ dẫn viết lách ở ngôi thứ hai để người dùng dán trực tiếp vào AI khác, bắt đầu bằng câu \u201cHãy viết theo phong cách sau:\u201d, cô đọng các điểm mấu chốt ở trên thành chỉ dẫn có tính thực thi cao.）\n\n"+
     "=== Đoạn trích truyện ===\n"+sample;
   const messages=[{role:"system",content:withSys(sys)},{role:"user",content:user}];
-  const onWait=(n,code,w)=>logTo("styleLog","Lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e");
+  const onWait=(n,code,w)=>logTo("styleLog",code+" → thử lại sau "+(w/1000)+"s (lần "+n+")","e");
   const render=f=>{ $("styleOut").value=stripThink(f); $("styleOut").scrollTop=$("styleOut").scrollHeight; };
 
   try{

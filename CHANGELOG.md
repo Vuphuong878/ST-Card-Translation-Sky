@@ -2,6 +2,10 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.33.1 — Trích Card: gọn lại câu log retry
+- Log retry trước đây đọc kỳ (*"gặp lỗi **HTTP** Bị lọc"* — chữ "HTTP" đứng trước "Bị lọc"/"Timeout" nghe sai vì đó không phải mã HTTP). Nay gọn và đúng: **"Đoạn 3: Bị lọc → thử lại sau 4.5s (lần 3)"**. Lỗi HTTP theo mã hiện đầy đủ **"HTTP 503"**.
+- Nhắc lại ý nghĩa nhãn: **Bị lọc** = API trả rỗng / bị bộ lọc an toàn chặn (thường do nội dung nhạy cảm) · **Timeout** = quá 180s không phản hồi (proxy chậm/treo) · **Lỗi mạng** = mất kết nối. Đây là log *đang thử lại*, chỉ khi hết lượt mới bỏ đoạn.
+
 ## v1.33.0 — Đồng bộ retry chống "API kẹt" cho cả 5 app
 Áp cơ chế retry (như đã làm cho Trích Card) sang 4 app còn lại — API kẹt/treo/timeout/5xx thì **cứ thử lại**, lỗi không sửa được thì dừng ngay:
 - **Dịch Card:** thêm **TIMEOUT** cho request dịch (OpenAI/Claude/Gemini) — proxy chết/treo sẽ bị **abort → thử lại** thay vì kẹt vĩnh viễn (trước đây fetch không có timeout nên treo là đứng luôn). `maxRetries` mặc định **3→5**. (429/5xx/rỗng vốn đã retry.)
