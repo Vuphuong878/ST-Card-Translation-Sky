@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.31.1 — Trích Card: thiết kế lại UI pool cho dễ dùng
+Bỏ cách quản lý pool bằng "gộp nhiều Cấu hình API" (rối). Nay:
+- **Nút "➕ Thêm provider"** → mở **popup đầy đủ** (tên, định dạng, Base URL, đa-key, model chính + RPM, model phụ + RPM, ngưỡng ký tự) → **Lưu** hiện thành **1 dòng** "Provider 2/3…" với chấm xanh (đủ) / đỏ (thiếu).
+- **Bấm vào dòng** để mở lại popup **sửa**; mỗi dòng có nút **Xóa**.
+- **Provider 1** = cấu hình chính phía trên (model phụ/RPM/ngưỡng của P1 chỉnh ngay trong mục Pool).
+- Engine đa-luồng (round-robin, rate-limit, model chính/phụ, đa-key) **giữ nguyên** — đã test lại trên trình duyệt: thêm/sửa/xóa provider, round-robin P1→P2, xoay key, trạng thái pool cập nhật đúng.
+
 ## v1.31.0 — Trích Card: full pool đa-provider + đa luồng (như Dịch Card)
 Trước đây Trích Card chỉ có **đa-key**. Nay có **đầy đủ** như Dịch Card:
 - **Đa provider chạy song song:** mỗi **Cấu hình API** (hệ chuyển đổi sẵn có) = 1 provider. Vào mục **"🔀 Pool đa-luồng"**, bật **"Gộp cấu hình NÀY vào POOL"** ở **≥2 cấu hình** → engine rải call **round-robin**, chạy **song song** nhiều provider. Áp cho: **quét nhân vật**, **tạo thẻ hàng loạt**, **trích Lorebook** (3 bước nặng nhất).

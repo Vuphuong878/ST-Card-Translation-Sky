@@ -171,18 +171,18 @@
     </details>
     <details class="adv" id="poolAdv">
       <summary>🔀 Pool đa-luồng (đa provider) — <span id="poolStatus" class="faint" style="font-size:11px"></span></summary>
-      <div class="field" style="margin-top:6px">
-        <label class="toggle"><input type="checkbox" id="poolInclude"> Gộp cấu hình NÀY vào POOL đa-luồng</label>
-        <div class="faint" style="font-size:11px;margin-top:4px;line-height:1.5">Bật ở <b>≥2 cấu hình</b> (đổi ở ô "Cấu hình API" phía trên, mỗi cấu hình một provider/key/model riêng) → engine rải call round-robin, chạy <b>song song</b> nhiều provider. Nhớ bấm <b>Lưu vào cấu hình hiện tại</b> sau khi chỉnh. Chỉ 1 cấu hình → chạy như cũ (vẫn xoay nhiều key).</div>
+      <div class="faint" style="font-size:11px;margin-top:6px;line-height:1.5"><b>Provider 1</b> = cấu hình chính phía trên. Thêm provider khác (mỗi cái Base URL/Key/Model riêng) để engine rải call <b>round-robin</b> và chạy <b>song song</b>. Các ô model phụ/RPM/ngưỡng dưới đây áp cho <b>Provider 1</b>.</div>
+      <div class="row" style="margin-top:6px">
+        <div class="field"><label title="Số call/phút tối đa cho model chính của Provider 1 (nhân số key). 0 = không giới hạn.">RPM model chính (P1)</label><input type="number" id="primaryRpm" value="10" min="0" step="1"></div>
+        <div class="field"><label title="Model phụ (rẻ/nhanh hơn) cho Provider 1 — để trống nếu không dùng">Model phụ P1 (tùy chọn)</label><input type="text" id="secondaryModel" class="mono" placeholder="vd gemini-2.5-flash" autocomplete="off"></div>
       </div>
       <div class="row">
-        <div class="field"><label title="Số call/phút tối đa cho model chính của cấu hình này (nhân với số key). 0 = không giới hạn.">RPM model chính</label><input type="number" id="primaryRpm" value="10" min="0" step="1"></div>
-        <div class="field"><label title="Model phụ (rẻ/nhanh hơn) — để trống nếu không dùng">Model phụ (tùy chọn)</label><input type="text" id="secondaryModel" class="mono" placeholder="vd gemini-2.5-flash" autocomplete="off"></div>
+        <div class="field"><label title="Số call/phút tối đa cho model phụ (nhân số key). 0 = không giới hạn.">RPM model phụ (P1)</label><input type="number" id="secondaryRpm" value="20" min="0" step="1"></div>
+        <div class="field"><label title="Entry ngắn hơn ngưỡng (SỐ KÝ TỰ) → ưu tiên model phụ. 0 = tắt.">Ngưỡng ký tự → model phụ (P1)</label><input type="number" id="charThreshold" value="0" min="0" step="500"></div>
       </div>
-      <div class="row">
-        <div class="field"><label title="Số call/phút tối đa cho model phụ (nhân với số key). 0 = không giới hạn.">RPM model phụ</label><input type="number" id="secondaryRpm" value="20" min="0" step="1"></div>
-        <div class="field"><label title="Entry ngắn hơn ngưỡng (SỐ KÝ TỰ) → ưu tiên model phụ cho nhanh. 0 = tắt.">Ngưỡng ký tự → dùng model phụ</label><input type="number" id="charThreshold" value="0" min="0" step="500"></div>
-      </div>
+      <label style="margin-top:12px;display:block">Provider bổ sung (chạy song song với Provider 1)</label>
+      <div id="provList" style="display:flex;flex-direction:column;gap:6px;margin-top:4px"></div>
+      <button type="button" id="addProvBtn" class="mini" style="margin-top:8px">➕ Thêm provider</button>
     </details>
     <details class="adv">
       <summary>Prompt tùy chỉnh (Nâng cao)</summary>
@@ -497,6 +497,39 @@
   </div>
 </div>
 
+<!-- Modal thêm/sửa provider của pool -->
+<div id="provModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--panel);border:1px solid var(--gold-dim);border-radius:14px;width:100%;max-width:540px;max-height:88vh;overflow:auto;padding:18px 20px;box-shadow:0 16px 48px rgba(0,0,0,.5)">
+    <h3 id="provModalTitle" style="margin:0 0 4px;font-size:16px">Provider</h3>
+    <div class="faint" style="font-size:11px;margin-bottom:12px">Provider này chạy song song với Provider 1. Có thể dán nhiều API key (mỗi dòng/phẩy 1 key) để xoay vòng.</div>
+    <div class="field"><label>Tên hiển thị</label><input type="text" id="pmName" class="mono" placeholder="Provider 2" autocomplete="off"></div>
+    <div class="field"><label>Định dạng API</label>
+      <select id="pmFormat" class="mono">
+        <option value="openai">Tương thích OpenAI (/v1/chat/completions)</option>
+        <option value="gemini">Gemini gốc (/v1beta)</option>
+      </select>
+    </div>
+    <div class="field"><label>Base URL</label><input type="text" id="pmBaseUrl" class="mono" placeholder="http://127.0.0.1:2156" autocomplete="off"></div>
+    <div class="field"><label>API Key (nhiều key: mỗi dòng hoặc dấu phẩy)</label><textarea id="pmApiKey" class="mono" rows="2" placeholder="sk-... hoặc key1, key2" style="resize:vertical"></textarea></div>
+    <div class="row">
+      <div class="field"><label>Model chính</label><input type="text" id="pmModel" class="mono" placeholder="gemini-2.5-pro / gpt-..." autocomplete="off"></div>
+      <div class="field"><label title="Call/phút cho model chính (× số key). 0 = không giới hạn.">RPM chính</label><input type="number" id="pmPrimaryRpm" value="10" min="0" step="1"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Model phụ (tùy chọn)</label><input type="text" id="pmSecondaryModel" class="mono" placeholder="vd gemini-2.5-flash" autocomplete="off"></div>
+      <div class="field"><label title="Call/phút cho model phụ (× số key). 0 = không giới hạn.">RPM phụ</label><input type="number" id="pmSecondaryRpm" value="20" min="0" step="1"></div>
+    </div>
+    <div class="field"><label title="Entry ngắn hơn ngưỡng (SỐ KÝ TỰ) → ưu tiên model phụ. 0 = tắt.">Ngưỡng ký tự → dùng model phụ</label><input type="number" id="pmCharThreshold" value="0" min="0" step="500"></div>
+    <div class="btnrow" style="margin-top:14px;justify-content:space-between;align-items:center">
+      <button type="button" id="pmDelete" class="mini" style="color:var(--danger);border-color:var(--danger)">Xóa provider này</button>
+      <span style="display:flex;gap:8px">
+        <button type="button" id="pmCancel" class="mini">Hủy</button>
+        <button type="button" id="pmSave" class="primary">Lưu</button>
+      </span>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 
@@ -528,6 +561,9 @@ if(!Array.isArray(apiProfiles) || !apiProfiles.length){
   PROFILE_FIELDS.forEach(k=>{ const v=store.get("cc_"+k); if(v!==null&&v!=="") p[k]=v; });
   apiProfiles=[p];
 }
+// Provider bổ sung của pool (độc lập với "Cấu hình API"). Provider 1 = cấu hình chính (els).
+let extraProviders = loadJSON("cc_extra_providers", []);
+if(!Array.isArray(extraProviders)) extraProviders=[];
 let curApiIdx = 0;
 { const n=store.get("cc_cur_api"); const i=apiProfiles.findIndex(p=>p.name===n); if(i>=0) curApiIdx=i; }
 
@@ -539,14 +575,12 @@ function renderApiSelect(){
 function applyProfileToFields(){
   const p=apiProfiles[curApiIdx]||blankProfile("Mặc định");
   PROFILE_FIELDS.forEach(k=>{ if(els[k]) els[k].value = (p[k]!==undefined&&p[k]!=="")? p[k] : els[k].value; });
-  const pi=$("poolInclude"); if(pi) pi.checked=!!p.inPool;
   if(typeof updatePoolStatus==="function") updatePoolStatus();
 }
 function persistApi(){ saveJSON("cc_api_profiles", apiProfiles); store.set("cc_cur_api", (apiProfiles[curApiIdx]&&apiProfiles[curApiIdx].name)||""); }
 function saveCfg(){
   const p=apiProfiles[curApiIdx];
   PROFILE_FIELDS.forEach(k=>{ if(els[k]) p[k]=els[k].value; });
-  const pi=$("poolInclude"); if(pi) p.inPool=pi.checked;
   persistApi();
   store.set("cc_sysPrefix", els.sysPrefix.value);   // 附加提示词全局保存
   flash($("cfgMsg"),"Đã lưu vào cấu hình \u201c"+p.name+"\u201d");
@@ -575,17 +609,67 @@ $("apiDel").onclick=()=>{
   renderApiSelect(); applyProfileToFields(); persistApi(); flash($("cfgMsg"),"Đã xóa cấu hình \u201c"+nm+"\u201d");
 };
 $("saveCfg").onclick=saveCfg;
-// Pool đa-luồng: cập nhật dòng trạng thái + lưu cờ inPool của cấu hình đang chọn.
+// Pool đa-luồng: dòng trạng thái theo số provider bổ sung hợp lệ.
 function updatePoolStatus(){
   const el=$("poolStatus"); if(!el) return;
-  const flagged=(apiProfiles||[]).filter(p=>p.inPool && _validProv(p));
-  if(flagged.length>=2){ el.textContent="ĐANG BẬT · "+flagged.length+" provider · ~"+poolConcurrency()+" lane song song"; el.style.color="var(--ok)"; }
-  else if((apiProfiles||[]).filter(p=>p.inPool).length>=2){ el.textContent="bật nhưng có cấu hình thiếu Base URL/Key/Model"; el.style.color="var(--gold)"; }
-  else { el.textContent="tắt (chỉ 1 cấu hình chạy)"; el.style.color="var(--faint)"; }
+  const okExtras=(extraProviders||[]).filter(_validProv).length;
+  const badExtras=(extraProviders||[]).length - okExtras;
+  if(okExtras>=1){ el.textContent="ĐANG BẬT · "+(okExtras+1)+" provider · ~"+poolConcurrency()+" lane song song"+(badExtras?(" ("+badExtras+" provider thiếu Base URL/Key/Model)"):""); el.style.color="var(--ok)"; }
+  else if(badExtras>=1){ el.textContent="có "+badExtras+" provider bổ sung nhưng thiếu Base URL/Key/Model"; el.style.color="var(--gold)"; }
+  else { el.textContent="1 provider (thêm provider để chạy song song)"; el.style.color="var(--faint)"; }
 }
-$("poolInclude").addEventListener("change",()=>{ const p=apiProfiles[curApiIdx]; if(p){ p.inPool=$("poolInclude").checked; persistApi(); } updatePoolStatus(); });
+// Danh sách provider bổ sung: mỗi dòng bấm để sửa (mở modal).
+function renderProvList(){
+  const box=$("provList"); if(!box) return; box.innerHTML="";
+  if(!extraProviders.length){ box.innerHTML='<div class="faint" style="font-size:11px">Chưa có provider bổ sung. Bấm "➕ Thêm provider" để chạy song song.</div>'; updatePoolStatus(); return; }
+  extraProviders.forEach((p,i)=>{
+    const ok=_validProv(p);
+    const row=document.createElement("div");
+    row.className="chip"; row.style.cssText="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 10px";
+    row.title="Bấm để sửa";
+    const dot='<span style="width:8px;height:8px;border-radius:50%;flex:none;background:'+(ok?"var(--ok)":"var(--danger)")+'"></span>';
+    const nm=(p.name||("Provider "+(i+2)));
+    const info=ok? (p.model+(String(p.secondaryModel||"").trim()?(" + "+p.secondaryModel):"")+" · "+profileKeys(p).length+" key") : "thiếu Base URL/Key/Model";
+    const d=document.createElement("div"); d.style.cssText="flex:1;min-width:0"; d.innerHTML=dot+' <b>'+nm.replace(/</g,"&lt;")+'</b> <span class="faint" style="font-size:11px">· '+info.replace(/</g,"&lt;")+'</span>';
+    row.appendChild(d);
+    const del=document.createElement("button"); del.type="button"; del.textContent="Xóa"; del.className="mini"; del.style.cssText="color:var(--danger);border-color:var(--gold-dim)";
+    del.onclick=ev=>{ ev.stopPropagation(); if(!confirm("Xóa "+nm+"?")) return; extraProviders.splice(i,1); saveJSON("cc_extra_providers",extraProviders); renderProvList(); };
+    row.appendChild(del);
+    row.onclick=()=>openProvModal(i);
+    box.appendChild(row);
+  });
+  updatePoolStatus();
+}
+// Modal thêm/sửa provider
+let _pmEditIdx=-1;
+function openProvModal(idx){
+  _pmEditIdx=idx;
+  const p = idx>=0 ? extraProviders[idx] : {apiFormat:"openai",baseUrl:"",apiKey:"",model:"",primaryRpm:"10",secondaryModel:"",secondaryRpm:"20",charThreshold:"0",name:""};
+  $("provModalTitle").textContent = idx>=0 ? ("Sửa "+(p.name||("Provider "+(idx+2)))) : ("Thêm Provider "+(extraProviders.length+2));
+  $("pmName").value=p.name||("Provider "+(idx>=0?idx+2:extraProviders.length+2));
+  $("pmFormat").value=p.apiFormat||"openai";
+  $("pmBaseUrl").value=p.baseUrl||"";
+  $("pmApiKey").value=p.apiKey||"";
+  $("pmModel").value=p.model||"";
+  $("pmPrimaryRpm").value=p.primaryRpm||"10";
+  $("pmSecondaryModel").value=p.secondaryModel||"";
+  $("pmSecondaryRpm").value=p.secondaryRpm||"20";
+  $("pmCharThreshold").value=p.charThreshold||"0";
+  $("pmDelete").style.display = idx>=0 ? "" : "none";
+  $("provModal").style.display="flex";
+}
+function closeProvModal(){ $("provModal").style.display="none"; _pmEditIdx=-1; }
+$("addProvBtn").onclick=()=>openProvModal(-1);
+$("pmCancel").onclick=closeProvModal;
+$("provModal").addEventListener("click",e=>{ if(e.target===$("provModal")) closeProvModal(); });
+$("pmSave").onclick=()=>{
+  const p={ name:$("pmName").value.trim()||("Provider "+(extraProviders.length+2)), apiFormat:$("pmFormat").value, baseUrl:$("pmBaseUrl").value.trim(), apiKey:$("pmApiKey").value.trim(), model:$("pmModel").value.trim(), primaryRpm:$("pmPrimaryRpm").value, secondaryModel:$("pmSecondaryModel").value.trim(), secondaryRpm:$("pmSecondaryRpm").value, charThreshold:$("pmCharThreshold").value };
+  if(_pmEditIdx>=0) extraProviders[_pmEditIdx]=p; else extraProviders.push(p);
+  saveJSON("cc_extra_providers",extraProviders); renderProvList(); closeProvModal();
+};
+$("pmDelete").onclick=()=>{ if(_pmEditIdx<0) return; if(!confirm("Xóa provider này?")) return; extraProviders.splice(_pmEditIdx,1); saveJSON("cc_extra_providers",extraProviders); renderProvList(); closeProvModal(); };
 ["primaryRpm","secondaryModel","secondaryRpm","charThreshold"].forEach(id=>{ const e=$(id); if(e) e.addEventListener("input",updatePoolStatus); });
-updatePoolStatus();
+renderProvList();
 els.sysPrefix.addEventListener("input",()=>store.set("cc_sysPrefix", els.sysPrefix.value));
 
 // Persist NSFW toggle states
@@ -696,7 +780,7 @@ function pickApiKey(){
 }
 
 /* ═══════════════ POOL đa-provider (như Dịch Card) ═══════════════
-   Mỗi PROFILE cấu hình (đã có sẵn hệ chuyển đổi) = 1 provider. Bật cờ inPool để gộp vào pool.
+   Provider 1 = cấu hình chính (els). Provider 2+ do danh sách extraProviders quản lý (modal).
    Mỗi provider: đa-key (xoay vòng) + model chính/phụ (chọn theo NGƯỠNG KÝ TỰ) + RPM riêng.
    Engine rải call round-robin qua các provider, rate-limit trượt 60s theo (provider, model),
    xoay key theo provider. Các vòng lặp bắn call SONG SONG → nhiều lane chạy cùng lúc. */
@@ -708,15 +792,18 @@ function _rlK(pn,model){ return pn+"§"+model; }
 function _rlOk(k,rpm){ if(!(rpm>0)) return true; const now=Date.now(); const a=(_rlHits[k]||[]).filter(t=>now-t<60000); _rlHits[k]=a; return a.length<rpm; }
 function _rlHit(k){ (_rlHits[k]=_rlHits[k]||[]).push(Date.now()); }
 // Đồng bộ giá trị đang hiển thị → profile đang chọn (để pool luôn dùng cấu hình mới nhất).
-function syncElsToActive(){ const p=apiProfiles&&apiProfiles[curApiIdx]; if(!p) return; PROFILE_FIELDS.forEach(k=>{ if(els[k]) p[k]=els[k].value; }); const pi=$("poolInclude"); if(pi) p.inPool=pi.checked; }
+function syncElsToActive(){ const p=apiProfiles&&apiProfiles[curApiIdx]; if(!p) return; PROFILE_FIELDS.forEach(k=>{ if(els[k]) p[k]=els[k].value; }); }
 function _validProv(p){ return String(p.baseUrl||"").trim() && String(p.model||"").trim() && profileKeys(p).length; }
+// Provider 1 = cấu hình chính đang hiển thị (els). Cộng danh sách extraProviders (do modal quản lý).
+function mainProvider(){
+  return { name:"Provider 1", apiFormat:els.apiFormat.value, baseUrl:els.baseUrl.value, apiKey:els.apiKey.value, model:els.model.value, temp:els.temp.value,
+    primaryRpm:els.primaryRpm.value, secondaryModel:els.secondaryModel.value, secondaryRpm:els.secondaryRpm.value, charThreshold:els.charThreshold.value };
+}
 function poolProviders(){
-  syncElsToActive();
-  const flagged=(apiProfiles||[]).filter(p=>p.inPool && _validProv(p));
-  if(flagged.length>=2) return flagged;
-  const cur=apiProfiles&&apiProfiles[curApiIdx];
-  if(cur && _validProv(cur)) return [cur];
-  return [{ name:"(hiện tại)", apiFormat:els.apiFormat.value, baseUrl:els.baseUrl.value, apiKey:els.apiKey.value, model:els.model.value, temp:els.temp.value, primaryRpm:"0", secondaryModel:"", secondaryRpm:"0", charThreshold:"0" }];
+  const p1=mainProvider();
+  const extras=(extraProviders||[]).filter(_validProv);
+  const all=[p1,...extras].filter(_validProv);
+  return all.length? all : [p1];   // p1 rỗng + không extra → vẫn trả p1 (call sẽ báo thiếu Base URL như cũ)
 }
 let _laneCursor=0;
 function connFromProfile(p,model){ return { name:p.name, fmt:p.apiFormat||"openai", baseUrl:String(p.baseUrl||"").trim(), model:String(model||"").trim(), key:pickKeyFor(p), temp:(p.temp!==undefined&&p.temp!=="")?p.temp:els.temp.value }; }
