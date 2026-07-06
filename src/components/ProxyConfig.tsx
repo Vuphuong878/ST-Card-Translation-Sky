@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { useT } from '../i18n/useLocale';
 import { testConnection, getModelSuggestions, getDefaultProxyUrl, fetchModelsFromProxy } from '../utils/apiClient';
+import ProviderPoolConfig from './ProviderPoolConfig';
 import type { AIProvider } from '../types/card';
 import {
   Settings,
@@ -399,7 +400,7 @@ export default function ProxyConfig() {
               {/* Threshold row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', flex: 1 }}>
-                  Dưới bao nhiêu ký tự thì dùng model phụ
+                  Dưới bao nhiêu token thì dùng model phụ
                 </span>
                 <input
                   className="input"
@@ -409,16 +410,19 @@ export default function ProxyConfig() {
                   value={proxy.secondaryModelThreshold ?? 0}
                   onChange={(e) => setProxy({ secondaryModelThreshold: Math.max(0, parseInt(e.target.value) || 0) })}
                   style={{ width: '70px', padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
-                  title="Dưới ngưỡng ký tự này → tự động dùng model phụ (0 = tắt)"
+                  title="Entry dưới ngưỡng token này (ước lượng) → tự động dùng model phụ cho nhanh (0 = tắt)"
                   placeholder="0"
                 />
               </div>
               <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                0 = tắt · Ví dụ: 300 → field &lt; 300 ký tự dùng Flash cho nhanh
+                0 = tắt · Ví dụ: 300 → entry &lt; ~300 token dùng Flash cho nhanh (token ≈ ký tự ÷ 4)
               </div>
             </div>
           )}
         </div>
+
+        {/* Provider bổ sung — đa provider chạy song song */}
+        <ProviderPoolConfig />
 
         {/* CORS Proxy Toggle */}
         <div

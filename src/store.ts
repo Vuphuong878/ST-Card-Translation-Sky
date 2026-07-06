@@ -3,6 +3,7 @@ import type { Locale } from './i18n/translations';
 import type {
   CharacterCard,
   ProxySettings,
+  ProviderConfig,
   ConnectionStatus,
   TranslationConfig,
   TranslationField,
@@ -101,6 +102,11 @@ interface AppState {
   proxy: ProxySettings;
   setProxy: (partial: Partial<ProxySettings>) => void;
   resetProxy: () => void;
+  /** Các provider PHỤ (ngoài `proxy`). Engine gộp proxy + providers bật → pool rải call song song. */
+  providers: ProviderConfig[];
+  addProvider: () => void;
+  updateProvider: (id: string, patch: Partial<ProviderConfig>) => void;
+  removeProvider: (id: string) => void;
   connectionStatus: ConnectionStatus;
   setConnectionStatus: (s: ConnectionStatus) => void;
   scannedModels: string[];
@@ -422,6 +428,47 @@ export const useStore = create<AppState>((set) => ({
     });
     set({ proxy: defaultProxy, connectionStatus: 'untested' });
   },
+
+  // ─── Provider phụ (đa provider — gộp chạy song song) ───
+  providers: LS.get('st-translator-providers', [] as ProviderConfig[]),
+  addProvider: () => {
+    set((s) => {
+      const n = s.providers.length + 2; // provider #1 = proxy, nên phụ bắt đầu từ #2
+      const np: ProviderConfig = {
+        id: (globalThis.crypto?.randomUUID?.() || `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`),
+        name: `Provider #${n}`,
+        enabled: true,
+        provider: s.proxy.provider,
+        proxyUrl: s.proxy.proxyUrl,
+        apiKey: '',
+        apiKeys: [],
+        model: s.proxy.model,
+        primaryModelRpm: 5,
+        enableSecondaryModel: false,
+        secondaryModel: '',
+        secondaryModelRpm: 17,
+        secondaryModelThreshold: 0,
+      };
+      const providers = [...s.providers, np];
+      LS.set('st-translator-providers', providers);
+      return { providers };
+    });
+  },
+  updateProvider: (id, patch) => {
+    set((s) => {
+      const providers = s.providers.map((p) => (p.id === id ? { ...p, ...patch } : p));
+      LS.set('st-translator-providers', providers);
+      return { providers };
+    });
+  },
+  removeProvider: (id) => {
+    set((s) => {
+      const providers = s.providers.filter((p) => p.id !== id);
+      LS.set('st-translator-providers', providers);
+      return { providers };
+    });
+  },
+
   connectionStatus: 'untested',
   setConnectionStatus: (s) => set({ connectionStatus: s }),
   scannedModels: LS.get('st-translator-scanned-models', []),

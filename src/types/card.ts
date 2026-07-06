@@ -280,6 +280,28 @@ export interface ProxySettings {
   secondaryModelThreshold: number;
 }
 
+/**
+ * Cấu hình 1 provider PHỤ (ngoài `proxy` = provider chính #1). Engine gộp `proxy` + tất cả
+ * ProviderConfig đang `enabled` thành pool, rải call round-robin để chạy song song nhiều provider.
+ * Chỉ chứa field ĐẶC THÙ provider — các thiết lập toàn cục (sampling, prompt, timeout, CORS…) lấy
+ * chung từ `proxy`. Khi dịch, lane của provider phụ = { ...proxy, ...(field dưới đây) }.
+ */
+export interface ProviderConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  provider: AIProvider;
+  proxyUrl: string;
+  apiKey: string;
+  apiKeys: string[];
+  model: string;
+  primaryModelRpm: number;
+  enableSecondaryModel: boolean;
+  secondaryModel: string;
+  secondaryModelRpm: number;
+  secondaryModelThreshold: number;
+}
+
 export type ConnectionStatus = 'untested' | 'connected' | 'failed';
 
 /* ─── Translation Config ─── */

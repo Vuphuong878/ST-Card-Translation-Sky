@@ -7,7 +7,7 @@ import { Cpu, KeyRound, Activity, Gauge } from 'lucide-react';
 /** Live panel: which model is translating which entry, how many threads are
  *  running concurrently, and the combined RPM capacity across all API keys. */
 export default function ActiveCallsPanel() {
-  const { proxy, phase, fields } = useStore();
+  const { proxy, phase, fields, providers } = useStore();
 
   const activeCalls = useSyncExternalStore(CallMonitor.subscribe, CallMonitor.getSnapshot);
 
@@ -29,26 +29,21 @@ export default function ActiveCallsPanel() {
 
   const keyCount = getUniqueKeyCount(proxy);
   const usage = getRateLimitUsage();
-
-  const basePrimaryRpm = proxy.primaryModelRpm && proxy.primaryModelRpm > 0 ? proxy.primaryModelRpm : 5;
-  const baseSecondaryRpm = proxy.secondaryModelRpm && proxy.secondaryModelRpm > 0 ? proxy.secondaryModelRpm : 17;
-
-  const effectiveRpmFor = (model: string): number => {
-    if (model === proxy.secondaryModel) return baseSecondaryRpm * keyCount;
-    return basePrimaryRpm * keyCount; // primary or anything else falls back to primary rpm
-  };
-
-  // Build the list of models to show usage for: configured ones + any seen in usage.
-  const modelsToShow = new Set<string>();
-  if (proxy.model) modelsToShow.add(proxy.model);
-  if (proxy.enableSecondaryModel && proxy.secondaryModel?.trim()) modelsToShow.add(proxy.secondaryModel);
-  for (const m of Object.keys(usage)) modelsToShow.add(m);
-
-  // Count active threads per model
-  const perModelActive = new Map<string, number>();
-  for (const c of activeCalls) perModelActive.set(c.model, (perModelActive.get(c.model) || 0) + 1);
-
   const accent = 'var(--accent-secondary)';
+
+  // ─── Dựng lanes (provider + model) để hiện RPM tách theo từng provider ───
+  const rlKey = (id: string, model: string) => (id === 'default' ? model : `${id}${model}`);
+  type Lane = { providerId: string; providerName: string; model: string; limit: number; used: number; isSecondary: boolean };
+  const lanes: Lane[] = [];
+  const enabledProviders = providers.filter((p) => p.enabled && p.model?.trim());
+  const showProviderName = enabledProviders.length > 0; // chỉ hiện tên provider khi có >1 provider
+  const addLanes = (id: string, name: string, cfg: { model: string; primaryModelRpm: number; enableSecondaryModel: boolean; secondaryModel: string; secondaryModelRpm: number; apiKey: string; apiKeys: string[] }) => {
+    const kc = getUniqueKeyCount(cfg);
+    if (cfg.model) lanes.push({ providerId: id, providerName: name, model: cfg.model, isSecondary: false, limit: (cfg.primaryModelRpm > 0 ? cfg.primaryModelRpm : 5) * kc, used: usage[rlKey(id, cfg.model)] || 0 });
+    if (cfg.enableSecondaryModel && cfg.secondaryModel?.trim()) lanes.push({ providerId: id, providerName: name, model: cfg.secondaryModel, isSecondary: true, limit: (cfg.secondaryModelRpm > 0 ? cfg.secondaryModelRpm : 17) * kc, used: usage[rlKey(id, cfg.secondaryModel)] || 0 });
+  };
+  addLanes('default', 'Provider #1', proxy);
+  enabledProviders.forEach((p, i) => addLanes(p.id, p.name || `Provider #${i + 2}`, p));
 
   return (
     <div
@@ -82,34 +77,21 @@ export default function ActiveCallsPanel() {
         </div>
       </div>
 
-      {/* Per-model RPM capacity (combined across keys) */}
+      {/* RPM theo từng provider + model (mỗi lane 1 thanh) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: activeCalls.length > 0 ? '10px' : '0' }}>
-        {[...modelsToShow].map((model) => {
-          const used = usage[model] || 0;
-          const limit = effectiveRpmFor(model);
-          const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
-          const activeHere = perModelActive.get(model) || 0;
-          const isSecondary = model === proxy.secondaryModel;
+        {lanes.map((lane) => {
+          const pct = lane.limit > 0 ? Math.min(100, (lane.used / lane.limit) * 100) : 0;
           return (
-            <div key={model}>
+            <div key={lane.providerId + '|' + lane.model + '|' + (lane.isSecondary ? 's' : 'p')}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.66rem', marginBottom: '3px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-secondary)', minWidth: 0 }}>
-                  <Cpu size={11} style={{ flexShrink: 0, color: isSecondary ? '#fbbf24' : accent }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model}</span>
-                  {isSecondary && <span style={{ fontSize: '0.55rem', color: '#fbbf24', flexShrink: 0 }}>(phụ)</span>}
-                  {activeHere > 0 && (
-                    <span style={{ fontSize: '0.55rem', color: accent, background: 'rgba(56,189,248,0.12)', padding: '0 4px', borderRadius: '3px', flexShrink: 0 }}>
-                      {activeHere} đang chạy
-                    </span>
-                  )}
+                  <Cpu size={11} style={{ flexShrink: 0, color: lane.isSecondary ? '#fbbf24' : accent }} />
+                  {showProviderName && <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '0 4px', borderRadius: '3px', flexShrink: 0 }}>{lane.providerName}</span>}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lane.model}</span>
+                  {lane.isSecondary && <span style={{ fontSize: '0.55rem', color: '#fbbf24', flexShrink: 0 }}>(phụ)</span>}
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', flexShrink: 0 }}>
-                  <Gauge size={10} /> {used}/{limit} RPM
-                  {keyCount > 1 && (
-                    <span style={{ fontSize: '0.55rem' }}>
-                      ({isSecondary ? baseSecondaryRpm : basePrimaryRpm}×{keyCount} key)
-                    </span>
-                  )}
+                  <Gauge size={10} /> {lane.used}/{lane.limit} RPM
                 </span>
               </div>
               <div className="progress-track" style={{ height: '4px' }}>
@@ -117,7 +99,7 @@ export default function ActiveCallsPanel() {
                   style={{
                     width: `${pct}%`,
                     height: '100%',
-                    background: pct > 85 ? 'var(--accent-danger)' : isSecondary ? '#fbbf24' : 'linear-gradient(90deg, var(--accent-secondary), var(--accent-primary))',
+                    background: pct > 85 ? 'var(--accent-danger)' : lane.isSecondary ? '#fbbf24' : 'linear-gradient(90deg, var(--accent-secondary), var(--accent-primary))',
                     borderRadius: 'inherit',
                     transition: 'width 0.3s ease',
                   }}

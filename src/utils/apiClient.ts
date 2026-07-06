@@ -1,4 +1,4 @@
-import type { AIProvider, ProxySettings, GlossaryEntry, CharacterBookEntry } from '../types/card';
+import type { AIProvider, ProxySettings, ProviderConfig, GlossaryEntry, CharacterBookEntry } from '../types/card';
 import {
   buildMasterSystemPrompt,
   extractTranslationFromResponse,
@@ -1496,34 +1496,30 @@ async function callGemini(
 }
 
 /* ─── API Key Rotation ─── */
-let _keyIndex = 0;
-
 /** Collect the de-duplicated pool of usable API keys (primary + rotation pool). */
-function getUniqueKeys(config: ProxySettings): string[] {
+function getUniqueKeys(config: { apiKey: string; apiKeys: string[] }): string[] {
   const pool = (config.apiKeys || []).filter(k => k.trim());
   const allKeys = [config.apiKey, ...pool].filter(Boolean);
   return [...new Set(allKeys)];
 }
 
 /** Number of distinct API keys available — used to multiply the effective RPM. */
-export function getUniqueKeyCount(config: ProxySettings): number {
+export function getUniqueKeyCount(config: { apiKey: string; apiKeys: string[] }): number {
   return getUniqueKeys(config).length || 1;
 }
 
-/** Get the next API key from rotation pool, with its index + pool size. */
-function getRotatedKey(config: ProxySettings): { key: string; index: number; count: number } {
-  const uniqueKeys = getUniqueKeys(config);
-  if (uniqueKeys.length === 0) return { key: config.apiKey, index: 0, count: 1 };
-
-  const index = _keyIndex % uniqueKeys.length;
-  const key = uniqueKeys[index];
-  _keyIndex = (_keyIndex + 1) % uniqueKeys.length;
-  return { key, index, count: uniqueKeys.length };
+// Key rotation is PER PROVIDER now (multi-provider pool) — mỗi provider có con trỏ key riêng.
+const _keyIndexByProvider = new Map<string, number>();
+function getRotatedKeyFor(providerId: string, keys: string[]): { key: string; index: number; count: number } {
+  if (keys.length === 0) return { key: '', index: 0, count: 1 };
+  const cur = _keyIndexByProvider.get(providerId) || 0;
+  const index = cur % keys.length;
+  _keyIndexByProvider.set(providerId, (cur + 1) % keys.length);
+  return { key: keys[index], index, count: keys.length };
 }
-
-/** Force advance to next key (e.g. after rate limit) */
-function advanceKeyRotation() {
-  _keyIndex++;
+/** Force advance to next key for a provider (e.g. after 429). */
+function advanceKeyRotationFor(providerId: string) {
+  _keyIndexByProvider.set(providerId, (_keyIndexByProvider.get(providerId) || 0) + 1);
 }
 
 /* ─── Rate Limiter — Per-model Sliding Window ─── */
@@ -1605,6 +1601,80 @@ async function waitForRateLimitModel(model: string, rpm: number, signal?: AbortS
   bucket.push(now2);
 }
 
+/* ─── Multi-provider pool ───
+ * `proxy` là provider #1. Các provider PHỤ được store bơm vào qua setExtraProviders().
+ * Pool = [proxy] + providers phụ (bật). pickLane() rải call ROUND-ROBIN đều giữa các provider,
+ * gate theo RPM riêng của từng (provider, model) — nhiều provider chạy song song → nhanh hơn.
+ * Chất lượng giữ nguyên: mỗi call vẫn là 1 provider trọn vẹn; covariance/RAG không phụ thuộc provider.
+ */
+let _extraProviders: ProviderConfig[] = [];
+export function setExtraProviders(list: ProviderConfig[]): void {
+  _extraProviders = (list || []).filter((p) => p.enabled && p.model?.trim() && (p.apiKey?.trim() || (p.apiKeys || []).some((k) => k.trim())));
+}
+let _laneCursor = 0;
+/** Reset pool round-robin + per-provider key rotation at the start of a run. */
+export function resetProviderPool(): void {
+  _laneCursor = 0;
+  _keyIndexByProvider.clear();
+}
+
+interface PoolProvider {
+  id: string; provider: AIProvider; proxyUrl: string; keys: string[];
+  primaryModel: string; primaryRpm: number;
+  enableSecondary: boolean; secondaryModel: string; secondaryRpm: number; secondaryThreshold: number;
+}
+interface ChosenLane { providerId: string; provider: AIProvider; proxyUrl: string; model: string; key: string; keyIndex: number; keyTotal: number; }
+
+const _rlKey = (id: string, model: string) => (id === 'default' ? model : `${id}${model}`);
+
+function _toPoolProvider(id: string, c: { provider: AIProvider; proxyUrl: string; apiKey: string; apiKeys: string[]; model: string; primaryModelRpm: number; enableSecondaryModel: boolean; secondaryModel: string; secondaryModelRpm: number; secondaryModelThreshold: number }): PoolProvider {
+  return {
+    id, provider: c.provider, proxyUrl: c.proxyUrl, keys: getUniqueKeys(c),
+    primaryModel: c.model, primaryRpm: c.primaryModelRpm > 0 ? c.primaryModelRpm : 5,
+    enableSecondary: !!c.enableSecondaryModel && !!c.secondaryModel?.trim(),
+    secondaryModel: c.secondaryModel, secondaryRpm: c.secondaryModelRpm > 0 ? c.secondaryModelRpm : 17,
+    secondaryThreshold: c.secondaryModelThreshold || 0,
+  };
+}
+function buildPool(base: ProxySettings): PoolProvider[] {
+  return [_toPoolProvider('default', base), ..._extraProviders.map((p) => _toPoolProvider(p.id, p))];
+}
+/** Thứ tự lane ưu tiên của 1 provider: entry NGẮN (≤ ngưỡng TOKEN) → ưu tiên model phụ cho nhanh.
+ *  Ngưỡng do user đặt theo token; ước lượng token ≈ ceil(ký tự / 4). */
+function laneOrder(p: PoolProvider, charCount?: number): { model: string; rpm: number }[] {
+  const kc = Math.max(1, p.keys.length || 1);
+  const primary = { model: p.primaryModel, rpm: p.primaryRpm * kc };
+  if (!p.enableSecondary) return [primary];
+  const secondary = { model: p.secondaryModel, rpm: p.secondaryRpm * kc };
+  const estTokens = charCount != null ? Math.ceil(charCount / 4) : null;
+  if (p.secondaryThreshold > 0 && estTokens != null && estTokens <= p.secondaryThreshold) return [secondary, primary];
+  return [primary, secondary];
+}
+/** Chọn lane kế tiếp (round-robin đều) còn RPM; nếu tất cả đầy thì chờ lane con trỏ. */
+async function pickLane(pool: PoolProvider[], charCount: number | undefined, signal?: AbortSignal): Promise<ChosenLane> {
+  const n = pool.length;
+  const build = (p: PoolProvider, model: string): ChosenLane => {
+    const { key, index, count } = getRotatedKeyFor(p.id, p.keys);
+    return { providerId: p.id, provider: p.provider, proxyUrl: p.proxyUrl, model, key, keyIndex: index, keyTotal: count };
+  };
+  for (let i = 0; i < n; i++) {
+    const p = pool[(_laneCursor + i) % n];
+    for (const L of laneOrder(p, charCount)) {
+      if (hasRateLimitCapacity(_rlKey(p.id, L.model), L.rpm)) {
+        recordRateLimitRequest(_rlKey(p.id, L.model));
+        _laneCursor = (_laneCursor + i + 1) % n;
+        return build(p, L.model);
+      }
+    }
+  }
+  // Mọi lane đầy → chờ lane đầu của provider con trỏ.
+  const p = pool[_laneCursor % n];
+  const L = laneOrder(p, charCount)[0];
+  await waitForRateLimitModel(_rlKey(p.id, L.model), L.rpm, signal);
+  _laneCursor = (_laneCursor + 1) % n;
+  return build(p, L.model);
+}
+
 /* ─── Route to correct provider (with key rotation + per-model rate limiting) ─── */
 export async function callProvider(
   config: ProxySettings,
@@ -1612,43 +1682,24 @@ export async function callProvider(
   user: string,
   signal?: AbortSignal,
   images?: string[],
-  meta?: { label?: string }
+  meta?: { label?: string; charCount?: number }
 ): Promise<string> {
-  // Effective RPM is multiplied by the number of distinct API keys: each key has
-  // its own per-minute quota, so N keys ≈ N× the throughput for the same model.
-  const keyCount = getUniqueKeyCount(config);
-  const basePrimaryRpm = (config.primaryModelRpm && config.primaryModelRpm > 0) ? config.primaryModelRpm : 5;
-  const primaryRpm = basePrimaryRpm * keyCount;
+  // ═══ Multi-provider pool: chọn lane (provider+model+key) round-robin, gate theo RPM ═══
+  // `config` (= store.proxy) là provider #1; _extraProviders là các provider phụ đã bơm vào.
+  // Field toàn cục (temperature/maxTokens/prompt…) lấy từ `config`; chỉ endpoint/keys/model/provider
+  // được thay theo lane đã chọn. Single-provider ⇒ pool 1 phần tử ⇒ hành vi y như trước.
+  const pool = buildPool(config);
+  const lane = await pickLane(pool, meta?.charCount, signal);
+  const keyIndex = lane.keyIndex;
+  const keyTotal = lane.keyTotal;
+  const rotatedConfig = { ...config, provider: lane.provider, proxyUrl: lane.proxyUrl, model: lane.model, apiKey: lane.key };
 
-  // ═══ Dual-model overflow: if secondary is enabled and primary is saturated, use secondary ═══
-  let activeConfig = config;
-  if (config.enableSecondaryModel && config.secondaryModel?.trim()) {
-    const baseSecondaryRpm = (config.secondaryModelRpm && config.secondaryModelRpm > 0) ? config.secondaryModelRpm : 17;
-    const secondaryRpm = baseSecondaryRpm * keyCount;
-    if (hasRateLimitCapacity(config.model, primaryRpm)) {
-      recordRateLimitRequest(config.model);
-    } else if (hasRateLimitCapacity(config.secondaryModel, secondaryRpm)) {
-      console.log(`[DualModel] ${config.model} rate-limited → switching to ${config.secondaryModel}`);
-      activeConfig = { ...config, model: config.secondaryModel };
-      recordRateLimitRequest(config.secondaryModel);
-    } else {
-      // Both saturated — wait for primary
-      await waitForRateLimitModel(config.model, primaryRpm, signal);
-    }
-  } else {
-    await waitForRateLimitModel(config.model, primaryRpm, signal);
-  }
-
-  // Create a config copy with rotated key
-  const { key: activeKey, index: keyIndex, count: keyTotal } = getRotatedKey(activeConfig);
-  const rotatedConfig = { ...activeConfig, apiKey: activeKey };
-
-  // Register this call in the live monitor so the UI can show model + entry + thread count
+  // Register this call in the live monitor so the UI can show model + provider + entry + thread count
   const callId = crypto.randomUUID();
   CallMonitor.start({
     id: callId,
-    model: activeConfig.model,
-    provider: activeConfig.provider,
+    model: lane.model,
+    provider: lane.provider,
     keyLabel: keyTotal > 1 ? `Key #${keyIndex + 1}/${keyTotal}` : 'Key #1',
     label: meta?.label || 'Đang dịch…',
     startedAt: Date.now(),
@@ -1666,9 +1717,9 @@ export async function callProvider(
         return await callOpenAICompatible(rotatedConfig, system, user, signal, images);
     }
   } catch (err) {
-    // On rate limit, advance to next key for the retry
+    // On rate limit, advance to next key for THIS provider on retry
     if (err instanceof ApiError && err.statusCode === 429) {
-      advanceKeyRotation();
+      advanceKeyRotationFor(lane.providerId);
     }
     throw err;
   } finally {
@@ -2243,6 +2294,7 @@ async function translateChunk(
 
       let result = await callProvider(config, systemPrompt, userPrompt, combinedSignal, undefined, {
         label: totalChunks > 1 ? `${fieldName} (phần ${chunkIdx + 1}/${totalChunks})` : fieldName,
+        charCount: chunk.length,
       });
       clearTimeout(timeoutId);
 
@@ -3672,8 +3724,10 @@ ${sectionList}
         : controller.signal;
 
       const firstName = items[0]?.fieldName.replace(/^Lorebook:\s*/i, '').slice(0, 40) || 'batch';
+      const batchChars = items.reduce((sum, it) => sum + (it.text?.length || 0), 0);
       const rawResult = await callProvider(config, system, user, combinedSignal, undefined, {
         label: items.length > 1 ? `Lô ${items.length} mục: ${firstName}…` : firstName,
+        charCount: batchChars,
       });
       clearTimeout(timeoutId);
 

@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useStore } from '../store';
-import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError } from '../utils/apiClient';
+import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError, setExtraProviders, resetProviderPool } from '../utils/apiClient';
 import { extractTranslatableFields, applyTranslationsToCard, autoTranslateLorebookTriggerKeys, injectNewLorebookEntries } from '../utils/cardFields';
 import { syncMvuVariables, postProcessRegexHtml, normalizeSmartQuotesInCode, fixNestedQuoteBracketPaths, fixBrokenLodashPaths, fixDotNotationPaths, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency, enforceVariableCasing, fixZodSyntaxErrors, validateDictionaryConflicts, aiResolveMvuConflicts } from '../utils/mvuSync';
 import { shouldSkipTranslation, detectLanguage } from '../utils/langDetect';
@@ -1407,6 +1407,12 @@ export function useTranslation() {
     }
     store.setPreprocessProgress(null);
     CallMonitor.reset();
+    // Nạp pool provider phụ + reset round-robin cho lượt dịch này.
+    setExtraProviders(store.providers);
+    resetProviderPool();
+    if (store.providers.filter((p) => p.enabled).length > 0) {
+      store.addLog('info', `🔀 Đa provider: ${1 + store.providers.filter((p) => p.enabled).length} provider chạy song song (rải đều).`);
+    }
 
     const logParts = [`Starting translation of ${fields.length} fields to ${store.translationConfig.targetLanguage}`];
     if (skippedCount > 0) logParts.push(`(${skippedCount} skipped — already in target language)`);
@@ -3365,6 +3371,8 @@ export function useTranslation() {
     }
     store.setPreprocessProgress(null);
     CallMonitor.reset();
+    setExtraProviders(store.providers);
+    resetProviderPool();
 
     store.addLog('info', `🔧 Applying Mod to ${targetFields.length} field(s) [Language: ${effectiveLang}]`);
     store.addLog('info', `📝 Mod instructions: "${modInstructions.slice(0, 100)}${modInstructions.length > 100 ? '...' : ''}"`);
