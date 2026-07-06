@@ -237,7 +237,7 @@
       <button class="primary" id="scanBtn">Quét toàn bộ truyện</button>
       <button class="ghost" id="mergeBtn" type="button">Gộp mục đã chọn</button>
       <button class="ghost" id="clearCharsBtn" type="button">Xóa danh sách</button>
-      <label class="toggle" style="margin-left:4px"><input type="checkbox" id="scanRole"> Kèm mô tả danh tính khi quét</label>
+      <label class="toggle" style="margin-left:4px"><input type="checkbox" id="scanRole" title="Kèm giới tính + phân loại vai (Chính / Phụ / NPC qua đường) + mô tả danh tính khi quét"> Kèm giới tính · vai chính/phụ · mô tả</label>
       <label class="toggle" style="margin-left:4px"><input type="checkbox" id="scanStage"> Chia theo giai đoạn nhân vật</label>
       <span id="scanMsg" class="faint" style="font-size:12px"></span>
     </div>
@@ -1144,7 +1144,11 @@ $("scanBtn").onclick=async()=>{
       const nameViRule = "Trường \"name\" giữ NGUYÊN VĂN đúng như chữ viết xuất hiện trong văn bản gốc (không dịch, dùng để dò lại đúng đoạn văn). Thêm trường \"vi\": tên đó viết bằng tiếng Việt để hiển thị cho người đọc — nếu là tên gốc Hán thì chuyển sang âm Hán Việt (ví dụ 夏冬→Hạ Đông), nếu là danh xưng/biệt hiệu có nghĩa thì dịch nghĩa (ví dụ 旺旺→Vượng Vượng, 疯狗→Cẩu Điên), nếu đã là tên phiên âm Latin/tiếng Anh sẵn trong văn bản thì giữ nguyên. Phải dùng nhất quán cùng một cách phiên âm/dịch cho cùng một nhân vật trong toàn bộ các lần liệt kê.\n";
       const nsfwScan = $("nsfw").checked ? "Truyện có thể chứa nội dung người lớn/nhạy cảm (NSFW); vẫn liệt kê ĐẦY ĐỦ mọi nhân vật, không né tránh và không bỏ sót nhân vật vì lý do nội dung nhạy cảm.\n" : "";
       const prompt = withRole
-        ? "Dưới đây là một đoạn văn bản tiểu thuyết. Hãy liệt kê các nhân vật có tên xuất hiện trong đó.\n"+nsfwScan+stageLine+nameViRule+"Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\",\"role\":\"Mô tả ngắn gọn danh tính/vai trò, viết bằng tiếng Việt\"}.\nChỉ xuất mảng JSON này, không đặt trong block code, không giải thích thêm. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i]
+        ? "Dưới đây là một đoạn văn bản tiểu thuyết. Hãy liệt kê các nhân vật có tên xuất hiện trong đó.\n"+nsfwScan+stageLine+nameViRule+
+          "Với MỖI nhân vật, xác định thêm 2 thông tin:\n"+
+          "- \"gender\": giới tính — \"Nam\", \"Nữ\", hoặc \"?\" nếu không rõ.\n"+
+          "- \"tier\": tầm quan trọng — \"Chính\" (nhân vật trung tâm / nam chính / nữ chính), \"Phụ\" (nhân vật phụ có vai trò rõ ràng), hoặc \"NPC\" (vai phụ mờ nhạt / người qua đường / chỉ xuất hiện thoáng qua). Đánh giá theo vai trò & mức độ xuất hiện trong đoạn này.\n"+
+          "Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\",\"gender\":\"Nam/Nữ/?\",\"tier\":\"Chính/Phụ/NPC\",\"role\":\"Mô tả ngắn gọn danh tính/vai trò, viết bằng tiếng Việt\"}.\nChỉ xuất mảng JSON này, không đặt trong block code, không giải thích thêm. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i]
         : "Dưới đây là một đoạn văn bản tiểu thuyết. Chỉ liệt kê tên các nhân vật có tên xuất hiện trong đó.\n"+nsfwScan+stageLine+nameViRule+"Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\"}.\nChỉ xuất mảng JSON này, không dùng block code, không giải thích, không kèm trường role. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i];
       let rawText="";
       try{
@@ -1169,8 +1173,10 @@ $("scanBtn").onclick=async()=>{
         if(!key) continue;
         const role = (c&&typeof c==="object"&&c.role)? String(c.role).trim() : "";
         const vi = (c&&typeof c==="object"&&c.vi)? String(c.vi).trim() : "";
-        if(map.has(key)){ const cur=map.get(key); cur.count++; if(vi&&!cur.vi) cur.vi=vi; if(role&&!cur.role) cur.role=role; }
-        else map.set(key,{name:key,vi,role,count:1,aliases:[]});
+        const gender = (c&&typeof c==="object"&&c.gender)? String(c.gender).trim() : "";
+        const tier = (c&&typeof c==="object"&&c.tier)? String(c.tier).trim() : "";
+        if(map.has(key)){ const cur=map.get(key); cur.count++; if(vi&&!cur.vi) cur.vi=vi; if(role&&!cur.role) cur.role=role; if(gender&&!cur.gender) cur.gender=gender; if(tier && tierRank(tier)>tierRank(cur.tier)) cur.tier=tier; }
+        else map.set(key,{name:key,vi,role,gender,tier,count:1,aliases:[]});
       }
       scanState.okArr[i]=true; _scDone++;
       $("scanMsg").innerHTML='<span class="spinner"></span>Đang quét '+_scDone+"/"+cap+((_scConc>1&&_spend.length>1)?(" · song song "+Math.min(_scConc,_spend.length)+" luồng"):"");
@@ -1191,6 +1197,21 @@ $("scanBtn").onclick=async()=>{
   }finally{ setRunning(btn,false); }
 };
 
+// Xếp hạng vai trò: Chính(3) > Phụ(2) > NPC(1). Dùng để merge (lấy mức cao nhất) + badge.
+function tierRank(t){ t=(t||"").toLowerCase(); if(/chính|chinh|main|protagon|nam ch|nữ ch|nu ch/.test(t)) return 3; if(/npc|qua đường|qua duong|passer|mờ|mo\b|minor|quần chúng|quan chung|thoáng qua/.test(t)) return 1; if(/phụ|phu\b|support/.test(t)) return 2; return 0; }
+function genderBadge(g){
+  g=(g||"").toLowerCase();
+  if(/nam|male|♂|nam gi/.test(g) && !/nữ|nu\b|female/.test(g)) return '<span style="color:#6ab7ff;font-weight:700">♂</span>';
+  if(/nữ|nu\b|female|♀/.test(g)) return '<span style="color:#ff8fc7;font-weight:700">♀</span>';
+  return "";
+}
+function tierBadge(t){
+  const r=tierRank(t);
+  if(r===3) return '<span style="background:rgba(200,168,107,.28);color:var(--gold);padding:0 6px;border-radius:6px;font-weight:600">★ Chính</span>';
+  if(r===2) return '<span style="background:rgba(120,190,120,.2);color:#8fbf8a;padding:0 6px;border-radius:6px;font-weight:600">Phụ</span>';
+  if(r===1) return '<span style="background:rgba(150,150,165,.22);color:var(--faint);padding:0 6px;border-radius:6px">NPC</span>';
+  return "";
+}
 function renderChars(){
   const box=$("charList"); box.innerHTML="";
   characters.forEach(c=>{
@@ -1200,6 +1221,12 @@ function renderChars(){
     d.style.position="relative";
     d.innerHTML=`<div class="n"></div><div class="r"></div><div class="c"></div>`;
     d.querySelector(".n").textContent=c.vi||c.name;
+    if(c.gender||c.tier){
+      const b=document.createElement("span");
+      b.style.cssText="margin-left:6px;font-size:10px;display:inline-flex;gap:5px;align-items:center;vertical-align:middle";
+      b.innerHTML=[genderBadge(c.gender),tierBadge(c.tier)].filter(Boolean).join(" ");
+      if(b.innerHTML) d.querySelector(".n").appendChild(b);
+    }
     d.querySelector(".r").textContent=c.role||"";
     const orig=(c.vi && c.vi!==c.name)? " · Gốc: "+c.name : "";
     const alias=(c.aliases&&c.aliases.length)? " · Biệt danh: "+c.aliases.join("、") : "";
@@ -1236,7 +1263,7 @@ function unmergeChar(name){
   const names=[c.name, ...c.aliases];
   characters=characters.filter(x=>x.name!==name);
   for(const nm of names){
-    if(!characters.some(x=>x.name===nm)) characters.push({name:nm, role:(nm===c.name? c.role:""), count:(nm===c.name?c.count:0), aliases:[]});
+    if(!characters.some(x=>x.name===nm)) characters.push({name:nm, role:(nm===c.name? c.role:""), gender:(nm===c.name? c.gender:"")||"", tier:(nm===c.name? c.tier:"")||"", count:(nm===c.name?c.count:0), aliases:[]});
   }
   renderChars(); updateGenBtn(); flash($("scanMsg"),"Đã tách \u201c"+name+"\u201d");
 }
@@ -2987,7 +3014,7 @@ function saveNovelSession(auto){
   if(!text.trim()){ if(!auto) flash($("novelSaveMsg"),"Chưa dán văn bản truyện",true); return; }
   const name=novelTitle();
   const rec={ id:Date.now(), name, time:new Date().toLocaleString(), text,
-    chars:characters.map(c=>({name:c.name,role:c.role,count:c.count,aliases:c.aliases||[]})) };
+    chars:characters.map(c=>({name:c.name,role:c.role,gender:c.gender||"",tier:c.tier||"",count:c.count,aliases:c.aliases||[]})) };
   const idx=novelSessions.findIndex(n=>n.name===name);
   if(idx>=0) novelSessions[idx]=rec; else novelSessions.unshift(rec);
   if(novelSessions.length>8) novelSessions=novelSessions.slice(0,8);
@@ -3003,7 +3030,7 @@ function loadNovelSession(){
   const v=$("novelSel").value; if(v==="") { flash($("novelSaveMsg"),"Chưa có bản ghi nào để tải",true); return; }
   const rec=novelSessions[parseInt(v)]; if(!rec) return;
   $("novel").value=rec.text||""; updateStat();
-  characters=(rec.chars||[]).map(c=>({name:c.name,role:c.role||"",count:c.count||0,aliases:c.aliases||[]}));
+  characters=(rec.chars||[]).map(c=>({name:c.name,role:c.role||"",gender:c.gender||"",tier:c.tier||"",count:c.count||0,aliases:c.aliases||[]}));
   selectedNames=[]; renderChars(); updateGenBtn();
   flash($("novelSaveMsg"), rec.text ? ("Đã tải: "+rec.name+" (Danh sách nhân vật không cần quét lại)") : ("Đã tải danh sách nhân vật, nhưng bản ghi này không chứa văn bản truyện, vui lòng dán lại văn bản truyện"));
 }

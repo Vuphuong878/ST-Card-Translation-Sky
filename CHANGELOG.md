@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.32.1 — Trích Card: quét kèm giới tính + phân loại vai (Chính/Phụ/NPC)
+Nâng cấp nút **"Kèm mô tả danh tính khi quét"** (bước 3, theo feedback client): mỗi nhân vật quét ra nay có thêm
+- **Giới tính**: badge **♂** (nam) / **♀** (nữ);
+- **Vai trò/tầm quan trọng**: **★ Chính** (nhân vật trung tâm / nam–nữ chính) · **Phụ** (nhân vật phụ có vai) · **NPC** (vai mờ / người qua đường).
+
+Hiển thị badge ngay cạnh tên trên thẻ nhân vật → **nhìn phát biết ngay ai chính ai phụ**, khỏi cần đọc truyện, để quyết định tạo thẻ chi tiết hay đơn giản (cho NPC phụ). Nhân vật xuất hiện ở nhiều đoạn thì **lấy vai cao nhất** (Chính > Phụ > NPC). Thông tin được lưu/tải cùng phiên truyện.
+
 ## v1.32.0 — Trích Card: fix thay {{user}} + NSFW/Jailbreak cho bước quét
 - **Fix bug thay {{user}} không nhất quán** (lúc được lúc không): trước đây chỉ **dặn AI** thay tên nhân vật thành `{{user}}` trong prompt, AI không tuân thủ ổn định → nhiều chỗ (header, tên gốc, trong thân thẻ, thẻ nhân vật khác nhắc tới) vẫn để nguyên tên. Nay **thay DETERMINISTIC** sau khi sinh: mọi lần xuất hiện của tên (kèm biệt danh nếu khớp nhân vật đã quét) → `{{user}}`, ở **cả header + key + toàn thân thẻ + luồng Sửa**, có **biên ký tự** nên không thay lẹm phần chữ dính (vd "Trần Duyệtxyz" giữ nguyên).
 - **Bước 3 (Quét nhân vật) nay có NSFW/Jailbreak/Gomorrah**: thêm 3 toggle **đồng bộ 2 chiều** với bước 4 (đổi bên nào cũng cập nhật bên kia + lưu). Prompt quét nay **áp NSFW** khi bật → quét truyện NSFW **không bỏ sót nhân vật** vì nội dung nhạy cảm. (Jailbreak/Gomorrah vốn đã áp cho bước quét qua system prompt chung, nay hiển thị/điều khiển được ngay ở bước 3.)
