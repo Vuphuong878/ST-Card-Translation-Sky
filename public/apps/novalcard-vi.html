@@ -241,6 +241,12 @@
       <label class="toggle" style="margin-left:4px"><input type="checkbox" id="scanStage"> Chia theo giai đoạn nhân vật</label>
       <span id="scanMsg" class="faint" style="font-size:12px"></span>
     </div>
+    <div class="btnrow" style="margin-top:0;margin-bottom:2px">
+      <label class="toggle"><input type="checkbox" id="scanNsfw"> Bao gồm NSFW</label>
+      <label class="toggle"><input type="checkbox" id="scanJailbreak"> Jailbreak (Phá lọc)</label>
+      <label class="toggle"><input type="checkbox" id="scanGomorrah"> Gomorrah Rules</label>
+      <span class="faint" style="font-size:11px;align-self:center">— áp cho bước quét (đồng bộ với bước 4)</span>
+    </div>
     <div class="log" id="scanLog"></div>
     <div class="charlist" id="charList" style="margin-top:16px"></div>
   </div>
@@ -675,6 +681,18 @@ els.sysPrefix.addEventListener("input",()=>store.set("cc_sysPrefix", els.sysPref
 // Persist NSFW toggle states
 $("jailbreak").addEventListener("change",e=>store.set("cc_jailbreak", e.target.checked.toString()));
 $("gomorrahNsfw").addEventListener("change",e=>store.set("cc_gomorrahNsfw", e.target.checked.toString()));
+// Đồng bộ 2 chiều toggle NSFW/Jailbreak/Gomorrah giữa bước 3 (quét) và bước 4 (tạo thẻ) —
+// cùng một trạng thái, đổi bên nào cũng cập nhật bên kia + lưu (jailbreak/gomorrah áp cho scan qua customSys).
+function linkToggles(masterId, mirrorId, saveKey){
+  const m=$(masterId), r=$(mirrorId); if(!m||!r) return;
+  r.checked=m.checked;
+  const apply=v=>{ m.checked=v; r.checked=v; if(saveKey) store.set(saveKey, v.toString()); };
+  m.addEventListener("change",()=>apply(m.checked));
+  r.addEventListener("change",()=>apply(r.checked));
+}
+linkToggles("nsfw","scanNsfw", null);
+linkToggles("jailbreak","scanJailbreak","cc_jailbreak");
+linkToggles("gomorrahNsfw","scanGomorrah","cc_gomorrahNsfw");
 
 // 附加系统提示：拼到每次请求最前
 function customSys(){
@@ -1124,9 +1142,10 @@ $("scanBtn").onclick=async()=>{
         ? "Nếu một nhân vật có các giai đoạn cuộc đời rõ rệt trong văn bản (như thiếu niên/thanh niên/trung niên, hoặc trước và sau biến cố lớn), hãy liệt kê riêng từng giai đoạn và ghi rõ giai đoạn đó trong dấu ngoặc sau tên, ví dụ: \u201cTrần Văn A (Thiếu niên)\u201d, \u201cTrần Văn A (Trưởng thành)\u201d; các nhân vật không có giai đoạn rõ ràng thì liệt kê bình thường.\n"
         : "";
       const nameViRule = "Trường \"name\" giữ NGUYÊN VĂN đúng như chữ viết xuất hiện trong văn bản gốc (không dịch, dùng để dò lại đúng đoạn văn). Thêm trường \"vi\": tên đó viết bằng tiếng Việt để hiển thị cho người đọc — nếu là tên gốc Hán thì chuyển sang âm Hán Việt (ví dụ 夏冬→Hạ Đông), nếu là danh xưng/biệt hiệu có nghĩa thì dịch nghĩa (ví dụ 旺旺→Vượng Vượng, 疯狗→Cẩu Điên), nếu đã là tên phiên âm Latin/tiếng Anh sẵn trong văn bản thì giữ nguyên. Phải dùng nhất quán cùng một cách phiên âm/dịch cho cùng một nhân vật trong toàn bộ các lần liệt kê.\n";
+      const nsfwScan = $("nsfw").checked ? "Truyện có thể chứa nội dung người lớn/nhạy cảm (NSFW); vẫn liệt kê ĐẦY ĐỦ mọi nhân vật, không né tránh và không bỏ sót nhân vật vì lý do nội dung nhạy cảm.\n" : "";
       const prompt = withRole
-        ? "Dưới đây là một đoạn văn bản tiểu thuyết. Hãy liệt kê các nhân vật có tên xuất hiện trong đó.\n"+stageLine+nameViRule+"Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\",\"role\":\"Mô tả ngắn gọn danh tính/vai trò, viết bằng tiếng Việt\"}.\nChỉ xuất mảng JSON này, không đặt trong block code, không giải thích thêm. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i]
-        : "Dưới đây là một đoạn văn bản tiểu thuyết. Chỉ liệt kê tên các nhân vật có tên xuất hiện trong đó.\n"+stageLine+nameViRule+"Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\"}.\nChỉ xuất mảng JSON này, không dùng block code, không giải thích, không kèm trường role. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i];
+        ? "Dưới đây là một đoạn văn bản tiểu thuyết. Hãy liệt kê các nhân vật có tên xuất hiện trong đó.\n"+nsfwScan+stageLine+nameViRule+"Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\",\"role\":\"Mô tả ngắn gọn danh tính/vai trò, viết bằng tiếng Việt\"}.\nChỉ xuất mảng JSON này, không đặt trong block code, không giải thích thêm. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i]
+        : "Dưới đây là một đoạn văn bản tiểu thuyết. Chỉ liệt kê tên các nhân vật có tên xuất hiện trong đó.\n"+nsfwScan+stageLine+nameViRule+"Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\"}.\nChỉ xuất mảng JSON này, không dùng block code, không giải thích, không kèm trường role. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i];
       let rawText="";
       try{
         rawText=await retry(
@@ -1755,6 +1774,22 @@ function userDirectives(){
   }
   return lines.length? (lines.join("\n")+"\n") : "";
 }
+// Thay thế DETERMINISTIC tên nhân vật (+biệt danh) → {{user}} trên văn bản đã sinh.
+// Prompt dặn AI thay nhưng AI không tuân thủ ổn định (lúc được lúc không) → làm cứng ở đây.
+function _escRe(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&"); }
+function applyUserReplace(text){
+  const rn=userReplaceName();
+  if(!rn || !text) return text;
+  let names=[rn];
+  try{ (charNames(rn)||[]).forEach(a=>{ a=String(a||"").trim(); if(a && !names.includes(a)) names.push(a); }); }catch(e){}
+  names.sort((a,b)=>b.length-a.length);   // tên/biệt danh DÀI thay trước → tránh thay lẹm phần con
+  for(const nm of names){
+    if(!nm) continue;
+    try{ text=text.replace(new RegExp("(?<![\\p{L}\\p{N}_])"+_escRe(nm)+"(?![\\p{L}\\p{N}_])","gu"), "{{user}}"); }
+    catch(e){ text=text.split(nm).join("{{user}}"); }   // fallback nếu trình duyệt không hỗ trợ lookbehind
+  }
+  return text.replace(/\{\{user\}\}(?:[ \t·、,]*\{\{user\}\})+/g,"{{user}}");   // gộp {{user}} liền kề (tên+biệt danh dính nhau)
+}
 
 $("genBtn").onclick=async()=>{
   const btn=$("genBtn");
@@ -1792,7 +1827,7 @@ $("genBtn").onclick=async()=>{
     const vi=(co&&co.vi)? co.vi : base;
     return stage? (vi+"（"+stage+"）") : vi;
   };
-  const head=nm=>(many?("# ========== "+dispOf(nm)+" ==========\n"):"");
+  const head=nm=>(many?("# ========== "+applyUserReplace(dispOf(nm))+" ==========\n"):"");
   const rebuild=()=>{ $("output").value=selectedNames.filter(n=>genDone[n]).map(n=>head(n)+genDone[n]).join("\n\n\n"); };
   if(resuming){ rebuild(); logTo("genLog","Tiếp tục tạo: Đã hoàn thành "+selectedNames.filter(n=>genDone[n]).length+"/"+selectedNames.length+" mục, bỏ qua các mục đã tạo","g"); }
   const total=selectedNames.length;
@@ -1842,7 +1877,7 @@ $("genBtn").onclick=async()=>{
       const onWait=(n,code,w)=>logTo("genLog",nm+" gặp lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e");
       const maxCont=$("autoCont").checked?5:0;
       const raw=await generate(messages,{maxTokens:maxT,useStream:streamThis&&useStream,signal,onText:render||undefined,onWait,maxCont,logEl:"genLog",label:nm,charCount:ctx.length});
-      genDone[nm]=finalizeCard(stripFence(stripThink(raw)).trim(), dispName);
+      genDone[nm]=applyUserReplace(finalizeCard(stripFence(stripThink(raw)).trim(), dispName));
       rebuild(); doneN++;
       $("genMsg").innerHTML='<span class="spinner"></span>Đang tạo '+doneN+"/"+total+((conc>1&&pending.length>1)?(" · song song "+Math.min(conc,pending.length)+" luồng"):"")+" · "+dispName;
       if(wasTruncated()) logTo("genLog",nm+": Đã đạt giới hạn viết tiếp nhưng chưa hoàn thành, hãy tăng \u201cMax tokens trích xuất\u201d và thử lại","e");
@@ -1959,7 +1994,7 @@ $("reviseBtn").onclick=async()=>{
       "Vui lòng chỉ chỉnh sửa trên thẻ này, xuất ra Thẻ Nhân vật hoàn chỉnh sau khi sửa: giữ nguyên cấu trúc mẫu; giữ nguyên các phần không được yêu cầu sửa; không giải thích thêm, không bọc trong block code.";
     const messages=[{role:"system",content:withSys(sys)},{role:"user",content:user}];
     const raw=await generate(messages,{maxTokens:maxT,useStream,signal,onText,onWait,maxCont,logEl:"genLog",label:(name||"Nhân vật")+" Chỉnh sửa"});
-    return stripFence(stripThink(raw)).trim();
+    return applyUserReplace(stripFence(stripThink(raw)).trim());
   }
 
   try{

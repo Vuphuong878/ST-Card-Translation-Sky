@@ -2,6 +2,10 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.32.0 — Trích Card: fix thay {{user}} + NSFW/Jailbreak cho bước quét
+- **Fix bug thay {{user}} không nhất quán** (lúc được lúc không): trước đây chỉ **dặn AI** thay tên nhân vật thành `{{user}}` trong prompt, AI không tuân thủ ổn định → nhiều chỗ (header, tên gốc, trong thân thẻ, thẻ nhân vật khác nhắc tới) vẫn để nguyên tên. Nay **thay DETERMINISTIC** sau khi sinh: mọi lần xuất hiện của tên (kèm biệt danh nếu khớp nhân vật đã quét) → `{{user}}`, ở **cả header + key + toàn thân thẻ + luồng Sửa**, có **biên ký tự** nên không thay lẹm phần chữ dính (vd "Trần Duyệtxyz" giữ nguyên).
+- **Bước 3 (Quét nhân vật) nay có NSFW/Jailbreak/Gomorrah**: thêm 3 toggle **đồng bộ 2 chiều** với bước 4 (đổi bên nào cũng cập nhật bên kia + lưu). Prompt quét nay **áp NSFW** khi bật → quét truyện NSFW **không bỏ sót nhân vật** vì nội dung nhạy cảm. (Jailbreak/Gomorrah vốn đã áp cho bước quét qua system prompt chung, nay hiển thị/điều khiển được ngay ở bước 3.)
+
 ## v1.31.1 — Trích Card: thiết kế lại UI pool cho dễ dùng
 Bỏ cách quản lý pool bằng "gộp nhiều Cấu hình API" (rối). Nay:
 - **Nút "➕ Thêm provider"** → mở **popup đầy đủ** (tên, định dạng, Base URL, đa-key, model chính + RPM, model phụ + RPM, ngưỡng ký tự) → **Lưu** hiện thành **1 dòng** "Provider 2/3…" với chấm xanh (đủ) / đỏ (thiếu).

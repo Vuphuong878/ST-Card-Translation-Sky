@@ -2,5 +2,5 @@
 // BUMP `APP_VERSION` on every fix so builds are distinguishable in the UI (shown in the
 // sidebar header). Use the patch number for small fixes; keep `APP_VERSION_NOTE` to a one-line
 // summary of the most recent change (shown on hover).
-export const APP_VERSION = '1.31.1';
-export const APP_VERSION_NOTE = '[Trích Card] Thiết kế lại UI pool đa-provider cho gọn: bỏ cách "gộp nhiều Cấu hình API". Nay có nút "➕ Thêm provider" → mở popup đầy đủ (format/baseURL/đa-key/model chính+phụ/RPM/ngưỡng) → lưu hiện 1 dòng "Provider 2/3..."; bấm dòng để sửa, có nút Xóa. Provider 1 = cấu hình chính. Engine đa-luồng giữ nguyên (đã test).';
+export const APP_VERSION = '1.32.0';
+export const APP_VERSION_NOTE = '[Trích Card] (1) Fix bug thay {{user}}: trước đây chỉ dặn AI (lúc được lúc không), nay THAY DETERMINISTIC sau khi sinh — mọi lần xuất hiện của tên nhân vật (+biệt danh) đổi thành {{user}} ở cả header/key/thân thẻ, không thay lẹm chữ dính. (2) Bước 3 (Quét nhân vật) nay có toggle NSFW/Jailbreak/Gomorrah (đồng bộ 2 chiều với bước 4) + prompt quét áp NSFW → quét truyện NSFW không bị bỏ sót nhân vật.';
