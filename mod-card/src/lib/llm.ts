@@ -18,9 +18,36 @@ const pickKey = (raw: string): string => {
   return keys.length <= 1 ? raw.trim() : keys[(_rr++) % keys.length];
 };
 
+// ─── Chống TREO: timeout mỗi call + auto-retry ───
+const REQUEST_TIMEOUT_MS = 180_000; // 3 phút/call — call treo sẽ bị abort thay vì kẹt vĩnh viễn
+const MAX_RETRIES = 3;
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** fetch có timeout (AbortController) — hết giờ thì abort để không treo. */
+async function fetchWithTimeout(url: string, opts: RequestInit, ms = REQUEST_TIMEOUT_MS): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new Error(`Timeout: API không phản hồi sau ${Math.round(ms / 1000)}s (đã hủy để tránh treo).`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Lỗi có nên retry không: timeout/mạng/429/5xx/overload → có; 4xx khác (key sai…) → không. */
+function isRetryable(err: unknown): boolean {
+  const msg = String((err as Error)?.message || err);
+  return /timeout|aborted|network|fetch failed|ECONNRESET|ETIMEDOUT|socket|\b429\b|rate.?limit|quota|\b5\d\d\b|overload|unavailable|Empty response/i.test(msg);
+}
+
 /**
- * Basic abstract LLM caller.
- * Needs to be implemented with actual SDKs or fetch calls.
+ * LLM caller có TIMEOUT + AUTO-RETRY (backoff + xoay key mỗi lần) — chống kẹt khi 1 call
+ * không phản hồi hoặc gặp lỗi tạm thời.
  */
 export const callLLM = async (
   systemPrompt: string,
@@ -31,26 +58,37 @@ export const callLLM = async (
     throw new Error("API Key is required");
   }
 
-  // Round-robin sang key kế nếu nhập nhiều key.
-  const key = pickKey(config.apiKey);
-  const cfg: LLMConfig = key === config.apiKey ? config : { ...config, apiKey: key };
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // Xoay sang key kế mỗi lần thử (nếu nhập nhiều key) → né 429/key hỏng.
+    const key = pickKey(config.apiKey);
+    const cfg: LLMConfig = key === config.apiKey ? config : { ...config, apiKey: key };
+    try {
+      let result: string;
+      if (cfg.provider === 'openai') result = await callOpenAI(systemPrompt, userPrompt, cfg);
+      else if (cfg.provider === 'anthropic') result = await callAnthropic(systemPrompt, userPrompt, cfg);
+      else if (cfg.provider === 'gemini') result = await callGemini(systemPrompt, userPrompt, cfg);
+      else throw new Error("Unsupported provider");
 
-  console.log(`Calling ${cfg.provider} with model ${cfg.model}...`);
-
-  if (cfg.provider === 'openai') {
-    return await callOpenAI(systemPrompt, userPrompt, cfg);
-  } else if (cfg.provider === 'anthropic') {
-    return await callAnthropic(systemPrompt, userPrompt, cfg);
-  } else if (cfg.provider === 'gemini') {
-    return await callGemini(systemPrompt, userPrompt, cfg);
+      if (!result || !result.trim()) throw new Error('Empty response from API');
+      return result;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX_RETRIES && isRetryable(err)) {
+        const wait = 1000 * Math.pow(2, attempt); // 1s → 2s → 4s
+        console.warn(`[callLLM] lỗi tạm thời (thử ${attempt + 1}/${MAX_RETRIES + 1}), chờ ${wait}ms rồi retry:`, (err as Error)?.message);
+        await sleep(wait);
+        continue;
+      }
+      throw err;
+    }
   }
-
-  throw new Error("Unsupported provider");
+  throw lastErr;
 };
 
 const callOpenAI = async (system: string, user: string, config: LLMConfig) => {
   const baseUrl = config.customUrl ? config.customUrl.replace(/\/$/, '') : 'https://api.openai.com/v1';
-  const res = await fetch(`${baseUrl}/chat/completions`, {
+  const res = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -66,19 +104,19 @@ const callOpenAI = async (system: string, user: string, config: LLMConfig) => {
       temperature: config.temperature !== undefined ? config.temperature : 0.2
     })
   });
-  
+
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI API error: ${err}`);
+    throw new Error(`OpenAI API error ${res.status}: ${err.slice(0, 300)}`);
   }
-  
+
   const data = await res.json();
-  return data.choices[0].message.content;
+  return data?.choices?.[0]?.message?.content ?? '';
 };
 
 const callAnthropic = async (system: string, user: string, config: LLMConfig) => {
   const baseUrl = config.customUrl ? config.customUrl.replace(/\/$/, '') : 'https://api.anthropic.com';
-  const res = await fetch(`${baseUrl}/v1/messages`, {
+  const res = await fetchWithTimeout(`${baseUrl}/v1/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -98,11 +136,11 @@ const callAnthropic = async (system: string, user: string, config: LLMConfig) =>
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Anthropic API error: ${err}`);
+    throw new Error(`Anthropic API error ${res.status}: ${err.slice(0, 300)}`);
   }
 
   const data = await res.json();
-  return data.content[0].text;
+  return data?.content?.[0]?.text ?? '';
 };
 
 const callGemini = async (system: string, user: string, config: LLMConfig) => {
@@ -110,7 +148,7 @@ const callGemini = async (system: string, user: string, config: LLMConfig) => {
   const baseUrl = config.customUrl ? config.customUrl.replace(/\/$/, '') : 'https://generativelanguage.googleapis.com';
   const url = `${baseUrl}/v1beta/models/${model}:generateContent?key=${config.apiKey}`;
   
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -132,9 +170,9 @@ const callGemini = async (system: string, user: string, config: LLMConfig) => {
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Gemini API error: ${err}`);
+    throw new Error(`Gemini API error ${res.status}: ${err.slice(0, 300)}`);
   }
 
   const data = await res.json();
-  return data.candidates[0].content.parts[0].text;
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 };
