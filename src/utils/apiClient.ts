@@ -1648,6 +1648,7 @@ export async function callProvider(
   CallMonitor.start({
     id: callId,
     model: activeConfig.model,
+    provider: activeConfig.provider,
     keyLabel: keyTotal > 1 ? `Key #${keyIndex + 1}/${keyTotal}` : 'Key #1',
     label: meta?.label || 'Đang dịch…',
     startedAt: Date.now(),

@@ -12,6 +12,8 @@ export interface ActiveCall {
   id: string;
   /** The model actually used for this call (after primary/secondary routing). */
   model: string;
+  /** Provider used for this call (openai / anthropic / google / custom). */
+  provider?: string;
   /** Human label for which API key is used, e.g. "Key #2". */
   keyLabel: string;
   /** What this call is translating, e.g. "lorebook[3].content" or "MVU vars 26-50". */

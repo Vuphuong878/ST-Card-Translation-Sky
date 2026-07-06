@@ -7,9 +7,14 @@ import { Cpu, KeyRound, Activity, Gauge } from 'lucide-react';
 /** Live panel: which model is translating which entry, how many threads are
  *  running concurrently, and the combined RPM capacity across all API keys. */
 export default function ActiveCallsPanel() {
-  const { proxy, phase } = useStore();
+  const { proxy, phase, fields } = useStore();
 
   const activeCalls = useSyncExternalStore(CallMonitor.subscribe, CallMonitor.getSnapshot);
+
+  // % hoàn thành tổng — field xong / auto-skip / bỏ qua (ignored = user tick bỏ dịch) đều tính là đã xử lý.
+  const total = fields.length;
+  const accounted = fields.filter((f) => f.status === 'done' || f.status === 'skipped' || f.status === 'ignored').length;
+  const overallPct = total > 0 ? Math.round((accounted / total) * 100) : 0;
 
   // RPM usage decays over time without events, so refresh on a light interval while active.
   const [, forceTick] = useState(0);
@@ -60,6 +65,11 @@ export default function ActiveCallsPanel() {
         <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: accent }}>
           <Activity size={14} className={activeCalls.length > 0 ? 'spin' : ''} />
           Luồng đang chạy: {activeCalls.length}
+          {total > 0 && (
+            <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--accent-primary)', background: 'rgba(124,106,240,0.14)', padding: '1px 7px', borderRadius: '10px' }}>
+              {overallPct}% ({accounted}/{total})
+            </span>
+          )}
         </span>
         <div style={{ display: 'flex', gap: '12px', fontSize: '0.65rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -122,7 +132,7 @@ export default function ActiveCallsPanel() {
       {activeCalls.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '180px', overflowY: 'auto' }}>
           {activeCalls.map((c) => (
-            <ActiveCallRow key={c.id} model={c.model} keyLabel={c.keyLabel} label={c.label} startedAt={c.startedAt} isSecondary={c.model === proxy.secondaryModel} />
+            <ActiveCallRow key={c.id} model={c.model} provider={c.provider} keyLabel={c.keyLabel} label={c.label} startedAt={c.startedAt} isSecondary={c.model === proxy.secondaryModel} />
           ))}
         </div>
       )}
@@ -130,13 +140,18 @@ export default function ActiveCallsPanel() {
   );
 }
 
-function ActiveCallRow({ model, keyLabel, label, startedAt, isSecondary }: { model: string; keyLabel: string; label: string; startedAt: number; isSecondary: boolean }) {
+const PROVIDER_LABEL: Record<string, string> = {
+  openai: 'OpenAI', anthropic: 'Claude', google: 'Gemini', custom: 'Custom',
+};
+
+function ActiveCallRow({ model, provider, keyLabel, label, startedAt, isSecondary }: { model: string; provider?: string; keyLabel: string; label: string; startedAt: number; isSecondary: boolean }) {
   const [, tick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => tick((n) => n + 1), 500);
     return () => clearInterval(id);
   }, []);
   const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
+  const providerName = provider ? (PROVIDER_LABEL[provider] || provider) : '';
 
   return (
     <div
@@ -164,10 +179,15 @@ function ActiveCallRow({ model, keyLabel, label, startedAt, isSecondary }: { mod
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
         }}
-        title={model}
+        title={`${providerName ? providerName + ' · ' : ''}${model}`}
       >
         {model}
       </span>
+      {providerName && (
+        <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '1px 5px', borderRadius: '3px', flexShrink: 0 }} title="Provider">
+          {providerName}
+        </span>
+      )}
       <span style={{ color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={label}>
         {label}
       </span>
