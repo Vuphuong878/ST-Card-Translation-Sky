@@ -53,4 +53,14 @@ export const FLOWS: FlowDef[] = [
     url: (import.meta as any).env?.VITE_MODCARD_TOOL_URL || 'http://localhost:5176',
     color: '#a855f7',
   },
+  {
+    id: 'novalcard',
+    label: 'Trích Card',
+    emoji: '🔍',
+    kind: 'iframe',
+    // NovalCard — công cụ trích xuất thẻ (1 file HTML tĩnh tự chứa). Không cần dev-server
+    // riêng: hub tự serve từ public/apps → cùng origin, load tức thì, không thêm port/start.bat.
+    url: '/apps/novalcard-vi.html',
+    color: '#c8a86b',
+  },
 ];

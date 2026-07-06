@@ -1,0 +1,2354 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Công cụ Trích xuất Thẻ Nhân vật (Character Card)</title>
+<style>
+  :root{
+    --bg:#0e0f13;
+    --panel:#16181f;
+    --panel-2:#1c1f28;
+    --line:rgba(255,255,255,.08);
+    --line-strong:rgba(255,255,255,.14);
+    --text:#e7e7ec;
+    --muted:#9a9ba6;
+    --faint:#6c6d78;
+    --gold:#c8a86b;
+    --gold-dim:#9c8250;
+    --danger:#e0736a;
+    --ok:#8fbf8a;
+    --radius:14px;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6}
+  a{color:var(--gold)}
+  .wrap{max-width:900px;margin:0 auto;padding:32px 20px 80px}
+  header{margin-bottom:28px}
+  header h1{font-size:22px;font-weight:600;letter-spacing:.5px;margin:0 0 6px}
+  header .sub{color:var(--muted);font-size:13px}
+  header .rule{height:1px;background:linear-gradient(90deg,var(--gold-dim),transparent);margin-top:16px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px}
+  .card h2{font-size:14px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+  .card h2 .idx{color:var(--gold);font-family:var(--mono);font-size:12px}
+  .card .hint{color:var(--faint);font-size:12.5px;margin:0 0 16px}
+
+  label{display:block;font-size:12.5px;color:var(--muted);margin:0 0 6px}
+  input[type=text],input[type=password],input[type=number],textarea,select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+    color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;outline:none;transition:border-color .15s}
+  input:focus,textarea:focus,select:focus{border-color:var(--gold-dim)}
+  textarea{resize:vertical;line-height:1.55}
+  .mono{font-family:var(--mono)}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row > div{flex:1;min-width:140px}
+  .field{margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+
+  button{font-family:var(--sans);font-size:13.5px;font-weight:500;cursor:pointer;border-radius:9px;
+    border:1px solid var(--line-strong);background:var(--panel-2);color:var(--text);padding:10px 16px;transition:all .15s}
+  button:hover{border-color:var(--gold-dim)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:linear-gradient(180deg,#d4b578,var(--gold));border-color:var(--gold);color:#211a0d;font-weight:600}
+  button.primary:hover{filter:brightness(1.05)}
+  button.ghost{background:transparent}
+  button.mini{padding:3px 10px;font-size:11px;font-weight:500;border-radius:6px;vertical-align:1px}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+
+  .toggle{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;color:var(--muted)}
+  .toggle input{appearance:none;width:38px;height:22px;background:var(--panel-2);border:1px solid var(--line-strong);border-radius:99px;position:relative;cursor:pointer;transition:.15s}
+  .toggle input:checked{background:var(--gold-dim);border-color:var(--gold-dim)}
+  .toggle input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--text);transition:.15s}
+  .toggle input:checked::after{left:18px;background:#211a0d}
+
+  .meta{display:flex;gap:16px;color:var(--faint);font-size:12px;margin-top:8px;flex-wrap:wrap}
+
+  .charlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:4px}
+  .chip{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;transition:.15s}
+  .chip:hover{border-color:var(--gold-dim)}
+  .chip.sel{border-color:var(--gold);background:rgba(200,168,107,.08)}
+  .chip .n{font-size:14px;font-weight:600}
+  .chip .r{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+  .chip .c{font-size:11px;color:var(--faint);font-family:var(--mono);margin-top:6px}
+
+  .log{font-family:var(--mono);font-size:12px;color:var(--muted);background:#0a0b0e;border:1px solid var(--line);border-radius:9px;
+    padding:10px 12px;margin-top:12px;max-height:130px;overflow:auto;white-space:pre-wrap;display:none}
+  .log.show{display:block}
+  .log .e{color:var(--danger)}
+  .log .g{color:var(--ok)}
+
+  .out{width:100%;min-height:420px;background:#0a0b0e;border:1px solid var(--line);border-radius:10px;color:#e7e7ec;
+    font-family:var(--mono);font-size:13px;line-height:1.55;padding:16px;white-space:pre;overflow:auto;tab-size:2}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .muted{color:var(--muted)} .faint{color:var(--faint)}
+  details.adv summary{cursor:pointer;color:var(--muted);font-size:12.5px;margin-bottom:12px;list-style:none}
+  details.adv summary::-webkit-details-marker{display:none}
+  details.adv summary::before{content:"▸ ";color:var(--gold)}
+  details.adv[open] summary::before{content:"▾ "}
+  .warnbox{font-size:12px;color:var(--faint);border-left:2px solid var(--gold-dim);padding:2px 0 2px 12px;margin-top:12px;line-height:1.5}
+  @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Công cụ Trích xuất Thẻ Nhân vật <span style="font-size:13px;font-weight:500;color:var(--gold);vertical-align:2px">v5.7.1</span></h1>
+    <div class="sub">Nhập tiểu thuyết · Quét nhân vật · Trích xuất Thẻ Nhân vật (Character Card) & Lorebook theo mẫu</div>
+    <div class="rule"></div>
+  </header>
+
+  <!-- 1. API 设置 -->
+  <div class="card">
+    <h2><span class="idx">01</span> Thiết lập API</h2>
+    <p class="hint">Hỗ trợ hai định dạng: OpenAI tương thích (chạy trung gian) hoặc Gemini gốc. Kết nối trực tiếp từ trình duyệt, yêu cầu API phải hỗ trợ CORS. Thiết lập được lưu cục bộ trên máy của bạn.</p>
+    <div class="field">
+      <label>Cấu hình API (Có thể lưu nhiều bộ để chuyển đổi nhanh)</label>
+      <div class="btnrow" style="margin-top:0">
+        <select id="apiProfile" class="mono" style="flex:1;min-width:150px"></select>
+        <button class="ghost" id="apiNew" type="button">Tạo cấu hình mới</button>
+        <button class="ghost" id="apiDel" type="button">Xóa</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Định dạng API</label>
+      <select id="apiFormat" class="mono">
+        <option value="openai">Tương thích OpenAI (/v1/chat/completions)</option>
+        <option value="gemini">Gemini gốc (vertex-proxy, v.v., /v1beta)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Base URL (OpenAI điền đến /v1; Gemini gốc điền đến cổng, ví dụ http://127.0.0.1:2156)</label>
+      <input type="text" id="baseUrl" class="mono" placeholder="http://127.0.0.1:2156" autocomplete="off">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>API Key</label>
+        <input type="password" id="apiKey" class="mono" placeholder="sk-..." autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Tên mô hình <button type="button" id="fetchModels" class="mini">Tải danh sách mô hình</button> <span id="modelMsg" class="faint" style="font-size:11px"></span></label>
+        <input type="text" id="model" class="mono" placeholder="gemini-2.5-pro / claude-... / gpt-..." autocomplete="off">
+        <select id="modelSelect" class="mono" style="display:none;margin-top:8px"></select>
+      </div>
+    </div>
+    <details class="adv">
+      <summary>Tham số nâng cao</summary>
+      <div class="row">
+        <div class="field"><label>Temperature</label><input type="number" id="temp" value="0.4" step="0.1" min="0" max="2"></div>
+        <div class="field"><label>Max tokens trích xuất</label><input type="number" id="maxTok" value="4000" step="500" min="500"></div>
+        <div class="field"><label>Kích thước phân đoạn quét (Ký tự)</label><input type="number" id="chunkSize" value="40000" step="5000" min="10000"></div>
+        <div class="field"><label>Giới hạn số đoạn quét (Quét càng nhiều tìm càng đủ)</label><input type="number" id="scanCap" value="40" step="5" min="1"></div>
+        <div class="field"><label>Giới hạn ngữ cảnh đoạn liên quan (Ký tự)</label><input type="number" id="ctxCap" value="90000" step="10000" min="10000"></div>
+        <div class="field"><label>Giới hạn ngữ cảnh chế độ toàn văn (Ký tự)</label><input type="number" id="fullCap" value="120000" step="10000" min="10000"></div>
+      </div>
+    </details>
+    <details class="adv">
+      <summary>Prompt tùy chỉnh (Nâng cao)</summary>
+      <div class="field" style="margin-top:6px">
+        <label>System Prompt bổ sung —— Sẽ được thêm vào đầu mỗi yêu cầu, áp dụng cho quét / tạo thẻ / Lorebook / phong cách viết. Để trống để dùng System Prompt mặc định.</label>
+        <textarea id="sysPrefix" rows="4" placeholder="Nhập chỉ thị bổ sung của riêng bạn tại đây (ví dụ: yêu cầu chuẩn đầu ra, giọng điệu...). Nội dung này sẽ được gửi nguyên bản đến API mà bạn đã thiết lập."></textarea>
+      </div>
+    </details>
+    <div class="btnrow">
+      <button class="ghost" id="saveCfg">Lưu vào cấu hình hiện tại</button>
+      <button class="ghost" id="testCfg">Kiểm tra kết nối</button>
+      <span id="cfgMsg" class="faint" style="font-size:12px"></span>
+    </div>
+  </div>
+
+  <!-- 2. 导入小说 -->
+  <div class="card">
+    <h2><span class="idx">02</span> Nhập tiểu thuyết</h2>
+    <p class="hint">Ứng dụng chỉ xử lý nội dung cục bộ trong trình duyệt, văn bản truyện chỉ được gửi đến API do bạn thiết lập để phân tích.</p>
+    <div class="field">
+      <input type="file" id="file">
+      <div class="meta" style="margin-top:6px">Nếu không chọn được file txt, hãy dùng tính năng kéo thả file từ máy tính vào khung nhập liệu bên dưới.</div>
+    </div>
+    <div class="field">
+      <textarea id="novel" rows="7" placeholder="Dán văn bản tiểu thuyết hoặc kéo thả file .txt vào đây…"></textarea>
+    </div>
+    <div class="meta"><span id="novelStat">0 ký tự</span></div>
+    <div class="field" style="margin-top:14px">
+      <label>Lịch sử tiểu thuyết (Sau khi quét sẽ tự động lưu văn bản truyện và nhân vật để tải nhanh lần sau mà không cần quét lại)</label>
+      <div class="btnrow" style="margin-top:0">
+        <select id="novelSel" class="mono" style="flex:1;min-width:150px"></select>
+        <button class="ghost" id="novelLoad" type="button">Tải bản ghi</button>
+        <button class="ghost" id="novelSave" type="button">Lưu bản ghi hiện tại</button>
+        <button class="ghost" id="novelDel" type="button">Xóa</button>
+      </div>
+      <div class="meta" style="margin-top:6px"><span id="novelSaveMsg" class="faint"></span></div>
+    </div>
+  </div>
+
+  <!-- 3. 角色 -->
+  <div class="card">
+    <h2><span class="idx">03</span> Chọn nhân vật</h2>
+    <p class="hint">Nếu đã biết cần làm thẻ cho ai, bạn có thể <b>nhập tên thủ công</b> (bỏ qua bước quét để tiết kiệm token); nếu chưa rõ truyện có những ai, hãy dùng chức năng "Quét toàn truyện". Nhấn "Gộp mục đã chọn" nếu cùng một nhân vật bị chia nhỏ do biệt danh.</p>
+    <div class="field" style="margin-bottom:12px">
+      <label>Thêm nhân vật thủ công (Dùng tên chính xác xuất hiện trong truyện, phân tách nhiều nhân vật bằng dấu phẩy hoặc khoảng trắng)</label>
+      <div class="btnrow" style="margin-top:0">
+        <input type="text" id="manualNames" class="mono" style="flex:1;min-width:180px" placeholder="Ví dụ: Tiểu Lý, Tiểu Vương, Tiểu Trương" autocomplete="off">
+        <button class="ghost" id="addNamesBtn" type="button">Thêm</button>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="primary" id="scanBtn">Quét toàn bộ truyện</button>
+      <button class="ghost" id="mergeBtn" type="button">Gộp mục đã chọn</button>
+      <button class="ghost" id="clearCharsBtn" type="button">Xóa danh sách</button>
+      <label class="toggle" style="margin-left:4px"><input type="checkbox" id="scanRole"> Kèm mô tả danh tính khi quét</label>
+      <label class="toggle" style="margin-left:4px"><input type="checkbox" id="scanStage"> Chia theo giai đoạn nhân vật</label>
+      <span id="scanMsg" class="faint" style="font-size:12px"></span>
+    </div>
+    <div class="log" id="scanLog"></div>
+    <div class="charlist" id="charList" style="margin-top:16px"></div>
+  </div>
+
+  <!-- 4. 生成角色卡 -->
+  <div class="card">
+    <h2><span class="idx">04</span> Tạo Thẻ Nhân vật (Character Card)</h2>
+    <p class="hint">Tạo thẻ nhân vật sau khi đã chọn nhân vật từ danh sách phía trên.</p>
+    <div class="field" style="margin-bottom:14px">
+      <label>Mẫu thiết kế thẻ nhân vật (AI sẽ điền nội dung theo định dạng này, bạn có thể tự chỉnh sửa)</label>
+      <div class="btnrow" style="margin-top:0">
+        <select id="tplSelect" class="mono" style="flex:1;min-width:160px"></select>
+        <button class="ghost" id="tplToggle" type="button">Hiện / Sửa mẫu</button>
+      </div>
+      <div id="tplPanel" style="display:none;margin-top:12px">
+        <textarea id="tplEditor" class="out" spellcheck="false" style="min-height:260px"></textarea>
+        <div class="btnrow">
+          <button class="ghost" id="tplNew" type="button">Tạo mẫu mới</button>
+          <button class="ghost" id="tplSave" type="button">Lưu</button>
+          <button class="ghost" id="tplReset" type="button">Khôi phục mặc định</button>
+          <button class="ghost" id="tplDel" type="button">Xóa mẫu</button>
+          <span id="tplMsg" class="faint" style="font-size:12px"></span>
+        </div>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:10px">
+      <label>Mức độ chi tiết</label>
+      <select id="detail" class="mono">
+        <option value="concise">Giản lược (Mỗi trường ngắn gọn, dung lượng nhỏ, thích hợp dùng ngay)</option>
+        <option value="medium" selected>Vừa phải</option>
+        <option value="rich">Chi tiết (Chi tiết tối đa, dung lượng lớn, giàu văn cảnh)</option>
+      </select>
+    </div>
+    <div class="btnrow" style="margin-top:0;margin-bottom:6px">
+      <label class="toggle"><input type="checkbox" id="nsfw"> Bao gồm nội dung NSFW</label>
+      <label class="toggle"><input type="checkbox" id="fullCtx"> Dùng toàn văn (Không lọc phân đoạn)</label>
+      <label class="toggle"><input type="checkbox" id="stream" checked> Phản hồi dạng Stream</label>
+      <label class="toggle"><input type="checkbox" id="autoCont" checked> Tự động viết tiếp khi bị cắt ngang</label>
+      <label class="toggle"><input type="checkbox" id="omitEmpty"> Lược bỏ trường không có trong truyện</label>
+    </div>
+    <details class="adv" style="margin-bottom:10px">
+      <summary>Cấu hình {{user}} (Liên kết "Bạn" vào thế giới của nhân vật)</summary>
+      <div style="margin-top:8px">
+        <label class="toggle" style="margin-bottom:8px"><input type="checkbox" id="userRel"> Thêm mối quan hệ với {{user}} vào thẻ nhân vật</label>
+        <div id="userRelBox" class="field" style="display:none;margin-bottom:14px">
+          <textarea id="userRelText" rows="3" placeholder="Mô tả mối quan hệ, trải nghiệm chung, thái độ giữa {{user}} và nhân vật... Viết càng chi tiết thì nội dung thẻ hiển thị càng tốt. Ví dụ: {{user}} là thanh mai trúc mã sống cạnh nhà, cùng lớn lên, nhân vật có lòng chiếm hữu thầm kín đối với {{user}}."></textarea>
+        </div>
+        <label class="toggle" style="margin-bottom:8px"><input type="checkbox" id="userReplace"> Để {{user}} thay thế một nhân vật trong truyện</label>
+        <div id="userReplaceBox" style="display:none">
+          <div class="field" style="margin-bottom:10px">
+            <label>Tên nhân vật sẽ bị thay thế thành {{user}} (Tên này sẽ đổi hoàn toàn thành {{user}})</label>
+            <input type="text" id="userReplaceName" class="mono" placeholder="Ví dụ: Lâm Tiểu Mãn" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Thiết lập bổ sung (Có thể để trống)</label>
+            <textarea id="userReplaceText" rows="3" placeholder="Mô tả bổ sung về trải nghiệm chung giữa {{user}} và nhân vật sau khi thay thế, để trống nếu không có gì đặc biệt."></textarea>
+          </div>
+        </div>
+      </div>
+    </details>
+    <div class="btnrow">
+      <button class="primary" id="genBtn" disabled>Tạo Thẻ Nhân vật</button>
+      <span id="genMsg" class="faint" style="font-size:12px"></span>
+    </div>
+    <div class="warnbox" style="margin-top:10px;border-color:var(--gold-dim)">
+      Bạn có thể <b>chọn nhiều nhân vật</b> ở danh sách phía trên để trích xuất hàng loạt và gộp chung vào một kết quả đầu ra.
+    </div>
+    <div class="log" id="genLog"></div>
+    <div class="field" style="margin-top:16px">
+      <textarea id="output" class="out" spellcheck="false" placeholder="Nội dung thẻ nhân vật tạo ra sẽ hiển thị ở đây, bạn có thể chỉnh sửa trực tiếp..."></textarea>
+    </div>
+    <div class="btnrow">
+      <button class="ghost" id="copyBtn">Sao chép</button>
+      <button class="ghost" id="dlBtn">Tải file .yaml</button>
+      <button class="ghost" id="contBtn" type="button">Tiếp tục viết tiếp</button>
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label>Yêu cầu chỉnh sửa (Muốn điều chỉnh gì hãy ghi vào đây, AI sẽ sửa trực tiếp trên kết quả hiện tại, không tạo lại từ đầu)</label>
+      <textarea id="reviseInput" rows="2" placeholder="Ví dụ: Viết tiểu sử chi tiết hơn, bổ sung mối quan hệ với nhân vật X, bỏ bớt các phần trùng lặp..."></textarea>
+      <div class="btnrow">
+        <button class="primary" id="reviseBtn" type="button">Sửa theo yêu cầu</button>
+        <span id="reviseMsg" class="faint" style="font-size:12px"></span>
+      </div>
+    </div>
+    <div class="warnbox">
+      Lưu ý: Nội dung AI trích xuất đôi khi có thể bị nhầm lẫn, khuyến nghị nên kiểm tra lại với nguyên tác trước khi sử dụng.
+    </div>
+  </div>
+
+  <!-- 5. 生成世界书 -->
+  <div class="card">
+    <h2><span class="idx">05</span> Tạo Lorebook (Sách thế giới)</h2>
+    <p class="hint">Trích xuất bối cảnh thế giới / thế lực / địa điểm / thiết lập / lịch sử từ truyện thành các mục Lorebook cho SillyTavern. Bạn có thể tải file JSON để nhập trực tiếp vào SillyTavern, hoặc tạo thủ công theo bản xem trước.</p>
+    <div class="btnrow" style="margin-top:0;margin-bottom:6px">
+      <label class="toggle"><input type="checkbox" id="wbNsfw"> Bao gồm thiết lập người lớn (NSFW)</label>
+    </div>
+    <div class="field" style="margin-bottom:10px">
+      <label>Tên Lorebook (Dùng để xuất file và đóng gói)</label>
+      <input type="text" id="wbName" class="mono" placeholder="Ví dụ: Lorebook 《Bá Đạo Tổng Tài》" autocomplete="off">
+    </div>
+    <div class="field" style="margin-bottom:10px">
+      <label>Cách xử lý nhân vật phụ</label>
+      <select id="minorMode" class="mono">
+        <option value="group">Gộp thành một mục quần tượng chung (Tiết kiệm mục từ)</option>
+        <option value="each">Mỗi nhân vật phụ một mục riêng kích hoạt bằng từ khóa (Chi tiết hơn)</option>
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:10px">
+      <label>Giới hạn số nhân vật phụ (Quá nhiều nhân vật dễ gây quá tải ngữ cảnh, mặc định 20)</label>
+      <input type="number" id="minorCap" class="mono" value="20" step="5" min="1" style="max-width:160px">
+    </div>
+    <details class="adv" style="margin-bottom:10px">
+      <summary>Cấu hình {{user}} trong Lorebook (Đưa "Bạn" vào cả bối cảnh thế giới)</summary>
+      <div style="margin-top:8px">
+        <label class="toggle" style="margin-bottom:8px"><input type="checkbox" id="wbUserReplace"> Để {{user}} thay thế một nhân vật trong truyện</label>
+        <div id="wbUserReplaceBox" class="field" style="display:none">
+          <label>Tên nhân vật sẽ bị thay thế thành {{user}} (Tên nhân vật này xuất hiện trong Lorebook sẽ tự động chuyển thành {{user}})</label>
+          <input type="text" id="wbUserReplaceName" class="mono" placeholder="Ví dụ: Lâm Tiểu Mãn" autocomplete="off">
+        </div>
+      </div>
+    </details>
+    <div class="field" style="margin-bottom:6px">
+      <label>Nội dung cần tạo (Tích chọn để tạo hàng loạt cùng lúc)</label>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px">
+        <label class="toggle"><input type="checkbox" id="wbTaskExtract" checked> Trích xuất các mục Lorebook</label>
+        <label class="toggle"><input type="checkbox" id="wbTaskBg"> Bối cảnh đại cương chung (Constant)</label>
+        <label class="toggle"><input type="checkbox" id="wbTaskMinor"> Quần tượng nhân vật phụ</label>
+        <label class="toggle"><input type="checkbox" id="wbTaskPlot"> Tóm tắt cốt truyện theo phân đoạn (Từ khóa)</label>
+        <label class="toggle"><input type="checkbox" id="wbTaskCharList"> Danh sách nhân vật (Constant)</label>
+        <label class="toggle"><input type="checkbox" id="wbTaskPlotList"> Đại cương cốt truyện (Constant)</label>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="primary" id="wbRunBtn" type="button">Tạo Lorebook đã chọn</button>
+      <span id="wbMsg" class="faint" style="font-size:12px"></span>
+    </div>
+    <div class="log" id="wbLog"></div>
+    <div class="field" style="margin-top:16px">
+      <textarea id="wbOut" class="out" spellcheck="false" placeholder="Các mục Lorebook trích xuất được (kèm cấu hình khuyến nghị) sẽ hiển thị ở đây, có thể chỉnh sửa trực tiếp..."></textarea>
+    </div>
+    <div class="btnrow">
+      <button class="ghost" id="wbCopy">Sao chép bản xem trước</button>
+      <button class="ghost" id="wbDl">Tải file Lorebook .json (Nhập trực tiếp vào SillyTavern)</button>
+      <button class="ghost" id="wbContBtn" type="button">Tiếp tục xuất kết quả</button>
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label>Yêu cầu chỉnh sửa (Áp dụng riêng cho Lorebook ở trên)</label>
+      <textarea id="wbReviseInput" rows="2" placeholder="Ví dụ: Viết chi tiết hơn về thế lực X, thêm một mục về địa điểm Y, gộp các mục trùng lặp, tinh giản mô tả..."></textarea>
+      <div class="btnrow">
+        <button class="primary" id="wbReviseBtn" type="button">Sửa theo yêu cầu</button>
+        <span id="wbReviseMsg" class="faint" style="font-size:12px"></span>
+      </div>
+    </div>
+    <div class="warnbox">
+      Hướng dẫn nhập: SillyTavern → World Info (Thông tin thế giới) → Import (Nhập), chọn file .json đã tải về. Bối cảnh cốt lõi mặc định là <b>Constant (Luôn kích hoạt)</b>, các mục chi tiết là <b>Selective (Chỉ kích hoạt khi từ khóa xuất hiện)</b>.
+    </div>
+  </div>
+
+  <!-- 6. 文风蒸馏 -->
+  <div class="card">
+    <h2><span class="idx">06</span> Chắt lọc Phong cách viết (Style Distillation)</h2>
+    <p class="hint">Phân tích mẫu phong cách viết của tác phẩm (góc nhìn, cấu trúc câu, từ vựng, nhịp điệu, biểu cảm cảm xúc...) để tạo ra một "Style Prompt" có thể dán trực tiếp vào AI, giúp AI viết ra đúng phong vị của nguyên tác. Chỉ trừu tượng hóa phong cách, không trích dẫn trực tiếp nguyên văn.</p>
+    <div class="btnrow" style="margin-top:0;margin-bottom:6px">
+      <label class="toggle"><input type="checkbox" id="styleNsfw"> Bao gồm phong cách miêu tả gợi dục (NSFW)</label>
+    </div>
+    <div class="btnrow">
+      <button class="primary" id="styleBtn">Chắt lọc phong cách</button>
+      <span id="styleMsg" class="faint" style="font-size:12px"></span>
+    </div>
+    <div class="log" id="styleLog"></div>
+    <div class="field" style="margin-top:16px">
+      <textarea id="styleOut" class="out" spellcheck="false" placeholder="Nội dung phân tích phong cách viết và Style Prompt mẫu sẽ hiển thị ở đây, có thể chỉnh sửa trực tiếp..."></textarea>
+    </div>
+    <div class="btnrow">
+      <button class="ghost" id="styleCopy">Sao chép</button>
+      <button class="ghost" id="styleDl">Tải file .md</button>
+    </div>
+  </div>
+
+  <!-- 7. 打包导出 -->
+  <div class="card">
+    <h2><span class="idx">07</span> Đóng gói và Xuất file</h2>
+    <p class="hint">Bước cuối cùng: Đóng gói thẻ nhân vật, Lorebook và phong cách viết đã tạo ở trên thành <b>một Thẻ Nhân vật hoàn chỉnh có thể nhập trực tiếp vào SillyTavern</b> (Lorebook được tích hợp bên trong thẻ, phong cách viết tự động ghi vào mục từ). Thiếu phần nào thì chỉ đóng gói những phần đã có.</p>
+    <div class="btnrow">
+      <button class="primary" id="fullCardBtn" type="button">Xuất thẻ nhân vật hoàn chỉnh .json</button>
+      <span id="fullCardMsg" class="faint" style="font-size:12px"></span>
+    </div>
+    <div class="warnbox" style="margin-top:12px">
+      Cách nhập vào SillyTavern: Quản lý nhân vật (Character Management) → Import Character (Nhập nhân vật), chọn file .json này. Thẻ nhân vật, Lorebook đi kèm và Phong cách viết sẽ được thiết lập đầy đủ cùng lúc. Tên Lorebook có thể điền ở mục "Tạo Lorebook" phía trên.
+    </div>
+  </div>
+
+  <!-- 8. 自检 -->
+  <div class="card">
+    <h2><span class="idx">08</span> Tự kiểm tra (Self-Check)</h2>
+    <p class="hint">Đối chiếu với nguyên tác để kiểm tra xem thẻ nhân vật / Lorebook đã tạo có bị OOC, nhầm lẫn trải nghiệm, hoặc mâu thuẫn với nguyên tác hay không, sau đó đưa ra nhật ký lỗi và thành phẩm đã sửa đổi. Trước tiên hãy "Quét nội dung hiện tại", chọn các mục cần kiểm tra, sau đó nhấn "Bắt đầu tự kiểm tra" (Chỉ kiểm tra các mục được chọn để tiết kiệm token). Không bao gồm lịch sử lưu trữ.</p>
+    <div class="btnrow" style="margin-top:0">
+      <button class="ghost" id="checkScanBtn" type="button">Quét nội dung hiện tại</button>
+      <button class="primary" id="checkRunBtn" type="button" disabled>Bắt đầu tự kiểm tra</button>
+      <span id="checkMsg" class="faint" style="font-size:12px"></span>
+    </div>
+    <div id="checkList" style="margin-top:12px"></div>
+    <div class="log" id="checkLog"></div>
+    <div class="field" style="margin-top:14px">
+      <textarea id="checkOut" class="out" spellcheck="false" placeholder="Kết quả tự kiểm tra (Nhật ký lỗi + Thành phẩm đã sửa) sẽ hiển thị ở đây…"></textarea>
+    </div>
+    <div class="btnrow">
+      <button class="ghost" id="checkCopy">Sao chép</button>
+      <button class="ghost" id="checkDl">Tải file .txt</button>
+    </div>
+  </div>
+
+  <!-- 9. 历史记录 -->
+  <div class="card">
+    <h2><span class="idx">09</span> Lịch sử tạo</h2>
+    <p class="hint">Mỗi lần tạo thẻ nhân vật hoặc Lorebook sẽ tự động lưu trữ tại đây (Lưu trên trình duyệt của máy bạn, tối đa 30 bản ghi). Nhấn "Xem" để tải lại nội dung lên khung hiển thị tương ứng ở trên.</p>
+    <div class="btnrow" style="margin-top:0">
+      <button class="ghost" id="histClear" type="button">Xóa toàn bộ lịch sử</button>
+      <span id="histMsg" class="faint" style="font-size:12px"></span>
+    </div>
+    <div id="histList" style="margin-top:14px"></div>
+  </div>
+
+  <!-- 10. 报错自查 -->
+  <div class="card">
+    <h2><span class="idx">10</span> Tự tra cứu lỗi</h2>
+    <p class="hint">Nếu gặp lỗi khi chạy ứng dụng, hãy đối chiếu các mục dưới đây để tự khắc phục.</p>
+    <details class="adv"><summary>Load failed / Lỗi mạng / Không gửi được yêu cầu</summary>
+      <div class="warnbox" style="margin-top:8px">Yêu cầu chưa gửi đến máy chủ, thường là do trình duyệt chặn: ① Nếu sử dụng API HTTP, đừng gọi từ trang chạy HTTPS (sẽ bị chặn Mixed Content); ② API phải hỗ trợ CORS, nếu không hỗ trợ hãy đổi cổng/trung gian khác; ③ Đối với API chạy nội bộ (localhost), hãy xác nhận nó đang chạy bình thường. Lỗi này không liên quan đến mô hình hay tham số cấu hình.</div>
+    </details>
+    <details class="adv"><summary>429 / rate limit / Giới hạn tần suất</summary>
+      <div class="warnbox" style="margin-top:8px">Yêu cầu quá thường xuyên hoặc hết hạn mức sử dụng API. Hãy đợi 1-2 phút rồi thử lại; đổi sang các mô hình có giới hạn rộng hơn (ví dụ dòng Flash); hoặc kiểm tra số dư tài khoản API của bạn. Công cụ đã được tích hợp tính năng tự động thử lại.</div>
+    </details>
+    <details class="adv"><summary>HTTP 500 / do_request_failed / upstream error</summary>
+      <div class="warnbox" style="margin-top:8px">Lỗi phía máy chủ, thường do kênh thượng nguồn của API trung gian gặp sự cố (bị sập kênh, thiếu mô hình, hết tiền...). Hãy thử lại vài lần; bấm "Tải danh sách mô hình" để chọn một mô hình thực sự được hỗ trợ; nếu vẫn không được hãy đổi mô hình hoặc nhà cung cấp API khác.</div>
+    </details>
+    <details class="adv"><summary>Chỉ xuất suy nghĩ (Thinking), không có văn bản chính / content trả về null</summary>
+      <div class="warnbox" style="margin-top:8px">Các mô hình lập luận (Thinking/Reasoning models) đã tiêu hết token cho phần suy nghĩ. Hãy tăng `max_tokens` lên (mô hình suy nghĩ nên đặt trên 10,000), hoặc chuyển sang dùng mô hình không suy nghĩ / dòng Flash.</div>
+    </details>
+    <details class="adv"><summary>Phân tích thất bại / Trả về rỗng</summary>
+      <div class="warnbox" style="margin-top:8px">Mô hình không xuất ra định dạng JSON theo yêu cầu, hoặc nội dung bị bộ lọc an toàn chặn (thường gặp ở chủ đề người lớn/bạo lực). Xem phản hồi thực tế của mô hình trong nhật ký log: nếu trống rỗng, phần lớn là bị lọc, hãy chuyển sang mô hình hoặc kênh trung gian có kiểm duyệt lỏng hơn; nếu là văn bản lộn xộn, hãy thử lại hoặc đổi mô hình.</div>
+    </details>
+    <details class="adv"><summary>File tiểu thuyết nhập vào bị lỗi hiển thị font (chữ rác)</summary>
+      <div class="warnbox" style="margin-top:8px">Không khớp mã hóa ký tự (encoding). Công cụ sẽ tự động thử giải mã bằng UTF-8 và GB18030; nếu vẫn bị lỗi hiển thị, hãy dùng một trình biên tập văn bản (như Notepad) lưu lại file dưới dạng mã hóa UTF-8 rồi nhập lại vào đây.</div>
+    </details>
+    <details class="adv"><summary>Tải danh sách mô hình thất bại</summary>
+      <div class="warnbox" style="margin-top:8px">API đó có thể không mở endpoint lấy danh sách mô hình (lỗi 404), hoặc bị hạn chế CORS. Bạn chỉ cần điền tên mô hình thủ công vào ô nhập liệu.</div>
+    </details>
+    <details class="adv"><summary>Từ chối do bản quyền / Copyright liên quan</summary>
+      <div class="warnbox" style="margin-top:8px">Một số mô hình có hạn chế bản quyền khi xử lý các tác phẩm dài và sẽ từ chối yêu cầu. Hãy đổi sang một mô hình lỏng hơn trong việc phân tích tiểu thuyết; hoặc giảm kích thước phân đoạn quét xuống nhỏ hơn.</div>
+    </details>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ---------- 安全的本地存储（在无法使用时降级为内存，不报错） ----------
+const store = (()=>{
+  let ok=true, mem={};
+  try{ const k="__t"; localStorage.setItem(k,"1"); localStorage.removeItem(k); }catch(e){ ok=false; }
+  return {
+    get:(k)=>{ try{ return ok?localStorage.getItem(k):(mem[k]??null);}catch(e){return mem[k]??null;} },
+    set:(k,v)=>{ try{ ok?localStorage.setItem(k,v):(mem[k]=v);}catch(e){mem[k]=v;} }
+  };
+})();
+
+const $ = id => document.getElementById(id);
+const els = ["baseUrl","apiKey","model","temp","maxTok","chunkSize","scanCap","ctxCap","fullCap","nsfw","fullCtx","apiFormat","sysPrefix","detail"].reduce((o,id)=>(o[id]=$(id),o),{});
+const fmt = ()=> els.apiFormat.value;
+
+// ---------- JSON 持久化小工具 ----------
+function loadJSON(key,def){ try{ const v=store.get(key); return v? JSON.parse(v):def; }catch(e){ return def; } }
+function saveJSON(key,val){ store.set(key, JSON.stringify(val)); }
+
+// ---------- API 配置（多套，可切换） ----------
+const PROFILE_FIELDS=["apiFormat","baseUrl","apiKey","model","temp","maxTok","chunkSize","scanCap","ctxCap","fullCap"];
+function blankProfile(name){ return {name, apiFormat:"openai", baseUrl:"", apiKey:"", model:"", temp:"0.4", maxTok:"4000", chunkSize:"40000", scanCap:"40", ctxCap:"90000", fullCap:"120000"}; }
+let apiProfiles = loadJSON("cc_api_profiles", null);
+if(!Array.isArray(apiProfiles) || !apiProfiles.length){
+  // 首次：尽量沿用旧的单套设置
+  const p=blankProfile("Mặc định");
+  PROFILE_FIELDS.forEach(k=>{ const v=store.get("cc_"+k); if(v!==null&&v!=="") p[k]=v; });
+  apiProfiles=[p];
+}
+let curApiIdx = 0;
+{ const n=store.get("cc_cur_api"); const i=apiProfiles.findIndex(p=>p.name===n); if(i>=0) curApiIdx=i; }
+
+function renderApiSelect(){
+  const sel=$("apiProfile"); sel.innerHTML="";
+  apiProfiles.forEach((p,i)=>{ const o=document.createElement("option"); o.value=String(i); o.textContent=p.name; sel.appendChild(o); });
+  sel.value=String(curApiIdx);
+}
+function applyProfileToFields(){
+  const p=apiProfiles[curApiIdx]||blankProfile("Mặc định");
+  PROFILE_FIELDS.forEach(k=>{ if(els[k]) els[k].value = (p[k]!==undefined&&p[k]!=="")? p[k] : els[k].value; });
+}
+function persistApi(){ saveJSON("cc_api_profiles", apiProfiles); store.set("cc_cur_api", (apiProfiles[curApiIdx]&&apiProfiles[curApiIdx].name)||""); }
+function saveCfg(){
+  const p=apiProfiles[curApiIdx];
+  PROFILE_FIELDS.forEach(k=>{ if(els[k]) p[k]=els[k].value; });
+  persistApi();
+  store.set("cc_sysPrefix", els.sysPrefix.value);   // 附加提示词全局保存
+  flash($("cfgMsg"),"Đã lưu vào cấu hình \u201c"+p.name+"\u201d");
+}
+renderApiSelect(); applyProfileToFields();
+{ const sp=store.get("cc_sysPrefix"); if(sp) els.sysPrefix.value=sp; }
+
+$("apiProfile").onchange=e=>{ curApiIdx=parseInt(e.target.value)||0; applyProfileToFields(); persistApi(); $("modelSelect").style.display="none"; };
+$("apiNew").onclick=()=>{
+  const name=(prompt("Tên cấu hình mới:","Cấu hình "+(apiProfiles.length+1))||"").trim();
+  if(!name) return;
+  if(apiProfiles.some(p=>p.name===name)){ flash($("cfgMsg"),"Tên đã tồn tại",true); return; }
+  const p=blankProfile(name); PROFILE_FIELDS.forEach(k=>{ if(els[k]) p[k]=els[k].value; }); // 以当前填的为基础
+  apiProfiles.push(p); curApiIdx=apiProfiles.length-1;
+  renderApiSelect(); applyProfileToFields(); persistApi(); flash($("cfgMsg"),"Đã tạo mới cấu hình \u201c"+name+"\u201d");
+};
+$("apiDel").onclick=()=>{
+  if(apiProfiles.length<=1){ flash($("cfgMsg"),"Phải giữ lại ít nhất một cấu hình",true); return; }
+  const nm=apiProfiles[curApiIdx].name;
+  if(!confirm("Xóa cấu hình \u201c"+nm+"\u201d?")) return;
+  apiProfiles.splice(curApiIdx,1); curApiIdx=0;
+  renderApiSelect(); applyProfileToFields(); persistApi(); flash($("cfgMsg"),"Đã xóa cấu hình \u201c"+nm+"\u201d");
+};
+$("saveCfg").onclick=saveCfg;
+els.sysPrefix.addEventListener("input",()=>store.set("cc_sysPrefix", els.sysPrefix.value));
+
+// 附加系统提示：拼到每次请求最前
+function customSys(){ return (els.sysPrefix.value||"").trim(); }
+function withSys(base){ const c=customSys(); return c? (c+"\n\n"+base) : base; }
+function userMsgs(prompt){ const c=customSys(); return c? [{role:"system",content:c},{role:"user",content:prompt}] : [{role:"user",content:prompt}]; }
+
+function flash(el,msg,err){ el.textContent=msg; el.style.color= err? "var(--danger)":"var(--ok)"; setTimeout(()=>{el.textContent="";},2600); }
+
+// ---------- 小说导入 ----------
+function updateStat(){ const n=$("novel").value.length; $("novelStat").textContent = n.toLocaleString()+" ký tự"; }
+$("novel").addEventListener("input",updateStat);
+$("file").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  readNovelFile(f);
+});
+
+function readNovelFile(f){
+  const r=new FileReader();
+  r.onload=()=>{
+    const {text,enc}=decodeBest(r.result);
+    $("novel").value=text; updateStat();
+    if(enc!=="utf-8") $("novelStat").textContent += "　·　Đã giải mã bằng " + enc.toUpperCase();
+  };
+  r.readAsArrayBuffer(f);   // 读成字节，自己判编码，避免 GBK 小说被当 UTF-8 读花
+}
+// 先试 UTF-8，乱码多就改用 GB18030（覆盖 GBK/GB2312），取乱码更少的
+function decodeBest(buf){
+  const bytes=new Uint8Array(buf);
+  const badCount=s=>(s.match(/\uFFFD/g)||[]).length;
+  // 先看 BOM：UTF-16 的记事本文件很常见，之前没兜到会一直乱码
+  if(bytes.length>=2){
+    if(bytes[0]===0xFF && bytes[1]===0xFE){ try{ return {text:new TextDecoder("utf-16le").decode(bytes), enc:"utf-16le"}; }catch(e){} }
+    if(bytes[0]===0xFE && bytes[1]===0xFF){ try{ return {text:new TextDecoder("utf-16be").decode(bytes), enc:"utf-16be"}; }catch(e){} }
+    if(bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF){ try{ return {text:new TextDecoder("utf-8").decode(bytes), enc:"utf-8"}; }catch(e){} }
+  }
+  // 无 BOM：逐个尝试，取乱码最少的
+  const cands=[];
+  const push=(label,dec)=>{ try{ const t=new TextDecoder(dec).decode(bytes); cands.push({text:t, enc:label, bad:badCount(t)}); }catch(e){} };
+  push("utf-8","utf-8");
+  push("gb18030","gb18030");
+  push("utf-16le","utf-16le");
+  push("utf-16be","utf-16be");
+  if(!cands.length) return {text:"", enc:"utf-8"};
+  cands.sort((a,b)=>a.bad-b.bad);
+  return {text:cands[0].text, enc:cands[0].enc};
+}
+
+// 拖拽导入：把 txt 拖到输入框（或整个导入卡片）即可
+(function(){
+  const ta=$("novel");
+  const zone=ta.closest(".card") || ta;
+  ["dragenter","dragover"].forEach(ev=>zone.addEventListener(ev,e=>{
+    e.preventDefault(); e.stopPropagation(); ta.style.borderColor="var(--gold)";
+  }));
+  ["dragleave","drop"].forEach(ev=>zone.addEventListener(ev,e=>{
+    e.preventDefault(); e.stopPropagation(); ta.style.borderColor="";
+  }));
+  zone.addEventListener("drop",e=>{
+    const f=e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) readNovelFile(f);
+  });
+})();
+
+// ---------- 接口封装 ----------
+function endpoint(){
+  let b=els.baseUrl.value.trim().replace(/\/+$/,"");
+  if(!b) throw new Error("Vui lòng điền Base URL trước");
+  if(/\/chat\/completions$/.test(b)) return b;
+  return b+"/chat/completions";
+}
+
+// ===== Gemini 原生 =====
+const GEM_SAFETY=[
+  {category:"HARM_CATEGORY_HARASSMENT",threshold:"BLOCK_NONE"},
+  {category:"HARM_CATEGORY_HATE_SPEECH",threshold:"BLOCK_NONE"},
+  {category:"HARM_CATEGORY_SEXUALLY_EXPLICIT",threshold:"BLOCK_NONE"},
+  {category:"HARM_CATEGORY_DANGEROUS_CONTENT",threshold:"BLOCK_NONE"}
+];
+function gbase(){
+  let b=els.baseUrl.value.trim().replace(/\/+$/,"");
+  if(!b) throw new Error("Vui lòng điền Base URL trước");
+  return b.replace(/\/v1beta$/,"").replace(/\/v1$/,"");
+}
+function gheaders(){ return { "Content-Type":"application/json", "x-goog-api-key":els.apiKey.value.trim() }; }
+// 夹取 max_tokens：填得过大（如几百万）某些接口会直接返回空/报错，这里限到合理上限
+function clampTok(n){ n=parseInt(n)||1500; if(n<256) n=256; if(n>200000) n=200000; return n; }
+function toGemini(messages,maxTokens){
+  maxTokens=clampTok(maxTokens);
+  let sys=null; const contents=[];
+  for(const m of messages){
+    if(m.role==="system"){ sys=(sys?sys+"\n":"")+m.content; continue; }
+    contents.push({ role: m.role==="assistant"?"model":"user", parts:[{text:m.content}] });
+  }
+  const body={ contents, generationConfig:{ temperature:parseFloat(els.temp.value)||0.4, maxOutputTokens:maxTokens }, safetySettings:GEM_SAFETY };
+  if(sys) body.systemInstruction={parts:[{text:sys}]};
+  return body;
+}
+function gemErr(cand,data){
+  const reason=cand?.finishReason||data?.promptFeedback?.blockReason||"Không có phản hồi";
+  return "Gemini không trả về nội dung ("+reason+") —— Có thể đã bị bộ lọc an toàn chặn hoặc đạt giới hạn tần suất API";
+}
+async function geminiChat(messages,{maxTokens,signal}){
+  const url=gbase()+"/v1beta/models/"+encodeURIComponent(els.model.value.trim())+":generateContent";
+  const res=await fetchWithTimeout(url,{ method:"POST",signal,headers:gheaders(),body:JSON.stringify(toGemini(messages,maxTokens)) });
+  if(!res.ok){ let t=""; try{t=await res.text();}catch(e){} throw new Error("HTTP "+res.status+" "+t.slice(0,300)); }
+  const data=await res.json();
+  const cand=data?.candidates?.[0];
+  const txt=cand?.content?.parts?.map(p=>p.text||"").join("")||"";
+  lastFinish = cand?.finishReason || "";
+  if(!txt) throw new Error(gemErr(cand,data));
+  return txt;
+}
+async function geminiStream(messages,{maxTokens,onDelta,signal}){
+  const url=gbase()+"/v1beta/models/"+encodeURIComponent(els.model.value.trim())+":streamGenerateContent?alt=sse";
+  const res=await fetchWithTimeout(url,{ method:"POST",signal,headers:gheaders(),body:JSON.stringify(toGemini(messages,maxTokens)) });
+  if(!res.ok){ let t=""; try{t=await res.text();}catch(e){} throw new Error("HTTP "+res.status+" "+t.slice(0,300)); }
+  if(!res.body) throw new Error("Cổng giao tiếp này không hỗ trợ stream");
+  const reader=res.body.getReader(), dec=new TextDecoder();
+  let buf="", full="";
+  while(true){
+    const {done,value}=await reader.read(); if(done) break;
+    buf+=dec.decode(value,{stream:true});
+    let nl;
+    while((nl=buf.indexOf("\n"))>=0){
+      let line=buf.slice(0,nl).trim(); buf=buf.slice(nl+1);
+      if(!line.startsWith("data:")) continue;
+      const p=line.slice(5).trim(); if(!p||p==="[DONE]") continue;
+      try{ const j=JSON.parse(p); const t=j?.candidates?.[0]?.content?.parts?.map(x=>x.text||"").join("")||""; if(j?.candidates?.[0]?.finishReason) lastFinish=j.candidates[0].finishReason; if(t){ full+=t; onDelta&&onDelta(full); } }catch(e){}
+    }
+  }
+  return full;
+}
+
+async function chat(messages, {maxTokens=1500, signal}={}){
+  if(fmt()==="gemini") return geminiChat(messages,{maxTokens,signal});
+  const res=await fetchWithTimeout(endpoint(),{
+    method:"POST",signal,
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+els.apiKey.value.trim() },
+    body:JSON.stringify({
+      model:els.model.value.trim(),
+      messages,
+      temperature:parseFloat(els.temp.value)||0.4,
+      max_tokens:clampTok(maxTokens)
+    })
+  });
+  if(!res.ok){
+    let t=""; try{t=await res.text();}catch(e){}
+    throw new Error("HTTP "+res.status+" "+t.slice(0,300));
+  }
+  const data=await res.json();
+  const choice=data?.choices?.[0];
+  const msg=choice?.message?.content;
+  if(msg==null){
+    if(choice?.message?.reasoning_content!=null)
+      throw new Error("Mô hình chỉ phản hồi suy nghĩ (Thinking), không có văn bản chính — Có thể max_tokens quá nhỏ đã bị dùng hết cho phần suy nghĩ. Vui lòng tăng max_tokens (Mô hình suy nghĩ nên đặt trên 10,000) hoặc đổi sang mô hình không suy nghĩ (như dòng Flash).");
+    throw new Error("Phản hồi rỗng: "+JSON.stringify(data).slice(0,200));
+  }
+  lastFinish = choice?.finish_reason || "";
+  return Array.isArray(msg)? msg.map(p=>p.text||"").join("") : msg;
+}
+
+// 记录上一次请求的结束原因（用于检测 max_tokens 截断）
+let lastFinish="";
+function wasTruncated(){ return /length|max_?tokens/i.test(lastFinish||""); }
+
+// ---------- 自动重试（429 / 5xx / 网络抖动） ----------
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// ---------- 运行控制（可主动停止） ----------
+let runController=null;
+function runSignal(){ runController=new AbortController(); return runController.signal; }
+function stopRun(){ if(runController) runController.abort(); }
+// 连接超时：ms 内没拿到响应就中止「这一个请求」（不牵连整轮任务），并抛出可重试的超时错误。
+async function fetchWithTimeout(url, opts, ms=180000){
+  const outer=opts&&opts.signal;              // 整轮任务的停止信号（用户点停止）
+  const tc=new AbortController();
+  const onOuter=()=>tc.abort();
+  if(outer){ if(outer.aborted) tc.abort(); else outer.addEventListener("abort",onOuter,{once:true}); }
+  let timedOut=false;
+  const t=setTimeout(()=>{ timedOut=true; tc.abort(); }, ms);
+  try{
+    return await fetch(url, Object.assign({}, opts, {signal:tc.signal}));
+  }catch(e){
+    if(timedOut) throw new Error("Yêu cầu quá hạn ("+(ms/1000)+"s không phản hồi), vui lòng thử lại hoặc đổi sang mô hình/kênh trung gian nhanh hơn");
+    throw e;   // 用户主动停止 → AbortError，照常向上抛
+  }finally{ clearTimeout(t); if(outer) outer.removeEventListener("abort",onOuter); }
+}
+// 所有会发请求的按钮：同一时刻只允许一个在跑，其余禁用，避免并发抢占 runController 导致卡死
+const ASYNC_BTNS=["scanBtn","genBtn","contBtn","reviseBtn","wbRunBtn","wbContBtn","wbReviseBtn","styleBtn","checkRunBtn"];
+let runningBtn=null;
+function setRunning(btn,on){
+  if(on){
+    runningBtn=btn;
+    if(!btn.dataset.label) btn.dataset.label=btn.textContent;
+    btn.dataset.running="1"; btn.textContent="■ Dừng lại";
+    ASYNC_BTNS.forEach(id=>{ const b=$(id); if(b&&b!==btn) b.disabled=true; });   // 锁住其它请求按钮
+  } else {
+    if(runningBtn===btn) runningBtn=null;
+    btn.dataset.running=""; if(btn.dataset.label){ btn.textContent=btn.dataset.label; btn.dataset.label=""; }
+    ASYNC_BTNS.forEach(id=>{ const b=$(id); if(b) b.disabled=false; });            // 解锁
+    if(typeof updateGenBtn==="function") updateGenBtn();                            // 修正生成按钮的可用状态
+  }
+}
+function isAbort(e,signal){ return (signal&&signal.aborted) || (e&&(e.name==="AbortError"||/abort/i.test(e.message||""))); }
+async function retry(fn,{tries=3,onWait}={}){
+  let last;
+  for(let i=0;i<tries;i++){
+    try{ return await fn(); }
+    catch(e){
+      last=e;
+      if(isAbort(e)) throw e;                                   // 用户中止：不重试
+      const httpm=/HTTP (429|5\d\d)/.exec(e.message||"");
+      const neterr = e.name==="TypeError" || /failed to fetch|load failed|network\s*error|请求超时|timeout/i.test(e.message||"");
+      if((!httpm && !neterr) || i===tries-1) throw e;           // 非可重试错误 / 已到上限
+      const code = httpm? httpm[1] : "Lỗi mạng";
+      const wait=2000*(i+1);
+      onWait && onWait(i+1, code, wait);
+      await sleep(wait);
+    }
+  }
+  throw last;
+}
+
+// ---------- 生成（自动续写：被 max_tokens 截断就接着写） ----------
+async function generate(messages,{maxTokens,useStream,signal,onText,onWait,maxCont=0,logEl,label}={}){
+  let full="";
+  for(let round=0; round<=maxCont; round++){
+    const msgs = round===0 ? messages
+      : messages.concat([
+          {role:"assistant",content:stripThink(full)},
+          {role:"user",content:"Nội dung phía trên đã bị cắt ngang do đạt giới hạn độ dài, vui lòng viết tiếp trực tiếp từ điểm bị cắt. Tuyệt đối không lặp lại nội dung đã viết, không cần viết lại phần mở đầu và không thêm bất kỳ lời giải thích thừa thãi nào khác."}
+        ]);
+    let part="";
+    if(useStream){
+      try{ part=await retry(()=>chatStream(msgs,{maxTokens,onDelta:(f)=>{ onText&&onText(full+f); },signal}),{onWait}); }
+      catch(err){ if(isAbort(err,signal)) throw err; part=await retry(()=>chat(msgs,{maxTokens,signal}),{onWait}); }
+    }else{
+      part=await retry(()=>chat(msgs,{maxTokens,signal}),{onWait});
+    }
+    full += part;
+    onText && onText(full);
+    if(!wasTruncated()) break;                 // 写完了
+    if(round<maxCont && logEl) logTo(logEl,(label?label+": ":"")+"Nội dung dài, tự động viết tiếp ("+(round+1)+")…","g");
+  }
+  return full;
+}
+
+$("testCfg").onclick=async()=>{
+  const b=$("testCfg"); b.disabled=true; flash($("cfgMsg"),"Đang kết nối thử...");
+  try{
+    const r=await chat([{role:"user",content:"Chỉ phản hồi hai chữ: OK."}],{maxTokens:2000});
+    flash($("cfgMsg"),"Kết nối OK · "+r.trim().slice(0,20));
+  }catch(e){ flash($("cfgMsg"),"Thất bại: "+e.message, true); }
+  finally{ b.disabled=false; }
+};
+
+// ---------- 拉取模型列表 ----------
+function modelsEndpoint(){
+  let b=els.baseUrl.value.trim().replace(/\/+$/,"");
+  if(!b) throw new Error("Vui lòng điền Base URL trước");
+  if(/\/chat\/completions$/.test(b)) return b.replace(/\/chat\/completions$/,"/models");
+  return b+"/models";
+}
+$("fetchModels").onclick=async()=>{
+  const btn=$("fetchModels"), msg=$("modelMsg");
+  if(!els.baseUrl.value.trim()){ msg.style.color="var(--danger)"; msg.textContent="Vui lòng điền Base URL trước"; return; }
+  btn.disabled=true; msg.style.color="var(--muted)"; msg.textContent="Đang tải...";
+  try{
+    let ids;
+    if(fmt()==="gemini"){
+      const res=await fetch(gbase()+"/v1beta/models", { headers:{ "x-goog-api-key":els.apiKey.value.trim() } });
+      if(!res.ok){ let t=""; try{t=await res.text();}catch(e){} throw new Error("HTTP "+res.status+" "+t.slice(0,200)); }
+      const data=await res.json();
+      ids=(data.models||[]).map(m=>(m.name||"").replace(/^models\//,"")).filter(Boolean);
+    }else{
+      const res=await fetch(modelsEndpoint(),{ headers:{ "Authorization":"Bearer "+els.apiKey.value.trim() } });
+      if(!res.ok){ let t=""; try{t=await res.text();}catch(e){} throw new Error("HTTP "+res.status+" "+t.slice(0,200)); }
+      const data=await res.json();
+      let list = Array.isArray(data) ? data : (data.data || data.models || []);
+      ids = list.map(m=> typeof m==="string" ? m : (m.id||m.name||m.model)).filter(Boolean);
+    }
+    ids=[...new Set(ids)].sort();
+    if(!ids.length) throw new Error("Danh sách mô hình rỗng");
+    const sel=$("modelSelect"); sel.innerHTML="";
+    ids.forEach(id=>{ const o=document.createElement("option"); o.value=id; o.textContent=id; sel.appendChild(o); });
+    sel.style.display="block";
+    const cur=els.model.value.trim();
+    if(cur && ids.includes(cur)) sel.value=cur; else els.model.value=sel.value;
+    msg.style.color="var(--ok)"; msg.textContent="Tìm thấy "+ids.length+" mô hình";
+  }catch(e){ msg.style.color="var(--danger)"; msg.textContent="Thất bại: "+e.message; }
+  finally{ btn.disabled=false; }
+};
+$("modelSelect").onchange=e=>{ els.model.value=e.target.value; };
+
+// ---------- 日志 ----------
+function logTo(elId,msg,cls){
+  const el=$(elId); el.classList.add("show");
+  const span=document.createElement("span");
+  if(cls) span.className=cls;
+  span.textContent=msg+"\n"; el.appendChild(span); el.scrollTop=el.scrollHeight;
+}
+function clearLog(elId){ const el=$(elId); el.innerHTML=""; el.classList.remove("show"); }
+
+// ---------- 扫描角色 ----------
+let characters=[]; let selectedNames=[];
+let scanState=null;   // 断点续扫：{len, chunks, cap, next, map}
+let genDone={}, genSelKey="";   // 批量角色卡断点续跑：已完成的角色缓存
+function stripFence(s){ return s.replace(/^\s*```(?:json)?/i,"").replace(/```\s*$/,"").trim(); }
+// 剥掉思考型模型的 <think>…</think> 块（想完了才剥得掉；截断没闭合的救不了）
+function stripThink(s){
+  s=String(s).replace(/<think>[\s\S]*?<\/think>/gi,"");
+  const ci=s.search(/<\/think>/i);          // 只有闭合标签（前面是裸思考）时，丢掉它之前的所有内容
+  if(ci>=0) s=s.slice(ci+"</think>".length);
+  return s.trim();
+}
+// 抗造地从模型回复里抠出 JSON 数组：先剥思考/代码块，再解析，失败就截取第一个 [ 到最后一个 ]
+function extractJsonArray(s){
+  if(s==null) return null;
+  s=stripFence(stripThink(String(s)));
+  try{ const v=JSON.parse(s); return Array.isArray(v)?v:null; }catch(e){}
+  const a=s.indexOf("["), b=s.lastIndexOf("]");
+  if(a>=0 && b>a){
+    try{ const v=JSON.parse(s.slice(a,b+1)); return Array.isArray(v)?v:null; }catch(e){}
+  }
+  return null;
+}
+
+$("scanBtn").onclick=async()=>{
+  const btn=$("scanBtn");
+  if(btn.dataset.running){ stopRun(); return; }
+  const text=$("novel").value.trim();
+  if(!text){ flash($("scanMsg"),"Vui lòng nhập tiểu thuyết trước",true); return; }
+  if(!els.baseUrl.value.trim()||!els.model.value.trim()){ flash($("scanMsg"),"Vui lòng hoàn thành thiết lập API",true); return; }
+
+  setRunning(btn,true);
+  const signal=runSignal();
+  const size=Math.max(10000,parseInt(els.chunkSize.value)||40000);
+
+  // 断点续扫：小说没变、且上次没扫完 → 从上次的位置接着扫
+  const resuming = scanState && scanState.len===text.length && scanState.next < scanState.cap;
+  let chunks, cap, map, startI;
+  if(resuming){
+    chunks=scanState.chunks; cap=scanState.cap; map=scanState.map; startI=scanState.next;
+    logTo("scanLog","Tiếp tục quét từ phân đoạn "+(startI+1)+"/"+cap+"…");
+  }else{
+    clearLog("scanLog"); characters=[]; selectedNames=[]; renderChars(); updateGenBtn();
+    chunks=[]; for(let i=0;i<text.length;i+=size) chunks.push(text.slice(i,i+size));
+    cap=Math.min(chunks.length, Math.max(1, parseInt(els.scanCap.value)||40));
+    map=new Map(); startI=0;
+    scanState={ len:text.length, chunks, cap, next:0, map };
+    if(chunks.length>cap) logTo("scanLog","Tiểu thuyết khá dài, chỉ quét "+cap+" phân đoạn đầu.","e");
+    logTo("scanLog","Tổng cộng "+cap+" phân đoạn, bắt đầu quét…");
+  }
+
+  try{
+    for(let i=startI;i<cap;i++){
+      if(signal.aborted) break;
+      $("scanMsg").innerHTML='<span class="spinner"></span>Đang quét '+(i+1)+"/"+cap;
+      const withRole=$("scanRole").checked;
+      const stage=$("scanStage").checked;
+      const stageLine = stage
+        ? "Nếu một nhân vật có các giai đoạn cuộc đời rõ rệt trong văn bản (như thiếu niên/thanh niên/trung niên, hoặc trước và sau biến cố lớn), hãy liệt kê riêng từng giai đoạn và ghi rõ giai đoạn đó trong dấu ngoặc sau tên, ví dụ: \u201cTrần Văn A (Thiếu niên)\u201d, \u201cTrần Văn A (Trưởng thành)\u201d; các nhân vật không có giai đoạn rõ ràng thì liệt kê bình thường.\n"
+        : "";
+      const nameViRule = "Trường \"name\" giữ NGUYÊN VĂN đúng như chữ viết xuất hiện trong văn bản gốc (không dịch, dùng để dò lại đúng đoạn văn). Thêm trường \"vi\": tên đó viết bằng tiếng Việt để hiển thị cho người đọc — nếu là tên gốc Hán thì chuyển sang âm Hán Việt (ví dụ 夏冬→Hạ Đông), nếu là danh xưng/biệt hiệu có nghĩa thì dịch nghĩa (ví dụ 旺旺→Vượng Vượng, 疯狗→Cẩu Điên), nếu đã là tên phiên âm Latin/tiếng Anh sẵn trong văn bản thì giữ nguyên. Phải dùng nhất quán cùng một cách phiên âm/dịch cho cùng một nhân vật trong toàn bộ các lần liệt kê.\n";
+      const prompt = withRole
+        ? "Dưới đây là một đoạn văn bản tiểu thuyết. Hãy liệt kê các nhân vật có tên xuất hiện trong đó.\n"+stageLine+nameViRule+"Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\",\"role\":\"Mô tả ngắn gọn danh tính/vai trò, viết bằng tiếng Việt\"}.\nChỉ xuất mảng JSON này, không đặt trong block code, không giải thích thêm. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i]
+        : "Dưới đây là một đoạn văn bản tiểu thuyết. Chỉ liệt kê tên các nhân vật có tên xuất hiện trong đó.\n"+stageLine+nameViRule+"Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\"}.\nChỉ xuất mảng JSON này, không dùng block code, không giải thích, không kèm trường role. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i];
+      let rawText="";
+      if(i>startI) await sleep(400); // 段间小间隔，缓解限流
+      try{
+        rawText=await retry(
+          ()=>chat(userMsgs(prompt),{maxTokens:withRole?8000:4000,signal}),
+          {onWait:(n,code,w)=>logTo("scanLog","Đoạn "+(i+1)+" gặp lỗi HTTP "+code+"，thử lại sau "+(w/1000)+"s (lần "+n+")","e")}
+        );
+      }
+      catch(err){
+        if(isAbort(err,signal)){ logTo("scanLog","Đã dừng","e"); break; }
+        logTo("scanLog","Đoạn "+(i+1)+" yêu cầu thất bại: "+err.message,"e"); scanState.next=i+1; continue;
+      }
+      const arr=extractJsonArray(rawText);
+      if(!Array.isArray(arr)){
+        const snip=rawText.trim().replace(/\s+/g," ").slice(0,90);
+        logTo("scanLog","Phân tích đoạn "+(i+1)+" thất bại, mô hình trả về: "+(snip? "「"+snip+"」" : "（Trống, có thể đã bị bộ lọc an toàn chặn）"),"e");
+        scanState.next=i+1; continue;
+      }
+      for(const c of arr){
+        const name = (typeof c==="string") ? c : (c&&c.name);
+        const key = name? String(name).trim() : "";
+        if(!key) continue;
+        const role = (c&&typeof c==="object"&&c.role)? String(c.role).trim() : "";
+        const vi = (c&&typeof c==="object"&&c.vi)? String(c.vi).trim() : "";
+        if(map.has(key)){ const cur=map.get(key); cur.count++; if(vi&&!cur.vi) cur.vi=vi; if(role&&!cur.role) cur.role=role; }
+        else map.set(key,{name:key,vi,role,count:1,aliases:[]});
+      }
+      scanState.next=i+1;   // 记录进度，供断点续扫
+      logTo("scanLog","Đoạn "+(i+1)+" → Lũy kế "+map.size+" nhân vật","g");
+    }
+    characters=[...map.values()].sort((a,b)=>b.count-a.count);
+    renderChars();
+    const doneAll = scanState.next>=cap;
+    if(doneAll){ scanState=null; $("scanMsg").textContent="Hoàn tất, tổng cộng "+characters.length+" nhân vật"; }
+    else { $("scanMsg").textContent="Đã dừng, tìm thấy "+characters.length+" nhân vật · Bấm lại \"Quét toàn truyện\" để chạy tiếp từ đoạn "+(scanState.next+1); }
+    if(characters.length) saveNovelSession(true);
+  }catch(e){
+    if(isAbort(e,signal)){ logTo("scanLog","Đã dừng","e"); $("scanMsg").textContent="Đã dừng (Có thể bấm lại \"Quét toàn truyện\" để tiếp tục)"; }
+    else { logTo("scanLog","Lỗi: "+e.message,"e"); $("scanMsg").textContent=""; }
+  }finally{ setRunning(btn,false); }
+};
+
+function renderChars(){
+  const box=$("charList"); box.innerHTML="";
+  characters.forEach(c=>{
+    const on=selectedNames.includes(c.name);
+    const d=document.createElement("div");
+    d.className="chip"+(on?" sel":"");
+    d.style.position="relative";
+    d.innerHTML=`<div class="n"></div><div class="r"></div><div class="c"></div>`;
+    d.querySelector(".n").textContent=c.vi||c.name;
+    d.querySelector(".r").textContent=c.role||"";
+    const orig=(c.vi && c.vi!==c.name)? " · Gốc: "+c.name : "";
+    const alias=(c.aliases&&c.aliases.length)? " · Biệt danh: "+c.aliases.join("、") : "";
+    const src = c.count>0 ? ("Xuất hiện trong "+c.count+" phân đoạn") : "Thêm thủ công";
+    d.querySelector(".c").textContent=src+orig+alias+(on?" · Đã chọn":"");
+    // 操作按钮：拆分（撤销合并）+ 删除
+    const ops=document.createElement("div");
+    ops.style.cssText="position:absolute;top:6px;right:6px;display:flex;gap:4px";
+    if(c.aliases&&c.aliases.length){
+      const un=document.createElement("button"); un.type="button"; un.textContent="Tách"; un.title="Hoàn tác gộp, tách lại thành nhiều nhân vật";
+      un.style.cssText="font-size:11px;padding:1px 6px;border:1px solid var(--gold-dim);background:transparent;color:var(--gold);border-radius:5px;cursor:pointer";
+      un.onclick=ev=>{ ev.stopPropagation(); if(runningBtn){ flash($("scanMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; } unmergeChar(c.name); };
+      ops.appendChild(un);
+    }
+    const del=document.createElement("button"); del.type="button"; del.textContent="✕"; del.title="Xóa nhân vật này";
+    del.style.cssText="font-size:11px;padding:1px 6px;border:1px solid var(--danger);background:transparent;color:var(--danger);border-radius:5px;cursor:pointer";
+    del.onclick=ev=>{ ev.stopPropagation(); if(runningBtn){ flash($("scanMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; }
+      characters=characters.filter(x=>x.name!==c.name); selectedNames=selectedNames.filter(n=>n!==c.name); renderChars(); updateGenBtn(); };
+    ops.appendChild(del);
+    d.appendChild(ops);
+    d.onclick=()=>{
+      if(runningBtn) return;
+      const i=selectedNames.indexOf(c.name);
+      if(i>=0) selectedNames.splice(i,1); else selectedNames.push(c.name);
+      renderChars(); updateGenBtn();
+    };
+    box.appendChild(d);
+  });
+}
+// 撤销合并：把主角色和它的别名拆回各自独立的角色
+function unmergeChar(name){
+  const c=characters.find(x=>x.name===name);
+  if(!c||!c.aliases||!c.aliases.length) return;
+  const names=[c.name, ...c.aliases];
+  characters=characters.filter(x=>x.name!==name);
+  for(const nm of names){
+    if(!characters.some(x=>x.name===nm)) characters.push({name:nm, role:(nm===c.name? c.role:""), count:(nm===c.name?c.count:0), aliases:[]});
+  }
+  renderChars(); updateGenBtn(); flash($("scanMsg"),"Đã tách \u201c"+name+"\u201d");
+}
+// 手动添加角色（跳过扫描）
+function addManualNames(){
+  const raw=$("manualNames").value.trim();
+  if(runningBtn){ flash($("scanMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; }
+  if(!raw){ flash($("scanMsg"),"Vui lòng nhập tên nhân vật trước",true); return; }
+  const names=raw.split(/[,，、\s]+/).map(s=>s.trim()).filter(Boolean);
+  let added=0;
+  for(const nm of names){
+    if(characters.some(c=>c.name===nm || (c.aliases||[]).includes(nm))) continue;
+    characters.push({name:nm, role:"（Thêm thủ công）", count:0, aliases:[]});
+    if(!selectedNames.includes(nm)) selectedNames.push(nm);
+    added++;
+  }
+  $("manualNames").value="";
+  renderChars(); updateGenBtn();
+  flash($("scanMsg"),added? ("Đã thêm "+added+" nhân vật, có thể bắt đầu tạo thẻ"):"Không có nhân vật mới (đã tồn tại)");
+}
+$("addNamesBtn").onclick=addManualNames;
+$("manualNames").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); addManualNames(); } });
+$("clearCharsBtn").onclick=()=>{ if(runningBtn){ flash($("scanMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; } characters=[]; selectedNames=[]; scanState=null; renderChars(); updateGenBtn(); flash($("scanMsg"),"Đã xóa danh sách"); };
+
+// 手动合并：把选中的多个角色并成一个（第一个为主名，其余记为别名）
+$("mergeBtn").onclick=()=>{
+  if(runningBtn){ flash($("scanMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; }
+  if(selectedNames.length<2){ flash($("scanMsg"),"Chọn từ 2 nhân vật trở lên để gộp",true); return; }
+  const primaryName=selectedNames[0];
+  const primary=characters.find(c=>c.name===primaryName);
+  if(!primary){ flash($("scanMsg"),"Không tìm thấy nhân vật chính để gộp",true); return; }
+  if(!Array.isArray(primary.aliases)) primary.aliases=[];
+  for(const nm of selectedNames.slice(1)){
+    const o=characters.find(c=>c.name===nm); if(!o) continue;
+    if(!primary.aliases.includes(nm)) primary.aliases.push(nm);
+    for(const a of (o.aliases||[])) if(!primary.aliases.includes(a)&&a!==primaryName) primary.aliases.push(a);
+    primary.count += o.count||0;
+    characters=characters.filter(c=>c.name!==nm);
+  }
+  selectedNames=[primaryName];
+  renderChars(); updateGenBtn();
+  flash($("scanMsg"),"Đã gộp thành \u201c"+primaryName+"\u201d");
+};
+function updateGenBtn(){
+  const n=selectedNames.length;
+  if(runningBtn){ $("genMsg").textContent = n ? ("Đã chọn "+n+" mục") : ""; return; } // 运行中不改动生成按钮，交给 setRunning 管
+  $("genBtn").disabled = n===0;
+  $("genBtn").textContent = n <= 1 ? "Tạo Thẻ Nhân vật" : ("Tạo hàng loạt ("+n+")");
+  $("genMsg").textContent = n ? ("Đã chọn "+n+" mục") : "";
+}
+
+// ---------- 模板 ----------
+const TEMPLATE = `char_name:
+  Chinese name / Tên gốc:
+  Nickname / Biệt danh:
+  age / Tuổi:
+  gender / Giới tính:
+  height / Chiều cao:
+  identity / Thân phận:
+    -
+  background_story / Tiểu sử nền:
+    Tuổi thơ (0-12 tuổi):
+    Thiếu niên (13-18 tuổi):
+    Thanh niên (19-35 tuổi):
+    Trung niên (35-nay):
+    Tình trạng hiện tại:
+  social_status / Địa vị xã hội:
+    -
+  appearance / Ngoại hình:
+    hair / Tóc:
+    eyes / Mắt:
+    skin / Làn da:
+    face_style / Khuôn mặt:
+    build / Vóc dáng:
+      -
+  attire / Trang phục:
+    business_formal / Công sở trang trọng:
+    business_casual / Công sở thường ngày:
+    casual_wear / Thường ngày:
+    home_wear / Mặc ở nhà:
+  archetype / Hình mẫu:
+  personality / Tính cách:
+    core_traits / Nét tính cách cốt lõi:
+      - : ""
+    romantic_traits / Nét tính cách trong tình yêu:
+      - : ""
+  lifestyle_behaviors / Hành vi đời sống:
+    -
+    -
+  work_behaviors / Hành vi công việc:
+    -
+  emotional_behaviors / Hành vi cảm xúc:
+    angry / Khi tức giận:
+    happy / Khi vui vẻ:
+  goals / Mục tiêu:
+    -
+  weakness / Điểm yếu:
+    -
+  likes / Sở thích:
+    -
+  dislikes / Ghét:
+    -
+  skills / Kỹ năng:
+    - Công việc: ["",""]
+    - Đời sống: ["",""]
+    - Sở thích cá nhân: ["",""]`;
+
+const NSFW_BLOCK = `
+  Thông tin_NSFW:
+    Đặc điểm_tình dục:
+      experiences / Kinh nghiệm:
+      sexual_orientation / Xu hướng tính dục:
+      sexual_role / Vai trò:
+      sexual_habits / Thói quen tình dục:
+        -
+    Kinks / Sở thích đặc biệt:
+    Limits / Giới hạn:`;
+
+// ---------- 段落检索 ----------
+function charNames(name){
+  const c=(typeof characters!=="undefined") ? characters.find(x=>x.name===name) : null;
+  const list=[name].concat((c&&c.aliases)?c.aliases:[]);
+  return [...new Set(list.filter(Boolean))];
+}
+function collectContext(name, extra){
+  const text=$("novel").value;
+  const CAP=Math.max(10000, parseInt(els.ctxCap.value)||90000);
+  const FULLCAP=Math.max(10000, parseInt(els.fullCap.value)||120000);
+  if($("fullCtx").checked){ return text.slice(0,FULLCAP); }
+  const names=[...charNames(name), ...((extra||[]).filter(Boolean))];
+  const paras=text.split(/\n\s*\n|\n/).filter(p=>p.trim());
+  const hit=paras.filter(p=> names.some(n=>p.includes(n)));
+  if(hit.length===0) return text.slice(0,FULLCAP); // 名字变体等情况兜底
+  const total=hit.reduce((s,p)=>s+p.length+2,0);
+  if(total<=CAP) return hit.join("\n\n");
+  // 超量时：不再从头截断，而是跨全书等距采样，兼顾开头/中间/结尾，避免长篇只覆盖前半
+  const avg=total/hit.length;
+  let keepN=Math.max(2, Math.min(hit.length, Math.floor(CAP/avg)));
+  const seen=new Set(), out=[];
+  for(let i=0;i<keepN;i++){
+    const idx=Math.round(i*(hit.length-1)/(keepN-1));
+    if(!seen.has(idx)){ seen.add(idx); out.push(hit[idx]); }
+  }
+  let joined=out.join("\n\n");
+  if(joined.length>CAP) joined=joined.slice(0,CAP);
+  return joined;
+}
+
+// ---------- 流式请求 ----------
+async function chatStream(messages,{maxTokens=4000,onDelta,signal}={}){
+  if(fmt()==="gemini") return geminiStream(messages,{maxTokens,onDelta,signal});
+  const res=await fetchWithTimeout(endpoint(),{
+    method:"POST",signal,
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+els.apiKey.value.trim() },
+    body:JSON.stringify({
+      model:els.model.value.trim(), messages,
+      temperature:parseFloat(els.temp.value)||0.4,
+      max_tokens:clampTok(maxTokens), stream:true
+    })
+  });
+  if(!res.ok){ let t=""; try{t=await res.text();}catch(e){} throw new Error("HTTP "+res.status+" "+t.slice(0,300)); }
+  if(!res.body) throw new Error("Cổng giao tiếp này không hỗ trợ stream");
+  const reader=res.body.getReader(), dec=new TextDecoder();
+  let buf="", full="";
+  while(true){
+    const {done,value}=await reader.read(); if(done) break;
+    buf+=dec.decode(value,{stream:true});
+    let nl;
+    while((nl=buf.indexOf("\n"))>=0){
+      let line=buf.slice(0,nl).trim(); buf=buf.slice(nl+1);
+      if(!line.startsWith("data:")) continue;
+      const p=line.slice(5).trim();
+      if(p==="[DONE]") return full;
+      try{ const j=JSON.parse(p); if(j.choices?.[0]?.finish_reason) lastFinish=j.choices[0].finish_reason; const d=j.choices?.[0]?.delta?.content; if(d){ full+=d; onDelta&&onDelta(full); } }catch(e){}
+    }
+  }
+  return full;
+}
+
+// ---------- 顶层 key 用中文名 ----------
+function finalizeCard(text, fallback){
+  let name=(fallback||"").trim();
+  const m=text.match(/(?:Chinese name \/ Tên gốc|Chinese name|Tên gốc):\s*(.+)/i);
+  if(m){ const v=m[1].trim().replace(/^["']|["']$/g,""); if(v && !/原文未提及|Nguyên tác không nhắc đến/i.test(v)) name=v; }
+  if(!name) return text;
+  let key=name.trim();
+  if(/[:#\{\}\[\]&\*!\|>%@`"'\n,]/.test(key)) key='"'+key.replace(/"/g,'\\"')+'"';
+  return text.replace(/^\s*char_name\s*:/, key+":");
+}
+
+// ---------- 生成角色卡（支持批量 / 流式） ----------
+// ---------- user 设置：显隐 + 提示词 ----------
+$("userRel").addEventListener("change",e=>{ $("userRelBox").style.display=e.target.checked?"block":"none"; });
+$("userReplace").addEventListener("change",e=>{ $("userReplaceBox").style.display=e.target.checked?"block":"none"; });
+function refreshWbPreviewIfAny(){ if(wbEntries && wbEntries.length) $("wbOut").value=buildWbPreview(wbEntries); }
+$("wbUserReplace").addEventListener("change",e=>{ $("wbUserReplaceBox").style.display=e.target.checked?"block":"none"; refreshWbPreviewIfAny(); });
+$("wbUserReplaceName").addEventListener("input", refreshWbPreviewIfAny);
+function userReplaceName(){ return $("userReplace").checked ? $("userReplaceName").value.trim() : ""; }
+function userDirectives(){
+  const lines=[];
+  if($("userRel").checked){
+    const t=$("userRelText").value.trim();
+    if(t) lines.push("· 【Đưa {{user}} vào thế giới của họ】{{user}} là một người thực sự tồn tại trong thế giới của nhân vật này. Vui lòng dựa vào thiết lập sau đây để đưa {{user}} vào cuộc đời, trải nghiệm, mối quan hệ và tình cảm của nhân vật một cách tự nhiên, như thể {{user}} luôn sống trong nguyên tác (có thể diễn giải hợp lý nhưng phải đồng điệu với bầu không khí của truyện):\n"+t);
+  }
+  const rn=userReplaceName();
+  if(rn){
+    lines.push("· 【Thay thế nhân vật \u201c"+rn+"\u201d bằng {{user}}】Coi nhân vật \u201c"+rn+"\u201d trong nguyên tác chính là {{user}}: tất cả các tương tác, mối quan hệ và trải nghiệm chung của họ với nhân vật hiện tại sẽ được viết lại thành trải nghiệm của {{user}} với nhân vật này, đồng thời thay thế toàn bộ tên \u201c"+rn+"\u201d xuất hiện trong văn bản thành {{user}}.");
+    const st=$("userReplaceText").value.trim();
+    if(st) lines.push("  Thiết lập bổ sung:\n"+st);
+  }
+  return lines.length? (lines.join("\n")+"\n") : "";
+}
+
+$("genBtn").onclick=async()=>{
+  const btn=$("genBtn");
+  if(btn.dataset.running){ stopRun(); return; }
+  if(!selectedNames.length){ flash($("genMsg"),"Vui lòng chọn ít nhất một nhân vật",true); return; }
+  setRunning(btn,true); clearLog("genLog");
+  const signal=runSignal();
+
+  const includeNsfw=$("nsfw").checked;
+  const useStream=$("stream").checked;
+  const omitEmpty=$("omitEmpty").checked;
+  const many=selectedNames.length>1;
+  const tmpl = getActiveTemplate();
+  const nsfwRule = includeNsfw
+    ? "· Nếu trong mẫu có mục Thông tin_NSFW (NSFW_information), chỉ điền dựa trên nguyên tác, nếu nguyên tác không đề cập thì điền \u201c(Nguyên tác không nhắc đến)\u201d, nghiêm cấm bịa đặt các thiết lập liên quan đến tình dục."
+    : "· Nếu mẫu có mục Thông tin_NSFW (NSFW_information), vui lòng lược bỏ toàn bộ phần này (xóa cùng tất cả các trường con của nó) và không xuất bất kỳ nội dung nào liên quan đến tình dục.";
+  const emptyRule = omitEmpty
+    ? "· Các trường hoặc mục con hoàn toàn không được nhắc đến trong nguyên tác, vui lòng lược bỏ và xóa bỏ trực tiếp, không viết ra."
+    : "· Các trường nguyên tác không nhắc đến thì điền \u201c(Nguyên tác không nhắc đến)\u201d, không xóa bỏ trường đó.";
+  const detail=$("detail").value;
+  const detailRule = detail==="concise"
+    ? "· 【Độ dài: Ngắn gọn】Cố gắng viết mỗi trường thật ngắn gọn, chỉ khoảng 1-2 câu; các trường dạng danh sách (quan hệ, trải nghiệm, kỹ năng, sở thích...) chỉ giữ lại 2-3 mục quan trọng nhất; cố gắng kiểm soát toàn bộ thẻ trong vòng 2000 ký tự."
+    : detail==="rich"
+    ? "· 【Độ dài: Chi tiết】Trên cơ sở trung thành với nguyên tác, cố gắng viết càng phong phú, cụ thể và nhiều chi tiết càng tốt."
+    : "";
+  const sys="Bạn là một trợ lý trích xuất Thẻ Nhân vật cực kỳ nghiêm túc. Nguyên tắc làm việc: Chỉ dựa trên nguyên tác, tuyệt đối không tự bịa đặt; trước khi viết, phải suy nghĩ để làm rõ toàn bộ cuộc đời và tính cách của nhân vật từ đầu đến cuối, xác định những trải nghiệm nào thực sự thuộc về họ; nghiêm cấm gán ghép trải nghiệm hoặc thiết lập của nhân vật khác cho nhân vật này; nghiêm cấm OOC (không viết những nội dung mâu thuẫn với tính cách trong nguyên tác); tuyệt đối không dùng những câu sáo rỗng vô thưởng vô phạt áp dụng cho ai cũng được để đối phó.";
+
+  const selKey=selectedNames.join("|");
+  const resuming = selKey===genSelKey && selectedNames.some(n=>genDone[n]);
+  if(!resuming){ genDone={}; genSelKey=selKey; $("output").value=""; }
+  const dispOf=n=>{
+    const m=n.match(/^(.*?)[（(]\s*(.+?)\s*[)）]\s*$/);
+    const base=m? m[1].trim() : n, stage=m? m[2].trim() : "";
+    const co=characters.find(x=>x.name===base);
+    const vi=(co&&co.vi)? co.vi : base;
+    return stage? (vi+"（"+stage+"）") : vi;
+  };
+  const head=nm=>(many?("# ========== "+dispOf(nm)+" ==========\n"):"");
+  const rebuild=()=>{ $("output").value=selectedNames.filter(n=>genDone[n]).map(n=>head(n)+genDone[n]).join("\n\n\n"); };
+  if(resuming){ rebuild(); logTo("genLog","Tiếp tục tạo: Đã hoàn thành "+selectedNames.filter(n=>genDone[n]).length+"/"+selectedNames.length+" mục, bỏ qua các mục đã tạo","g"); }
+  try{
+    for(let i=0;i<selectedNames.length;i++){
+      if(signal.aborted) break;
+      const nm=selectedNames[i];
+      if(genDone[nm]){ continue; }   // 断点续跑：已生成的跳过
+      $("genMsg").innerHTML='<span class="spinner"></span>Đang tạo '+(i+1)+"/"+selectedNames.length+" · "+dispOf(nm);
+      const _rn=userReplaceName();
+      const _stageM=nm.match(/^(.*?)[（(]\s*(.+?)\s*[)）]\s*$/);   // 「名字（阶段）」
+      const _base=_stageM? _stageM[1].trim() : nm;
+      const _stage=_stageM? _stageM[2].trim() : "";
+      const dispName=dispOf(nm);   // Tên tiếng Việt dùng cho tiêu đề & key trong thẻ (nm gốc chỉ dùng để dò văn bản)
+      const ctx=collectContext(_base, _rn?[_rn]:[]);
+      logTo("genLog",nm+": Ngữ cảnh khoảng "+ctx.length.toLocaleString()+" ký tự"+($("fullCtx").checked?" (Toàn văn)":" (Các đoạn liên quan)"));
+
+      const _aliases=charNames(nm).filter(x=>x!==nm);
+      const aliasLine=_aliases.length? "· Lưu ý: Nhân vật này trong nguyên tác còn được gọi là \u201c"+_aliases.join("、")+"\u201d, vui lòng coi những tên này là cùng một người và tổng hợp tất cả nội dung liên quan.\n" : "";
+      const stageLine=_stage? ("· 【Chỉ viết giai đoạn \u201c"+_stage+"\u201d】Lần này chỉ tạo thẻ nhân vật cho giai đoạn cuộc đời \u201c"+_stage+"\u201d của \u201c"+_base+"\u201d, chỉ viết tính cách, trạng thái, trải nghiệm và mối quan hệ của giai đoạn này. Chú ý sự phát triển của nhân vật (character arc): Tính cách và trải nghiệm của cùng một nhân vật ở các giai đoạn khác nhau sẽ thay đổi, **nghiêm cấm đưa trải nghiệm, tính cách, trạng thái của các giai đoạn khác (sớm hơn hoặc muộn hơn) vào đây**, và không tiết lộ nội dung của các giai đoạn khác. Key ngoài cùng dùng \u201c"+dispName+"\u201d.\n") : "";
+      const _userLines=userDirectives();
+      const user=
+        "Hãy trích xuất thông tin cho nhân vật \u201c"+dispName+"\u201d (tên xuất hiện trong nguyên tác: \u201c"+nm+"\u201d) và điền vào mẫu bên dưới.\n\nYêu cầu:\n"+
+        aliasLine+
+        stageLine+
+        _userLines+
+        "· 【Phân tích trước khi điền thẻ】Trước khi đặt bút viết, hãy hệ thống lại trong suy nghĩ **toàn bộ mạch cuộc đời và tính cách từ đầu đến cuối** của nhân vật (phải bao quát cả giai đoạn đầu -> giai đoạn giữa -> giai đoạn cuối, không chỉ dừng lại ở nửa đầu câu chuyện), xác định những sự kiện, trải nghiệm, mối quan hệ nào thực sự thuộc về họ, rồi mới bắt đầu điền.\n"+
+        "· 【Nghiêm cấm râu ông nọ cắm cằm bà kia】Chỉ viết những trải nghiệm và thiết lập thuộc về \u201c"+dispName+"\u201d, tuyệt đối không gán ghép chuyện của nhân vật khác hoặc trải nghiệm của người khác lên họ.\n"+
+        "· 【Nghiêm cấm OOC】Mọi mô tả phải nhất quán với tính cách của nhân vật trong nguyên tác, không được viết ra những lời nói hay hành động mâu thuẫn với nguyên tác.\n"+
+        "· Chỉ dựa trên nguyên tác, có thể suy luận hợp lý nhưng tuyệt đối không bịa đặt. "+emptyRule.replace(/^· /,"")+"\n"+
+        (detailRule? detailRule+"\n" : "")+
+        "· 【Trọng tâm】Các trường về trải nghiệm/tiểu sử phải viết rõ các **sự kiện cụ thể, mốc thời gian, bước ngoặt, thay đổi quan hệ** trong nguyên tác — ai, trong hoàn cảnh nào, đã làm gì, kết quả ra sao, bao quát toàn bộ quá trình chứ không chỉ viết phần mở đầu. Nghiêm cấm những khái quát sáo rỗng áp dụng cho ai cũng được như \u201cbên ngoài ôn hòa lịch sự, được mọi người yêu mến, sự nghiệp thành công\u201d; hãy viết cụ thể về những sự việc thực tế đã xảy ra.\n"+
+        "· Nếu nguyên tác có gợi ý, hãy khai thác **động cơ sâu xa, mục đích ẩn giấu và ý đồ ẩn dụ** đằng sau hành vi của nhân vật (chẳng hạn như bẫy do phản diện giăng ra, ý đồ thực sự); chỉ viết khi có cơ sở trong nguyên tác, không có cơ sở thì không viết, không bịa.\n"+
+        "· Các trường như tính cách, sở thích, điểm yếu cũng phải kết hợp với những biểu hiện/tình tiết cụ thể trong nguyên tác để viết, tránh rập khuôn hình mẫu có sẵn.\n"+
+        "· Không bỏ sót các thiết lập quan trọng về nhân vật trong nguyên tác; có thể tăng giảm các mục con một cách linh hoạt nhưng cần giữ nguyên cấu trúc tổng thể của mẫu.\n"+
+        "· Key ngoài cùng PHẢI dùng tên tiếng Việt \u201c"+dispName+"\u201d, không viết char_name. Trường \u201cChinese name / Tên gốc\u201d cũng điền tên tiếng Việt này (không để nguyên chữ Hán/ngôn ngữ gốc).\n"+
+        nsfwRule+"\n"+
+        "· Cuối cùng chỉ xuất ra nội dung thẻ nhân vật đã điền, không xuất quá trình phân tích của bạn, không giải thích thêm, không bọc trong block code.\n\nMẫu:\n"+tmpl+"\n\n=== Văn bản tiểu thuyết liên quan ===\n"+ctx;
+      const messages=[{role:"system",content:withSys(sys)},{role:"user",content:user}];
+      const maxT=parseInt(els.maxTok.value)||4000;
+      const header = head(nm);
+
+      const render=(cur)=>{
+        const base=selectedNames.filter(n=>genDone[n]).map(n=>head(n)+genDone[n]).join("\n\n\n");
+        $("output").value=(base?base+"\n\n\n":"")+header+stripThink(cur); $("output").scrollTop=$("output").scrollHeight;
+      };
+
+      let raw="";
+      const onWait=(n,code,w)=>logTo("genLog",nm+" gặp lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e");
+      const maxCont=$("autoCont").checked?5:0;
+      try{
+        raw=await generate(messages,{maxTokens:maxT,useStream,signal,onText:render,onWait,maxCont,logEl:"genLog",label:nm});
+      }catch(err){ if(isAbort(err,signal)){ logTo("genLog","Đã dừng","e"); break; } throw err; }
+      genDone[nm]=finalizeCard(stripFence(stripThink(raw)).trim(), dispName);
+      rebuild();
+      if(wasTruncated()) logTo("genLog",nm+": Đã đạt giới hạn viết tiếp nhưng chưa hoàn thành, hãy tăng \u201cMax tokens trích xuất\u201d và thử lại","e");
+      logTo("genLog",nm+" Hoàn thành","g");
+    }
+    const doneCount=selectedNames.filter(n=>genDone[n]).length;
+    const allDone = doneCount>=selectedNames.length;
+    if(allDone){ $("genMsg").textContent="Tất cả hoàn thành ("+doneCount+")"; genDone={}; genSelKey=""; }
+    else { $("genMsg").textContent="Đã dừng ("+doneCount+"/"+selectedNames.length+") · Nhấn tiếp để chạy các mục còn lại"; }
+    if(doneCount) saveHistory({ id:Date.now(), type:"card", time:new Date().toLocaleString(), title:selectedNames.filter(n=>genDone[n]||allDone).slice(0,doneCount).join("、")+(allDone?"":"（Một phần）"), model:els.model.value.trim(), text:$("output").value });
+  }catch(e){
+    if(isAbort(e,signal)){ logTo("genLog","Đã dừng","e"); $("genMsg").textContent="Đã dừng"; }
+    else { logTo("genLog","Lỗi: "+e.message,"e"); $("genMsg").textContent=""; }
+  }finally{ setRunning(btn,false); updateGenBtn(); }
+};
+
+// ---------- 复制 / 下载 ----------
+$("copyBtn").onclick=async()=>{
+  const t=$("output").value; if(!t) return;
+  try{ await navigator.clipboard.writeText(t); flash($("genMsg"),"Đã sao chép"); }
+  catch(e){ $("output").select(); document.execCommand("copy"); flash($("genMsg"),"Đã sao chép"); }
+};
+$("dlBtn").onclick=()=>{
+  const t=$("output").value; if(!t){ flash($("genMsg"),"Không có nội dung",true); return; }
+  const base = selectedNames.length===1 ? selectedNames[0] : (selectedNames.length>1 ? "Bộ sưu tập thẻ nhân vật" : "character");
+  const name=base.replace(/[\\/:*?"<>|]/g,"_");
+  const blob=new Blob([t],{type:"text/yaml;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=name+".yaml";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+
+// ---------- 继续续写：调大 max_tokens 后从当前内容接着写 ----------
+$("contBtn").onclick=async()=>{
+  const btn=$("contBtn");
+  if(btn.dataset.running){ stopRun(); return; }
+  const cur=$("output").value;
+  if(!cur.trim()){ flash($("genMsg"),"Không có nội dung phía trên",true); return; }
+  if(!els.baseUrl.value.trim()||!els.model.value.trim()){ flash($("genMsg"),"Vui lòng hoàn thành thiết lập API",true); return; }
+
+  setRunning(btn,true); $("genMsg").innerHTML='<span class="spinner"></span>Đang viết tiếp...';
+  const signal=runSignal();
+  const useStream=$("stream").checked;
+  const maxT=parseInt(els.maxTok.value)||4000;
+  const maxCont=$("autoCont").checked?5:0;
+  let ref="";
+  if(selectedNames.length) ref=selectedNames.map(nm=>collectContext(nm)).join("\n\n").slice(0,90000);
+  const sys="Bạn đang viết tiếp một Thẻ Nhân vật bị cắt ngang: Hãy tiếp tục viết phần còn lại, giữ nguyên cấu trúc các trường, dựa theo nguyên tác, không bịa đặt, tuyệt đối không lặp lại phần đã viết và không viết lời giải thích thừa.";
+  const user=
+    "Đây là Thẻ Nhân vật bị cắt ngang (phần đã viết):\n"+cur+"\n\n"+
+    (ref? ("Tham khảo nguyên tác (Đoạn trích liên quan):\n"+ref+"\n\n") : "")+
+    "Vui lòng viết tiếp trực tiếp từ đoạn bị cắt, chỉ xuất nội dung viết tiếp, không lặp lại nội dung cũ.";
+  const messages=[{role:"system",content:withSys(sys)},{role:"user",content:user}];
+  const onWait=(n,code,w)=>logTo("genLog","Viết tiếp gặp lỗi HTTP "+code+", thử lại sau (lần "+n+")","e");
+  const base=cur.replace(/\s+$/,"");
+  const render=f=>{ $("output").value=base+"\n"+stripThink(f); $("output").scrollTop=$("output").scrollHeight; };
+
+  try{
+    const raw=await generate(messages,{maxTokens:maxT,useStream,signal,onText:render,onWait,maxCont,logEl:"genLog",label:"Viết tiếp"});
+    $("output").value=base+"\n"+stripFence(stripThink(raw)).trim();
+    $("genMsg").textContent = wasTruncated()? "Đã viết tiếp (vẫn chưa hoàn thành, tăng max_tokens để chạy tiếp)" : "Viết tiếp hoàn thành";
+    saveHistory({ id:Date.now(), type:"card", time:new Date().toLocaleString(), title:(selectedNames.length?selectedNames.join("、"):"Thẻ nhân vật")+" · Viết tiếp", model:els.model.value.trim(), text:$("output").value });
+  }catch(e){
+    if(isAbort(e,signal)) $("genMsg").textContent="Đã dừng";
+    else { logTo("genLog","Viết tiếp thất bại: "+e.message,"e"); $("genMsg").textContent="Thất bại"; }
+  }finally{ setRunning(btn,false); }
+};
+$("reviseBtn").onclick=async()=>{
+  const btn=$("reviseBtn");
+  if(btn.dataset.running){ stopRun(); return; }
+  const cur=$("output").value.trim();
+  if(!cur){ flash($("reviseMsg"),"Chưa có thẻ nhân vật phía trên",true); return; }
+  const instr=$("reviseInput").value.trim();
+  if(!instr){ flash($("reviseMsg"),"Vui lòng nhập yêu cầu chỉnh sửa trước",true); return; }
+  if(!els.baseUrl.value.trim()||!els.model.value.trim()){ flash($("reviseMsg"),"Vui lòng hoàn thành thiết lập API",true); return; }
+
+  setRunning(btn,true); $("reviseMsg").innerHTML='<span class="spinner"></span>Đang sửa...';
+  const signal=runSignal();
+  const useStream=$("stream").checked;
+  const maxT=parseInt(els.maxTok.value)||4000;
+  const maxCont=$("autoCont").checked?5:0;
+  const onWait=(n,code,w)=>flash($("reviseMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  const sys="Bạn là một biên tập viên thẻ nhân vật nghiêm túc. Hãy chỉnh sửa dựa trên thẻ nhân vật hiện tại của người dùng theo yêu cầu của họ, giữ nguyên cấu trúc trường mẫu, dựa theo nguyên tác và logic thông thường, tuyệt đối không bịa đặt thiết lập.";
+
+  // 把多角色输出按 "# ===== 角色名 =====" 拆成若干张卡；单角色则整体为一张
+  function splitCards(text){
+    const re=/^#\s*=+\s*(.+?)\s*=+\s*$/gm;
+    const idxs=[]; let m;
+    while((m=re.exec(text))!==null){ idxs.push({name:m[1].trim(), start:m.index, headEnd:re.lastIndex}); }
+    if(idxs.length<=1) return [{name:(selectedNames[0]||""), header:"", body:text.trim()}];
+    const cards=[];
+    for(let i=0;i<idxs.length;i++){
+      const s=idxs[i].headEnd, e=(i+1<idxs.length)? idxs[i+1].start : text.length;
+      cards.push({ name:idxs[i].name, header:text.slice(idxs[i].start, s).replace(/\n+$/,"")+"\n", body:text.slice(s,e).trim() });
+    }
+    return cards;
+  }
+
+  async function reviseOne(name, body, onText){
+    let ref = name ? collectContext(name, (userReplaceName()?[userReplaceName()]:[])).slice(0,90000) : "";
+    const user=
+      "Đây là Thẻ Nhân vật đã tạo"+(name?(" (Nhân vật: \u201c"+name+"\u201d)"):"")+"：\n"+body+"\n\n"+
+      "Yêu cầu chỉnh sửa của người dùng:\n"+instr+"\n\n"+
+      (ref? ("Tham khảo nguyên tác (Đoạn trích liên quan để đối chiếu/bổ sung): \n"+ref+"\n\n") : "")+
+      "Vui lòng chỉ chỉnh sửa trên thẻ này, xuất ra Thẻ Nhân vật hoàn chỉnh sau khi sửa: giữ nguyên cấu trúc mẫu; giữ nguyên các phần không được yêu cầu sửa; không giải thích thêm, không bọc trong block code.";
+    const messages=[{role:"system",content:withSys(sys)},{role:"user",content:user}];
+    const raw=await generate(messages,{maxTokens:maxT,useStream,signal,onText,onWait,maxCont,logEl:"genLog",label:(name||"Nhân vật")+" Chỉnh sửa"});
+    return stripFence(stripThink(raw)).trim();
+  }
+
+  try{
+    const cards=splitCards(cur);
+    const done=[]; // 已改好的整块（含 header）
+    for(let i=0;i<cards.length;i++){
+      if(signal.aborted) break;
+      const c=cards[i];
+      if(cards.length>1) $("reviseMsg").innerHTML='<span class="spinner"></span>Đang sửa '+(i+1)+"/"+cards.length+(c.name?(" · "+c.name):"");
+      const render=f=>{
+        const base=done.join("\n\n\n");
+        $("output").value=(base?base+"\n\n\n":"")+c.header+stripThink(f);
+        $("output").scrollTop=$("output").scrollHeight;
+      };
+      let newBody;
+      try{ newBody=await reviseOne(c.name, c.body, render); }
+      catch(err){ if(isAbort(err,signal)) break; throw err; }
+      done.push(c.header+newBody);
+      $("output").value=done.join("\n\n\n");
+    }
+    const finalText=$("output").value.trim();
+    $("reviseMsg").textContent = signal.aborted ? "Đã dừng" : ("Đã sửa "+(cards.length>1?("（đã sửa "+done.length+"/"+cards.length+" thẻ）"):""));
+    if(done.length) saveHistory({ id:Date.now(), type:"card", time:new Date().toLocaleString(),
+      title:(selectedNames.length? selectedNames.join("、"):"Thẻ nhân vật")+" · Sửa đổi",
+      model:els.model.value.trim(), text:finalText });
+  }catch(e){
+    if(isAbort(e,signal)) $("reviseMsg").textContent="Đã dừng";
+    else $("reviseMsg").textContent="Thất bại: "+e.message;
+  }finally{ setRunning(btn,false); }
+};
+
+updateStat();
+
+// ==================== 世界书提取 ====================
+let wbEntries=[];
+let wbState=null;   // 断点续提：{len, chunks, cap, next, map}
+
+function downloadBlob(text, filename, mime){
+  const blob=new Blob([text],{type:(mime||"text/plain")+";charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+async function wbExtractCore(signal){
+  const text=$("novel").value.trim();
+  const size=Math.max(10000,parseInt(els.chunkSize.value)||40000);
+  const resuming = wbState && wbState.len===text.length && wbState.next < wbState.cap;
+  let chunks, cap, map, startI;
+  if(resuming){
+    chunks=wbState.chunks; cap=wbState.cap; map=wbState.map; startI=wbState.next;
+    logTo("wbLog","Tiếp tục trích xuất từ đoạn "+(startI+1)+"/"+cap+"…");
+  }else{
+    chunks=[]; for(let i=0;i<text.length;i+=size) chunks.push(text.slice(i,i+size));
+    cap=Math.min(chunks.length, Math.max(1, parseInt(els.scanCap.value)||40));
+    map=new Map(); startI=0;
+    wbState={ len:text.length, chunks, cap, next:0, map };
+    if(chunks.length>cap) logTo("wbLog","Tiểu thuyết khá dài, chỉ trích xuất "+cap+" đoạn đầu.","e");
+    logTo("wbLog","Tổng cộng "+cap+" đoạn, bắt đầu trích xuất…");
+  }
+
+  const nsfwLine = $("wbNsfw").checked
+    ? "Có thể bao gồm các bối cảnh/thiết lập người lớn (NSFW), chỉ dựa theo nguyên tác, không tự bịa."
+    : "Không trích xuất nội dung người lớn/nhạy cảm liên quan đến tình dục.";
+
+  try{
+    for(let i=startI;i<cap;i++){
+      if(signal.aborted) break;
+      $("wbMsg").innerHTML='<span class="spinner"></span>Đang trích xuất '+(i+1)+"/"+cap;
+      if(i>startI) await sleep(400);
+      const prompt=
+        "Dưới đây là một đoạn của tiểu thuyết. Hãy trích xuất các thông tin thuộc thể loại \u201cbối cảnh thế giới / thiết lập\u201d để làm thành các mục từ Lorebook.\n"+
+        "Chú ý: Bối cảnh thế giới, thế lực/tổ chức, địa điểm, thiết lập chủng tộc/hệ thống sức mạnh, khái niệm hoặc quy tắc quan trọng, sự kiện lịch sử, vật phẩm mấu chốt, v.v.\n"+
+        "Không trích xuất hồ sơ cá nhân của một nhân vật cụ thể (đó là việc của Thẻ Nhân vật); thiết lập mang tính tập thể như thân phận nhóm/chủng tộc/phe phái thì có thể trích xuất.\n"+
+        nsfwLine+"\n"+
+        "Xuất ra mảng JSON, mỗi phần tử có dạng:\n"+
+        '{"category":"Phân loại (một trong các loại: Bối cảnh/Thế lực/Địa điểm/Thiết lập/Lịch sử/Vật phẩm)","title":"Tiêu đề mục từ","keys":["Từ khóa kích hoạt, dùng các tên/thuật ngữ thực tế xuất hiện trong nguyên tác, từ 2-5 từ"],"content":"Mô tả về thiết lập đó, dựa theo nguyên tác, ngắn gọn chính xác, không bịa đặt","constant":true hoặc false}\n'+
+        "constant: Bối cảnh chung/Thế giới quan tổng thể -> true (khuyến nghị luôn kích hoạt - đèn xanh dương); thế lực/địa điểm/thuật ngữ/vật phẩm cụ thể -> false (kích hoạt bằng từ khóa - đèn xanh lá).\n"+
+        "Chỉ xuất ra mảng JSON, không dùng block code, không giải thích. Nếu phân đoạn này không có thiết lập rõ ràng, hãy xuất [].\n\nVăn bản:\n"+chunks[i];
+      let raw="";
+      try{
+        raw=await retry(()=>chat(userMsgs(prompt),{maxTokens:8000,signal}),
+          {onWait:(n,code,w)=>logTo("wbLog","Đoạn "+(i+1)+" lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e")});
+      }catch(err){
+        if(isAbort(err,signal)){ logTo("wbLog","Đã dừng","e"); break; }
+        logTo("wbLog","Đoạn "+(i+1)+" yêu cầu thất bại: "+err.message,"e"); wbState.next=i+1; continue;
+      }
+      const arr=extractJsonArray(raw);
+      if(!Array.isArray(arr)){
+        const snip=raw.trim().replace(/\s+/g," ").slice(0,90);
+        logTo("wbLog","Phân tích đoạn "+(i+1)+" thất bại, mô hình trả về: "+(snip?"「"+snip+"」":"（Trống, có thể đã bị bộ lọc an toàn chặn）"),"e");
+        wbState.next=i+1; continue;
+      }
+      for(const e of arr){
+        if(!e||!e.title) continue;
+        const title=String(e.title).trim(); if(!title) continue;
+        const keys=Array.isArray(e.keys)? e.keys.map(k=>String(k).trim()).filter(Boolean) : [];
+        const content=String(e.content||"").trim();
+        if(map.has(title)){
+          const ex=map.get(title);
+          for(const k of keys) if(!ex.keys.includes(k)) ex.keys.push(k);
+          if(content.length>ex.content.length) ex.content=content;
+          ex.constant = ex.constant || !!e.constant;
+        }else{
+          map.set(title,{ category:String(e.category||"Thiết lập").trim(), title, keys, content, constant:!!e.constant });
+        }
+      }
+      wbState.next=i+1;
+      logTo("wbLog","Đoạn "+(i+1)+" → Lũy kế "+map.size+" mục","g");
+    }
+    wbEntries=[...map.values()];
+    const doneAll = wbState.next>=cap;
+    if(!wbEntries.length){ $("wbMsg").textContent=doneAll?"Không trích xuất được mục nào":"Đã dừng"; logTo("wbLog","Không có kết quả","e"); if(doneAll) wbState=null; return; }
+    $("wbOut").value=buildWbPreview(wbEntries);
+    if(doneAll){ wbState=null; logTo("wbLog","Trích xuất hoàn thành, tổng cộng "+wbEntries.length+" mục","g"); }
+    else { $("wbMsg").textContent="Đã dừng, tìm thấy "+wbEntries.length+" mục · Bấm lại \u201cTạo Lorebook đã chọn\u201d để tiếp tục từ đoạn "+(wbState.next+1); }
+    saveHistory({ id:Date.now(), type:"worldbook", time:new Date().toLocaleString(), title:"Lorebook · "+wbEntries.length+" mục", model:els.model.value.trim(), text:$("wbOut").value });
+  }catch(e){
+    if(isAbort(e,signal)){ logTo("wbLog","Đã dừng","e"); throw e; }
+    else { logTo("wbLog","Lỗi: "+e.message,"e"); throw e; }
+  }
+}
+
+// 可读预览（带推荐设置）
+// user 替换：把配置的角色名换成 {{user}}，并把该名从关键词里剔除
+function wbReplaceName(){ return $("wbUserReplace").checked ? $("wbUserReplaceName").value.trim() : ""; }
+function wbSub(s){ const rn=wbReplaceName(); return (rn&&s)? String(s).split(rn).join("{{user}}") : s; }
+function wbSubKeys(keys){ const rn=wbReplaceName(); return rn? (keys||[]).filter(k=>k!==rn) : (keys||[]); }
+
+function buildWbPreview(entries){
+  const lines=[];
+  lines.push("# Bản xem trước mục từ Lorebook (Tổng cộng "+entries.length+" mục)");
+  lines.push("# Khuyến nghị chung: Vị trí = Trước khi định nghĩa nhân vật (before_char) · Độ sâu 4 · Thứ tự 100 (để mặc định của SillyTavern)");
+  lines.push("");
+  entries.forEach((e,i)=>{
+    const mode = e.constant ? "Luôn kích hoạt (Constant - Đèn xanh dương) — Luôn luôn chèn, thích hợp cho bối cảnh cốt lõi" : "Kích hoạt bằng từ khóa (Selective - Đèn xanh lá) — Chỉ chèn khi được nhắc đến";
+    const keys=wbSubKeys(e.keys);
+    lines.push("========== "+(i+1)+". "+wbSub(e.title)+"　["+e.category+"] ==========");
+    lines.push("Từ khóa kích hoạt: "+(keys.length? keys.join("、") : "（Không có, khuyến nghị nên bổ sung thủ công）"));
+    lines.push("Chế độ khuyến nghị: "+mode);
+    lines.push("Nội dung:");
+    lines.push(wbSub(e.content)||"（Nguyên tác không nhắc đến）");
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+
+// 生成可导入酒馆的世界书 JSON
+function buildWbJson(entries){
+  const out={entries:{}};
+  entries.forEach((e,i)=>{
+    out.entries[String(i)]={
+      uid:i,
+      key:wbSubKeys(e.keys),
+      keysecondary:[],
+      comment:wbSub(e.title),
+      content:"【"+wbSub(e.title)+"】"+(e.category?("（"+e.category+"）"):"")+"\n"+wbSub(e.content),
+      constant:e.constant,
+      selective:!e.constant,
+      selectiveLogic:0,
+      order:100,
+      position:0,            // 0 = 角色定义之前
+      depth:4,
+      probability:100,
+      useProbability:true,
+      disable:false,
+      addMemo:true,
+      excludeRecursion:false,
+      group:"",
+      groupOverride:false,
+      scanDepth:null,
+      caseSensitive:null,
+      matchWholeWords:null,
+      automationId:"",
+      role:null,
+      vectorized:false,
+      displayIndex:i
+    };
+  });
+  return JSON.stringify(out,null,2);
+}
+
+$("wbCopy").onclick=async()=>{
+  const t=$("wbOut").value; if(!t) return;
+  try{ await navigator.clipboard.writeText(t); flash($("wbMsg"),"Đã sao chép"); }
+  catch(e){ $("wbOut").select(); document.execCommand("copy"); flash($("wbMsg"),"Đã sao chép"); }
+};
+
+// 世界书条目的文本格式（供 AI 修改/续写时严格遵守，便于回读成结构）
+const WB_FMT="Mỗi mục từ bắt buộc phải tuân theo định dạng sau:\n========== Số thứ tự. Tiêu đề　[Phân loại] ==========\nTừ khóa kích hoạt: Từ khóa 1、Từ khóa 2\nChế độ khuyến nghị: Luôn kích hoạt (Constant)  hoặc  Kích hoạt bằng từ khóa (Selective)\nNội dung:\n（Nội dung thiết lập chi tiết của mục từ）\n\n（Chừa một dòng trống giữa các mục từ）";
+// 把预览文本回读成结构化条目，供下载/打包用
+function parseWbPreview(text){
+  const lines=String(text).split(/\r?\n/);
+  const entries=[]; let cur=null, mode=null;
+  const headerRe=/^={4,}\s*\d+\.\s*(.+?)\s*={4,}\s*$/;
+  for(const line of lines){
+    const hm=line.match(headerRe);
+    if(hm){
+      if(cur) entries.push(cur);
+      let head=hm[1].trim(), category="Thiết lập", title=head;
+      const cm=head.match(/^(.*?)[　\s]*[\[［](.+?)[\]］]\s*$/);
+      if(cm){ title=cm[1].trim(); category=cm[2].trim(); }
+      cur={ title, category, keys:[], content:"", constant:false }; mode=null; continue;
+    }
+    if(!cur) continue;
+    if(/^触发关键词\s*[:：]|^Từ khóa kích hoạt\s*[:：]/i.test(line)){
+      const v=line.replace(/^(?:触发关键词|Từ khóa kích hoạt)\s*[:：]\s*/i,"").trim();
+      cur.keys=(v && !/^（?无）?|^（?Không có）?/i.test(v))? v.split(/[、,，]/).map(s=>s.trim()).filter(Boolean):[]; mode=null; continue;
+    }
+    if(/^推荐模式\s*[:：]|^Chế độ khuyến nghị\s*[:：]/i.test(line)){ cur.constant=/常驻|蓝灯|constant|Luôn kích hoạt/i.test(line); mode=null; continue; }
+    if(/^内容\s*[:：]|^Nội dung\s*[:：]/i.test(line)){ mode="content"; const rest=line.replace(/^(?:内容|Nội dung)\s*[:：]\s*/i,""); if(rest.trim()) cur.content+=rest+"\n"; continue; }
+    if(mode==="content") cur.content+=line+"\n";
+  }
+  if(cur) entries.push(cur);
+  entries.forEach(e=>e.content=e.content.trim());
+  return entries.filter(e=>e.title);
+}
+function novelSampleOrEmpty(){ const t=$("novel").value.trim(); return t? sampleForStyle(t) : ""; }
+
+// 世界书 · 按意见修改
+$("wbReviseBtn").onclick=async()=>{
+  const btn=$("wbReviseBtn");
+  if(btn.dataset.running){ stopRun(); return; }
+  const cur=$("wbOut").value.trim();
+  if(!cur){ flash($("wbReviseMsg"),"Chưa có thiết lập Lorebook phía trên",true); return; }
+  const instr=$("wbReviseInput").value.trim();
+  if(!instr){ flash($("wbReviseMsg"),"Vui lòng nhập yêu cầu chỉnh sửa trước",true); return; }
+  if(!els.baseUrl.value.trim()||!els.model.value.trim()){ flash($("wbReviseMsg"),"Vui lòng hoàn thành thiết lập API",true); return; }
+  setRunning(btn,true); $("wbReviseMsg").innerHTML='<span class="spinner"></span>Đang sửa...';
+  const signal=runSignal();
+  const useStream=$("stream").checked, maxT=parseInt(els.maxTok.value)||4000, maxCont=$("autoCont").checked?5:0;
+  const ref=novelSampleOrEmpty();
+  const sys=withSys("Bạn là một biên tập viên Lorebook nghiêm túc, điều chỉnh các mục dựa trên yêu cầu của người dùng, chỉ căn cứ theo nguyên tác và logic thông thường, tuyệt đối không bịa đặt thiết lập.");
+  const user="Đây là các mục Lorebook đã tạo:\n"+cur+"\n\nYêu cầu chỉnh sửa của người dùng:\n"+instr+"\n\n"+
+    (ref?("Tham khảo nguyên tác (Đoạn trích để đối chiếu/bổ sung):\n"+ref+"\n\n"):"")+
+    "Vui lòng sửa đổi dựa theo yêu cầu trên, xuất ra danh sách mục Lorebook 【hoàn chỉnh】 sau khi sửa, không giải thích thêm, không dùng block code.\n\n"+WB_FMT;
+  const messages=[{role:"system",content:sys},{role:"user",content:user}];
+  const onWait=(n,code,w)=>flash($("wbReviseMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  const render=f=>{ $("wbOut").value=stripThink(f); $("wbOut").scrollTop=$("wbOut").scrollHeight; };
+  try{
+    const raw=await generate(messages,{maxTokens:maxT,useStream,signal,onText:render,onWait,maxCont,logEl:"wbLog",label:"Sửa đổi Lorebook"});
+    const txt=stripFence(stripThink(raw)).trim();
+    const parsed=parseWbPreview(txt);
+    if(parsed.length){ wbEntries=parsed; $("wbOut").value=buildWbPreview(wbEntries); }
+    else { $("wbOut").value=txt; }
+    $("wbReviseMsg").textContent=parsed.length? ("Đã sửa（" + parsed.length + " mục）") : "Đã sửa (định dạng có thay đổi lớn, vui lòng kiểm tra kỹ trước khi tải)";
+    saveHistory({ id:Date.now(), type:"worldbook", time:new Date().toLocaleString(), title:"Lorebook · Sửa đổi", model:els.model.value.trim(), text:$("wbOut").value });
+  }catch(e){
+    if(isAbort(e,signal)) $("wbReviseMsg").textContent="Đã dừng";
+    else flash($("wbReviseMsg"),"Thất bại: "+e.message,true);
+  }finally{ setRunning(btn,false); }
+};
+
+// 世界书 · 继续输出（补更多条目 / 补完被截断的）
+$("wbContBtn").onclick=async()=>{
+  const btn=$("wbContBtn");
+  if(btn.dataset.running){ stopRun(); return; }
+  const cur=$("wbOut").value.trim();
+  if(!cur){ flash($("wbMsg"),"Chưa có thiết lập Lorebook phía trên",true); return; }
+  if(!els.baseUrl.value.trim()||!els.model.value.trim()){ flash($("wbMsg"),"Vui lòng hoàn thành thiết lập API",true); return; }
+  setRunning(btn,true); $("wbMsg").innerHTML='<span class="spinner"></span>Đang tiếp tục xuất...';
+  const signal=runSignal();
+  const useStream=$("stream").checked, maxT=parseInt(els.maxTok.value)||4000, maxCont=$("autoCont").checked?5:0;
+  const ref=novelSampleOrEmpty();
+  const sys=withSys("Bạn đang bổ sung một bộ Lorebook, chỉ căn cứ theo nguyên tác, không tự bịa đặt, không lặp lại các mục đã có.");
+  const user="Đây là các mục Lorebook hiện tại:\n"+cur+"\n\n"+
+    (ref?("Tham khảo nguyên tác (Đoạn trích):\n"+ref+"\n\n"):"")+
+    "Vui lòng tiếp tục bổ sung các mục thiết lập có xuất hiện trong truyện nhưng chưa được ghi nhận ở trên (Thế giới quan/Thế lực/Địa điểm/Thiết lập/Lịch sử/Vật phẩm, v.v.), hoặc hoàn thành các mục đang bị cắt ngang. Tuyệt đối không lặp lại các mục hiện có, chỉ xuất ra phần bổ sung hoặc phần hoàn thiện, tuân thủ nghiêm ngặt định dạng bên dưới, không giải thích thêm, không dùng block code.\n\n"+WB_FMT;
+  const messages=[{role:"system",content:sys},{role:"user",content:user}];
+  const onWait=(n,code,w)=>flash($("wbMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  const base=cur.replace(/\s+$/,"");
+  const render=f=>{ $("wbOut").value=base+"\n\n"+stripThink(f); $("wbOut").scrollTop=$("wbOut").scrollHeight; };
+  try{
+    const raw=await generate(messages,{maxTokens:maxT,useStream,signal,onText:render,onWait,maxCont,logEl:"wbLog",label:"Viết tiếp Lorebook"});
+    const full=base+"\n\n"+stripFence(stripThink(raw)).trim();
+    const parsed=parseWbPreview(full);
+    if(parsed.length){ wbEntries=parsed; $("wbOut").value=buildWbPreview(wbEntries); }
+    else { $("wbOut").value=full; }
+    $("wbMsg").textContent=parsed.length? ("Đã bổ sung (Tổng cộng "+parsed.length+" mục)") : "Đã bổ sung";
+    saveHistory({ id:Date.now(), type:"worldbook", time:new Date().toLocaleString(), title:"Lorebook · Viết tiếp", model:els.model.value.trim(), text:$("wbOut").value });
+  }catch(e){
+    if(isAbort(e,signal)) $("wbMsg").textContent="Đã dừng";
+    else flash($("wbMsg"),"Thất bại: "+e.message,true);
+  }finally{ setRunning(btn,false); }
+};
+
+// 剧情分段总结：按顺序分段，每个阶段/副本一条绿灯世界书条目（≥300字）
+async function wbPlotCore(signal){
+  const text=$("novel").value.trim();
+  $("wbMsg").innerHTML='<span class="spinner"></span>Đang phân đoạn cốt truyện...';
+  const size=Math.max(50000, parseInt(els.chunkSize.value)||40000);
+  const chunks=[]; for(let i=0;i<text.length;i+=size) chunks.push(text.slice(i,i+size));
+  const cap=Math.min(chunks.length, Math.max(1, parseInt(els.scanCap.value)||40));
+  logTo("wbLog","Phân đoạn cốt truyện: Tổng cộng "+cap+" đoạn, bắt đầu...");
+  const nsfwLine=$("wbNsfw").checked ? "Có thể bao gồm tình tiết cốt truyện người lớn (NSFW)." : "Không cần né tránh diễn biến truyện, nhưng tránh miêu tả tình dục quá lộ liễu.";
+  const added=[];
+  try{
+    for(let i=0;i<cap;i++){
+      if(signal.aborted) break;
+      $("wbMsg").innerHTML='<span class="spinner"></span>Phân đoạn cốt truyện '+(i+1)+"/"+cap;
+      if(i>0) await sleep(400);
+      const prompt=
+        "Dưới đây là đoạn thứ "+(i+1)+"/"+cap+" của tiểu thuyết được chia theo thứ tự. Vui lòng chia nhỏ cốt truyện của đoạn này theo \u201cgiai đoạn / phụ bản\u201d và tóm tắt từng phần.\n"+
+        "Mỗi giai đoạn một mục từ, bao gồm:\n"+
+        "- title: Tên của giai đoạn / phụ bản\n"+
+        "- keys: Từ khóa kích hoạt (các tên gọi, địa điểm, tên phụ bản... sẽ được nhắc tới trong giai đoạn này, từ 2-5 từ)\n"+
+        "- content: Tóm tắt cốt truyện của giai đoạn đó, **không dưới 300 ký tự**, phải bao gồm [các nhân vật xuất hiện quan trọng, nguyên nhân và kết quả của sự kiện, đạo cụ quan trọng, dòng thời gian], **không được bỏ sót bất kỳ tình tiết hay chi tiết ẩn dụ (foreshadowing) nào**.\n"+
+        nsfwLine+"\n"+
+        "Chỉ dựa trên nguyên tác, không bịa đặt. Xuất ra mảng JSON [{\"title\":\"\",\"keys\":[],\"content\":\"\"}], chỉ xuất JSON, không dùng block code, không giải thích thêm. Nếu đoạn này không có cốt truyện thực chất, hãy xuất [].\n\nVăn bản:\n"+chunks[i];
+      let raw="";
+      try{
+        raw=await retry(()=>chat(userMsgs(prompt),{maxTokens:16000,signal}),
+          {onWait:(n,code,w)=>logTo("wbLog","Đoạn "+(i+1)+" lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e")});
+      }catch(err){
+        if(isAbort(err,signal)){ logTo("wbLog","Đã dừng","e"); break; }
+        logTo("wbLog","Đoạn "+(i+1)+" yêu cầu thất bại: "+err.message,"e"); continue;
+      }
+      const arr=extractJsonArray(raw);
+      if(!Array.isArray(arr)){ logTo("wbLog","Đoạn "+(i+1)+" phân tích thất bại, bỏ qua","e"); continue; }
+      for(const e of arr){
+        if(!e||!e.title||!e.content) continue;
+        const rawTitle=String(e.title).trim();
+        const title="Cốt truyện·"+rawTitle;
+        const keys=Array.isArray(e.keys)? e.keys.map(k=>String(k).trim()).filter(Boolean):[];
+        if(!keys.includes(rawTitle)) keys.unshift(rawTitle);
+        added.push({ category:"Cốt truyện", title, keys, content:String(e.content).trim(), constant:false });
+      }
+      logTo("wbLog","Đoạn "+(i+1)+" → Lũy kế mục cốt truyện: "+added.length,"g");
+    }
+    if(!added.length){ if(signal.aborted) return; logTo("wbLog","Không trích xuất được cốt truyện","e"); return; }
+    for(const e of added){ const idx=wbEntries.findIndex(x=>x.title===e.title); if(idx>=0) wbEntries[idx]=e; else wbEntries.push(e); }
+    $("wbOut").value=buildWbPreview(wbEntries);
+    logTo("wbLog","Phân đoạn cốt truyện: Thêm mới "+added.length+" mục (Tổng cộng "+wbEntries.length+" mục)","g");
+    saveHistory({ id:Date.now(), type:"worldbook", time:new Date().toLocaleString(), title:"Lorebook · "+wbEntries.length+" mục (Gồm phân đoạn cốt truyện)", model:els.model.value.trim(), text:$("wbOut").value });
+  }catch(e){ throw e; }
+}
+
+// 配角群像合集：把次要角色归纳成一条世界书条目，每人一两句
+async function wbMinorCore(signal){
+  const text=$("novel").value.trim();
+  if(!characters.length){ logTo("wbLog","Nhân vật phụ: Vui lòng quét/thêm nhân vật trước, bỏ qua bước này","e"); return; }
+  const mode=$("minorMode").value;
+  $("wbMsg").innerHTML='<span class="spinner"></span>'+(mode==="each"?"Đang tạo từng vai phụ…":"Đang gộp quần tượng vai phụ…");
+  const maxT=Math.max(4000,parseInt(els.maxTok.value)||4000);
+  const sample=sampleForStyle(text);
+  const cap=Math.max(1, parseInt($("minorCap").value)||20);
+  const list=characters.map(c=>"· "+(c.vi||c.name)+(c.vi&&c.vi!==c.name?(" [nguyên tác: "+c.name+"]"):"")+(c.aliases&&c.aliases.length?("（"+c.aliases.join("、")+"）"):"")+(c.role?("："+c.role):"")).join("\n");
+  const onWait=(n,code,w)=>flash($("wbMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  try{
+    if(mode==="each"){
+      // 每个配角单独一条绿灯条目
+      const prompt=
+        "Dưới đây là danh sách nhân vật và đoạn trích của tiểu thuyết này. Vui lòng tạo mục Lorebook cho từng **nhân vật phụ** trong số đó (bỏ qua nhân vật chính/cốt lõi, họ sẽ được tạo thẻ nhân vật riêng).\n"+
+        "Chọn lọc những nhân vật phụ quan trọng nhất, **tối đa "+cap+" nhân vật**. Mỗi nhân vật phụ một mục, viết rõ thân phận, tính cách, địa vị, mối quan hệ với nhân vật chính và với nhau, phần nào có nhiều đất diễn thì viết càng chi tiết càng tốt.\n"+
+        "Chỉ dựa trên nguyên tác, không bịa đặt. Xuất ra mảng JSON [{\"name\":\"Tên nhân vật phụ\",\"keys\":[\"Từ khóa kích hoạt 2-4 từ\"],\"content\":\"Giới thiệu\"}], chỉ xuất JSON, không dùng block code, không giải thích.\n\n"+
+        "Danh sách nhân vật:\n"+list+"\n\n=== Đoạn trích truyện ===\n"+sample;
+      const raw=await generate(userMsgs(prompt),{maxTokens:Math.max(maxT,12000),useStream:$("stream").checked,signal,onText:f=>{$("wbOut").value=stripThink(f);},onWait,maxCont:$("autoCont").checked?5:0,logEl:"wbLog",label:"Từng nhân vật phụ"});
+      const arr=extractJsonArray(stripFence(stripThink(raw)));
+      if(!Array.isArray(arr)||!arr.length){ flash($("wbMsg"),"Không phân tích được mục vai phụ",true); return; }
+      let n=0;
+      for(const e of arr){
+        if(!e||!e.name||!e.content) continue;
+        const nm=String(e.name).trim();
+        let keys=Array.isArray(e.keys)? e.keys.map(k=>String(k).trim()).filter(Boolean):[];
+        if(!keys.includes(nm)) keys.unshift(nm);
+        const entry={ category:"Vai phụ", title:"Vai phụ·"+nm, keys, content:String(e.content).trim(), constant:false };
+        const idx=wbEntries.findIndex(x=>x.title===entry.title);
+        if(idx>=0) wbEntries[idx]=entry; else wbEntries.push(entry);
+        n++;
+      }
+      $("wbOut").value=buildWbPreview(wbEntries);
+      $("wbMsg").textContent="Đã thêm "+n+" mục nhân vật phụ (Tổng cộng "+wbEntries.length+" mục)";
+    }else{
+      // 合成一条群像
+      const prompt=
+        "Dưới đây là danh sách nhân vật và đoạn trích của tiểu thuyết này. Vui lòng gộp các **nhân vật phụ** thành một mục \u201cquần tượng vai phụ\u201d chung trong Lorebook.\n"+
+        "Nhân vật chính / nhân vật cốt lõi vui lòng bỏ qua (họ sẽ được tạo thẻ riêng). Hãy chọn lọc các nhân vật phụ quan trọng nhất, **tối đa ghi nhận "+cap+" nhân vật** (lựa chọn theo mức độ quan trọng, bỏ qua phần thừa).\n"+
+        "Cách viết phân tầng: Với nhân vật thực sự là quần chúng, xuất hiện cực ít thì có thể lướt qua bằng một hai câu; **các nhân vật phụ có đất diễn khác, mỗi người ít nhất 100 ký tự**, viết rõ thân phận, tính cách, địa vị, mối quan hệ với nhân vật chính và với nhau — họ là những con người thực sự sống động trong thế giới này, không phải công cụ vô hồn, đừng viết hời hợt.\n"+
+        "Chỉ dựa trên nguyên tác, không bịa đặt, những gì nguyên tác không viết thì không viết. Sử dụng định dạng \u201c· Tên: Giới thiệu\u201d, trực tiếp xuất ra nội dung chính, không giải thích, không dùng block code.\n\n"+
+        "Danh sách nhân vật:\n"+list+"\n\n=== Đoạn trích truyện ===\n"+sample;
+      const raw=await generate(userMsgs(prompt),{maxTokens:maxT,useStream:$("stream").checked,signal,onText:f=>{$("wbOut").value=stripThink(f);},onWait,maxCont:$("autoCont").checked?5:0,logEl:"wbLog",label:"Quần tượng vai phụ"});
+      const content=stripFence(stripThink(raw)).trim();
+      if(!content){ flash($("wbMsg"),"Không tóm tắt được nội dung",true); return; }
+      let keys=[]; characters.forEach(c=>{ keys.push(c.name); (c.aliases||[]).forEach(a=>keys.push(a)); });
+      keys=[...new Set(keys.filter(Boolean))].slice(0,80);
+      const entry={ category:"Nhân vật", title:"Quần tượng nhân vật phụ", keys, content, constant:false };
+      const i=wbEntries.findIndex(e=>e.title===entry.title);
+      if(i>=0) wbEntries[i]=entry; else wbEntries.push(entry);
+      $("wbOut").value=buildWbPreview(wbEntries);
+      $("wbMsg").textContent="Đã thêm quần tượng nhân vật phụ (Tổng cộng "+wbEntries.length+" mục)";
+    }
+    saveHistory({ id:Date.now(), type:"worldbook", time:new Date().toLocaleString(), title:"Lorebook · "+wbEntries.length+" mục", model:els.model.value.trim(), text:$("wbOut").value });
+  }catch(e){ throw e; }
+}
+
+// 蓝灯列表：一条常驻条目（人物列表 / 剧情大纲）
+async function wbConstantEntry(signal, kind){
+  const text=$("novel").value.trim();
+  $("wbMsg").innerHTML='<span class="spinner"></span>'+(kind==="chars"?"Đang tạo danh sách nhân vật…":"Đang tạo đại cương cốt truyện…");
+  const maxT=Math.max(6000,parseInt(els.maxTok.value)||4000);
+  const sample=sampleForStyle(text);
+  const onWait=(n,code,w)=>flash($("wbMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  let prompt, title;
+  if(kind==="chars"){
+    title="Danh sách nhân vật";
+    const list=characters.length? ("Nhân vật đã biết:\n"+characters.map(c=>"· "+c.name).join("\n")+"\n\n") : "";
+    prompt="Dưới đây là đoạn trích tiểu thuyết"+(characters.length?" và danh sách nhân vật đã biết":"")+". Vui lòng tạo một **Danh sách nhân vật** để làm thiết lập thường trú luôn luôn kích hoạt: liệt kê từng nhân vật chính, mỗi người từ một đến hai dòng, nêu rõ thân phận, mối quan hệ với nhân vật chính, tính cách cốt lõi. Chỉ dựa trên nguyên tác, không bịa đặt. Trực tiếp xuất ra phần nội dung danh sách, không giải thích, không dùng block code.\n\n"+list+"=== Đoạn trích truyện ===\n"+sample;
+  }else{
+    title="Đại cương cốt truyện";
+    prompt="Dưới đây là đoạn trích tiểu thuyết. Vui lòng tạo một **Đại cương cốt truyện** để làm thiết lập thường trú luôn luôn kích hoạt: tóm tắt diễn biến tuyến chính và các bước ngoặt quan trọng theo thứ tự thời gian (chỉ cần vài đoạn ngắn), giúp AI luôn nắm được bức tranh toàn cảnh của câu chuyện. Chỉ dựa trên nguyên tác, không bịa đặt. Trực tiếp xuất ra phần nội dung đại cương, không giải thích, không dùng block code.\n\n=== Đoạn trích truyện ===\n"+sample;
+  }
+  try{
+    const raw=await generate(userMsgs(prompt),{maxTokens:maxT,useStream:$("stream").checked,signal,onText:f=>{$("wbOut").value=stripThink(f);},onWait,maxCont:$("autoCont").checked?5:0,logEl:"wbLog",label:title});
+    const content=stripFence(stripThink(raw)).trim();
+    if(!content){ logTo("wbLog",title+": Không tạo được nội dung","e"); return; }
+    const entry={ category:"Đại cương", title, keys:[], content, constant:true };  // 蓝灯常驻
+    const idx=wbEntries.findIndex(x=>x.title===title);
+    if(idx>=0) wbEntries[idx]=entry; else wbEntries.unshift(entry);
+    $("wbOut").value=buildWbPreview(wbEntries);
+    logTo("wbLog",title+": Đã thêm (Constant - Đèn xanh dương, tổng cộng "+wbEntries.length+" mục)","g");
+    saveHistory({ id:Date.now(), type:"worldbook", time:new Date().toLocaleString(), title:"Lorebook · "+wbEntries.length+" mục (Gồm "+title+")", model:els.model.value.trim(), text:$("wbOut").value });
+  }catch(e){ throw e; }
+}
+
+$("wbDl").onclick=()=>{
+  if(!wbEntries.length){ flash($("wbMsg"),"Chưa có mục Lorebook nào",true); return; }
+  downloadBlob(buildWbJson(wbEntries), (($("wbName").value.trim()||"Lorebook").replace(/[\\/:*?"<>|]/g,"_"))+".json", "application/json");
+};
+
+// ---------- 一键导出完整角色卡（酒馆 V2 规范，内嵌世界书 + 文风） ----------
+function parseCardName(txt){
+  const lines=txt.split(/\n/);
+  for(const ln of lines){
+    if(/^\s*#/.test(ln)) continue;
+    const m=ln.match(/^\s*(?:Chinese name \/ Tên gốc|Chinese name|Tên gốc)\s*[:：]\s*(.+)$/i);
+    if(m){ const v=m[1].trim().replace(/^["']|["']$/g,""); if(v && !/原文未提及|Nguyên tác không nhắc đến/i.test(v)) return v; }
+  }
+  const first=(lines.find(l=>l.trim() && !/^\s*#/.test(l))||"").match(/^\s*([^:：#]+)\s*[:：]/);
+  return first? first[1].trim().replace(/^["']|["']$/g,"") : "";
+}
+// 把工具内部的 wbEntries 转成 character_book 内嵌条目
+function bookEntries(entries){
+  return entries.map((e,i)=>({
+    id:i, keys:wbSubKeys(e.keys), secondary_keys:[],
+    comment:wbSub(e.title)||"", name:wbSub(e.title)||"",
+    content:"【"+(wbSub(e.title)||"")+"】"+(e.category?("（"+e.category+"）"):"")+"\n"+(wbSub(e.content)||""),
+    enabled:true, constant:!!e.constant, selective:!e.constant,
+    insertion_order:100, position:"before_char", case_sensitive:false, priority:10,
+    extensions:{ position:0, exclude_recursion:false, display_index:i, probability:100, useProbability:true, depth:4, selectiveLogic:0, group:"", vectorized:false }
+  }));
+}
+function buildFullCard(){
+  const cardText=$("output").value.trim();
+  if(!cardText) return null;
+  const name = (selectedNames[0]) || parseCardName(cardText) || "character";
+  // 汇总世界书条目：世界书 + 文风（若有）
+  const entries = wbEntries.slice();
+  const styleText=$("styleOut").value.trim();
+  if(styleText){
+    entries.push({ category:"Phong cách viết", title:"Style Prompt phong cách viết", keys:[], content:styleText, constant:true });
+  }
+  const bookName = $("wbName").value.trim() || (name+"_Lorebook");
+  const data={
+    name, description:cardText, personality:"", scenario:"", first_mes:"", mes_example:"",
+    creator_notes:"Được tạo bởi Công cụ trích xuất thẻ nhân vật tiểu thuyết", system_prompt:"", post_history_instructions:"",
+    alternate_greetings:[], tags:[], creator:"", character_version:"1.0", extensions:{}
+  };
+  if(entries.length) data.character_book={ name:bookName, entries:bookEntries(entries) };
+  return { name, description:cardText, spec:"chara_card_v2", spec_version:"2.0", data };
+}
+$("fullCardBtn").onclick=()=>{
+  const card=buildFullCard();
+  if(!card){ flash($("fullCardMsg"),"Vui lòng tạo Thẻ Nhân vật ở khung phía trên trước",true); return; }
+  const fn=(card.name||"character").replace(/[\\/:*?"<>|、]/g,"_")+".json";
+  downloadBlob(JSON.stringify(card,null,2), fn, "application/json");
+  const parts=[]; if(card.data.character_book){ parts.push("Lorebook chứa "+card.data.character_book.entries.length+" mục"); }
+  flash($("fullCardMsg"),"Đã xuất file"+(parts.length?("（Gồm "+parts.join(" và ")+"）"):"（Chỉ xuất Thẻ Nhân vật）"));
+};
+
+// 共享背景 / 世界大纲：把多角色共同的时代背景、共同经历抽成一条常驻条目
+async function wbBgCore(signal){
+  const text=$("novel").value.trim();
+  $("wbMsg").innerHTML='<span class="spinner"></span>Đang trích xuất bối cảnh chung…';
+  const maxT=Math.max(4000,parseInt(els.maxTok.value)||4000);
+  const sample=sampleForStyle(text);
+  const prompt=
+    "Đọc kỹ đoạn trích tiểu thuyết dưới đây, đúc kết bối cảnh thời đại, môi trường thế giới, quy tắc xã hội, trải nghiệm tập thể và thiết lập bối cảnh chung của tất cả các nhân vật — tuyệt đối không viết hồ sơ riêng của bất kỳ cá nhân nào.\n"+
+    "Tóm tắt cô đọng thành một đoạn bối cảnh đại cương thích hợp để làm một mục \u201cThường trú (Constant)\u201d trong Lorebook, giúp AI luôn nắm được khung thế giới chung của truyện mà không cần lặp lại thông tin này trên mỗi thẻ nhân vật.\n"+
+    "Chỉ dựa trên nguyên tác, ngắn gọn chính xác, không tự bịa đặt. Trực tiếp xuất ra đoạn bối cảnh đại cương này, không đặt tiêu đề, không giải thích thêm, không dùng block code.\n\n=== Đoạn trích tiểu thuyết ===\n"+sample;
+  const onWait=(n,code,w)=>flash($("wbMsg"),"Lỗi HTTP "+code+", thử lại sau (lần "+n+")",true);
+  const raw=await generate(userMsgs(prompt),{maxTokens:maxT,useStream:$("stream").checked,signal,onText:f=>{$("wbOut").value=stripThink(f);},onWait,maxCont:$("autoCont").checked?5:0,logEl:"wbLog",label:"Bối cảnh chung"});
+  const content=stripFence(stripThink(raw)).trim();
+  if(!content){ logTo("wbLog","Bối cảnh chung: Không trích xuất được nội dung","e"); return; }
+  const entry={ category:"Bối cảnh chung", title:"Bối cảnh chung / Đại cương thế giới", keys:[], content, constant:true };
+  const i=wbEntries.findIndex(e=>e.title===entry.title);
+  if(i>=0) wbEntries[i]=entry; else wbEntries.unshift(entry);
+  $("wbOut").value=buildWbPreview(wbEntries);
+  logTo("wbLog","Bối cảnh chung: Đã thêm (Tổng cộng "+wbEntries.length+" mục)","g");
+  saveHistory({ id:Date.now(), type:"worldbook", time:new Date().toLocaleString(), title:"Lorebook · "+wbEntries.length+" mục (Gồm bối cảnh chung)", model:els.model.value.trim(), text:$("wbOut").value });
+}
+
+// ========== 统一运行器：按勾选依次生成 ==========
+$("wbRunBtn").onclick=async()=>{
+  const btn=$("wbRunBtn");
+  if(btn.dataset.running){ stopRun(); return; }
+  const text=$("novel").value.trim();
+  if(!text){ flash($("wbMsg"),"Vui lòng dán tiểu thuyết vào trước",true); return; }
+  if(!els.baseUrl.value.trim()||!els.model.value.trim()){ flash($("wbMsg"),"Vui lòng hoàn thành thiết lập API",true); return; }
+  const tasks=[];
+  if($("wbTaskExtract").checked) tasks.push(["Trích xuất Lorebook", wbExtractCore]);
+  if($("wbTaskBg").checked) tasks.push(["Bối cảnh chung", wbBgCore]);
+  if($("wbTaskMinor").checked) tasks.push(["Quần tượng nhân vật phụ", wbMinorCore]);
+  if($("wbTaskPlot").checked) tasks.push(["Phân đoạn cốt truyện", wbPlotCore]);
+  if($("wbTaskCharList").checked) tasks.push(["Danh sách nhân vật", s=>wbConstantEntry(s,"chars")]);
+  if($("wbTaskPlotList").checked) tasks.push(["Đại cương cốt truyện", s=>wbConstantEntry(s,"plot")]);
+  if(!tasks.length){ flash($("wbMsg"),"Vui lòng chọn nội dung muốn tạo",true); return; }
+
+  setRunning(btn,true);
+  // 若勾了「提取世界书条目」且不是断点续跑，清空重来
+  if($("wbTaskExtract").checked && !(wbState && wbState.len===text.length && wbState.next<wbState.cap)){ clearLog("wbLog"); wbEntries=[]; $("wbOut").value=""; }
+  else clearLog("wbLog");
+  const signal=runSignal();
+  try{
+    for(let k=0;k<tasks.length;k++){
+      if(signal.aborted) break;
+      logTo("wbLog","▶ Đang chạy: "+tasks[k][0]);
+      await tasks[k][1](signal);
+    }
+    $("wbMsg").textContent = signal.aborted ? "Đã dừng" : ("Hoàn tất, tổng cộng "+wbEntries.length+" mục");
+  }catch(e){
+    if(isAbort(e,signal)) $("wbMsg").textContent="Đã dừng (Bấm lại để tiếp tục từ vị trí dừng)";
+    else flash($("wbMsg"),"Thất bại: "+e.message,true);
+  }finally{ setRunning(btn,false); }
+};
+
+// ==================== 模板管理 ====================
+const DEFAULT_TPL = TEMPLATE + NSFW_BLOCK;
+
+const EVENT_TPL = `char_name:
+  Chinese name / Tên gốc:
+  Nickname / Biệt danh:
+  age / Tuổi:
+  gender / Giới tính:
+  identity / Thân phận:
+    -
+  key_events:            # Các sự kiện quan trọng trong đời (Theo thứ tự thời gian, ghi rõ: Khi nào / Chuyện gì / Ảnh hưởng thế nào)
+    - Thời gian:
+      Sự kiện:
+      Ảnh hưởng:
+    - Thời gian:
+      Sự kiện:
+      Ảnh hưởng:
+  relationships:         # Mối quan hệ quan trọng
+    - Đối tượng:
+      Quan hệ:
+      Ràng buộc hoặc mâu thuẫn:
+  turning_points:        # Các bước ngoặt định hình tính cách/vận mệnh (Diễn ra thực tế trong truyện, không viết sáo rỗng)
+    -
+  appearance / Ngoại hình:
+    hair / Tóc:
+    eyes / Mắt:
+    build / Vóc dáng:
+    Đặc điểm nhận dạng:
+  personality / Tính cách:
+    core_traits / Nét tính cách cốt lõi:
+      - : ""             # Đặc điểm: Biểu hiện thực tế trong nguyên tác (Diễn ra ở phân đoạn nào/sự kiện nào)
+  values_and_drives:     # Giá trị quan & Động lực nội tâm (Những thứ họ thực sự quan tâm/theo đuổi/sợ hãi)
+    -
+  hidden_motives:        # Động cơ ẩn giấu / Mục đích sâu xa / Ý đồ ẩn dụ (Chỉ viết khi nguyên tác có cơ sở gợi ý)
+    -
+  goals / Mục tiêu:
+    -
+  weakness / Điểm yếu:
+    -
+  likes / Sở thích:
+    -
+  dislikes / Ghét:
+    -
+  skills / Kỹ năng:
+    -
+  speech_style:          # Phong cách nói chuyện / Khẩu khí / Câu cửa miệng đặc trưng
+    -
+  Thông tin_NSFW:
+    Đặc điểm_tình dục:
+      experiences:
+      sexual_orientation:
+      sexual_role:
+      sexual_habits:
+        -
+    Kinks:
+    Limits:`;
+
+const SLIM_TPL = `char_name:
+  Chinese name / Tên gốc:
+  Nickname / Biệt danh:
+  age / Tuổi:
+  gender / Giới tính:
+  identity / Thân phận:
+    -
+  appearance / Ngoại hình:
+    hair / Tóc:
+    eyes / Mắt:
+    build / Vóc dáng:
+    Đặc điểm nhận dạng:
+  archetype / Hình mẫu:
+  personality / Tính cách:
+    core_traits / Nét tính cách cốt lõi:
+      - : ""             # Đặc điểm: Biểu hiện thực tế trong nguyên tác
+  values_and_drives:     # Giá trị quan / Động lực nội tâm
+    -
+  goals / Mục tiêu:
+    -
+  weakness / Điểm yếu:
+    -
+  likes / Sở thích:
+    -
+  dislikes / Ghét:
+    -
+  skills / Kỹ năng:
+    -
+  speech_style:          # Phong cách nói chuyện / Khẩu khí
+    -
+  Thông tin_NSFW:
+    Đặc điểm_tình dục:
+      experiences:
+      sexual_orientation:
+      sexual_role:
+      sexual_habits:
+        -
+    Kinks:
+    Limits:`;
+
+const NPC_TPL = `char_name:
+  Chinese name / Tên gốc:
+  identity / Thân phận:
+  personality / Tính cách:
+  relationship_to_main:   # Mối quan hệ với nhân vật chính/các nhân vật quan trọng khác
+  appearance:             # Miêu tả ngoại hình ngắn gọn trong 1 câu
+  role_in_story:          # Vai trò/Tác dụng trong cốt truyện
+  notes:                  # Các ghi chú đáng lưu ý khác`;
+
+const BLANK_TPL = `char_name:
+  # Tự do thiết kế cấu hình các trường của riêng bạn tại đây, AI sẽ điền theo định dạng này
+  Chinese name:
+  `;
+
+const BUILTINS = [
+  {name:"Mẫu mặc định", text:DEFAULT_TPL},
+  {name:"Mẫu hướng sự kiện", text:EVENT_TPL},
+  {name:"Mẫu giản lược (Không tiểu sử)", text:SLIM_TPL},
+  {name:"Mẫu NPC (Rút gọn cho vai phụ)", text:NPC_TPL},
+  {name:"Mẫu trống (Tự cấu hình)", text:BLANK_TPL}
+];
+
+let templates = loadJSON("cc_templates", null);
+if(!Array.isArray(templates) || !templates.length){
+  templates = BUILTINS.map(t=>({...t}));
+}else{
+  // 补齐缺失的内置模板（不覆盖用户已改的同名模板）
+  for(const b of BUILTINS){ if(!templates.some(t=>t.name===b.name)) templates.push({...b}); }
+}
+saveJSON("cc_templates", templates);
+let curTplIdx = 0;
+{ const savedName=store.get("cc_curTpl"); const i=templates.findIndex(t=>t.name===savedName); if(i>=0) curTplIdx=i; }
+
+function renderTplSelect(){
+  const sel=$("tplSelect"); sel.innerHTML="";
+  templates.forEach((t,i)=>{ const o=document.createElement("option"); o.value=String(i); o.textContent=t.name; sel.appendChild(o); });
+  sel.value=String(curTplIdx);
+}
+function loadTplToEditor(){ $("tplEditor").value = (templates[curTplIdx] && templates[curTplIdx].text) || DEFAULT_TPL; }
+function persistTemplates(){ saveJSON("cc_templates", templates); store.set("cc_curTpl", (templates[curTplIdx]&&templates[curTplIdx].name)||""); }
+function getActiveTemplate(){ return $("tplEditor").value || DEFAULT_TPL; }
+
+renderTplSelect(); loadTplToEditor();
+
+$("tplToggle").onclick=()=>{ const p=$("tplPanel"); p.style.display = (p.style.display==="none"?"block":"none"); };
+$("tplSelect").onchange=e=>{ curTplIdx=parseInt(e.target.value)||0; loadTplToEditor(); persistTemplates(); };
+$("tplSave").onclick=()=>{ templates[curTplIdx].text=$("tplEditor").value; persistTemplates(); flash($("tplMsg"),"Đã lưu vào cấu hình \u201c"+templates[curTplIdx].name+"\u201d"); };
+$("tplReset").onclick=()=>{ $("tplEditor").value=DEFAULT_TPL; flash($("tplMsg"),"Đã khôi phục mẫu mặc định (nhớ bấm Lưu)"); };
+$("tplNew").onclick=()=>{
+  const name=(prompt("Tên mẫu cấu hình mới:","Mẫu cấu hình "+(templates.length+1))||"").trim();
+  if(!name) return;
+  if(templates.some(t=>t.name===name)){ flash($("tplMsg"),"Tên mẫu cấu hình đã tồn tại",true); return; }
+  templates.push({name, text:$("tplEditor").value || DEFAULT_TPL});
+  curTplIdx=templates.length-1;
+  renderTplSelect(); loadTplToEditor(); persistTemplates(); flash($("tplMsg"),"Đã tạo mẫu mới \u201c"+name+"\u201d");
+};
+$("tplDel").onclick=()=>{
+  if(templates.length<=1){ flash($("tplMsg"),"Cần giữ lại ít nhất một mẫu cấu hình",true); return; }
+  const nm=templates[curTplIdx].name;
+  if(!confirm("Xóa mẫu cấu hình \u201c"+nm+"\u201d?")) return;
+  templates.splice(curTplIdx,1); curTplIdx=0;
+  renderTplSelect(); loadTplToEditor(); persistTemplates(); flash($("tplMsg"),"Đã xóa mẫu cấu hình \u201c"+nm+"\u201d");
+};
+
+// ==================== 历史记录 ====================
+let history = loadJSON("cc_history", []);
+if(!Array.isArray(history)) history=[];
+
+function saveHistory(rec){
+  history.unshift(rec);
+  if(history.length>30) history=history.slice(0,30);
+  saveJSON("cc_history", history);
+  renderHistory();
+}
+function renderHistory(){
+  const box=$("histList"); box.innerHTML="";
+  if(!history.length){ box.innerHTML='<div class="faint" style="font-size:12.5px">Chưa có bản ghi lịch sử nào</div>'; return; }
+  const meta={ card:{label:"Thẻ Nhân vật",box:"output",ext:".yaml",mime:"text/yaml"},
+               worldbook:{label:"Lorebook",box:"wbOut",ext:".txt",mime:"text/plain"},
+               style:{label:"Phong cách viết",box:"styleOut",ext:".md",mime:"text/markdown"} };
+  history.forEach(rec=>{
+    const m=meta[rec.type]||meta.card;
+    const d=document.createElement("div");
+    d.className="chip"; d.style.cursor="default"; d.style.marginBottom="8px";
+    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +'<span class="tag"></span><span class="n" style="font-size:13.5px"></span></div>'
+      +'<div class="c" style="margin-top:4px"></div><div class="btnrow" style="margin-top:8px"></div>';
+    const tag=d.querySelector(".tag");
+    tag.textContent=m.label;
+    tag.style.cssText="font-size:11px;padding:1px 8px;border-radius:6px;background:rgba(200,168,107,.15);color:var(--gold);border:1px solid var(--gold-dim)";
+    d.querySelector(".n").textContent=rec.title||"（Không có tên）";
+    d.querySelector(".c").textContent=(rec.time||"")+(rec.model?(" · "+rec.model):"");
+    const row=d.querySelector(".btnrow");
+    const mk=(label,fn)=>{ const b=document.createElement("button"); b.type="button"; b.className="mini"; b.textContent=label; b.onclick=fn; return b; };
+    row.appendChild(mk("Xem",()=>{ const t=$(m.box); if(t){ t.value=rec.text; t.scrollIntoView({behavior:"smooth",block:"center"}); } }));
+    row.appendChild(mk("Tải về",()=>downloadBlob(rec.text,(rec.title||m.label).replace(/[\\/:*?"<>|、]/g,"_")+m.ext,m.mime)));
+    row.appendChild(mk("Xóa",()=>{ history=history.filter(x=>x.id!==rec.id); saveJSON("cc_history",history); renderHistory(); }));
+    box.appendChild(d);
+  });
+}
+$("histClear").onclick=()=>{ if(!history.length) return; if(!confirm("Xóa toàn bộ lịch sử?")) return; history=[]; saveJSON("cc_history",history); renderHistory(); };
+renderHistory();
+
+// ==================== 自检 ====================
+let checkItems=[];   // {type:'card'|'wb', label, name, content, keys}
+// 扫描"当前"已生成的内容：输出框里的角色卡 + 世界书条目（不含历史）
+$("checkScanBtn").onclick=()=>{
+  checkItems=[];
+  const out=$("output").value.trim();
+  if(out){
+    const re=/^#\s*=+\s*(.+?)\s*=+\s*$/gm; const idxs=[]; let m;
+    while((m=re.exec(out))!==null){ idxs.push({name:m[1].trim(), start:m.index, headEnd:re.lastIndex}); }
+    if(idxs.length<=1){
+      checkItems.push({ type:"card", label:"Thẻ Nhân vật·"+(selectedNames[0]||parseCardName(out)||"Hiện tại"), name:(selectedNames[0]||parseCardName(out)||""), content:out });
+    }else{
+      for(let i=0;i<idxs.length;i++){ const s=idxs[i].headEnd, e=(i+1<idxs.length)?idxs[i+1].start:out.length;
+        checkItems.push({ type:"card", label:"Thẻ Nhân vật·"+idxs[i].name, name:idxs[i].name, content:out.slice(s,e).trim() }); }
+    }
+  }
+  (wbEntries||[]).forEach(e=>{ checkItems.push({ type:"wb", label:"Lorebook·"+e.title, name:e.title, content:e.content, keys:e.keys }); });
+
+  const box=$("checkList"); box.innerHTML="";
+  if(!checkItems.length){ box.innerHTML='<div class="faint" style="font-size:12.5px">Không có nội dung nào để kiểm tra — Hãy tạo thẻ nhân vật hoặc Lorebook trước</div>'; $("checkRunBtn").disabled=true; return; }
+  checkItems.forEach((it,i)=>{
+    const row=document.createElement("label");
+    row.className="toggle"; row.style.cssText="display:flex;margin-bottom:6px;font-size:13px;color:var(--text)";
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.checked=true; cb.dataset.idx=String(i);
+    const span=document.createElement("span"); span.textContent=" "+it.label; span.style.marginLeft="6px";
+    row.appendChild(cb); row.appendChild(span); box.appendChild(row);
+  });
+  $("checkRunBtn").disabled=false;
+  flash($("checkMsg"),"Tìm thấy "+checkItems.length+" mục, mặc định chọn tất cả");
+};
+
+$("checkRunBtn").onclick=async()=>{
+  const btn=$("checkRunBtn");
+  if(btn.dataset.running){ stopRun(); return; }
+  const picks=[...$("checkList").querySelectorAll('input[type=checkbox]')].filter(c=>c.checked).map(c=>checkItems[parseInt(c.dataset.idx)]).filter(Boolean);
+  if(!picks.length){ flash($("checkMsg"),"Vui lòng tích chọn mục cần kiểm tra",true); return; }
+  if(!els.baseUrl.value.trim()||!els.model.value.trim()){ flash($("checkMsg"),"Vui lòng hoàn thành thiết lập API",true); return; }
+
+  setRunning(btn,true); clearLog("checkLog"); $("checkOut").value="";
+  const signal=runSignal();
+  const useStream=$("stream").checked, maxT=Math.max(4000,parseInt(els.maxTok.value)||4000), maxCont=$("autoCont").checked?5:0;
+  const onWait=(n,code,w)=>logTo("checkLog","Lỗi HTTP "+code+", thử lại sau (lần "+n+")","e");
+  const results=[];
+  try{
+    for(let i=0;i<picks.length;i++){
+      if(signal.aborted) break;
+      const it=picks[i];
+      $("checkMsg").innerHTML='<span class="spinner"></span>Tự kiểm tra '+(i+1)+"/"+picks.length+" · "+it.label;
+      // 取参考原文
+      let ref="";
+      if(it.type==="card"){ const b=(it.name||"").replace(/[（(].+?[)）]\s*$/,"").trim(); ref=collectContext(b||it.name); }
+      else { const names=(it.keys&&it.keys.length)?it.keys:[it.name]; const paras=$("novel").value.split(/\n\s*\n|\n/).filter(p=>p.trim()); ref=paras.filter(p=>names.some(n=>n&&p.includes(n))).join("\n\n").slice(0,80000); }
+      const sys="Bạn là một nhân viên hiệu đính nghiêm túc, đối chiếu với nguyên tác để kiểm tra tính chính xác của Thẻ Nhân vật/Mục từ Lorebook, chỉ phán đoán dựa trên nguyên tác.";
+      const user=
+        "Vui lòng đối chiếu với nguyên tác, kiểm tra xem bản "+(it.type==="card"?"Thẻ Nhân vật":"Mục từ Lorebook")+" sau đây có tồn tại vấn đề gì không:\n"+
+        "Trọng tâm kiểm tra: ① OOC (mâu thuẫn với tính cách/ngôn hành trong nguyên tác); ② Nhầm lẫn trải nghiệm (gán trải nghiệm của nhân vật khác/giai đoạn khác vào đây); ③ Lỗi thực tế mâu thuẫn với nguyên tác, râu ông nọ cắm cằm bà kia, rối loạn dòng thời gian; ④ Bịa đặt các thiết lập không có trong nguyên tác.\n\n"+
+        "【Nội dung cần kiểm tra】\n"+it.content+"\n\n"+
+        (ref?("【Nguyên tác tham khảo (đoạn trích liên quan)】\n"+ref+"\n\n"):"")+
+        "Vui lòng xuất ra theo định dạng sau:\n"+
+        "Nhật ký lỗi:\n（Liệt kê từng lỗi phát hiện; nếu không có lỗi hãy ghi \u201cKhông có\u201d）\n\n"+
+        "Thành phẩm sau khi sửa đổi:\n（Đưa ra toàn bộ nội dung "+(it.type==="card"?"Thẻ Nhân vật":"Mục từ Lorebook")+" hoàn chỉnh sau khi sửa, giữ nguyên cấu trúc và định dạng; nếu không cần sửa đổi thì xuất nguyên bản）\n\n"+
+        "Không giải thích thêm, không bọc trong block code.";
+      const messages=[{role:"system",content:withSys(sys)},{role:"user",content:user}];
+      const header="========== "+it.label+" ==========\n";
+      const render=f=>{ $("checkOut").value=results.join("\n\n\n")+(results.length?"\n\n\n":"")+header+stripThink(f); $("checkOut").scrollTop=$("checkOut").scrollHeight; };
+      let raw="";
+      try{ raw=await generate(messages,{maxTokens:maxT,useStream,signal,onText:render,onWait,maxCont,logEl:"checkLog",label:it.label}); }
+      catch(err){ if(isAbort(err,signal)){ logTo("checkLog","Đã dừng","e"); break; } throw err; }
+      results.push(header+stripFence(stripThink(raw)).trim());
+      $("checkOut").value=results.join("\n\n\n");
+      logTo("checkLog",it.label+" Kiểm tra hoàn tất","g");
+    }
+    $("checkMsg").textContent = signal.aborted ? ("Đã dừng (Đã xong "+results.length+"/"+picks.length+" mục)") : ("Tự kiểm tra hoàn thành ("+results.length+" mục)");
+    if(results.length) saveHistory({ id:Date.now(), type:"style", time:new Date().toLocaleString(), title:"Tự kiểm tra · "+results.length+" mục", model:els.model.value.trim(), text:$("checkOut").value });
+  }catch(e){
+    if(isAbort(e,signal)) $("checkMsg").textContent="Đã dừng";
+    else { logTo("checkLog","Lỗi: "+e.message,"e"); $("checkMsg").textContent="Thất bại"; }
+  }finally{ setRunning(btn,false); }
+};
+$("checkCopy").onclick=async()=>{ const t=$("checkOut").value; if(!t) return; try{ await navigator.clipboard.writeText(t); flash($("checkMsg"),"Đã sao chép"); }catch(e){ $("checkOut").select(); document.execCommand("copy"); flash($("checkMsg"),"Đã sao chép"); } };
+$("checkDl").onclick=()=>{ const t=$("checkOut").value; if(!t){ flash($("checkMsg"),"Không có nội dung",true); return; } downloadBlob(t,"Báo_cáo_tự_kiểm_tra.txt","text/plain"); };
+// 文风通篇一致，抽样若干段即可，省 token
+function sampleForStyle(text, perChunk=8000, slices=6, cap=52000){
+  if(text.length<=cap) return text;
+  const step=Math.max(perChunk, Math.floor(text.length/slices));
+  const parts=[];
+  for(let i=0;i<slices;i++){ const s=i*step; if(s>=text.length) break; parts.push(text.slice(s, s+perChunk)); }
+  let joined=parts.join("\n……（Trích lược đoạn giữa）……\n");
+  return joined.length>cap ? joined.slice(0,cap) : joined;
+}
+
+$("styleBtn").onclick=async()=>{
+  const btn=$("styleBtn");
+  if(btn.dataset.running){ stopRun(); return; }
+  const text=$("novel").value.trim();
+  if(!text){ flash($("styleMsg"),"Vui lòng nhập tiểu thuyết trước",true); return; }
+  if(!els.baseUrl.value.trim()||!els.model.value.trim()){ flash($("styleMsg"),"Vui lòng hoàn thành thiết lập API",true); return; }
+
+  setRunning(btn,true); clearLog("styleLog"); $("styleOut").value="";
+  const signal=runSignal();
+  const useStream=$("stream").checked;
+  const maxT=Math.max(4000, parseInt(els.maxTok.value)||4000);
+  const sample=sampleForStyle(text);
+  logTo("styleLog","Lấy mẫu khoảng "+sample.length.toLocaleString()+" ký tự để phân tích…");
+
+  const eroLine=$("styleNsfw").checked
+    ? "- Mô tả thân mật/gợi dục (NSFW): Mức độ bạo, bút pháp, các từ hay dùng và cách tạo khoảng lặng, tỷ lệ miêu tả cơ thể và cảm xúc"
+    : "";
+  const sys="Bạn là một biên tập viên văn học và nhà phân tích phong cách viết kỳ cựu, có sở trường trừu tượng hóa bút pháp của tác giả thành các chỉ dẫn viết lách có tính thực thi cao.";
+  const user=
+    "Hãy phân tích phong cách viết của tiểu thuyết (đoạn trích) dưới đây, mục tiêu là để một AI khác có thể nhìn vào bản hướng dẫn này và viết ra những áng văn cực kỳ sát với phong vị của nguyên tác.\n\n"+
+    "Quan trọng: Chỉ thực hiện phân tích trừu tượng ở cấp độ phong cách, không kể lại cốt truyện, không trích dẫn nguyên văn các câu trong truyện; khi cần đưa ra ví dụ, vui lòng tự mình viết phỏng theo một câu cực ngắn, tuyệt đối không sao chép trực tiếp từ nguyên tác.\n\n"+
+    "Vui lòng xuất bằng tiếng Việt theo cấu trúc sau:\n\n"+
+    "## Khái quát Phong cách\n（Tóm tắt bầu không khí chung trong 3-4 câu）\n\n"+
+    "## Phân tích chi tiết\n"+
+    "- Góc nhìn trần thuật: Ngôi kể / Toàn tri hay hạn tri / Khoảng cách trần thuật\n"+
+    "- Giọng điệu chủ đạo\n"+
+    "- Nhịp điệu câu từ: Sở thích dùng câu dài/ngắn, cách ngắt câu, nhịp độ nhanh/chậm\n"+
+    "- Thói quen dùng từ: Mức độ bình dân hay trau chuốt, các nhóm từ và hình ảnh ẩn dụ ưa thích, những từ kiêng kỵ\n"+
+    "- Phong cách đối thoại: Tỷ lệ đối thoại, giọng điệu nhân vật, thói quen dùng dấu câu\n"+
+    "- Thói quen miêu tả: Cách thức và tỷ lệ miêu tả cảnh vật / tâm lý / hành động\n"+
+    "- Thói quen tu từ: Các biện pháp ẩn dụ, nhân hóa, mỉa mai thường dùng, v.v.\n"+
+    "- Biểu đạt cảm xúc: Trực diện hay hàm súc, cách thức đẩy cao trào cảm xúc\n"+
+    "- Đặc trưng thương hiệu: Bút pháp dễ nhận diện nhất của tác giả này\n"+
+    (eroLine? eroLine+"\n":"")+
+    "\n## Prompt Phong cách tái sử dụng\n（Viết một chỉ dẫn viết lách ở ngôi thứ hai để người dùng dán trực tiếp vào AI khác, bắt đầu bằng câu \u201cHãy viết theo phong cách sau:\u201d, cô đọng các điểm mấu chốt ở trên thành chỉ dẫn có tính thực thi cao.）\n\n"+
+    "=== Đoạn trích truyện ===\n"+sample;
+  const messages=[{role:"system",content:withSys(sys)},{role:"user",content:user}];
+  const onWait=(n,code,w)=>logTo("styleLog","Lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e");
+  const render=f=>{ $("styleOut").value=stripThink(f); $("styleOut").scrollTop=$("styleOut").scrollHeight; };
+
+  try{
+    $("styleMsg").innerHTML='<span class="spinner"></span>Đang phân tích…';
+    const maxCont=$("autoCont").checked?5:0;
+    const raw=await generate(messages,{maxTokens:maxT,useStream,signal,onText:render,onWait,maxCont,logEl:"styleLog",label:"Phong cách viết"});
+    const finalText=stripFence(stripThink(raw)).trim();
+    if(!finalText){
+      $("styleOut").value="";
+      const snip=String(raw).trim().replace(/\s+/g," ").slice(0,80);
+      logTo("styleLog","Không nhận được phản hồi. "+(snip?("Phản hồi từ mô hình: \u201c"+snip+"\u201d"):"(Trống)")),"e";
+      $("styleMsg").textContent="Mô hình không xuất ra văn bản chính — Đối với mô hình suy nghĩ, hãy tăng max_tokens hoặc đổi sang dòng mô hình Flash.";
+      return;
+    }
+    $("styleOut").value=finalText;
+    $("styleMsg").textContent=wasTruncated()?"Hoàn tất (Có thể đã bị ngắt do đạt giới hạn max_tokens, hãy tăng giới hạn lên để thử lại)":"Hoàn tất";
+    logTo("styleLog","Hoàn tất","g");
+    saveHistory({ id:Date.now(), type:"style", time:new Date().toLocaleString(), title:"Chắt lọc phong cách", model:els.model.value.trim(), text:$("styleOut").value });
+  }catch(e){
+    if(isAbort(e,signal)){ logTo("styleLog","Đã dừng","e"); $("styleMsg").textContent="Đã dừng"; }
+    else { logTo("styleLog","Lỗi: "+e.message,"e"); $("styleMsg").textContent=""; }
+  }finally{ setRunning(btn,false); }
+};
+
+$("styleCopy").onclick=async()=>{
+  const t=$("styleOut").value; if(!t) return;
+  try{ await navigator.clipboard.writeText(t); flash($("styleMsg"),"Đã sao chép"); }
+  catch(e){ $("styleOut").select(); document.execCommand("copy"); flash($("styleMsg"),"Đã sao chép"); }
+};
+$("styleDl").onclick=()=>{
+  const t=$("styleOut").value; if(!t){ flash($("styleMsg"),"Không có nội dung",true); return; }
+  downloadBlob(t, "Phong_cach_viet.md", "text/markdown");
+};
+
+// ==================== 小说记录（保留导入+扫描，免重扫） ====================
+function trySet(key,val){ try{ localStorage.setItem(key,val); return true; }catch(e){ return false; } }
+let novelSessions = loadJSON("cc_novels", []);
+if(!Array.isArray(novelSessions)) novelSessions=[];
+
+function renderNovelSel(){
+  const sel=$("novelSel"); sel.innerHTML="";
+  if(!novelSessions.length){ const o=document.createElement("option"); o.value=""; o.textContent="（Chưa có bản ghi nào）"; sel.appendChild(o); return; }
+  novelSessions.forEach((n,i)=>{ const o=document.createElement("option"); o.value=String(i); o.textContent=n.name+"（"+((n.chars&&n.chars.length)||0)+" nhân vật"+(n.text?"":"· Không có văn bản")+"）"; sel.appendChild(o); });
+}
+function novelTitle(){
+  const t=$("novel").value.trim();
+  const first=(t.split(/\n/)[0]||"").trim().slice(0,16);
+  return first || ("Tiểu thuyết "+new Date().toLocaleDateString());
+}
+function persistNovels(){ return trySet("cc_novels", JSON.stringify(novelSessions)); }
+function saveNovelSession(auto){
+  const text=$("novel").value;
+  if(!text.trim()){ if(!auto) flash($("novelSaveMsg"),"Chưa dán văn bản truyện",true); return; }
+  const name=novelTitle();
+  const rec={ id:Date.now(), name, time:new Date().toLocaleString(), text,
+    chars:characters.map(c=>({name:c.name,role:c.role,count:c.count,aliases:c.aliases||[]})) };
+  const idx=novelSessions.findIndex(n=>n.name===name);
+  if(idx>=0) novelSessions[idx]=rec; else novelSessions.unshift(rec);
+  if(novelSessions.length>8) novelSessions=novelSessions.slice(0,8);
+  if(persistNovels()){ renderNovelSel(); if(!auto) flash($("novelSaveMsg"),"Đã lưu: "+name); }
+  else {
+    // 正文太大存不下 → 退化为只存角色
+    novelSessions=novelSessions.map(n=>({...n,text:""}));
+    if(persistNovels()){ renderNovelSel(); flash($("novelSaveMsg"),"Tiểu thuyết dung lượng lớn, chỉ lưu được danh sách nhân vật (Văn bản truyện chưa được lưu, lần sau cần dán lại văn bản truyện)",true); }
+    else flash($("novelSaveMsg"),"Dung lượng lưu trữ của trình duyệt không đủ, lưu thất bại",true);
+  }
+}
+function loadNovelSession(){
+  const v=$("novelSel").value; if(v==="") { flash($("novelSaveMsg"),"Chưa có bản ghi nào để tải",true); return; }
+  const rec=novelSessions[parseInt(v)]; if(!rec) return;
+  $("novel").value=rec.text||""; updateStat();
+  characters=(rec.chars||[]).map(c=>({name:c.name,role:c.role||"",count:c.count||0,aliases:c.aliases||[]}));
+  selectedNames=[]; renderChars(); updateGenBtn();
+  flash($("novelSaveMsg"), rec.text ? ("Đã tải: "+rec.name+" (Danh sách nhân vật không cần quét lại)") : ("Đã tải danh sách nhân vật, nhưng bản ghi này không chứa văn bản truyện, vui lòng dán lại văn bản truyện"));
+}
+$("novelSave").onclick=()=>saveNovelSession(false);
+$("novelLoad").onclick=loadNovelSession;
+$("novelDel").onclick=()=>{
+  const v=$("novelSel").value; if(v==="") return;
+  const rec=novelSessions[parseInt(v)]; if(!rec) return;
+  if(!confirm("Xóa bản ghi tiểu thuyết \u201c"+rec.name+"\u201d?")) return;
+  novelSessions=novelSessions.filter(n=>n.id!==rec.id);
+  persistNovels(); renderNovelSel(); flash($("novelSaveMsg"),"Đã xóa");
+};
+renderNovelSel();
+</script>
+</body>
+</html>

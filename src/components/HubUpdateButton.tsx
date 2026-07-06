@@ -7,9 +7,9 @@ type Phase = 'idle' | 'open' | 'updating' | 'done';
 const DISMISS_KEY = 'update-autopopup-dismissed';
 
 /**
- * Always-visible Hub update control. Lives at the bottom of the flow rail so it shows in
- * EVERY flow (Dịch / Tạo Card / Tạo Preset / Mod Card). All 4 tools are one git repo, so a
- * single "Cập nhật" (git pull) updates them all at once.
+ * Always-visible Hub update control. Lives right below the flow list so it shows in
+ * EVERY flow (Dịch / Tạo Card / Tạo Preset / Mod Card / Trích Card). All tools are one git
+ * repo, so a single "Cập nhật" (git pull) updates them all at once.
  *
  * - Checks on load; shows a green pulsing badge when the repo is behind origin.
  * - Auto-opens the modal once per session when updates are found.
@@ -128,7 +128,7 @@ export default function HubUpdateButton() {
                 <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary, #f1f0f7)' }}>
                   {phase === 'updating' ? 'Đang cập nhật…' : phase === 'done' ? 'Cập nhật xong' : hasUpdate ? `Có ${behind} cập nhật mới` : 'Đã là bản mới nhất'}
                 </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted, #9b98ae)' }}>Bản hiện tại: v{APP_VERSION} · cập nhật 1 lần cho cả 4 tool</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted, #9b98ae)' }}>Bản hiện tại: v{APP_VERSION} · cập nhật 1 lần cho cả 5 tool</div>
               </div>
               {phase !== 'updating' && (
                 <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, display: 'flex' }}><X size={18} /></button>
