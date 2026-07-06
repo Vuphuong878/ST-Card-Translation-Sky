@@ -246,8 +246,8 @@
     </div>
     <div class="btnrow" style="margin-top:0;margin-bottom:6px">
       <label class="toggle"><input type="checkbox" id="nsfw"> Bao gồm nội dung NSFW</label>
-      <label class="toggle"><input type="checkbox" id="jailbreak" title="Vô hiệu hóa bộ lọc nội dung, dùng cho thẻ NSFW"> Bật Jailbreak (Phá lọc)</label>
-      <label class="toggle"><input type="checkbox" id="gomorrahNsfw" title="Áp dụng Silence Rules tối ưu content"> Gomorrah Rules</label>
+      <label class="toggle"><input type="checkbox" id="jailbreak" checked title="Vô hiệu hóa bộ lọc nội dung, dùng cho thẻ NSFW"> Bật Jailbreak (Phá lọc)</label>
+      <label class="toggle"><input type="checkbox" id="gomorrahNsfw" checked title="Áp dụng Silence Rules tối ưu content"> Gomorrah Rules</label>
       <label class="toggle"><input type="checkbox" id="fullCtx"> Dùng toàn văn (Không lọc phân đoạn)</label>
       <label class="toggle"><input type="checkbox" id="stream" checked> Phản hồi dạng Stream</label>
       <label class="toggle"><input type="checkbox" id="autoCont" checked> Tự động viết tiếp khi bị cắt ngang</label>
@@ -521,9 +521,9 @@ function saveCfg(){
 renderApiSelect(); applyProfileToFields();
 { const sp=store.get("cc_sysPrefix"); if(sp) els.sysPrefix.value=sp; }
 
-// Load NSFW toggles from localStorage
-{ const jb=store.get("cc_jailbreak"); if(jb==="true") els.jailbreak.checked=true; }
-{ const gm=store.get("cc_gomorrahNsfw"); if(gm==="true") els.gomorrahNsfw.checked=true; }
+// Load NSFW toggles from localStorage (default to true)
+{ const jb=store.get("cc_jailbreak"); els.jailbreak.checked=(jb!=="false"); }
+{ const gm=store.get("cc_gomorrahNsfw"); els.gomorrahNsfw.checked=(gm!=="false"); }
 
 $("apiProfile").onchange=e=>{ curApiIdx=parseInt(e.target.value)||0; applyProfileToFields(); persistApi(); $("modelSelect").style.display="none"; };
 $("apiNew").onclick=()=>{
