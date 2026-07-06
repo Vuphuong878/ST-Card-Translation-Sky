@@ -169,6 +169,21 @@
         <div class="field"><label>Giới hạn ngữ cảnh chế độ toàn văn (Ký tự)</label><input type="number" id="fullCap" value="120000" step="10000" min="10000"></div>
       </div>
     </details>
+    <details class="adv" id="poolAdv">
+      <summary>🔀 Pool đa-luồng (đa provider) — <span id="poolStatus" class="faint" style="font-size:11px"></span></summary>
+      <div class="field" style="margin-top:6px">
+        <label class="toggle"><input type="checkbox" id="poolInclude"> Gộp cấu hình NÀY vào POOL đa-luồng</label>
+        <div class="faint" style="font-size:11px;margin-top:4px;line-height:1.5">Bật ở <b>≥2 cấu hình</b> (đổi ở ô "Cấu hình API" phía trên, mỗi cấu hình một provider/key/model riêng) → engine rải call round-robin, chạy <b>song song</b> nhiều provider. Nhớ bấm <b>Lưu vào cấu hình hiện tại</b> sau khi chỉnh. Chỉ 1 cấu hình → chạy như cũ (vẫn xoay nhiều key).</div>
+      </div>
+      <div class="row">
+        <div class="field"><label title="Số call/phút tối đa cho model chính của cấu hình này (nhân với số key). 0 = không giới hạn.">RPM model chính</label><input type="number" id="primaryRpm" value="10" min="0" step="1"></div>
+        <div class="field"><label title="Model phụ (rẻ/nhanh hơn) — để trống nếu không dùng">Model phụ (tùy chọn)</label><input type="text" id="secondaryModel" class="mono" placeholder="vd gemini-2.5-flash" autocomplete="off"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label title="Số call/phút tối đa cho model phụ (nhân với số key). 0 = không giới hạn.">RPM model phụ</label><input type="number" id="secondaryRpm" value="20" min="0" step="1"></div>
+        <div class="field"><label title="Entry ngắn hơn ngưỡng (SỐ KÝ TỰ) → ưu tiên model phụ cho nhanh. 0 = tắt.">Ngưỡng ký tự → dùng model phụ</label><input type="number" id="charThreshold" value="0" min="0" step="500"></div>
+      </div>
+    </details>
     <details class="adv">
       <summary>Prompt tùy chỉnh (Nâng cao)</summary>
       <div class="field" style="margin-top:6px">
@@ -496,7 +511,7 @@ const store = (()=>{
 })();
 
 const $ = id => document.getElementById(id);
-const els = ["baseUrl","apiKey","model","temp","maxTok","chunkSize","scanCap","ctxCap","fullCap","nsfw","fullCtx","apiFormat","sysPrefix","detail","jailbreak","gomorrahNsfw"].reduce((o,id)=>(o[id]=$(id),o),{});
+const els = ["baseUrl","apiKey","model","temp","maxTok","chunkSize","scanCap","ctxCap","fullCap","nsfw","fullCtx","apiFormat","sysPrefix","detail","jailbreak","gomorrahNsfw","primaryRpm","secondaryModel","secondaryRpm","charThreshold"].reduce((o,id)=>(o[id]=$(id),o),{});
 const fmt = ()=> els.apiFormat.value;
 
 // ---------- JSON 持久化小工具 ----------
@@ -504,8 +519,8 @@ function loadJSON(key,def){ try{ const v=store.get(key); return v? JSON.parse(v)
 function saveJSON(key,val){ store.set(key, JSON.stringify(val)); }
 
 // ---------- API 配置（多套，可切换） ----------
-const PROFILE_FIELDS=["apiFormat","baseUrl","apiKey","model","temp","maxTok","chunkSize","scanCap","ctxCap","fullCap"];
-function blankProfile(name){ return {name, apiFormat:"openai", baseUrl:"", apiKey:"", model:"", temp:"0.4", maxTok:"4000", chunkSize:"40000", scanCap:"40", ctxCap:"90000", fullCap:"120000"}; }
+const PROFILE_FIELDS=["apiFormat","baseUrl","apiKey","model","temp","maxTok","chunkSize","scanCap","ctxCap","fullCap","primaryRpm","secondaryModel","secondaryRpm","charThreshold"];
+function blankProfile(name){ return {name, apiFormat:"openai", baseUrl:"", apiKey:"", model:"", temp:"0.4", maxTok:"4000", chunkSize:"40000", scanCap:"40", ctxCap:"90000", fullCap:"120000", primaryRpm:"10", secondaryModel:"", secondaryRpm:"20", charThreshold:"0", inPool:false}; }
 let apiProfiles = loadJSON("cc_api_profiles", null);
 if(!Array.isArray(apiProfiles) || !apiProfiles.length){
   // 首次：尽量沿用旧的单套设置
@@ -524,11 +539,14 @@ function renderApiSelect(){
 function applyProfileToFields(){
   const p=apiProfiles[curApiIdx]||blankProfile("Mặc định");
   PROFILE_FIELDS.forEach(k=>{ if(els[k]) els[k].value = (p[k]!==undefined&&p[k]!=="")? p[k] : els[k].value; });
+  const pi=$("poolInclude"); if(pi) pi.checked=!!p.inPool;
+  if(typeof updatePoolStatus==="function") updatePoolStatus();
 }
 function persistApi(){ saveJSON("cc_api_profiles", apiProfiles); store.set("cc_cur_api", (apiProfiles[curApiIdx]&&apiProfiles[curApiIdx].name)||""); }
 function saveCfg(){
   const p=apiProfiles[curApiIdx];
   PROFILE_FIELDS.forEach(k=>{ if(els[k]) p[k]=els[k].value; });
+  const pi=$("poolInclude"); if(pi) p.inPool=pi.checked;
   persistApi();
   store.set("cc_sysPrefix", els.sysPrefix.value);   // 附加提示词全局保存
   flash($("cfgMsg"),"Đã lưu vào cấu hình \u201c"+p.name+"\u201d");
@@ -557,6 +575,17 @@ $("apiDel").onclick=()=>{
   renderApiSelect(); applyProfileToFields(); persistApi(); flash($("cfgMsg"),"Đã xóa cấu hình \u201c"+nm+"\u201d");
 };
 $("saveCfg").onclick=saveCfg;
+// Pool đa-luồng: cập nhật dòng trạng thái + lưu cờ inPool của cấu hình đang chọn.
+function updatePoolStatus(){
+  const el=$("poolStatus"); if(!el) return;
+  const flagged=(apiProfiles||[]).filter(p=>p.inPool && _validProv(p));
+  if(flagged.length>=2){ el.textContent="ĐANG BẬT · "+flagged.length+" provider · ~"+poolConcurrency()+" lane song song"; el.style.color="var(--ok)"; }
+  else if((apiProfiles||[]).filter(p=>p.inPool).length>=2){ el.textContent="bật nhưng có cấu hình thiếu Base URL/Key/Model"; el.style.color="var(--gold)"; }
+  else { el.textContent="tắt (chỉ 1 cấu hình chạy)"; el.style.color="var(--faint)"; }
+}
+$("poolInclude").addEventListener("change",()=>{ const p=apiProfiles[curApiIdx]; if(p){ p.inPool=$("poolInclude").checked; persistApi(); } updatePoolStatus(); });
+["primaryRpm","secondaryModel","secondaryRpm","charThreshold"].forEach(id=>{ const e=$(id); if(e) e.addEventListener("input",updatePoolStatus); });
+updatePoolStatus();
 els.sysPrefix.addEventListener("input",()=>store.set("cc_sysPrefix", els.sysPrefix.value));
 
 // Persist NSFW toggle states
@@ -636,9 +665,10 @@ function decodeBest(buf){
   });
 })();
 
-// ---------- 接口封装 ----------
-function endpoint(){
-  let b=els.baseUrl.value.trim().replace(/\/+$/,"");
+// ---------- 接口封装 (hỗ trợ POOL đa-provider: mỗi call tự chọn lane) ----------
+// conn = { name, fmt, baseUrl, model, key, temp } — nếu không truyền thì fallback cấu hình đang hiển thị (els).
+function endpoint(conn){
+  let b=String((conn?conn.baseUrl:els.baseUrl.value)||"").trim().replace(/\/+$/,"");
   if(!b) throw new Error("Vui lòng điền Base URL trước");
   if(/\/chat\/completions$/.test(b)) return b;
   return b+"/chat/completions";
@@ -651,13 +681,12 @@ const GEM_SAFETY=[
   {category:"HARM_CATEGORY_SEXUALLY_EXPLICIT",threshold:"BLOCK_NONE"},
   {category:"HARM_CATEGORY_DANGEROUS_CONTENT",threshold:"BLOCK_NONE"}
 ];
-function gbase(){
-  let b=els.baseUrl.value.trim().replace(/\/+$/,"");
+function gbase(conn){
+  let b=String((conn?conn.baseUrl:els.baseUrl.value)||"").trim().replace(/\/+$/,"");
   if(!b) throw new Error("Vui lòng điền Base URL trước");
   return b.replace(/\/v1beta$/,"").replace(/\/v1$/,"");
 }
-// Đa-key: nhập nhiều key (cách nhau bằng dấu phẩy hoặc xuống dòng) → mỗi call xoay vòng 1 key
-// → rải rate-limit qua nhiều key/account (tương đương "đa luồng" bên các app kia).
+// Đa-key: nhập nhiều key (cách nhau bằng dấu phẩy hoặc xuống dòng) → mỗi call xoay vòng 1 key.
 let _keyRR=0;
 function pickApiKey(){
   const raw=els.apiKey.value||"";
@@ -665,17 +694,73 @@ function pickApiKey(){
   if(keys.length<=1) return raw.trim();
   return keys[(_keyRR++)%keys.length];
 }
-function gheaders(){ return { "Content-Type":"application/json", "x-goog-api-key":pickApiKey() }; }
+
+/* ═══════════════ POOL đa-provider (như Dịch Card) ═══════════════
+   Mỗi PROFILE cấu hình (đã có sẵn hệ chuyển đổi) = 1 provider. Bật cờ inPool để gộp vào pool.
+   Mỗi provider: đa-key (xoay vòng) + model chính/phụ (chọn theo NGƯỠNG KÝ TỰ) + RPM riêng.
+   Engine rải call round-robin qua các provider, rate-limit trượt 60s theo (provider, model),
+   xoay key theo provider. Các vòng lặp bắn call SONG SONG → nhiều lane chạy cùng lúc. */
+function profileKeys(p){ return String(p&&p.apiKey||"").split(/[\n,]+/).map(k=>k.trim()).filter(Boolean); }
+const _keyIdx={};
+function pickKeyFor(p){ const ks=profileKeys(p); if(!ks.length) return ""; const nm=p.name||"_"; const i=(_keyIdx[nm]||0)%ks.length; _keyIdx[nm]=i+1; return ks[i]; }
+const _rlHits={};
+function _rlK(pn,model){ return pn+"§"+model; }
+function _rlOk(k,rpm){ if(!(rpm>0)) return true; const now=Date.now(); const a=(_rlHits[k]||[]).filter(t=>now-t<60000); _rlHits[k]=a; return a.length<rpm; }
+function _rlHit(k){ (_rlHits[k]=_rlHits[k]||[]).push(Date.now()); }
+// Đồng bộ giá trị đang hiển thị → profile đang chọn (để pool luôn dùng cấu hình mới nhất).
+function syncElsToActive(){ const p=apiProfiles&&apiProfiles[curApiIdx]; if(!p) return; PROFILE_FIELDS.forEach(k=>{ if(els[k]) p[k]=els[k].value; }); const pi=$("poolInclude"); if(pi) p.inPool=pi.checked; }
+function _validProv(p){ return String(p.baseUrl||"").trim() && String(p.model||"").trim() && profileKeys(p).length; }
+function poolProviders(){
+  syncElsToActive();
+  const flagged=(apiProfiles||[]).filter(p=>p.inPool && _validProv(p));
+  if(flagged.length>=2) return flagged;
+  const cur=apiProfiles&&apiProfiles[curApiIdx];
+  if(cur && _validProv(cur)) return [cur];
+  return [{ name:"(hiện tại)", apiFormat:els.apiFormat.value, baseUrl:els.baseUrl.value, apiKey:els.apiKey.value, model:els.model.value, temp:els.temp.value, primaryRpm:"0", secondaryModel:"", secondaryRpm:"0", charThreshold:"0" }];
+}
+let _laneCursor=0;
+function connFromProfile(p,model){ return { name:p.name, fmt:p.apiFormat||"openai", baseUrl:String(p.baseUrl||"").trim(), model:String(model||"").trim(), key:pickKeyFor(p), temp:(p.temp!==undefined&&p.temp!=="")?p.temp:els.temp.value }; }
+function laneOrder(p,charCount){
+  const kc=Math.max(1,profileKeys(p).length);
+  const prm={model:String(p.model||"").trim(), rpm:(+p.primaryRpm||0)*kc};
+  const sec=String(p.secondaryModel||"").trim();
+  if(!sec) return [prm];
+  const s={model:sec, rpm:(+p.secondaryRpm||0)*kc};
+  const th=+p.charThreshold||0;
+  return (th>0 && charCount!=null && charCount<=th) ? [s,prm] : [prm,s];
+}
+// Chọn lane kế tiếp còn RPM (round-robin đều); tất cả đầy → dùng lane con trỏ (best-effort, không chặn cứng).
+function resolveConn(charCount){
+  const pool=poolProviders(), n=pool.length;
+  for(let i=0;i<n;i++){
+    const p=pool[(_laneCursor+i)%n];
+    for(const L of laneOrder(p,charCount)){
+      if(_rlOk(_rlK(p.name,L.model),L.rpm)){ _rlHit(_rlK(p.name,L.model)); _laneCursor=(_laneCursor+i+1)%n; return connFromProfile(p,L.model); }
+    }
+  }
+  const p=pool[_laneCursor%n]; _laneCursor=(_laneCursor+1)%n; const L=laneOrder(p,charCount)[0]; _rlHit(_rlK(p.name,L.model)); return connFromProfile(p,L.model);
+}
+// Số lane song song đề xuất = tổng (provider × số key), giới hạn hợp lý.
+function poolConcurrency(){ let c=0; for(const p of poolProviders()){ c+=Math.max(1,profileKeys(p).length)*(String(p.secondaryModel||"").trim()?2:1); } return Math.max(1,Math.min(c,12)); }
+// Runner song song: chạy tối đa `conc` worker cùng lúc trên `items`.
+async function runPool(items, worker, conc, signal){
+  const N=items.length; let idx=0; const results=new Array(N);
+  conc=Math.max(1,Math.min(conc||1,N||1));
+  async function lane(){ while(idx<N){ if(signal&&signal.aborted) return; const i=idx++; try{ results[i]=await worker(items[i],i); }catch(e){ results[i]={__err:e}; } } }
+  await Promise.all(Array.from({length:conc},lane));
+  return results;
+}
+function gheaders(conn){ return { "Content-Type":"application/json", "x-goog-api-key": conn?conn.key:pickApiKey() }; }
 // 夹取 max_tokens：填得过大（如几百万）某些接口会直接返回空/报错，这里限到合理上限
 function clampTok(n){ n=parseInt(n)||1500; if(n<256) n=256; if(n>200000) n=200000; return n; }
-function toGemini(messages,maxTokens){
+function toGemini(messages,maxTokens,conn){
   maxTokens=clampTok(maxTokens);
   let sys=null; const contents=[];
   for(const m of messages){
     if(m.role==="system"){ sys=(sys?sys+"\n":"")+m.content; continue; }
     contents.push({ role: m.role==="assistant"?"model":"user", parts:[{text:m.content}] });
   }
-  const body={ contents, generationConfig:{ temperature:parseFloat(els.temp.value)||0.4, maxOutputTokens:maxTokens }, safetySettings:GEM_SAFETY };
+  const body={ contents, generationConfig:{ temperature:parseFloat((conn?conn.temp:els.temp.value))||0.4, maxOutputTokens:maxTokens }, safetySettings:GEM_SAFETY };
   if(sys) body.systemInstruction={parts:[{text:sys}]};
   return body;
 }
@@ -683,20 +768,22 @@ function gemErr(cand,data){
   const reason=cand?.finishReason||data?.promptFeedback?.blockReason||"Không có phản hồi";
   return "Gemini không trả về nội dung ("+reason+") —— Có thể đã bị bộ lọc an toàn chặn hoặc đạt giới hạn tần suất API";
 }
-async function geminiChat(messages,{maxTokens,signal}){
-  const url=gbase()+"/v1beta/models/"+encodeURIComponent(els.model.value.trim())+":generateContent";
-  const res=await fetchWithTimeout(url,{ method:"POST",signal,headers:gheaders(),body:JSON.stringify(toGemini(messages,maxTokens)) });
+async function geminiChat(messages,{maxTokens,signal,conn,meta}){
+  const model=String((conn?conn.model:els.model.value)||"").trim();
+  const url=gbase(conn)+"/v1beta/models/"+encodeURIComponent(model)+":generateContent";
+  const res=await fetchWithTimeout(url,{ method:"POST",signal,headers:gheaders(conn),body:JSON.stringify(toGemini(messages,maxTokens,conn)) });
   if(!res.ok){ let t=""; try{t=await res.text();}catch(e){} throw new Error("HTTP "+res.status+" "+t.slice(0,300)); }
   const data=await res.json();
   const cand=data?.candidates?.[0];
   const txt=cand?.content?.parts?.map(p=>p.text||"").join("")||"";
-  lastFinish = cand?.finishReason || "";
+  const fin=cand?.finishReason||""; lastFinish=fin; if(meta) meta.finish=fin;
   if(!txt) throw new Error(gemErr(cand,data));
   return txt;
 }
-async function geminiStream(messages,{maxTokens,onDelta,signal}){
-  const url=gbase()+"/v1beta/models/"+encodeURIComponent(els.model.value.trim())+":streamGenerateContent?alt=sse";
-  const res=await fetchWithTimeout(url,{ method:"POST",signal,headers:gheaders(),body:JSON.stringify(toGemini(messages,maxTokens)) });
+async function geminiStream(messages,{maxTokens,onDelta,signal,conn,meta}){
+  const model=String((conn?conn.model:els.model.value)||"").trim();
+  const url=gbase(conn)+"/v1beta/models/"+encodeURIComponent(model)+":streamGenerateContent?alt=sse";
+  const res=await fetchWithTimeout(url,{ method:"POST",signal,headers:gheaders(conn),body:JSON.stringify(toGemini(messages,maxTokens,conn)) });
   if(!res.ok){ let t=""; try{t=await res.text();}catch(e){} throw new Error("HTTP "+res.status+" "+t.slice(0,300)); }
   if(!res.body) throw new Error("Cổng giao tiếp này không hỗ trợ stream");
   const reader=res.body.getReader(), dec=new TextDecoder();
@@ -709,21 +796,22 @@ async function geminiStream(messages,{maxTokens,onDelta,signal}){
       let line=buf.slice(0,nl).trim(); buf=buf.slice(nl+1);
       if(!line.startsWith("data:")) continue;
       const p=line.slice(5).trim(); if(!p||p==="[DONE]") continue;
-      try{ const j=JSON.parse(p); const t=j?.candidates?.[0]?.content?.parts?.map(x=>x.text||"").join("")||""; if(j?.candidates?.[0]?.finishReason) lastFinish=j.candidates[0].finishReason; if(t){ full+=t; onDelta&&onDelta(full); } }catch(e){}
+      try{ const j=JSON.parse(p); const t=j?.candidates?.[0]?.content?.parts?.map(x=>x.text||"").join("")||""; const fr=j?.candidates?.[0]?.finishReason; if(fr){ lastFinish=fr; if(meta) meta.finish=fr; } if(t){ full+=t; onDelta&&onDelta(full); } }catch(e){}
     }
   }
   return full;
 }
 
-async function chat(messages, {maxTokens=1500, signal}={}){
-  if(fmt()==="gemini") return geminiChat(messages,{maxTokens,signal});
-  const res=await fetchWithTimeout(endpoint(),{
+async function chat(messages, {maxTokens=1500, signal, charCount, conn, meta}={}){
+  conn = conn || resolveConn(charCount);
+  if((conn.fmt||fmt())==="gemini") return geminiChat(messages,{maxTokens,signal,conn,meta});
+  const res=await fetchWithTimeout(endpoint(conn),{
     method:"POST",signal,
-    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+pickApiKey() },
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+(conn.key||pickApiKey()) },
     body:JSON.stringify({
-      model:els.model.value.trim(),
+      model:String(conn.model||els.model.value).trim(),
       messages,
-      temperature:parseFloat(els.temp.value)||0.4,
+      temperature:parseFloat(conn.temp!=null?conn.temp:els.temp.value)||0.4,
       max_tokens:clampTok(maxTokens)
     })
   });
@@ -739,7 +827,7 @@ async function chat(messages, {maxTokens=1500, signal}={}){
       throw new Error("Mô hình chỉ phản hồi suy nghĩ (Thinking), không có văn bản chính — Có thể max_tokens quá nhỏ đã bị dùng hết cho phần suy nghĩ. Vui lòng tăng max_tokens (Mô hình suy nghĩ nên đặt trên 10,000) hoặc đổi sang mô hình không suy nghĩ (như dòng Flash).");
     throw new Error("Phản hồi rỗng: "+JSON.stringify(data).slice(0,200));
   }
-  lastFinish = choice?.finish_reason || "";
+  const fin=choice?.finish_reason||""; lastFinish=fin; if(meta) meta.finish=fin;
   return Array.isArray(msg)? msg.map(p=>p.text||"").join("") : msg;
 }
 
@@ -806,7 +894,7 @@ async function retry(fn,{tries=3,onWait}={}){
 }
 
 // ---------- 生成（自动续写：被 max_tokens 截断就接着写） ----------
-async function generate(messages,{maxTokens,useStream,signal,onText,onWait,maxCont=0,logEl,label}={}){
+async function generate(messages,{maxTokens,useStream,signal,onText,onWait,maxCont=0,logEl,label,charCount}={}){
   let full="";
   for(let round=0; round<=maxCont; round++){
     const msgs = round===0 ? messages
@@ -814,16 +902,16 @@ async function generate(messages,{maxTokens,useStream,signal,onText,onWait,maxCo
           {role:"assistant",content:stripThink(full)},
           {role:"user",content:"Nội dung phía trên đã bị cắt ngang do đạt giới hạn độ dài, vui lòng viết tiếp trực tiếp từ điểm bị cắt. Tuyệt đối không lặp lại nội dung đã viết, không cần viết lại phần mở đầu và không thêm bất kỳ lời giải thích thừa thãi nào khác."}
         ]);
-    let part="";
+    let part=""; const meta={};   // meta.finish per-call → an toàn khi chạy song song (không dựa lastFinish toàn cục)
     if(useStream){
-      try{ part=await retry(()=>chatStream(msgs,{maxTokens,onDelta:(f)=>{ onText&&onText(full+f); },signal}),{onWait}); }
-      catch(err){ if(isAbort(err,signal)) throw err; part=await retry(()=>chat(msgs,{maxTokens,signal}),{onWait}); }
+      try{ part=await retry(()=>chatStream(msgs,{maxTokens,onDelta:(f)=>{ onText&&onText(full+f); },signal,charCount,meta}),{onWait}); }
+      catch(err){ if(isAbort(err,signal)) throw err; part=await retry(()=>chat(msgs,{maxTokens,signal,charCount,meta}),{onWait}); }
     }else{
-      part=await retry(()=>chat(msgs,{maxTokens,signal}),{onWait});
+      part=await retry(()=>chat(msgs,{maxTokens,signal,charCount,meta}),{onWait});
     }
     full += part;
     onText && onText(full);
-    if(!wasTruncated()) break;                 // 写完了
+    if(!/length|max_?tokens/i.test(meta.finish||"")) break;                 // 写完了
     if(round<maxCont && logEl) logTo(logEl,(label?label+": ":"")+"Nội dung dài, tự động viết tiếp ("+(round+1)+")…","g");
   }
   return full;
@@ -936,10 +1024,13 @@ $("scanBtn").onclick=async()=>{
     logTo("scanLog","Tổng cộng "+cap+" phân đoạn, bắt đầu quét…");
   }
 
+  if(!scanState.okArr) scanState.okArr=new Array(cap).fill(false);
+  const _spend=[]; for(let i=startI;i<cap;i++) if(!scanState.okArr[i]) _spend.push(i);
+  let _scDone=scanState.okArr.filter(Boolean).length;
+  const _scConc=poolConcurrency();
   try{
-    for(let i=startI;i<cap;i++){
-      if(signal.aborted) break;
-      $("scanMsg").innerHTML='<span class="spinner"></span>Đang quét '+(i+1)+"/"+cap;
+    async function _scOne(i){
+      if(signal.aborted) return;
       const withRole=$("scanRole").checked;
       const stage=$("scanStage").checked;
       const stageLine = stage
@@ -950,22 +1041,21 @@ $("scanBtn").onclick=async()=>{
         ? "Dưới đây là một đoạn văn bản tiểu thuyết. Hãy liệt kê các nhân vật có tên xuất hiện trong đó.\n"+stageLine+nameViRule+"Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\",\"role\":\"Mô tả ngắn gọn danh tính/vai trò, viết bằng tiếng Việt\"}.\nChỉ xuất mảng JSON này, không đặt trong block code, không giải thích thêm. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i]
         : "Dưới đây là một đoạn văn bản tiểu thuyết. Chỉ liệt kê tên các nhân vật có tên xuất hiện trong đó.\n"+stageLine+nameViRule+"Xuất ra mảng JSON, mỗi phần tử có định dạng: {\"name\":\"Tên nhân vật nguyên văn (có thể kèm giai đoạn)\",\"vi\":\"Tên tiếng Việt để hiển thị\"}.\nChỉ xuất mảng JSON này, không dùng block code, không giải thích, không kèm trường role. Nếu không có nhân vật nào, xuất [].\n\nNội dung văn bản:\n"+chunks[i];
       let rawText="";
-      if(i>startI) await sleep(400); // 段间小间隔，缓解限流
       try{
         rawText=await retry(
-          ()=>chat(userMsgs(prompt),{maxTokens:withRole?8000:4000,signal}),
+          ()=>chat(userMsgs(prompt),{maxTokens:withRole?8000:4000,signal,charCount:(chunks[i]||"").length}),
           {onWait:(n,code,w)=>logTo("scanLog","Đoạn "+(i+1)+" gặp lỗi HTTP "+code+"，thử lại sau "+(w/1000)+"s (lần "+n+")","e")}
         );
       }
       catch(err){
-        if(isAbort(err,signal)){ logTo("scanLog","Đã dừng","e"); break; }
-        logTo("scanLog","Đoạn "+(i+1)+" yêu cầu thất bại: "+err.message,"e"); scanState.next=i+1; continue;
+        if(isAbort(err,signal)) return;
+        logTo("scanLog","Đoạn "+(i+1)+" yêu cầu thất bại: "+err.message,"e"); return;
       }
       const arr=extractJsonArray(rawText);
       if(!Array.isArray(arr)){
         const snip=rawText.trim().replace(/\s+/g," ").slice(0,90);
         logTo("scanLog","Phân tích đoạn "+(i+1)+" thất bại, mô hình trả về: "+(snip? "「"+snip+"」" : "（Trống, có thể đã bị bộ lọc an toàn chặn）"),"e");
-        scanState.next=i+1; continue;
+        return;
       }
       for(const c of arr){
         const name = (typeof c==="string") ? c : (c&&c.name);
@@ -976,9 +1066,13 @@ $("scanBtn").onclick=async()=>{
         if(map.has(key)){ const cur=map.get(key); cur.count++; if(vi&&!cur.vi) cur.vi=vi; if(role&&!cur.role) cur.role=role; }
         else map.set(key,{name:key,vi,role,count:1,aliases:[]});
       }
-      scanState.next=i+1;   // 记录进度，供断点续扫
+      scanState.okArr[i]=true; _scDone++;
+      $("scanMsg").innerHTML='<span class="spinner"></span>Đang quét '+_scDone+"/"+cap+((_scConc>1&&_spend.length>1)?(" · song song "+Math.min(_scConc,_spend.length)+" luồng"):"");
       logTo("scanLog","Đoạn "+(i+1)+" → Lũy kế "+map.size+" nhân vật","g");
     }
+    if(_spend.length && _scConc>1) logTo("scanLog","▶ Chạy SONG SONG "+Math.min(_scConc,_spend.length)+" luồng qua pool…","g");
+    await runPool(_spend, _scOne, _scConc, signal);
+    { let nx=0; while(nx<cap && scanState.okArr[nx]) nx++; scanState.next=nx; }
     characters=[...map.values()].sort((a,b)=>b.count-a.count);
     renderChars();
     const doneAll = scanState.next>=cap;
@@ -1510,14 +1604,15 @@ function collectContext(name, extra){
 }
 
 // ---------- 流式请求 ----------
-async function chatStream(messages,{maxTokens=4000,onDelta,signal}={}){
-  if(fmt()==="gemini") return geminiStream(messages,{maxTokens,onDelta,signal});
-  const res=await fetchWithTimeout(endpoint(),{
+async function chatStream(messages,{maxTokens=4000,onDelta,signal,charCount,conn,meta}={}){
+  conn = conn || resolveConn(charCount);
+  if((conn.fmt||fmt())==="gemini") return geminiStream(messages,{maxTokens,onDelta,signal,conn,meta});
+  const res=await fetchWithTimeout(endpoint(conn),{
     method:"POST",signal,
-    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+pickApiKey() },
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+(conn.key||pickApiKey()) },
     body:JSON.stringify({
-      model:els.model.value.trim(), messages,
-      temperature:parseFloat(els.temp.value)||0.4,
+      model:String(conn.model||els.model.value).trim(), messages,
+      temperature:parseFloat(conn.temp!=null?conn.temp:els.temp.value)||0.4,
       max_tokens:clampTok(maxTokens), stream:true
     })
   });
@@ -1534,7 +1629,7 @@ async function chatStream(messages,{maxTokens=4000,onDelta,signal}={}){
       if(!line.startsWith("data:")) continue;
       const p=line.slice(5).trim();
       if(p==="[DONE]") return full;
-      try{ const j=JSON.parse(p); if(j.choices?.[0]?.finish_reason) lastFinish=j.choices[0].finish_reason; const d=j.choices?.[0]?.delta?.content; if(d){ full+=d; onDelta&&onDelta(full); } }catch(e){}
+      try{ const j=JSON.parse(p); const fr=j.choices?.[0]?.finish_reason; if(fr){ lastFinish=fr; if(meta) meta.finish=fr; } const d=j.choices?.[0]?.delta?.content; if(d){ full+=d; onDelta&&onDelta(full); } }catch(e){}
     }
   }
   return full;
@@ -1613,12 +1708,12 @@ $("genBtn").onclick=async()=>{
   const head=nm=>(many?("# ========== "+dispOf(nm)+" ==========\n"):"");
   const rebuild=()=>{ $("output").value=selectedNames.filter(n=>genDone[n]).map(n=>head(n)+genDone[n]).join("\n\n\n"); };
   if(resuming){ rebuild(); logTo("genLog","Tiếp tục tạo: Đã hoàn thành "+selectedNames.filter(n=>genDone[n]).length+"/"+selectedNames.length+" mục, bỏ qua các mục đã tạo","g"); }
-  try{
-    for(let i=0;i<selectedNames.length;i++){
-      if(signal.aborted) break;
-      const nm=selectedNames[i];
-      if(genDone[nm]){ continue; }   // 断点续跑：已生成的跳过
-      $("genMsg").innerHTML='<span class="spinner"></span>Đang tạo '+(i+1)+"/"+selectedNames.length+" · "+dispOf(nm);
+  const total=selectedNames.length;
+  const pending=selectedNames.filter(n=>!genDone[n]);
+  const conc=poolConcurrency();
+  let doneN=total-pending.length;
+  // Tạo 1 nhân vật. streamThis=true → stream ra ô output (chỉ khi chạy 1 luồng); song song thì tắt stream.
+  async function genOne(nm, streamThis){
       const _rn=userReplaceName();
       const _stageM=nm.match(/^(.*?)[（(]\s*(.+?)\s*[)）]\s*$/);   // 「名字（阶段）」
       const _base=_stageM? _stageM[1].trim() : nm;
@@ -1652,27 +1747,33 @@ $("genBtn").onclick=async()=>{
       const maxT=parseInt(els.maxTok.value)||4000;
       const header = head(nm);
 
-      const render=(cur)=>{
+      const render=streamThis? (cur)=>{
         const base=selectedNames.filter(n=>genDone[n]).map(n=>head(n)+genDone[n]).join("\n\n\n");
         $("output").value=(base?base+"\n\n\n":"")+header+stripThink(cur); $("output").scrollTop=$("output").scrollHeight;
-      };
+      } : null;
 
-      let raw="";
       const onWait=(n,code,w)=>logTo("genLog",nm+" gặp lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e");
       const maxCont=$("autoCont").checked?5:0;
-      try{
-        raw=await generate(messages,{maxTokens:maxT,useStream,signal,onText:render,onWait,maxCont,logEl:"genLog",label:nm});
-      }catch(err){ if(isAbort(err,signal)){ logTo("genLog","Đã dừng","e"); break; } throw err; }
+      const raw=await generate(messages,{maxTokens:maxT,useStream:streamThis&&useStream,signal,onText:render||undefined,onWait,maxCont,logEl:"genLog",label:nm,charCount:ctx.length});
       genDone[nm]=finalizeCard(stripFence(stripThink(raw)).trim(), dispName);
-      rebuild();
+      rebuild(); doneN++;
+      $("genMsg").innerHTML='<span class="spinner"></span>Đang tạo '+doneN+"/"+total+((conc>1&&pending.length>1)?(" · song song "+Math.min(conc,pending.length)+" luồng"):"")+" · "+dispName;
       if(wasTruncated()) logTo("genLog",nm+": Đã đạt giới hạn viết tiếp nhưng chưa hoàn thành, hãy tăng \u201cMax tokens trích xuất\u201d và thử lại","e");
       logTo("genLog",nm+" Hoàn thành","g");
+  }
+  try{
+    if(conc<=1 || pending.length<=1){
+      for(const nm of pending){ if(signal.aborted) break; try{ await genOne(nm,true); }catch(err){ if(isAbort(err,signal)){ logTo("genLog","Đã dừng","e"); break; } logTo("genLog",nm+" lỗi: "+err.message,"e"); } }
+    } else {
+      logTo("genLog","▶ Chạy SONG SONG "+Math.min(conc,pending.length)+" luồng qua pool đa-provider…","g");
+      const res=await runPool(pending, nm=>genOne(nm,false), conc, signal);
+      res.forEach((r,idx)=>{ if(r&&r.__err&&!isAbort(r.__err,signal)) logTo("genLog",pending[idx]+" lỗi: "+r.__err.message,"e"); });
     }
     const doneCount=selectedNames.filter(n=>genDone[n]).length;
-    const allDone = doneCount>=selectedNames.length;
+    const allDone = doneCount>=total;
     if(allDone){ $("genMsg").textContent="Tất cả hoàn thành ("+doneCount+")"; genDone={}; genSelKey=""; }
-    else { $("genMsg").textContent="Đã dừng ("+doneCount+"/"+selectedNames.length+") · Nhấn tiếp để chạy các mục còn lại"; }
-    if(doneCount) saveHistory({ id:Date.now(), type:"card", time:new Date().toLocaleString(), title:selectedNames.filter(n=>genDone[n]||allDone).slice(0,doneCount).join("、")+(allDone?"":"（Một phần）"), model:els.model.value.trim(), text:$("output").value });
+    else { $("genMsg").textContent="Đã dừng ("+doneCount+"/"+total+") · Nhấn tiếp để chạy các mục còn lại"; }
+    if(doneCount) saveHistory({ id:Date.now(), type:"card", time:new Date().toLocaleString(), title:selectedNames.filter(n=>genDone[n]).slice(0,doneCount).join("、")+(allDone?"":"（Một phần）"), model:els.model.value.trim(), text:$("output").value });
   }catch(e){
     if(isAbort(e,signal)){ logTo("genLog","Đã dừng","e"); $("genMsg").textContent="Đã dừng"; }
     else { logTo("genLog","Lỗi: "+e.message,"e"); $("genMsg").textContent=""; }
@@ -1838,11 +1939,13 @@ async function wbExtractCore(signal){
     ? "Có thể bao gồm các bối cảnh/thiết lập người lớn (NSFW), chỉ dựa theo nguyên tác, không tự bịa."
     : "Không trích xuất nội dung người lớn/nhạy cảm liên quan đến tình dục.";
 
+  if(!wbState.okArr) wbState.okArr=new Array(cap).fill(false);
+  const _pending=[]; for(let i=startI;i<cap;i++) if(!wbState.okArr[i]) _pending.push(i);
+  let _wbDone=wbState.okArr.filter(Boolean).length;
+  const _wbConc=poolConcurrency();
   try{
-    for(let i=startI;i<cap;i++){
-      if(signal.aborted) break;
-      $("wbMsg").innerHTML='<span class="spinner"></span>Đang trích xuất '+(i+1)+"/"+cap;
-      if(i>startI) await sleep(400);
+    async function _wbOne(i){
+      if(signal.aborted) return;
       const prompt=
         "Dưới đây là một đoạn của tiểu thuyết. Hãy trích xuất các thông tin thuộc thể loại \u201cbối cảnh thế giới / thiết lập\u201d để làm thành các mục từ Lorebook.\n"+
         "Chú ý: Bối cảnh thế giới, thế lực/tổ chức, địa điểm, thiết lập chủng tộc/hệ thống sức mạnh, khái niệm hoặc quy tắc quan trọng, sự kiện lịch sử, vật phẩm mấu chốt, v.v.\n"+
@@ -1854,17 +1957,17 @@ async function wbExtractCore(signal){
         "Chỉ xuất ra mảng JSON, không dùng block code, không giải thích. Nếu phân đoạn này không có thiết lập rõ ràng, hãy xuất [].\n\nVăn bản:\n"+chunks[i];
       let raw="";
       try{
-        raw=await retry(()=>chat(userMsgs(prompt),{maxTokens:8000,signal}),
+        raw=await retry(()=>chat(userMsgs(prompt),{maxTokens:8000,signal,charCount:(chunks[i]||"").length}),
           {onWait:(n,code,w)=>logTo("wbLog","Đoạn "+(i+1)+" lỗi HTTP "+code+", thử lại sau "+(w/1000)+"s (lần "+n+")","e")});
       }catch(err){
-        if(isAbort(err,signal)){ logTo("wbLog","Đã dừng","e"); break; }
-        logTo("wbLog","Đoạn "+(i+1)+" yêu cầu thất bại: "+err.message,"e"); wbState.next=i+1; continue;
+        if(isAbort(err,signal)) return;
+        logTo("wbLog","Đoạn "+(i+1)+" yêu cầu thất bại: "+err.message,"e"); return;
       }
       const arr=extractJsonArray(raw);
       if(!Array.isArray(arr)){
         const snip=raw.trim().replace(/\s+/g," ").slice(0,90);
         logTo("wbLog","Phân tích đoạn "+(i+1)+" thất bại, mô hình trả về: "+(snip?"「"+snip+"」":"（Trống, có thể đã bị bộ lọc an toàn chặn）"),"e");
-        wbState.next=i+1; continue;
+        return;
       }
       for(const e of arr){
         if(!e||!e.title) continue;
@@ -1880,9 +1983,13 @@ async function wbExtractCore(signal){
           map.set(title,{ category:String(e.category||"Thiết lập").trim(), title, keys, content, constant:!!e.constant });
         }
       }
-      wbState.next=i+1;
+      wbState.okArr[i]=true; _wbDone++;
+      $("wbMsg").innerHTML='<span class="spinner"></span>Đang trích xuất '+_wbDone+"/"+cap+((_wbConc>1&&_pending.length>1)?(" · song song "+Math.min(_wbConc,_pending.length)+" luồng"):"");
       logTo("wbLog","Đoạn "+(i+1)+" → Lũy kế "+map.size+" mục","g");
     }
+    if(_pending.length && _wbConc>1) logTo("wbLog","▶ Chạy SONG SONG "+Math.min(_wbConc,_pending.length)+" luồng qua pool…","g");
+    await runPool(_pending, _wbOne, _wbConc, signal);
+    { let nx=0; while(nx<cap && wbState.okArr[nx]) nx++; wbState.next=nx; }
     wbEntries=[...map.values()];
     const doneAll = wbState.next>=cap;
     if(!wbEntries.length){ $("wbMsg").textContent=doneAll?"Không trích xuất được mục nào":"Đã dừng"; logTo("wbLog","Không có kết quả","e"); if(doneAll) wbState=null; return; }

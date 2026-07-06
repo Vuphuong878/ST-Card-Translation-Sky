@@ -2,6 +2,14 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.31.0 — Trích Card: full pool đa-provider + đa luồng (như Dịch Card)
+Trước đây Trích Card chỉ có **đa-key**. Nay có **đầy đủ** như Dịch Card:
+- **Đa provider chạy song song:** mỗi **Cấu hình API** (hệ chuyển đổi sẵn có) = 1 provider. Vào mục **"🔀 Pool đa-luồng"**, bật **"Gộp cấu hình NÀY vào POOL"** ở **≥2 cấu hình** → engine rải call **round-robin**, chạy **song song** nhiều provider. Áp cho: **quét nhân vật**, **tạo thẻ hàng loạt**, **trích Lorebook** (3 bước nặng nhất).
+- **Model chính/phụ theo NGƯỠNG KÝ TỰ:** mỗi provider đặt được model phụ (rẻ/nhanh) + ngưỡng ký tự — entry ngắn hơn ngưỡng → tự dùng model phụ.
+- **RPM riêng mỗi provider** (× số key), rate-limit trượt 60s tách theo (provider, model) → không đụng hạn mức nhau; **đa-key xoay vòng** theo từng provider.
+- **Số luồng song song** tự tính theo tổng (provider × key). Chỉ 1 cấu hình → chạy tuần tự có stream như cũ.
+- *Kỹ thuật:* toàn bộ call giờ resolve "lane" (provider+model+key) mỗi lần gọi; continuation dùng cờ per-call (an toàn khi song song). Engine đã test round-robin/threshold/rate-limit/runPool trên trình duyệt.
+
 ## v1.30.0 — 4 fix theo báo lỗi client (Dịch Card + Tạo Card)
 **Dịch Card:**
 - **Ngưỡng model phụ đo bằng SỐ KÝ TỰ** (không phải token). Trước đây path đa-provider quy đổi token ≈ ký tự/4, nên đặt ngưỡng 800 thì entry ~2.200 ký tự (~550 token) vẫn lọt → bị dịch bằng model phụ (flash) ngoài ý muốn. Nay so thẳng số ký tự; nhãn đổi thành "Ngưỡng ký tự".
