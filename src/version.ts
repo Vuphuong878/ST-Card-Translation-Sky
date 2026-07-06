@@ -2,5 +2,5 @@
 // BUMP `APP_VERSION` on every fix so builds are distinguishable in the UI (shown in the
 // sidebar header). Use the patch number for small fixes; keep `APP_VERSION_NOTE` to a one-line
 // summary of the most recent change (shown on hover).
-export const APP_VERSION = '1.25.0';
-export const APP_VERSION_NOTE = '[Preset + Mod + Trích Card] Đa provider/đa key áp nốt cho 3 app còn lại: Mod Card thêm "Provider bổ sung" → orchestrator rải call round-robin nhiều provider; Preset thêm extraProviders rải round-robin mỗi lượt chat (rải rate-limit đa account); Trích Card gõ nhiều API key (mỗi dòng/phẩy 1 key) → xoay vòng key mọi call. Hoàn tất đa-provider cho cả 5 app.';
+export const APP_VERSION = '1.26.0';
+export const APP_VERSION_NOTE = '[Hub + Trích Card] (1) Hub tự quét cập nhật mỗi 30 phút, có commit mới hơn thì bật popup báo (không lặp lại cùng 1 bản). (2) Trích Card: export nhiều nhân vật giờ tạo MỖI nhân vật 1 mục Lorebook riêng (kích hoạt theo tên) thay vì nhồi hết vào ô Mô tả — fix theo feedback PhatSiz. (3) 6 nút "Nội dung cần tạo" có icon ⓘ chú thích (rê chuột hoặc bấm).';

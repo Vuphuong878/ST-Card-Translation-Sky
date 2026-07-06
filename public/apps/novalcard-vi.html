@@ -66,6 +66,21 @@
   .btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
 
   .toggle{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;color:var(--muted)}
+  /* Tooltip chú thích cho nút (rê chuột hoặc bấm ⓘ) */
+  .tgw{display:inline-flex;align-items:center;gap:4px}
+  .ttip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+    border-radius:50%;border:1px solid var(--faint);color:var(--faint);font-size:11px;font-weight:700;line-height:1;
+    cursor:help;user-select:none;flex:none;font-family:var(--mono)}
+  .ttip:hover,.ttip.open{border-color:var(--gold);color:var(--gold)}
+  .ttip::after{content:attr(data-tip);position:absolute;left:50%;bottom:150%;transform:translateX(-50%);
+    width:290px;max-width:72vw;padding:10px 12px;border-radius:10px;background:#0a0b0e;color:var(--text);
+    border:1px solid var(--gold-dim);box-shadow:0 10px 30px rgba(0,0,0,.55);
+    font-size:12px;font-weight:400;line-height:1.55;white-space:normal;text-align:left;letter-spacing:.1px;
+    opacity:0;visibility:hidden;transition:opacity .12s;z-index:60;pointer-events:none}
+  .ttip::before{content:"";position:absolute;left:50%;bottom:150%;transform:translate(-50%,9px) rotate(45deg);
+    width:9px;height:9px;background:#0a0b0e;border-right:1px solid var(--gold-dim);border-bottom:1px solid var(--gold-dim);
+    opacity:0;visibility:hidden;transition:opacity .12s;z-index:61}
+  .ttip:hover::after,.ttip.open::after,.ttip:hover::before,.ttip.open::before{opacity:1;visibility:visible}
   .toggle input{appearance:none;width:38px;height:22px;background:var(--panel-2);border:1px solid var(--line-strong);border-radius:99px;position:relative;cursor:pointer;transition:.15s}
   .toggle input:checked{background:var(--gold-dim);border-color:var(--gold-dim)}
   .toggle input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--text);transition:.15s}
@@ -337,12 +352,12 @@
     <div class="field" style="margin-bottom:6px">
       <label>Nội dung cần tạo (Tích chọn để tạo hàng loạt cùng lúc)</label>
       <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px">
-        <label class="toggle"><input type="checkbox" id="wbTaskExtract" checked> Trích xuất các mục Lorebook</label>
-        <label class="toggle"><input type="checkbox" id="wbTaskBg"> Bối cảnh đại cương chung (Constant)</label>
-        <label class="toggle"><input type="checkbox" id="wbTaskMinor"> Quần tượng nhân vật phụ</label>
-        <label class="toggle"><input type="checkbox" id="wbTaskPlot"> Tóm tắt cốt truyện theo phân đoạn (Từ khóa)</label>
-        <label class="toggle"><input type="checkbox" id="wbTaskCharList"> Danh sách nhân vật (Constant)</label>
-        <label class="toggle"><input type="checkbox" id="wbTaskPlotList"> Đại cương cốt truyện (Constant)</label>
+        <span class="tgw"><label class="toggle"><input type="checkbox" id="wbTaskExtract" checked> Trích xuất các mục Lorebook</label><span class="ttip" tabindex="0" data-tip="Quét truyện theo từng đoạn, rút ra các THIẾT LẬP THẾ GIỚI: bối cảnh, thế lực/tổ chức, địa điểm, hệ thống sức mạnh, khái niệm/quy tắc, sự kiện lịch sử, vật phẩm mấu chốt — mỗi thứ thành 1 mục Lorebook riêng, kích hoạt bằng từ khóa (đèn xanh lá). KHÔNG viết hồ sơ từng nhân vật (đó là việc của Thẻ Nhân vật). Số đoạn quét theo giới hạn trong phần Nâng cao.">ⓘ</span></span>
+        <span class="tgw"><label class="toggle"><input type="checkbox" id="wbTaskBg"> Bối cảnh đại cương chung (Constant)</label><span class="ttip" tabindex="0" data-tip="Đúc kết bối cảnh thời đại, thế giới quan, quy tắc xã hội, trải nghiệm chung của TẤT CẢ nhân vật thành MỘT mục thường trú (Constant — luôn kích hoạt, đèn xanh dương). Giúp AI luôn nắm khung thế giới chung mà không phải lặp lại thông tin này trên mỗi thẻ nhân vật.">ⓘ</span></span>
+        <span class="tgw"><label class="toggle"><input type="checkbox" id="wbTaskMinor"> Quần tượng nhân vật phụ</label><span class="ttip" tabindex="0" data-tip="Từ danh sách nhân vật đã quét, tạo mục Lorebook cho các NHÂN VẬT PHỤ (bỏ qua nhân vật chính — họ đã có thẻ riêng). Có 2 chế độ: gộp tất cả vào 1 mục quần tượng, hoặc mỗi nhân vật phụ 1 mục riêng (chọn ở ô kế bên). Cần quét/thêm nhân vật ở khung trên trước.">ⓘ</span></span>
+        <span class="tgw"><label class="toggle"><input type="checkbox" id="wbTaskPlot"> Tóm tắt cốt truyện theo phân đoạn (Từ khóa)</label><span class="ttip" tabindex="0" data-tip="Chia truyện theo thứ tự thành các GIAI ĐOẠN / phụ bản; mỗi giai đoạn 1 mục Lorebook kích hoạt bằng từ khóa (đèn xanh lá), tóm tắt ≥300 ký tự gồm nhân vật quan trọng, nguyên nhân–kết quả sự kiện, đạo cụ, dòng thời gian. Hợp với truyện dài nhiều arc — chỉ nạp khúc liên quan khi được nhắc tới.">ⓘ</span></span>
+        <span class="tgw"><label class="toggle"><input type="checkbox" id="wbTaskCharList"> Danh sách nhân vật (Constant)</label><span class="ttip" tabindex="0" data-tip="Một mục thường trú (Constant — luôn kích hoạt) liệt kê các nhân vật chính, mỗi người 1–2 dòng: thân phận, quan hệ với nhân vật chính, tính cách cốt lõi. Để AI luôn nhớ được dàn nhân vật của truyện.">ⓘ</span></span>
+        <span class="tgw"><label class="toggle"><input type="checkbox" id="wbTaskPlotList"> Đại cương cốt truyện (Constant)</label><span class="ttip" tabindex="0" data-tip="Một mục thường trú (Constant — luôn kích hoạt) tóm tắt tuyến truyện chính và các bước ngoặt quan trọng theo dòng thời gian (vài đoạn ngắn), để AI luôn nắm bức tranh toàn cảnh. Khác với Tóm tắt phân đoạn: đây là 1 mục tổng quan ngắn luôn bật, còn phân đoạn là nhiều mục chi tiết bật theo từ khóa.">ⓘ</span></span>
       </div>
     </div>
     <div class="btnrow">
@@ -2209,32 +2224,98 @@ function bookEntries(entries){
     extensions:{ position:0, exclude_recursion:false, display_index:i, probability:100, useProbability:true, depth:4, selectiveLogic:0, group:"", vectorized:false }
   }));
 }
+// Tách output NHIỀU nhân vật theo header "# ===== Tên =====" (do genBtn chèn khi chọn ≥2 NV).
+// Trả [] nếu không có header (chỉ 1 nhân vật/không phải batch).
+function splitCharCards(text){
+  const re=/^#\s*=+\s*(.+?)\s*=+\s*$/gm;
+  const idxs=[]; let m;
+  while((m=re.exec(text))!==null){ idxs.push({ name:m[1].trim(), headStart:m.index, headEnd:re.lastIndex }); }
+  if(idxs.length===0) return [];
+  const cards=[];
+  for(let i=0;i<idxs.length;i++){
+    const s=idxs[i].headEnd, e=(i+1<idxs.length)? idxs[i+1].headStart : text.length;
+    const body=text.slice(s,e).trim();
+    if(body) cards.push({ name:idxs[i].name, body });
+  }
+  return cards;
+}
+// Key kích hoạt cho 1 entry nhân vật: tên hiển thị + phần tên trước "（giai đoạn）" + tên gốc + biệt danh.
+function charEntryKeys(name, body){
+  const keys=[];
+  const push=v=>{ v=(v||"").trim().replace(/^["'“”]|["'“”]$/g,""); if(v && !/原文未提及|Nguyên tác không nhắc đến/i.test(v) && !keys.includes(v)) keys.push(v); };
+  push(name);
+  const bare=name.match(/^(.*?)[（(]/); if(bare) push(bare[1]);
+  for(const ln of body.split(/\n/).slice(0,14)){
+    let mm=ln.match(/^\s*(?:Chinese name \/ Tên gốc|Chinese name|Tên gốc)\s*[:：]\s*(.+)$/i); if(mm) push(mm[1]);
+    mm=ln.match(/^\s*(?:Nickname \/ Biệt danh|Nickname|Biệt danh)\s*[:：]\s*(.+)$/i); if(mm){ mm[1].split(/[、,，\/]+/).forEach(push); }
+  }
+  return keys.length? keys : [name];
+}
+// 把工具内部的 wbEntries 转成 character_book 内嵌条目
 function buildFullCard(){
   const cardText=$("output").value.trim();
   if(!cardText) return null;
-  const name = (selectedNames[0]) || parseCardName(cardText) || "character";
-  // 汇总世界书条目：世界书 + 文风（若有）
-  const entries = wbEntries.slice();
+
+  // Lorebook nền: các mục thế giới đã trích + văn phong (nếu có).
+  const worldEntries = wbEntries.slice();
   const styleText=$("styleOut").value.trim();
   if(styleText){
-    entries.push({ category:"Phong cách viết", title:"Style Prompt phong cách viết", keys:[], content:styleText, constant:true });
+    worldEntries.push({ category:"Phong cách viết", title:"Style Prompt phong cách viết", keys:[], content:styleText, constant:true });
   }
+  const worldBook = bookEntries(worldEntries);   // đã có id/display_index 0..n-1
+
+  const chars = splitCharCards(cardText);
+  const multi = chars.length>=2;
+
+  if(multi){
+    // NHIỀU nhân vật: mỗi người thành 1 mục Lorebook (kích hoạt theo tên) thay vì nhồi hết vào description.
+    const name = "Bộ sưu tập thẻ nhân vật";
+    const charBook = chars.map((c,i)=>{
+      const idx=worldBook.length+i;
+      return {
+        id:idx, keys:charEntryKeys(c.name, c.body), secondary_keys:[],
+        comment:c.name, name:c.name,
+        content:"# "+c.name+"\n"+c.body,
+        enabled:true, constant:false, selective:true,
+        insertion_order:100, position:"before_char", case_sensitive:false, priority:10,
+        extensions:{ position:0, exclude_recursion:false, display_index:idx, probability:100, useProbability:true, depth:4, selectiveLogic:0, group:"Nhân vật", vectorized:false }
+      };
+    });
+    // description = bối cảnh chung (nếu user đã tạo) để AI luôn nắm khung thế giới; nếu không, ghi chú ensemble.
+    const bg = wbEntries.find(e=>/Bối cảnh chung|Đại cương thế giới/i.test(e.title||""));
+    const description = bg && bg.content ? bg.content
+      : ("Thẻ tổng hợp gồm "+chars.length+" nhân vật. Mỗi nhân vật là một mục trong Lorebook, tự kích hoạt khi tên nhân vật được nhắc tới trong hội thoại.\nDanh sách nhân vật: "+chars.map(c=>c.name).join("、")+".");
+    const bookName = $("wbName").value.trim() || (name+"_Lorebook");
+    const data={
+      name, description, personality:"", scenario:"", first_mes:"", mes_example:"",
+      creator_notes:"Được tạo bởi Công cụ trích xuất thẻ nhân vật tiểu thuyết ("+chars.length+" nhân vật → "+chars.length+" mục Lorebook)", system_prompt:"", post_history_instructions:"",
+      alternate_greetings:[], tags:[], creator:"", character_version:"1.0", extensions:{},
+      character_book:{ name:bookName, entries:worldBook.concat(charBook) }
+    };
+    return { name, description, spec:"chara_card_v2", spec_version:"2.0", data, _charCount:chars.length };
+  }
+
+  // 1 nhân vật: giữ nguyên — toàn bộ thẻ vào description.
+  const name = (selectedNames[0]) || parseCardName(cardText) || "character";
   const bookName = $("wbName").value.trim() || (name+"_Lorebook");
   const data={
     name, description:cardText, personality:"", scenario:"", first_mes:"", mes_example:"",
     creator_notes:"Được tạo bởi Công cụ trích xuất thẻ nhân vật tiểu thuyết", system_prompt:"", post_history_instructions:"",
     alternate_greetings:[], tags:[], creator:"", character_version:"1.0", extensions:{}
   };
-  if(entries.length) data.character_book={ name:bookName, entries:bookEntries(entries) };
-  return { name, description:cardText, spec:"chara_card_v2", spec_version:"2.0", data };
+  if(worldBook.length) data.character_book={ name:bookName, entries:worldBook };
+  return { name, description:cardText, spec:"chara_card_v2", spec_version:"2.0", data, _charCount:1 };
 }
 $("fullCardBtn").onclick=()=>{
   const card=buildFullCard();
   if(!card){ flash($("fullCardMsg"),"Vui lòng tạo Thẻ Nhân vật ở khung phía trên trước",true); return; }
   const fn=(card.name||"character").replace(/[\\/:*?"<>|、]/g,"_")+".json";
   downloadBlob(JSON.stringify(card,null,2), fn, "application/json");
-  const parts=[]; if(card.data.character_book){ parts.push("Lorebook chứa "+card.data.character_book.entries.length+" mục"); }
-  flash($("fullCardMsg"),"Đã xuất file"+(parts.length?("（Gồm "+parts.join(" và ")+"）"):"（Chỉ xuất Thẻ Nhân vật）"));
+  const total = card.data.character_book ? card.data.character_book.entries.length : 0;
+  let note;
+  if(card._charCount>1) note="（"+card._charCount+" nhân vật → "+card._charCount+" mục Lorebook riêng"+(total>card._charCount?(" + "+(total-card._charCount)+" mục thiết lập"):"")+"）";
+  else note = total?("（Kèm Lorebook "+total+" mục）"):"（Chỉ xuất Thẻ Nhân vật）";
+  flash($("fullCardMsg"),"Đã xuất file "+note);
 };
 
 // 共享背景 / 世界大纲：把多角色共同的时代背景、共同经历抽成一条常驻条目
@@ -2707,6 +2788,14 @@ $("novelDel").onclick=()=>{
   persistNovels(); renderNovelSel(); flash($("novelSaveMsg"),"Đã xóa");
 };
 renderNovelSel();
+
+// Tooltip ⓘ: rê chuột đã hiện qua CSS; thêm bấm/chạm để bật-tắt (mobile) + Esc/bấm ngoài để đóng.
+document.addEventListener("click",e=>{
+  const tip=e.target.closest(".ttip");
+  document.querySelectorAll(".ttip.open").forEach(t=>{ if(t!==tip) t.classList.remove("open"); });
+  if(tip){ e.preventDefault(); e.stopPropagation(); tip.classList.toggle("open"); }
+});
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.querySelectorAll(".ttip.open").forEach(t=>t.classList.remove("open")); });
 </script>
 </body>
 </html>

@@ -4,7 +4,10 @@ import { APP_VERSION } from '../version';
 
 interface Commit { hash: string; subject: string; }
 type Phase = 'idle' | 'open' | 'updating' | 'done';
-const DISMISS_KEY = 'update-autopopup-dismissed';
+// Lưu SỐ commit đang chờ mà user đã bấm "Để sau/Đóng". Chỉ tự mở lại popup khi số này
+// THAY ĐỔI (có commit mới hơn) → không làm phiền lặp lại cùng một bản.
+const DISMISS_KEY = 'update-autopopup-dismissed-behind';
+const AUTO_CHECK_MS = 30 * 60 * 1000; // tự quét cập nhật mỗi 30 phút
 
 /**
  * Always-visible Hub update control. Lives right below the flow list so it shows in
@@ -23,6 +26,12 @@ export default function HubUpdateButton() {
   const [log, setLog] = useState('');
   const [error, setError] = useState('');
   const checkedOnce = useRef(false);
+  const phaseRef = useRef<Phase>('idle');
+  phaseRef.current = phase;
+
+  const dismissedBehind = () => {
+    try { return parseInt(sessionStorage.getItem(DISMISS_KEY) || '0', 10) || 0; } catch { return 0; }
+  };
 
   const check = async (opts?: { openIfFound?: boolean; openAlways?: boolean }) => {
     setChecking(true);
@@ -32,10 +41,14 @@ export default function HubUpdateButton() {
         const data = await r.json();
         if (data?.ok) {
           setError('');
-          setBehind(data.behind || 0);
+          const nBehind = data.behind || 0;
+          setBehind(nBehind);
           setCommits(Array.isArray(data.commits) ? data.commits : []);
-          if (opts?.openAlways || (opts?.openIfFound && data.behind > 0)) setPhase('open');
-          return data.behind || 0;
+          // Tự mở popup khi có bản mới VÀ số commit khác lần user đã bỏ qua (tức có commit mới hơn).
+          // Không đè khi đang cập nhật/đang mở dở (chỉ auto-open lúc idle).
+          const isNew = nBehind > 0 && nBehind !== dismissedBehind();
+          if (opts?.openAlways || (opts?.openIfFound && isNew && phaseRef.current === 'idle')) setPhase('open');
+          return nBehind;
         }
         // ok:false → không kiểm tra được (không phải git clone / fetch lỗi / offline). BÁO RÕ.
         setError(String(data?.error || 'Không kiểm tra được cập nhật.'));
@@ -54,8 +67,11 @@ export default function HubUpdateButton() {
   useEffect(() => {
     if (checkedOnce.current) return;
     checkedOnce.current = true;
-    const autoDismissed = (() => { try { return !!sessionStorage.getItem(DISMISS_KEY); } catch { return false; } })();
-    check({ openIfFound: !autoDismissed });
+    check({ openIfFound: true });
+    // Quét lại mỗi 30 phút: nếu có commit mới hơn lần đã bỏ qua → tự bật popup báo.
+    const id = setInterval(() => { check({ openIfFound: true }); }, AUTO_CHECK_MS);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const runUpdate = async () => {
@@ -80,7 +96,8 @@ export default function HubUpdateButton() {
   };
 
   const closeModal = () => {
-    try { sessionStorage.setItem(DISMISS_KEY, '1'); } catch { /* ignore */ }
+    // Ghi nhớ số commit hiện đang chờ → lần quét 30 phút sau chỉ bật lại nếu có commit mới hơn.
+    try { sessionStorage.setItem(DISMISS_KEY, String(behind)); } catch { /* ignore */ }
     setPhase('idle');
   };
 
