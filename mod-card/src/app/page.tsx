@@ -4,11 +4,12 @@ import { useState } from 'react';
 import FileUploader from '@/components/FileUploader';
 import ModRulesManager, { ModRule } from '@/components/ModRulesManager';
 import VarRemapPanel from '@/components/VarRemapPanel';
+import SubExpandPanel from '@/components/SubExpandPanel';
 import { CardV3 } from '@/types/card';
 import { LLMConfig } from '@/lib/llm';
 import { usePersistedState } from '@/lib/usePersistedState';
 import { CardParser } from '@/lib/parser';
-import { ModOrchestrator, extractSections, applyModification, OrchestratorRule } from '@/lib/orchestrator';
+import { ModOrchestrator, extractSections, applyModification, buildLoreDigest, OrchestratorRule } from '@/lib/orchestrator';
 
 interface AnalysisItem {
   section_id: string;
@@ -46,6 +47,8 @@ export default function Home() {
   const [scannedModels, setScannedModels] = useState<string[]>([]);
   const [isScanningModels, setIsScanningModels] = useState(false);
   const [customPrompt, setCustomPrompt] = usePersistedState<string>('modcard.customPrompt', '');
+  const [expandMode, setExpandMode] = usePersistedState<boolean>('modcard.expandMode', false);
+  const [expandIntensity, setExpandIntensity] = usePersistedState<string>('modcard.expandIntensity', 'vừa');
   const [manualModelInput, setManualModelInput] = useState(false);
 
   const handleProviderChange = (provider: 'openai' | 'anthropic' | 'gemini') => {
@@ -178,12 +181,15 @@ export default function Home() {
       let currentContext = '';
       let currentCard = JSON.parse(JSON.stringify(card));
       const moddedEntries: { index: number; content: string }[] = [];
-      
+      // Chế độ mở rộng: dựng lore digest 1 lần để mọi section bám lore toàn cảnh.
+      const loreDigest = expandMode ? buildLoreDigest(card) : '';
+      const modOpts = { expand: expandMode, intensity: expandIntensity, loreDigest };
+
       for (const req of sectionsToMod) {
-        setProcessStatus(`Giai đoạn 3: Đang mod section ${String(req.label)}...`);
+        setProcessStatus(`Giai đoạn 3: Đang ${expandMode ? 'MỞ RỘNG' : 'mod'} section ${String(req.label)}...`);
         const sectionData = allSections.find(s => s.section_id === req.section_id);
         if (sectionData) {
-          const modded = await orchestrator.modSection(currentCard, sectionData, activeRules, currentContext);
+          const modded = await orchestrator.modSection(currentCard, sectionData, activeRules, currentContext, modOpts);
           currentCard = applyModification(currentCard, sectionData.field_path, modded);
           currentContext += `\n[Đã sửa ${String(req.label)}]:\n${modded}\n`;
           
@@ -331,8 +337,43 @@ export default function Home() {
 
           <ModRulesManager rules={rules} onChange={setRules} />
 
+          {card && (
+            <SubExpandPanel
+              card={moddedCard || card}
+              llmConfig={llmConfig}
+              onApplied={(newCard) => {
+                setModdedCard(newCard);
+                setProcessStatus('Đã đào sâu 1 phần. Xem tab So sánh / Xuất file.');
+                setActiveTab('diff');
+              }}
+            />
+          )}
+
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
             <h3 className="font-extrabold text-gray-950 mb-2">Điều khiển Orchestrator</h3>
+
+            {/* Chế độ Mở rộng / đào sâu */}
+            <div className="mb-3 p-2.5 rounded-md border border-amber-300 bg-amber-50">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={expandMode} onChange={e => setExpandMode(e.target.checked)} />
+                <span className="text-sm font-bold text-amber-950">✨ Chế độ Mở rộng / đào sâu</span>
+              </label>
+              <p className="text-[11px] text-amber-900 mt-1 leading-snug">
+                Thay vì làm theo nghĩa đen, AI đọc toàn cảnh lorebook, bổ sung 3-4 phần mở rộng & viết chi tiết hơn (bám lore).
+              </p>
+              {expandMode && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs font-semibold text-amber-950">Mức đào sâu:</span>
+                  <select value={expandIntensity} onChange={e => setExpandIntensity(e.target.value)}
+                    className="text-xs border border-amber-400 rounded px-2 py-1 bg-white text-amber-950 font-bold">
+                    <option value="nhẹ">Nhẹ</option>
+                    <option value="vừa">Vừa</option>
+                    <option value="sâu">Sâu</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={runFullPipeline}
               disabled={!card || isProcessing || (rules.filter(r => r.enabled).length === 0 && !customPrompt.trim())}

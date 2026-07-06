@@ -154,26 +154,13 @@ SCRIPT GỐC:
 {ORIGINAL_SCRIPT}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTPUT FORMAT (JSON):
+OUTPUT — CHỈ xuất đúng khối XML sau (KHÔNG JSON, KHÔNG markdown). Đặt TOÀN BỘ script đã sửa
+(giữ nguyên xuống dòng, dấu ngoặc, ký tự đặc biệt) vào trong tag — không cần escape:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{
-  "has_changes": true,
-  "modified_content": "...toàn bộ script đã sửa...",
-  "changes": [
-    {
-      "type": "comment | string_literal | html_text",
-      "original": "đoạn gốc (trích ngắn)",
-      "modified": "đoạn đã sửa",
-      "justification": "tại sao đây là safe to modify"
-    }
-  ],
-  "preserved": [
-    "Mô tả những gì KHÔNG sửa và tại sao (code logic, class names, etc.)"
-  ],
-  "warnings": [
-    "Cảnh báo nếu có thứ gì đó cần user review thủ công"
-  ]
-}
+<modified_script>
+...toàn bộ script đã sửa (hoặc giữ nguyên nếu không đổi gì)...
+</modified_script>
+<warnings>Cảnh báo nếu có thứ cần user review thủ công (để trống nếu không có)</warnings>
 `;
 
 export const KEYWORD_SYNC_PROMPT = `
@@ -422,13 +409,82 @@ NỘI DUNG GỐC:
 {ORIGINAL_CONTENT}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTPUT FORMAT (JSON):
+OUTPUT — CHỈ xuất đúng khối XML sau (KHÔNG JSON, KHÔNG markdown). Đặt nội dung vào trong tag,
+không cần escape ký tự đặc biệt:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{
-  "modified_content": "...nội dung đã sửa hoàn chỉnh...",
-  "keys_to_update": ["tên NPC mới nếu cần"],
-  "comment_to_update": "Tên entry mới nếu cần"
-}
+<modified>
+...nội dung đã sửa hoàn chỉnh...
+</modified>
+<keys>tên NPC/keys mới nếu cần, phân tách bằng dấu phẩy (để trống nếu không đổi)</keys>
+<comment>tên entry mới nếu cần (để trống nếu không đổi)</comment>
+`;
+
+export const EXPAND_SUBSECTION_PROMPT = `
+Bạn cần ĐÀO SÂU / CHI TIẾT HOÁ một PHẦN NHỎ bên trong section này, GIỮ NGUYÊN toàn bộ phần còn lại.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHẦN CẦN ĐÀO SÂU: {SUB_MARKER}
+(ví dụ: tag <Appearance>, hoặc mục tiêu đề "Ngoại hình", hoặc mô tả đoạn cần chi tiết hoá)
+
+YÊU CẦU: {INSTRUCTION}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NGUYÊN TẮC:
+- CHỈ mở rộng/chi tiết hoá đúng phần nêu trên (thêm chi tiết cảm quan, cụ thể, chiều sâu) — bám LORE.
+- KHÔNG đổi các phần khác của section. GIỮ NGUYÊN mọi macro/biến ({{...}}, getvar) và XML tag CẤU TRÚC.
+- Ngôn ngữ giữ như card.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LORE DIGEST:
+{LORE_DIGEST}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION GỐC (ĐẦY ĐỦ):
+{ORIGINAL_CONTENT}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — CHỈ xuất XML (KHÔNG markdown). Trả về TOÀN BỘ section với phần đã đào sâu đặt đúng vị trí:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<result>
+...toàn bộ section (phần được nêu đã chi tiết hơn, phần còn lại y nguyên)...
+</result>
+`;
+
+export const EXPAND_SECTION_PROMPT = `
+Bạn đang MOD theo CHẾ ĐỘ MỞ RỘNG. Thay vì chỉ làm theo nghĩa đen của yêu cầu, hãy VIẾT CHI TIẾT & ĐÀO SÂU section này.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NGUYÊN TẮC MỞ RỘNG:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Thực hiện đúng YÊU CẦU MOD trước.
+2. Sau đó BỔ SUNG 3-4 phần mở rộng HỢP LÝ (chi tiết cảm quan, chiều sâu tâm lý/động cơ, quan hệ, hệ quả, tiểu tiết bối cảnh) — làm nội dung dày và sống động hơn.
+3. Bám sát LORE DIGEST — KHÔNG mâu thuẫn với thế giới/nhân vật/sự kiện đã có.
+4. Mức độ đào sâu: {INTENSITY}.
+5. GIỮ NGUYÊN mọi macro/biến kỹ thuật: {{...}}, getvar(...), <UpdateVariable>, <StatusPlaceHolderImpl/>, và các XML tag CẤU TRÚC hiện có (chỉ mở rộng NỘI DUNG bên trong, không phá cấu trúc). Ngôn ngữ giữ như card.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+YÊU CẦU MOD:
+{MOD_RULES}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LORE DIGEST (toàn cảnh card + lorebook — để match lore):
+{LORE_DIGEST}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION: {SECTION_LABEL} ({CONTENT_TYPE})
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{ORIGINAL_CONTENT}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTEXT (các phần đã sửa trước — giữ nhất quán):
+{PREVIOUSLY_MODIFIED_CONTEXT}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — CHỈ xuất đúng khối XML (KHÔNG markdown, KHÔNG giải thích):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<expanded>
+...nội dung đã mở rộng, chi tiết, hoàn chỉnh...
+</expanded>
 `;
 
 export const MVUZOD_VAR_REMAP_PROMPT = `

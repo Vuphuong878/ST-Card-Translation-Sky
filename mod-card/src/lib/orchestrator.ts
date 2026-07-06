@@ -1,7 +1,36 @@
 import { CardV3 } from '../types/card';
 import { CardParser, VariableRemap } from './parser';
 import { LLMConfig } from './llm';
-import { SYSTEM_PROMPT, ANALYZE_CARD_PROMPT, MOD_SECTION_PROMPT, MOD_SCRIPT_PROMPT, KEYWORD_SYNC_PROMPT, CONSISTENCY_AUDIT_PROMPT, VALIDATE_CARD_PROMPT, MVUZOD_NARRATIVE_MOD_PROMPT, MVUZOD_VALIDATE_PROMPT, MVUZOD_VAR_REMAP_PROMPT } from './prompts';
+import { SYSTEM_PROMPT, ANALYZE_CARD_PROMPT, MOD_SECTION_PROMPT, MOD_SCRIPT_PROMPT, KEYWORD_SYNC_PROMPT, CONSISTENCY_AUDIT_PROMPT, VALIDATE_CARD_PROMPT, MVUZOD_NARRATIVE_MOD_PROMPT, MVUZOD_VALIDATE_PROMPT, MVUZOD_VAR_REMAP_PROMPT, EXPAND_SECTION_PROMPT, EXPAND_SUBSECTION_PROMPT } from './prompts';
+
+/** Tuỳ chọn chế độ mở rộng khi mod 1 section. */
+export interface ModOptions { expand?: boolean; intensity?: string; loreDigest?: string; }
+
+/** Digest toàn cảnh card + lorebook (để AI mở rộng bám lore, không mâu thuẫn). */
+export function buildLoreDigest(card: CardV3): string {
+  const d = card.data;
+  const strip = (s: string) => (s || '').replace(/<%[\s\S]*?%>/g, '').replace(/\s+/g, ' ').trim();
+  const parts: string[] = [];
+  if (d.name) parts.push(`Nhân vật chính: ${d.name}`);
+  const desc = strip(d.description || card.description || '').slice(0, 600);
+  if (desc) parts.push(`Mô tả (tóm tắt): ${desc}`);
+  const scen = strip(d.scenario || '').slice(0, 300);
+  if (scen) parts.push(`Bối cảnh: ${scen}`);
+  const entries = (d.character_book?.entries || []).filter(e =>
+    e.content && !e.content.trim().startsWith('@@preprocessing') &&
+    !e.comment?.includes('[mvu_update]') && !e.comment?.includes('[initvar]'));
+  const loreLines = entries.slice(0, 30).map(e => `• ${e.comment || 'entry'}: ${strip(e.content).slice(0, 160)}`);
+  if (loreLines.length) parts.push(`LOREBOOK (${loreLines.length} mục tham chiếu):\n${loreLines.join('\n')}`);
+  return parts.join('\n\n').slice(0, 5000);
+}
+
+/** Lấy nội dung 1 tag XML (khoan dung: chấp nhận thiếu tag đóng). */
+function extractTag(text: string, name: string): string {
+  const closed = new RegExp(`<${name}>([\\s\\S]*?)</${name}>`, 'i').exec(text);
+  if (closed) return closed[1].replace(/^\n+|\n+$/g, '').trim();
+  const open = new RegExp(`<${name}>([\\s\\S]*)`, 'i').exec(text);
+  return open ? open[1].replace(/^\n+/g, '').trim() : '';
+}
 
 /** Parse khoan dung khối <remap> XML từ AI → danh sách đổi biến. */
 function parseRemapXml(text: string): VariableRemap[] {
@@ -231,10 +260,24 @@ export class ModOrchestrator {
     }
   }
 
-  async modSection(card: CardV3, section: CardSection, rules: OrchestratorRule[], context: string) {
+  async modSection(card: CardV3, section: CardSection, rules: OrchestratorRule[], context: string, opts?: ModOptions) {
     const isMvuZod = CardParser.detectMvuZod(card);
     const isCode = section.is_code;
     const isSystemMvuEntry = section.label.includes('[mvu_update]') || section.label.includes('[initvar]') || section.section_id === 'system_prompt';
+
+    // ═══ Chế độ MỞ RỘNG: đào sâu narrative (không dùng cho code / entry hệ thống MVU) ═══
+    if (opts?.expand && !isCode && !isSystemMvuEntry) {
+      const userPrompt = EXPAND_SECTION_PROMPT
+        .replace('{INTENSITY}', opts.intensity || 'vừa')
+        .replace('{MOD_RULES}', formatRules(rules))
+        .replace('{LORE_DIGEST}', opts.loreDigest || '(không có)')
+        .replace('{SECTION_LABEL}', section.label)
+        .replace('{CONTENT_TYPE}', section.content_type || 'text_narrative')
+        .replace('{ORIGINAL_CONTENT}', section.content)
+        .replace('{PREVIOUSLY_MODIFIED_CONTEXT}', context || 'Chưa có context');
+      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
+      return extractTag(response, 'expanded') || response.trim() || section.content;
+    }
 
     if (isMvuZod && !isCode && !isSystemMvuEntry) {
       const entryIndex = section.section_id.startsWith('entry_') 
@@ -250,16 +293,8 @@ export class ModOrchestrator {
         .replace('{ORIGINAL_CONTENT}', section.content);
 
       const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
-      try {
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          return parsed.modified_content || section.content;
-        }
-      } catch (err) {
-        console.warn("Could not parse JSON for MVU-Zod narrative mod, returning raw response", err);
-      }
-      return response;
+      // Output XML: lấy <modified> (fallback raw). Không parse JSON để tránh vỡ với nội dung lớn.
+      return extractTag(response, 'modified') || response.trim() || section.content;
     }
 
     const promptTemplate = isCode ? MOD_SCRIPT_PROMPT : MOD_SECTION_PROMPT;
@@ -284,15 +319,8 @@ export class ModOrchestrator {
 
     const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
     if (isCode) {
-      try {
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          return parsed.modified_content || section.content;
-        }
-      } catch (err) {
-        console.warn("Could not parse JSON for script mod, returning raw response", err);
-      }
+      // Output XML: lấy <modified_script> (fallback raw) — chắc hơn JSON cho script dài.
+      return extractTag(response, 'modified_script') || response.trim() || section.content;
     }
     return response;
   }
@@ -320,6 +348,17 @@ export class ModOrchestrator {
     // Chỉ giữ remap có oldKey là biến THẬT + thực sự thay đổi.
     const valid = new Set(infos.map(v => v.key));
     return results.filter(r => valid.has(r.oldKey) && ((r.newKey && r.newKey !== r.oldKey) || r.newDescribe));
+  }
+
+  /** Đào sâu 1 phần nhỏ (sub-block) trong 1 section → trả về TOÀN BỘ section đã đào sâu. */
+  async expandSubSection(card: CardV3, sectionContent: string, subMarker: string, instruction: string): Promise<string> {
+    const userPrompt = EXPAND_SUBSECTION_PROMPT
+      .replace('{SUB_MARKER}', subMarker)
+      .replace('{INSTRUCTION}', instruction || '(chi tiết hoá tối đa, giữ đúng ý gốc)')
+      .replace('{LORE_DIGEST}', buildLoreDigest(card))
+      .replace('{ORIGINAL_CONTENT}', sectionContent);
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.config);
+    return extractTag(response, 'result') || response.trim() || sectionContent;
   }
 
   async syncKeywords(card: CardV3, rules: OrchestratorRule[], moddedEntries: { index: number; content: string }[]) {
