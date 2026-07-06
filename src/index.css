@@ -1070,9 +1070,16 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 
-/* ─── Hub update button pulse (khi có bản mới) ─── */
+/* ─── Hub update button — neon ─── */
+/* Có bản mới: neon xanh lá nhấp nháy mạnh. */
 @keyframes hubUpdatePulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
-  50% { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+  0%, 100% { box-shadow: 0 0 12px rgba(57,255,20,0.75), inset 0 0 8px rgba(57,255,20,0.35); }
+  50%      { box-shadow: 0 0 22px rgba(57,255,20,1),    inset 0 0 12px rgba(57,255,20,0.55); }
 }
-.hub-update-pulse { animation: hubUpdatePulse 1.8s ease-in-out infinite; }
+.hub-update-pulse { animation: hubUpdatePulse 1.3s ease-in-out infinite; }
+/* Không có bản mới: neon cyan thở nhẹ. */
+@keyframes hubUpdateGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(0,229,255,0.45),  inset 0 0 6px rgba(0,229,255,0.15); }
+  50%      { box-shadow: 0 0 15px rgba(0,229,255,0.75), inset 0 0 9px rgba(0,229,255,0.3); }
+}
+.hub-update-glow { animation: hubUpdateGlow 2.6s ease-in-out infinite; }

@@ -50,8 +50,8 @@ export default function AppHub() {
         {FLOWS.map((f) => (
           <RailButton key={f.id} flow={f} active={active === f.id} onClick={() => select(f.id)} />
         ))}
-        {/* Update button pinned to the bottom — visible in every flow */}
-        <div style={{ marginTop: 'auto' }} />
+        {/* Update button — ngay dưới các luồng (tự tụt xuống nếu thêm luồng thứ 5, 6...) */}
+        <div style={{ height: 4 }} />
         <HubUpdateButton />
       </nav>
 

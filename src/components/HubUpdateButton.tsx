@@ -90,14 +90,18 @@ export default function HubUpdateButton() {
           flexDirection: 'column',
           alignItems: 'center',
           gap: 3,
-          border: '1px solid ' + (hasUpdate ? '#22c55e' : 'var(--border-subtle, #2a2a3e)'),
+          border: '1.5px solid ' + (hasUpdate ? '#39ff14' : '#00e5ff'),
           borderRadius: 10,
-          background: hasUpdate ? 'rgba(34,197,94,0.15)' : 'var(--bg-elevated, #252536)',
-          color: hasUpdate ? '#22c55e' : 'var(--text-secondary, #a09cb5)',
+          background: hasUpdate ? 'rgba(57,255,20,0.15)' : 'rgba(0,229,255,0.10)',
+          color: hasUpdate ? '#8dff6b' : '#5ff4ff',
           cursor: 'pointer',
+          textShadow: hasUpdate ? '0 0 6px rgba(57,255,20,0.9)' : '0 0 6px rgba(0,229,255,0.8)',
+          boxShadow: hasUpdate
+            ? '0 0 12px rgba(57,255,20,0.75), inset 0 0 8px rgba(57,255,20,0.35)'
+            : '0 0 10px rgba(0,229,255,0.55), inset 0 0 6px rgba(0,229,255,0.2)',
           transition: 'all 0.15s',
         }}
-        className={hasUpdate ? 'hub-update-pulse' : ''}
+        className={hasUpdate ? 'hub-update-pulse' : 'hub-update-glow'}
       >
         {checking
           ? <RefreshCw size={18} className="spin" />
