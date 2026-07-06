@@ -31,6 +31,10 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'Be Vietnam Pro', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 
+  /* Chiều cao header chung của Hub (AppHub GlobalHeader). Layout translate nằm DƯỚI header
+     nên mọi chỗ tính theo viewport phải trừ đi phần này, nếu không đáy sidebar bị cắt 54px. */
+  --hub-header-h: 54px;
+
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -640,13 +644,16 @@ input[type="range"]::-webkit-slider-thumb {
 .app-layout {
   display: grid;
   grid-template-columns: 360px 1fr;
-  min-height: 100vh;
+  /* Trừ header Hub để không dư 54px (gây thanh cuộn thừa). */
+  min-height: calc(100vh - var(--hub-header-h));
 }
 .sidebar {
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-subtle);
   overflow-y: auto;
-  max-height: 100vh;
+  /* Cột cấu hình (Chiến Lược A/B/C…) — cao tối đa = viewport trừ header, nếu để 100vh thì
+     đáy sidebar thò xuống dưới màn hình 54px và bị cắt (không cuộn tới được). */
+  max-height: calc(100vh - var(--hub-header-h));
   position: sticky;
   top: 0;
 }

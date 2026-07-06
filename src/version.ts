@@ -2,5 +2,5 @@
 // BUMP `APP_VERSION` on every fix so builds are distinguishable in the UI (shown in the
 // sidebar header). Use the patch number for small fixes; keep `APP_VERSION_NOTE` to a one-line
 // summary of the most recent change (shown on hover).
-export const APP_VERSION = '1.18.0';
-export const APP_VERSION_NOTE = '[Cache] Rà soát persistence cả 5 app. Vá 2 lỗ hổng: Mod Card (trước F5 mất sạch → nay lưu card/rules/API/kết quả) + trang "Tạo thẻ từ truyện" (nay tự lưu truyện/roster/thẻ). Dịch/Preset/Trích Card đã ổn sẵn.';
+export const APP_VERSION = '1.18.1';
+export const APP_VERSION_NOTE = '[Fix UI] Dịch Card: cột cấu hình (Chiến Lược A/B/C) bị CẮT 54px ở đáy do dùng 100vh trong khi có header Hub — sửa thành calc(100vh - var(--hub-header-h)), đáy không còn mất. + header trang "Tạo thẻ từ truyện" thêm flex-wrap chống tràn khi hẹp.';

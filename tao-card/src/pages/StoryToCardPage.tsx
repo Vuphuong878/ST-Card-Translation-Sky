@@ -147,11 +147,11 @@ export function StoryToCardPage() {
 
   return (
     <div className="p-5 max-w-3xl mx-auto space-y-5">
-      <div className="flex items-center gap-2">
-        <Wand2 className="w-5 h-5 text-primary" />
-        <h1 className="text-lg font-bold">Tạo thẻ từ truyện</h1>
-        <span className="text-xs text-muted-foreground">Quét nhân vật (chunk) → sinh thẻ theo mô-đun</span>
-        <span className="ml-auto text-[11px] text-muted-foreground flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Wand2 className="w-5 h-5 text-primary shrink-0" />
+        <h1 className="text-lg font-bold shrink-0">Tạo thẻ từ truyện</h1>
+        <span className="text-xs text-muted-foreground truncate min-w-0 hidden sm:inline">Quét nhân vật (chunk) → sinh thẻ theo mô-đun</span>
+        <span className="ml-auto text-[11px] text-muted-foreground flex items-center gap-2 shrink-0">
           <span title="Truyện, roster và thẻ được tự lưu — F5 không mất">💾 tự lưu</span>
           {(story || roster.length > 0 || card || batch.length > 0) && (
             <button onClick={clearWork} className="inline-flex items-center gap-1 hover:text-red-400" title="Xoá việc trong trang này">
