@@ -18,6 +18,7 @@ interface SidebarProps {
 
 const NAV_ITEMS = [
   { path: '/auto-creator', icon: Wand2, label: 'Auto Creator', emoji: '🪄' },
+  { path: '/story-to-card', icon: FileText, label: 'Tạo thẻ từ truyện', emoji: '📖' },
   { path: '/settings', icon: Settings, label: 'Cài đặt', emoji: '⚙' },
   { path: '/editor', icon: FileText, label: 'Card Editor', emoji: '📝' },
   { path: '/lorebook', icon: BookOpen, label: 'Lorebook', emoji: '📚' },

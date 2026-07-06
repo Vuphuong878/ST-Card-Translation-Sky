@@ -14,6 +14,7 @@ const MVUZODPage = lazy(() => import('./pages/MVUZODPage').then(m => ({ default:
 const EJSStudioPage = lazy(() => import('./pages/EJSStudioPage').then(m => ({ default: m.EJSStudioPage })));
 const WikiPage = lazy(() => import('./pages/WikiPage').then(m => ({ default: m.WikiPage })));
 const AutoCreatorPage = lazy(() => import('./pages/AutoCreatorPage').then(m => ({ default: m.AutoCreatorPage })));
+const StoryToCardPage = lazy(() => import('./pages/StoryToCardPage').then(m => ({ default: m.StoryToCardPage })));
 
 function AppInit() {
   const { createNewProject, loadProject, refreshProjectList } = useCardStore();
@@ -62,6 +63,7 @@ export default function App() {
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/auto-creator" element={<AutoCreatorPage />} />
+          <Route path="/story-to-card" element={<StoryToCardPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/editor" element={<CardEditorPage />} />
           <Route path="/lorebook" element={<LorebookPage />} />
