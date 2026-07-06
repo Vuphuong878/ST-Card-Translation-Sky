@@ -553,7 +553,8 @@ function customSys(){
   let sys = (els.sysPrefix.value||"").trim();
   // Thêm Jailbreak + Advanced Tactics nếu enabled
   if($("jailbreak").checked) {
-    sys = (sys ? sys + "\n\n" : "") + JAILBREAK_PROMPT;
+    sys = (sys ? sys + "\n\n" : "") + CHINESE_SAFE_TAG_BYPASS_RULES;
+    sys = sys + "\n\n" + JAILBREAK_PROMPT;
     sys = sys + "\n\n" + ADVANCED_NSFW_TRANSLATION_TACTICS;
   }
   // Thêm Gomorrah rules nếu enabled

@@ -1118,6 +1118,7 @@ export function buildEffectivePrompt(options: PromptBuildOptions): PromptBuildRe
 
     // Inject jailbreak if enabled (Mod may need uncensored output)
     if (enableJailbreak) {
+      modPrompt += CHINESE_SAFE_TAG_BYPASS_RULES;
       modPrompt += JAILBREAK_PROMPT;
       // Append advanced tactics for strategic application
       modPrompt += ADVANCED_NSFW_TRANSLATION_TACTICS;
@@ -1267,6 +1268,7 @@ ${glossaryList}`;
 
   // ─── 1. Jailbreak + Advanced Tactics + Objective mode + Gomorrah NSFW Rules (always appended — masterPrompt.ts does NOT handle these) ───
   if (enableJailbreak) {
+    prompt += CHINESE_SAFE_TAG_BYPASS_RULES;
     prompt += JAILBREAK_PROMPT;
     // Append advanced tactics for strategic application
     prompt += ADVANCED_NSFW_TRANSLATION_TACTICS;
