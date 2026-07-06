@@ -6,6 +6,19 @@
 import type { CharacterCardV3 } from '../../types/card.types';
 import type { SyncResult, SyncConnectionStatus, STCharacterInfo, SyncEvent } from './syncTypes';
 
+// ─── CORS proxy ───
+// Trình duyệt tại localhost:5174 gọi thẳng SillyTavern (localhost:8000) là request
+// KHÁC ORIGIN → bị CORS chặn (lý do "liên kết ST" không hoạt động). Ở dev, định tuyến
+// qua CORS-proxy của Vite (server-side) để vượt CORS. (Không đụng gì tới SillyTavern.)
+function proxied(url: string): string {
+  try {
+    if (typeof import.meta !== 'undefined' && (import.meta as any).env && !(import.meta as any).env.PROD) {
+      return `/api/cors-proxy/${encodeURIComponent(url)}`;
+    }
+  } catch { /* ignore */ }
+  return url;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ADAPTER INTERFACE
 // ═══════════════════════════════════════════════════════════════════════════
@@ -34,13 +47,27 @@ export class RestAdapter implements SyncAdapter {
     this.baseUrl = baseUrl.replace(/\/+$/, ''); // trim trailing slash
   }
 
+  private csrf = '';
+  /** SillyTavern yêu cầu CSRF token cho các POST. Lấy token trước (qua proxy). */
+  private async getCsrf(): Promise<string> {
+    if (this.csrf) return this.csrf;
+    try {
+      const res = await fetch(proxied(`${this.baseUrl}/csrf-token`));
+      if (res.ok) {
+        const d = await res.json().catch(() => ({} as Record<string, unknown>));
+        this.csrf = String((d as Record<string, unknown>).token ?? '');
+      }
+    } catch { /* ignore */ }
+    return this.csrf;
+  }
+
   async connect(): Promise<boolean> {
     this.status = 'connecting';
     try {
-      // Test bằng cách gọi /api/characters/all
-      const res = await fetch(`${this.baseUrl}/api/characters/all`, {
+      const token = await this.getCsrf();
+      const res = await fetch(proxied(`${this.baseUrl}/api/characters/all`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'X-CSRF-Token': token } : {}) },
         body: JSON.stringify({}),
       });
       if (res.ok) {
@@ -74,9 +101,11 @@ export class RestAdapter implements SyncAdapter {
         : `${this.baseUrl}/api/characters/create`;
 
       const payload = this.buildFormData(card, exists);
+      const token = await this.getCsrf();
 
-      const res = await fetch(endpoint, {
+      const res = await fetch(proxied(endpoint), {
         method: 'POST',
+        headers: token ? { 'X-CSRF-Token': token } : {},
         body: payload,
       });
 
@@ -108,9 +137,10 @@ export class RestAdapter implements SyncAdapter {
 
   async listCharacters(): Promise<STCharacterInfo[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/api/characters/all`, {
+      const token = await this.getCsrf();
+      const res = await fetch(proxied(`${this.baseUrl}/api/characters/all`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'X-CSRF-Token': token } : {}) },
         body: JSON.stringify({}),
       });
       if (!res.ok) return [];
@@ -329,7 +359,7 @@ export class PluginAdapter implements SyncAdapter {
   async connect(): Promise<boolean> {
     this.status = 'connecting';
     try {
-      const res = await fetch(`${this.pluginUrl}/status`);
+      const res = await fetch(proxied(`${this.pluginUrl}/status`));
       if (res.ok) {
         this.status = 'connected';
         return true;
@@ -353,7 +383,7 @@ export class PluginAdapter implements SyncAdapter {
   async pushCard(card: CharacterCardV3): Promise<SyncResult> {
     const now = Date.now();
     try {
-      const res = await fetch(`${this.pluginUrl}/push`, {
+      const res = await fetch(proxied(`${this.pluginUrl}/push`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(card),
@@ -385,7 +415,7 @@ export class PluginAdapter implements SyncAdapter {
 
   async listCharacters(): Promise<STCharacterInfo[]> {
     try {
-      const res = await fetch(`${this.pluginUrl}/characters`);
+      const res = await fetch(proxied(`${this.pluginUrl}/characters`));
       if (!res.ok) return [];
       return await res.json();
     } catch {
