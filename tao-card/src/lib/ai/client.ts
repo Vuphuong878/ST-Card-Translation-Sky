@@ -86,12 +86,40 @@ export function getUniqueKeyCount(profile: ProxyProfile): number {
   return Math.max(1, new Set(parseApiKeys(profile.apiKey)).size);
 }
 
+// ─── Đa provider (pool) ───
+// Store bơm danh sách profile vào đây. Pool = profile đang active + các profile inPool khác.
+// Mỗi call round-robin sang provider kế → nhiều provider chạy SONG SONG (mỗi cái vẫn giữ đa-key +
+// RPM riêng). 1 profile ⇒ pool 1 phần tử ⇒ hành vi y như cũ.
+let _poolProfiles: ProxyProfile[] = [];
+export function setPoolProfiles(list: ProxyProfile[]): void { _poolProfiles = list || []; }
+let _providerCursor = 0;
+export function resetProviderPool(): void { _providerCursor = 0; }
+
+const _usableProfile = (p: ProxyProfile) => !!(p.apiKey?.trim() && p.selectedModel?.trim());
+function buildPool(active: ProxyProfile): ProxyProfile[] {
+  const map = new Map<string, ProxyProfile>();
+  if (_usableProfile(active)) map.set(active.id, active);
+  for (const p of _poolProfiles) if (p.inPool && _usableProfile(p)) map.set(p.id, p);
+  const pool = [...map.values()];
+  return pool.length ? pool : [active];
+}
+/** Chọn provider kế tiếp (round-robin) từ pool cho 1 call. */
+function pickPoolProfile(active: ProxyProfile): ProxyProfile {
+  const pool = buildPool(active);
+  if (pool.length <= 1) return pool[0];
+  const p = pool[_providerCursor % pool.length];
+  _providerCursor = (_providerCursor + 1) % pool.length;
+  return p;
+}
+
 /**
  * Gọi AI chat-completion theo provider type.
  * Trả về text response thuần (đã extract từ JSON response format).
  */
 export async function callAI(options: AICallOptions): Promise<AICallResult> {
-  const { profile, params, messages, signal, useSecondary } = options;
+  const { params, messages, signal, useSecondary } = options;
+  // Đa provider: chọn provider từ pool (round-robin) cho call này. 1 provider ⇒ chính nó.
+  const profile = pickPoolProfile(options.profile);
   const base = profile.baseUrl.replace(/\/+$/, '');
 
   const keys = parseApiKeys(profile.apiKey);
@@ -106,8 +134,8 @@ export async function callAI(options: AICallOptions): Promise<AICallResult> {
     if (signal?.aborted) throw signal.reason || new Error('Aborted');
 
     const key = keys.length ? keys[(rrCounter++) % keys.length] : profile.apiKey;
-    // Rate-limit RIÊNG cho từng key + tier → nhiều key = nhiều luồng thật.
-    if (rpm > 0) await getKeyLimiter(`${tier}:${key || 'default'}`).waitIfNecessary(rpm);
+    // Rate-limit RIÊNG cho từng (provider + key + tier) → nhiều key/provider = nhiều luồng thật.
+    if (rpm > 0) await getKeyLimiter(`${profile.id}:${tier}:${key || 'default'}`).waitIfNecessary(rpm);
     const effProfile: ProxyProfile = (keys.length > 0 && key !== profile.apiKey) ? { ...profile, apiKey: key } : profile;
 
     // Smart AbortController with 30min hard timeout (large lorebooks need time)
@@ -122,7 +150,7 @@ export async function callAI(options: AICallOptions): Promise<AICallResult> {
     // Live monitor: register this in-flight call (model + which key) for the progress UI.
     const dispModel = (useSecondary && profile.enableSecondaryModel && profile.secondaryModel)
       ? profile.secondaryModel : profile.selectedModel;
-    const keyLabel = keys.length > 1 ? `Key #${((rrCounter - 1) % keys.length) + 1}` : 'Key';
+    const keyLabel = `${profile.label}${keys.length > 1 ? ` · Key #${((rrCounter - 1) % keys.length) + 1}` : ''}`;
     const monId = CallMonitor.start({ model: dispModel || '?', keyLabel, label: options.label || '', startedAt: Date.now() });
 
     try {

@@ -373,6 +373,17 @@ ${activeProfile.masterInstruction || ''}`;
                         </span>
                       </div>
 
+                      {/* Đa provider: gộp profile này vào pool chạy song song */}
+                      <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                        <input type="checkbox" checked={activeProfile.inPool || false}
+                          onChange={e => updateField('inPool', e.target.checked)}
+                          className="settings-checkbox" />
+                        🔀 Gộp vào POOL đa-provider (chạy song song)
+                      </label>
+                      <p className="text-xs text-muted-foreground -mt-2 pl-6 leading-snug">
+                        Bật ở ≥2 profile → engine rải call round-robin, nhiều provider chạy cùng lúc (mỗi cái giữ đa-key + RPM riêng) → nhanh hơn. Để giữ chất lượng, dùng model tốt tương đương ở mọi profile.
+                      </p>
+
                       <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                         <input type="checkbox" checked={activeProfile.enableSecondaryModel || false}
                           onChange={e => updateField('enableSecondaryModel', e.target.checked)}

@@ -3,8 +3,20 @@ import { useEffect, lazy } from 'react';
 import { AppShell } from './components/layout/AppShell';
 import { CopilotPanel } from './components/copilot/CopilotPanel';
 import { useCardStore } from './store/cardStore';
+import { useSettingsStore } from './store/settingsStore';
+import { setPoolProfiles } from './lib/ai/client';
 import { ToastContainer } from './components/common/ToastContainer';
 import AICallMonitor from './components/common/AICallMonitor';
+
+/** Đồng bộ danh sách profile vào pool đa-provider của client (giữ luôn cập nhật). */
+function ProviderPoolSync() {
+  useEffect(() => {
+    const sync = () => setPoolProfiles(useSettingsStore.getState().profiles);
+    sync();
+    return useSettingsStore.subscribe(sync);
+  }, []);
+  return null;
+}
 
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const CardEditorPage = lazy(() => import('./pages/CardEditorPage').then(m => ({ default: m.CardEditorPage })));
@@ -60,6 +72,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppInit />
+      <ProviderPoolSync />
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/auto-creator" element={<AutoCreatorPage />} />

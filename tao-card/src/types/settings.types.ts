@@ -22,6 +22,10 @@ export interface ProxyProfile {
   cachedModelsAt: number | null;
   supportsNativeToolCalling: boolean | null;
   
+  // Đa provider: bật để profile này tham gia POOL chạy song song (rải call round-robin
+  // cùng profile đang active + các profile inPool khác → nhiều provider chạy cùng lúc).
+  inPool?: boolean;
+
   // Dual-model & concurrency options (inspired by Tawa Translate Tool)
   enableSecondaryModel?: boolean;
   secondaryModel?: string;
