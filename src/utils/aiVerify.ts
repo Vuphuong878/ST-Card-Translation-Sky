@@ -2779,3 +2779,221 @@ function parseAIVerifyResponse(text: string): { issues: VerifyIssue[]; summary: 
     };
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   REGEX — Pipeline GỘP Quét+Sửa: 4 giai đoạn, chunk deterministic, output XML
+   GĐ1 Plan(thinking) → GĐ2 So sánh chunk (song song) → GĐ3 Sửa field lỗi → GĐ4 Kiểm coverage
+   ═══════════════════════════════════════════════════════════════ */
+
+export interface RegexProcessProgress {
+  phase: 'plan' | 'compare' | 'fix' | 'coverage' | 'done' | 'cancelled';
+  phaseLabel: string;
+  done: number;
+  total: number;
+  issues: VerifyIssue[];
+  fixes: RegexFixResult[];
+}
+
+interface RegexChunk {
+  scriptIdx: number; scriptName: string; fieldPath: string;
+  fieldType: string; part: number; totalParts: number; origChunk: string; transChunk: string;
+}
+
+const _rgTag = (text: string, name: string): string => {
+  const closed = new RegExp(`<${name}>([\\s\\S]*?)</${name}>`, 'i').exec(text);
+  if (closed) return closed[1].replace(/^\n+|\n+$/g, '');
+  const open = new RegExp(`<${name}>([\\s\\S]*)`, 'i').exec(text);
+  return open ? open[1].replace(/^\n+/g, '').trim() : '';
+};
+const _rgAll = (text: string, name: string): string[] => {
+  const out: string[] = []; const re = new RegExp(`<${name}>([\\s\\S]*?)</${name}>`, 'gi');
+  let m: RegExpExecArray | null; while ((m = re.exec(text)) !== null) out.push(m[1].trim()); return out;
+};
+async function _rgPool<T>(items: T[], limit: number, fn: (it: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    for (;;) { const i = next++; if (i >= items.length) return; await fn(items[i]); }
+  }));
+}
+/** Chia text thành ĐÚNG p phần theo ranh giới DÒNG (p phải ≤ số dòng để không có phần rỗng).
+ *  Bảo đảm join('\n') == gốc (phủ hết, không sót/trùng). */
+function _splitByLines(text: string, p: number): string[] {
+  const lines = text.split('\n');
+  const L = lines.length;
+  if (p <= 1 || L <= 1) return [text];
+  const parts: string[] = [];
+  for (let k = 0; k < p; k++) {
+    const start = Math.floor((k * L) / p);
+    const end = Math.floor(((k + 1) * L) / p);
+    parts.push(lines.slice(start, end).join('\n'));
+  }
+  return parts;
+}
+function _regexFieldType(path: string): string {
+  return path.includes('replaceString') ? 'replaceString' : path.includes('findRegex') ? 'findRegex' : path.includes('trimStrings') ? 'trimStrings' : 'other';
+}
+function _regexIdxOf(path: string): number { const m = path.match(/regex_scripts\[(\d+)\]/); return m ? parseInt(m[1]) : -1; }
+
+/** Chia field regex thành chunk deterministic (theo dòng, phủ HẾT — không sót/trùng). */
+function chunkRegexFields(fields: TranslationField[]): { chunks: RegexChunk[]; regexFields: TranslationField[] } {
+  const CHUNK = 6000;
+  const regexFields = fields.filter(f => f.group === 'regex' && f.translated);
+  const chunks: RegexChunk[] = [];
+  for (const f of regexFields) {
+    const scriptIdx = _regexIdxOf(f.path);
+    const nameField = fields.find(nf => nf.path === `data.extensions.regex_scripts[${scriptIdx}].scriptName`);
+    const scriptName = nameField?.translated || nameField?.original || `regex[${scriptIdx}]`;
+    const fieldType = _regexFieldType(f.path);
+    const pDesired = Math.max(1, Math.ceil(Math.max(f.original.length, f.translated.length) / CHUNK));
+    // p ≤ số dòng của CẢ hai bản → orig & trans chia đúng p phần (căn nhau, không phần rỗng, phủ hết).
+    const p = Math.max(1, Math.min(pDesired, f.original.split('\n').length, f.translated.split('\n').length));
+    const oParts = _splitByLines(f.original, p);
+    const tParts = _splitByLines(f.translated, p);
+    const P = Math.min(oParts.length, tParts.length);
+    for (let k = 0; k < P; k++) {
+      chunks.push({ scriptIdx, scriptName, fieldPath: f.path, fieldType, part: k, totalParts: P, origChunk: oParts[k], transChunk: tParts[k] });
+    }
+  }
+  return { chunks, regexFields };
+}
+
+function _regexSpecialSignals(regexFields: TranslationField[]): string {
+  const sigs = new Set<string>();
+  for (const f of regexFields) {
+    const t = `${f.translated}\n${f.original}`;
+    if (/\bnew Map\(|\.set\(|=>\s*\{|\[\s*\{/.test(t)) sigs.add('Map/object/arrow-fn');
+    if (/[一-鿿]/.test(f.translated)) sigs.add('CÒN chữ Hán trong bản dịch');
+    if (/<style|class=|id=|data-[a-z-]+=/.test(t)) sigs.add('HTML/CSS');
+    if (/function |const |let |JSON\.|\.push\(/.test(t)) sigs.add('JavaScript');
+    if (/\{\{[^}]+\}\}|getvar|setvar/.test(t)) sigs.add('macro/getvar');
+  }
+  return [...sigs].join('; ') || 'không phát hiện ca đặc biệt';
+}
+
+const _balanced = (s: string, o: string, c: string) => s.split(o).length === s.split(c).length;
+
+/**
+ * Pipeline GỘP quét+sửa regex (1 nút). Trả issues + fixes; áp fix qua callback applyFix.
+ */
+export async function aiRegexProcess(
+  fields: TranslationField[],
+  config: ProxySettings,
+  targetLang: string,
+  mvuDictionary: Record<string, string>,
+  _sourceLang: string,
+  applyFix: (fieldPath: string, newTranslated: string) => void,
+  onProgress: (p: RegexProcessProgress) => void,
+  signal?: AbortSignal,
+): Promise<{ issues: VerifyIssue[]; fixes: RegexFixResult[]; planNotes: string }> {
+  const { chunks, regexFields } = chunkRegexFields(fields);
+  const issues: VerifyIssue[] = [];
+  const fixes: RegexFixResult[] = [];
+  let planNotes = '';
+  const mvuBlock = Object.keys(mvuDictionary).length
+    ? `\nMVU Dictionary:\n${Object.entries(mvuDictionary).slice(0, 50).map(([k, v]) => `  "${k}" → "${v}"`).join('\n')}` : '';
+
+  if (regexFields.length === 0) {
+    onProgress({ phase: 'done', phaseLabel: 'Không có regex đã dịch để xử lý.', done: 0, total: 0, issues, fixes });
+    return { issues, fixes, planNotes };
+  }
+
+  // ── GĐ1: Plan + thinking ──
+  onProgress({ phase: 'plan', phaseLabel: 'Giai đoạn 1: Quét + lập plan (thinking)…', done: 0, total: 1, issues, fixes });
+  try {
+    const sys = `Bạn là chuyên gia kiểm định bản dịch REGEX script SillyTavern (HTML/CSS/JS + macro). TƯ DUY trước rồi lập plan.
+Xuất ĐÚNG XML (không markdown):
+<thinking>Với các ca ĐẶC BIỆT (Map/object literal, CÒN chữ Hán trong bản dịch, code JS, macro {{...}}) thì kiểm & sửa thế nào để KHÔNG phá code/logic.</thinking>
+<plan>Các LƯU Ý ngắn gọn (gạch đầu dòng) để áp khi so sánh gốc↔dịch từng chunk.</plan>`;
+    const user = `Regex field đã dịch: ${regexFields.length} (chia ${chunks.length} chunk). Ngôn ngữ đích: ${targetLang}.
+Tín hiệu ca đặc biệt: ${_regexSpecialSignals(regexFields)}.${mvuBlock}`;
+    const resp = await callLLM(config, sys, user, signal);
+    planNotes = (_rgTag(resp, 'plan') || _rgTag(resp, 'thinking') || '').slice(0, 2000);
+  } catch (e) {
+    if (signal?.aborted) { onProgress({ phase: 'cancelled', phaseLabel: 'Đã hủy.', done: 0, total: 0, issues, fixes }); return { issues, fixes, planNotes }; }
+  }
+
+  // ── GĐ2: So sánh chunk (song song) ──
+  let cmpDone = 0;
+  onProgress({ phase: 'compare', phaseLabel: `Giai đoạn 2: So sánh ${chunks.length} chunk…`, done: 0, total: chunks.length, issues, fixes });
+  await _rgPool(chunks, 6, async (ch) => {
+    if (signal?.aborted) return;
+    const label = `regex[${ch.scriptIdx}] ${ch.scriptName}${ch.totalParts > 1 ? ` (phần ${ch.part + 1}/${ch.totalParts})` : ''}`;
+    const sys = `Bạn kiểm bản dịch 1 ĐOẠN regex script. So GỐC ↔ DỊCH, chỉ liệt kê LỖI thật (không bịa).
+LƯU Ý (plan): ${planNotes || '(không có)'}
+Quy tắc: KHÔNG dịch class/id/tên hàm/biến JS, attribute HTML, \${...}, macro {{...}}; ngoặc {}[]() phải cân; findRegex phải là /…/flags; text tự nhiên KHÔNG còn chữ Hán.${mvuBlock}
+Xuất ĐÚNG XML:
+<issues><issue><sev>error|warning</sev><desc>lỗi gì</desc><snippet>đoạn dịch bị lỗi</snippet><fix>nên sửa thành gì</fix></issue></issues>
+Nếu không lỗi: <issues></issues>`;
+    const user = `Field: ${ch.fieldType} — ${label}\n\nGỐC:\n${ch.origChunk}\n\nDỊCH (${targetLang}):\n${ch.transChunk}`;
+    try {
+      const resp = await callLLM(config, sys, user, signal);
+      for (const raw of _rgAll(_rgTag(resp, 'issues') || resp, 'issue')) {
+        const sev = (_rgTag(raw, 'sev') || 'warning').toLowerCase().includes('err') ? 'error' : 'warning';
+        issues.push({
+          id: crypto.randomUUID(), severity: sev, location: label,
+          description: _rgTag(raw, 'desc'), original: _rgTag(raw, 'snippet'), current: _rgTag(raw, 'snippet'),
+          suggestion: _rgTag(raw, 'fix'), autoFixable: true, fixPath: ch.fieldPath,
+        });
+      }
+    } catch (e) {
+      if (!signal?.aborted) issues.push({ id: crypto.randomUUID(), severity: 'info', location: label, description: `So sánh lỗi: ${(e as Error)?.message?.slice(0, 120)}`, original: '', current: '', suggestion: '', autoFixable: false });
+    }
+    cmpDone++;
+    onProgress({ phase: 'compare', phaseLabel: `Giai đoạn 2: So sánh ${cmpDone}/${chunks.length} chunk…`, done: cmpDone, total: chunks.length, issues: [...issues], fixes });
+  });
+  if (signal?.aborted) { onProgress({ phase: 'cancelled', phaseLabel: 'Đã hủy.', done: cmpDone, total: chunks.length, issues, fixes }); return { issues, fixes, planNotes }; }
+
+  // ── GĐ3: Sửa field lỗi (song song, chỉ phần lỗi) ──
+  const issuesByField = new Map<string, VerifyIssue[]>();
+  for (const iss of issues) {
+    if (!iss.fixPath || iss.severity === 'info') continue;
+    if (!issuesByField.has(iss.fixPath)) issuesByField.set(iss.fixPath, []);
+    issuesByField.get(iss.fixPath)!.push(iss);
+  }
+  const fixTargets = [...issuesByField.keys()];
+  let fixDone = 0;
+  onProgress({ phase: 'fix', phaseLabel: `Giai đoạn 3: Sửa ${fixTargets.length} field lỗi…`, done: 0, total: fixTargets.length, issues, fixes });
+  await _rgPool(fixTargets, 4, async (fp) => {
+    if (signal?.aborted) return;
+    const field = fields.find(f => f.path === fp);
+    if (!field?.translated) { fixDone++; return; }
+    const fieldType = _regexFieldType(fp);
+    const fIssues = issuesByField.get(fp)!;
+    const issueDesc = fIssues.map((i, k) => `${k + 1}. [${i.severity}] ${i.description}${i.suggestion ? ` → ${i.suggestion}` : ''}`).join('\n');
+    const sys = `Bạn SỬA lỗi bản dịch 1 field regex. CHỈ sửa các lỗi liệt kê, KHÔNG đổi gì khác.
+KHÔNG dịch class/id/tên hàm/biến/attribute/\${...}/macro; giữ ngoặc cân; findRegex = /…/flags; xóa dấu thừa/format sai; bỏ chữ Hán sót trong text tự nhiên.${mvuBlock}
+Xuất ĐÚNG XML, đặt TOÀN BỘ field đã sửa trong tag (không markdown, không escape):
+<fixed>...toàn bộ field đã sửa...</fixed>`;
+    const user = `Field ${fieldType} của "${field.label}".\n\nGỐC:\n${field.original}\n\nDỊCH HIỆN TẠI (${targetLang}):\n${field.translated}\n\nLỖI CẦN SỬA:\n${issueDesc}`;
+    try {
+      const resp = await callLLM(config, sys, user, signal);
+      const fixed = _rgTag(resp, 'fixed');
+      const cur = field.translated;
+      const rIdx = _regexIdxOf(fp);
+      if (!fixed) { fixDone++; return; }
+      const ratio = fixed.length / Math.max(1, cur.length);
+      const validRegex = fieldType !== 'findRegex' || /^\/[\s\S]*\/[a-z]*$/.test(fixed.trim());
+      const ok = ratio >= 0.4 && ratio <= 2.5 && _balanced(fixed, '{', '}') && _balanced(fixed, '[', ']') && _balanced(fixed, '(', ')') && validRegex;
+      if (ok && fixed !== cur) {
+        applyFix(fp, fixed);
+        fixes.push({ regexIndex: rIdx, scriptName: field.label, fieldPath: fp, fieldType: fieldType as RegexFixResult['fieldType'], success: true, before: cur, after: fixed, reason: `Đã sửa ${fIssues.length} lỗi` });
+      } else {
+        fixes.push({ regexIndex: rIdx, scriptName: field.label, fieldPath: fp, fieldType: fieldType as RegexFixResult['fieldType'], success: false, before: cur, after: fixed, reason: !ok ? 'Validate thất bại (ngoặc/độ dài/regex) — giữ bản cũ' : 'Không thay đổi' });
+      }
+    } catch { /* bỏ qua field lỗi call */ }
+    fixDone++;
+    onProgress({ phase: 'fix', phaseLabel: `Giai đoạn 3: Sửa ${fixDone}/${fixTargets.length} field…`, done: fixDone, total: fixTargets.length, issues, fixes: [...fixes] });
+  });
+  if (signal?.aborted) { onProgress({ phase: 'cancelled', phaseLabel: 'Đã hủy.', done: fixDone, total: fixTargets.length, issues, fixes }); return { issues, fixes, planNotes }; }
+
+  // ── GĐ4: Kiểm mốc chunk / coverage ──
+  onProgress({ phase: 'coverage', phaseLabel: 'Giai đoạn 4: Kiểm mốc chunk (coverage)…', done: 0, total: 1, issues, fixes });
+  const covered = new Set(chunks.map(c => c.fieldPath));
+  const missed = regexFields.filter(f => !covered.has(f.path));
+  if (missed.length) {
+    issues.push({ id: crypto.randomUUID(), severity: 'warning', location: 'coverage', description: `${missed.length} field regex bị bỏ sót khi chia chunk — cần kiểm tay: ${missed.map(f => f.label).slice(0, 5).join(', ')}`, original: '', current: '', suggestion: '', autoFixable: false });
+  }
+
+  onProgress({ phase: 'done', phaseLabel: `Xong: ${issues.filter(i => i.severity === 'error').length} lỗi, ${fixes.filter(f => f.success).length} field đã sửa.`, done: 1, total: 1, issues, fixes });
+  return { issues, fixes, planNotes };
+}

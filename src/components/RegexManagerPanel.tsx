@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
 import { useT } from '../i18n/useLocale';
 import { X, Regex, Languages, Save, Check, Loader2, Sparkles, RefreshCw, Copy, Trash2, StopCircle, CircleStop, Code2, Play, CheckCircle2, Search, Wrench } from 'lucide-react';
 import type { RegexScript } from '../types/card';
-import { aiRegexScan, aiRegexFixAll } from '../utils/aiVerify';
-import type { VerifyIssue, RegexFixResult, RegexScanProgress } from '../utils/aiVerify';
+import { aiRegexScan, aiRegexFixAll, aiRegexProcess } from '../utils/aiVerify';
+import type { VerifyIssue, RegexFixResult, RegexScanProgress, RegexProcessProgress } from '../utils/aiVerify';
 import AiCompanionPanel from './AiCompanionPanel';
 import ExternalLinkTab from './ExternalLinkTab';
 
@@ -181,6 +181,10 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
   const [regexScanProgress, setRegexScanProgress] = useState<RegexScanProgress | null>(null);
   const [regexFixProgress, setRegexFixProgress] = useState('');
   const regexAbortRef = React.useRef<AbortController | null>(null);
+  // ─── Pipeline gộp Quét+Sửa (4 giai đoạn) ───
+  const [isRegexAuto, setIsRegexAuto] = useState(false);
+  const [regexAutoProgress, setRegexAutoProgress] = useState<RegexProcessProgress | null>(null);
+  const regexAutoAbortRef = useRef<AbortController | null>(null);
 
   const isVi = (t as any)._lang === 'vi';
 
@@ -254,6 +258,43 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
       regexAbortRef.current = null;
     }
   }, [regexIssues, fields, proxy, translationConfig, addLog, addToast, isVi, t]);
+
+  // ─── Pipeline GỘP: Quét + Sửa (4 giai đoạn: plan → so sánh chunk → sửa → coverage) ───
+  const handleRegexAuto = useCallback(async () => {
+    setIsRegexAuto(true);
+    setRegexIssues([]);
+    setRegexFixResults([]);
+    setRegexAutoProgress(null);
+    const abort = new AbortController();
+    regexAutoAbortRef.current = abort;
+    try {
+      addLog('active', '🔧 Quét & Sửa Regex (AI) — bắt đầu pipeline 4 giai đoạn...');
+      const { issues, fixes } = await aiRegexProcess(
+        fields, proxy, translationConfig.targetLanguage,
+        translationConfig.mvuDictionary, translationConfig.sourceLanguage,
+        (fieldPath, newTranslated) => updateField(fieldPath, { translated: newTranslated, status: 'done' }),
+        (p) => setRegexAutoProgress({ ...p, issues: [...p.issues], fixes: [...p.fixes] }),
+        abort.signal,
+      );
+      setRegexIssues(issues);
+      setRegexFixResults(fixes);
+      const errCount = issues.filter(i => i.severity === 'error').length;
+      const fixedCount = fixes.filter(f => f.success).length;
+      addLog('success', `✅ Regex: ${errCount} lỗi, đã sửa ${fixedCount} field.`);
+      addToast('success', `Regex: ${errCount} lỗi · sửa ${fixedCount} field`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!abort.signal.aborted) addToast('error', `Quét & Sửa regex lỗi: ${msg}`);
+    } finally {
+      setIsRegexAuto(false);
+      regexAutoAbortRef.current = null;
+    }
+  }, [fields, proxy, translationConfig, updateField, addLog, addToast]);
+
+  const handleCancelRegexAuto = useCallback(() => {
+    regexAutoAbortRef.current?.abort();
+    addLog('warning', '🛑 Đã hủy Quét & Sửa Regex.');
+  }, [addLog]);
 
   // ─── Build field rows from store fields (reactive to translation progress) ───
   const fieldRows = useMemo((): (RegexFieldRow & { path: string })[] => {
@@ -525,74 +566,42 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
               </div>
             )}
             
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {!isRegexScanning ? (
-                <button
-                  onClick={handleRegexScan}
-                  style={{
-                    flex: 1,
-                    padding: '6px 8px',
-                    background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 'var(--radius-sm)',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <Search size={12} /> Quét
-                </button>
-              ) : (
-                <button
-                  onClick={handleCancelRegexScan}
-                  style={{
-                    flex: 1,
-                    padding: '6px 8px',
-                    background: 'rgba(255, 82, 82, 0.1)',
-                    border: '1px solid rgba(255, 82, 82, 0.2)',
-                    borderRadius: 'var(--radius-sm)',
-                    color: 'var(--accent-danger)',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Dừng
-                </button>
-              )}
-
+            {/* 1 nút: Quét & Sửa (pipeline 4 giai đoạn) */}
+            {!isRegexAuto ? (
               <button
-                onClick={handleRegexFix}
-                disabled={regexIssues.length === 0 || isRegexScanning || isRegexFixing}
+                onClick={handleRegexAuto}
+                title="Chạy pipeline: quét+lập plan → so sánh theo chunk (song song) → sửa lỗi → kiểm mốc"
                 style={{
-                  flex: 1,
-                  padding: '6px 8px',
-                  background: regexIssues.length > 0 ? 'rgba(76, 175, 80, 0.1)' : 'var(--bg-secondary)',
-                  border: regexIssues.length > 0 ? '1px solid rgba(76, 175, 80, 0.2)' : '1px solid transparent',
-                  borderRadius: 'var(--radius-sm)',
-                  color: regexIssues.length > 0 ? 'var(--accent-success)' : 'var(--text-muted)',
-                  fontSize: '0.75rem',
-                  cursor: regexIssues.length > 0 && !isRegexFixing ? 'pointer' : 'not-allowed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px'
+                  padding: '8px', background: 'rgba(124,106,240,0.12)', border: '1px solid var(--accent-primary)',
+                  borderRadius: 'var(--radius-sm)', color: 'var(--accent-primary)', fontSize: '0.78rem', fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                 }}
               >
-                {isRegexFixing ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Wrench size={12} />} 
-                Sửa
+                <Wrench size={13} /> Quét &amp; Sửa Regex (AI)
               </button>
-            </div>
-            {regexFixProgress && (
-              <div style={{ fontSize: '0.65rem', color: 'var(--accent-success)', textAlign: 'center' }}>
-                {regexFixProgress}
+            ) : (
+              <button
+                onClick={handleCancelRegexAuto}
+                style={{
+                  padding: '8px', background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                  borderRadius: 'var(--radius-sm)', color: 'var(--accent-danger)', fontSize: '0.78rem', fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                }}
+              >
+                <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Dừng
+              </button>
+            )}
+            {regexAutoProgress && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{regexAutoProgress.phaseLabel}</div>
+                {regexAutoProgress.total > 0 && regexAutoProgress.phase !== 'done' && (
+                  <div className="progress-track" style={{ height: '4px' }}>
+                    <div className="progress-fill" style={{ width: `${Math.round((regexAutoProgress.done / Math.max(1, regexAutoProgress.total)) * 100)}%` }} />
+                  </div>
+                )}
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                  {regexAutoProgress.issues.filter(i => i.severity === 'error').length} lỗi · đã sửa {regexAutoProgress.fixes.filter(f => f.success).length} field
+                </div>
               </div>
             )}
           </div>
