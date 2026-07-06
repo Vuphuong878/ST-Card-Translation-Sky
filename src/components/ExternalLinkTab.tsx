@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
 import { Code2, Play, Loader2, Trash2, CheckCircle2, Copy, Check, X, Globe } from 'lucide-react';
 import { publishToGithub } from '../utils/githubApi';
+import { safeSetItem } from '../utils/safeStorage';
 
 const renderSafeHtml = (htmlContent: string) => {
   return `
@@ -38,10 +39,10 @@ export default function ExternalLinkTab() {
   const [publishUrl, setPublishUrl] = useState('');
   const [cdnUrl, setCdnUrl] = useState('');
 
-  useEffect(() => { localStorage.setItem('custom-external-input', input); }, [input]);
-  useEffect(() => { localStorage.setItem('gh-token', ghToken); }, [ghToken]);
-  useEffect(() => { localStorage.setItem('gh-repo', ghRepo); }, [ghRepo]);
-  useEffect(() => { localStorage.setItem('gh-branch', ghBranch); }, [ghBranch]);
+  useEffect(() => { safeSetItem('custom-external-input', input); }, [input]);
+  useEffect(() => { safeSetItem('gh-token', ghToken); }, [ghToken]);
+  useEffect(() => { safeSetItem('gh-repo', ghRepo); }, [ghRepo]);
+  useEffect(() => { safeSetItem('gh-branch', ghBranch); }, [ghBranch]);
 
   const fieldPath = 'custom_external_link';
   const field = fields.find(f => f.path === fieldPath);

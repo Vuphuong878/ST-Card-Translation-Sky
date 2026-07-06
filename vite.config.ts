@@ -22,6 +22,28 @@ const readJsonBody = (req: import('http').IncomingMessage): Promise<any> =>
     req.on('error', () => resolve(null));
   });
 
+// ─── Same-origin guard (chống CSRF) ───
+// Các endpoint dev-server dưới đây gây SIDE-EFFECT (git pull/reset, ghi file, hoặc proxy tới
+// đích tuỳ ý). Chúng bị gọi bằng POST/GET đơn giản nên MỘT WEBSITE BẤT KỲ đang mở trong cùng
+// trình duyệt có thể kích hoạt side-effect qua fetch cross-origin (dù CORS chặn ĐỌC kết quả).
+// Nguy hiểm nhất: /api/downgrade chạy `git reset --hard HEAD~1` → mất việc chưa commit.
+// Vì app tự gọi các API này là SAME-ORIGIN (localhost:5173), ta chỉ cần chặn khi request mang
+// Origin/Referer của một site khác. Same-origin GET thường không có Origin → vẫn cho qua.
+const ALLOWED_HOSTS = new Set(['localhost:5173', '127.0.0.1:5173']);
+const isSameOrigin = (req: import('http').IncomingMessage): boolean => {
+  const origin = req.headers.origin;
+  if (origin) {
+    try { return ALLOWED_HOSTS.has(new URL(origin).host); } catch { return false; }
+  }
+  // Không có Origin (same-origin GET, hoặc client không phải trình duyệt): kiểm tra thêm Referer nếu có.
+  const referer = req.headers.referer;
+  if (referer) {
+    try { return ALLOWED_HOSTS.has(new URL(referer).host); } catch { return false; }
+  }
+  // Không Origin lẫn Referer → coi là same-origin/công cụ nội bộ, cho qua.
+  return true;
+};
+
 export default defineConfig({
   plugins: [
     react(),
@@ -49,8 +71,23 @@ export default defineConfig({
         });
 
         server.middlewares.use(async (req, res, next) => {
-          // ─── Translation progress cache: save / load / list / delete (filesystem) ───
           const url = req.url || '';
+
+          // ─── Chặn CSRF cho các route gây side-effect (git, ghi file, proxy tuỳ ý) ───
+          // Chỉ chấp nhận khi request đến từ chính app (same-origin). Đọc dữ liệu vô hại
+          // (/api/check-update, /api/progress/load|list) không chặn.
+          const isMutating =
+            url === '/api/update' || url === '/api/downgrade' ||
+            url === '/api/dump-config' || url === '/api/debug-log' ||
+            url === '/api/progress/save' || url === '/api/progress/delete' ||
+            url.startsWith('/api-proxy/custom/');
+          if (isMutating && !isSameOrigin(req)) {
+            res.writeHead(403, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ ok: false, error: 'Bị chặn: request cross-origin không được phép gọi endpoint này (chống CSRF).' }));
+            return;
+          }
+
+          // ─── Translation progress cache: save / load / list / delete (filesystem) ───
           if (url.startsWith('/api/progress/')) {
             try {
               ensureProgressDir();

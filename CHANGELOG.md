@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.27.0 — Audit: củng cố bảo mật + độ bền (không đổi tính năng)
+Rà soát toàn bộ Project + 5 app, sửa các điểm rủi ro/nợ kỹ thuật:
+- **Bảo mật dev-server (chống CSRF):** các endpoint gây side-effect (`/api/update`, `/api/downgrade`, `/api/dump-config`, `/api/debug-log`, `/api/progress/save|delete`, `/api-proxy/custom`) nay **chỉ chấp nhận request same-origin**. Trước đây một website bất kỳ đang mở trong cùng trình duyệt có thể lén gọi `git reset --hard` (mất việc chưa commit) — nay bị chặn.
+- **Chống vỡ khi tràn localStorage:** bọc an toàn mọi `localStorage.setItem` (chat dài / file đính kèm lớn vượt ~5MB trước đây ném lỗi làm **vỡ giao diện**, nay chỉ cảnh báo nhẹ và tiếp tục).
+- **Vệ sinh repo:** gỡ thư mục rác `_dev-scratch/` (19 file) khỏi git + thêm vào `.gitignore`.
+- **Build:** gỡ 1 cảnh báo `INEFFECTIVE_DYNAMIC_IMPORT` (bỏ dynamic-import thừa của `apiClient` trong `aiVerify`); cảnh báo còn lại ở `surgical` là do circular-dep, giữ nguyên có chủ đích.
+
 ## v1.26.0 — Hub tự quét cập nhật 30' + fix export nhiều nhân vật + tooltip nút
 - **Hub tự kiểm tra cập nhật mỗi 30 phút**: nếu có commit mới hơn lần bạn đã bỏ qua → tự bật popup báo. Không làm phiền lặp lại cùng một bản; không đè lúc đang cập nhật.
 - **[Trích Card] Fix xuất thẻ nhiều nhân vật** (feedback PhatSiz): trước đây tạo 39 nhân vật 1 lượt thì cả 39 bị **nhồi hết vào ô Mô tả** của 1 thẻ. Nay **mỗi nhân vật thành 1 mục Lorebook riêng**, kích hoạt theo **tên + tên gốc + biệt danh**, để test/bật từng nhân vật độc lập. Ô Mô tả dùng bối cảnh chung (nếu có) hoặc ghi chú danh sách. Thẻ 1 nhân vật giữ nguyên như cũ.

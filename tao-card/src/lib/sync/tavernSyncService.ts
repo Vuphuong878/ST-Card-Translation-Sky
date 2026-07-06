@@ -7,6 +7,7 @@ import type { CharacterCardV3 } from '../../types/card.types';
 import type { SyncSettings, SyncResult, SyncEvent, SyncConnectionStatus, STCharacterInfo } from './syncTypes';
 import { DEFAULT_SYNC_SETTINGS } from './syncTypes';
 import { createAdapter, type SyncAdapter } from './adapters';
+import { safeSetItem } from '../safeStorage';
 
 const STORAGE_KEY = 'tavern_sync_settings';
 
@@ -39,7 +40,7 @@ class TavernSyncService {
 
   updateSettings(patch: Partial<SyncSettings>): void {
     this.settings = { ...this.settings, ...patch };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings));
+    safeSetItem(STORAGE_KEY, JSON.stringify(this.settings));
   }
 
   // ─── Connection ─────────────────────────────────────────────────

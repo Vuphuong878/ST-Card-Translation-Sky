@@ -24,3 +24,7 @@ card-progress/
 
 # Next.js build output (mod-card)
 .next/
+
+# Local dev scratch: EJS dumps, message drafts, diffs — never part of the app
+_dev-scratch/
+translation_debug.log

@@ -5,6 +5,7 @@ import Editor from '@monaco-editor/react';
 import { X, Copy, Save, Plus, Book, Sparkles, Upload, FileJson, ArrowRight, AlertTriangle, Check, Send, RotateCcw, PenTool, Cpu, Trash2 } from 'lucide-react';
 import type { CharacterBookEntry } from '../types/card';
 import { callProvider } from '../utils/apiClient';
+import { safeSetItem } from '../utils/safeStorage';
 import { isWorldbookFormat } from '../utils/worldbookParser';
 import { extractTranslationFromResponse } from '../utils/masterPrompt';
 import MvuEjsToolkit from './MvuEjsToolkit';
@@ -339,7 +340,7 @@ export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
   });
 
   useEffect(() => {
-    localStorage.setItem('ejs_snippets', JSON.stringify(snippets));
+    safeSetItem('ejs_snippets', JSON.stringify(snippets));
   }, [snippets]);
 
   const [newSnipTitle, setNewSnipTitle] = useState('');

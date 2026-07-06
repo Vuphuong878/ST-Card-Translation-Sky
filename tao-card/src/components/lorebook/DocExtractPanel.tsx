@@ -16,6 +16,7 @@ import {
   type EntryCategory, type CardType,
 } from '../../lib/worldbook/worldbookConfig';
 import { DEFAULT_STEPS } from '../../lib/ai/worldbuildingDefaults';
+import { safeSetItem } from '../../lib/safeStorage';
 
 const POSITION_LABELS: Record<number, string> = {
   0: '↑ Before Char', 1: '↓ After Char', 2: '📝 Top AN',
@@ -56,7 +57,7 @@ export function DocExtractPanel() {
 
   // Đổi kích thước chunk → lưu lại + cập nhật số chunk hiển thị
   useEffect(() => {
-    localStorage.setItem('doc-extract-chunk-size', String(chunkSize));
+    safeSetItem('doc-extract-chunk-size', String(chunkSize));
     setFileInfo(prev => prev ? { ...prev, chunks: splitDocument(prev.text, { chunkSize }).length } : prev);
   }, [chunkSize]);
 

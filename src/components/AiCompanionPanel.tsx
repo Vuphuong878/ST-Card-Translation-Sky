@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from '
 import { useStore } from '../store';
 import { useT } from '../i18n/useLocale';
 import { callProvider } from '../utils/apiClient';
+import { safeSetItem } from '../utils/safeStorage';
 import { 
   X, Send, Code2, Copy, Trash2, Upload, Loader2, Settings, Plus, FileText, 
   Sparkles, Check, Download, AlertCircle, RefreshCw, Eye, Flame, RotateCcw,
@@ -1384,7 +1385,7 @@ export default function AiCompanionPanel({ onClose }: { onClose: () => void }) {
 
   // Save custom presets to localStorage
   useEffect(() => {
-    localStorage.setItem('regex_custom_presets', JSON.stringify(customPresets));
+    safeSetItem('regex_custom_presets', JSON.stringify(customPresets));
   }, [customPresets]);
 
   // Compute sandbox result
@@ -1438,19 +1439,19 @@ export default function AiCompanionPanel({ onClose }: { onClose: () => void }) {
 
   // Save changes to localStorage
   useEffect(() => {
-    localStorage.setItem('ai_assistant_messages', JSON.stringify(messages));
+    safeSetItem('ai_assistant_messages', JSON.stringify(messages));
   }, [messages]);
 
   useEffect(() => {
-    localStorage.setItem('ai_assistant_attached_files', JSON.stringify(attachedFiles));
+    safeSetItem('ai_assistant_attached_files', JSON.stringify(attachedFiles));
   }, [attachedFiles]);
 
   useEffect(() => {
-    localStorage.setItem('ai_assistant_nsfw', String(nsfwEnabled));
+    safeSetItem('ai_assistant_nsfw', String(nsfwEnabled));
   }, [nsfwEnabled]);
 
   useEffect(() => {
-    localStorage.setItem('ai_assistant_auto_retry', String(autoRetry));
+    safeSetItem('ai_assistant_auto_retry', String(autoRetry));
   }, [autoRetry]);
 
   // Scroll to bottom on new message
@@ -1492,7 +1493,7 @@ export default function AiCompanionPanel({ onClose }: { onClose: () => void }) {
     return localStorage.getItem('ai_assistant_auto_execute') === 'true';
   });
   useEffect(() => {
-    localStorage.setItem('ai_assistant_auto_execute', String(autoExecute));
+    safeSetItem('ai_assistant_auto_execute', String(autoExecute));
   }, [autoExecute]);
 
   // ─── Pending actions awaiting confirmation ───
@@ -2833,7 +2834,7 @@ function MvuZodTab() {
   const [mvuSelectedDocs, setMvuSelectedDocs] = useState<string[]>([]);
 
   useEffect(() => {
-    localStorage.setItem('ai_assistant_mvu_attached_files', JSON.stringify(mvuAttachedFiles));
+    safeSetItem('ai_assistant_mvu_attached_files', JSON.stringify(mvuAttachedFiles));
   }, [mvuAttachedFiles]);
 
   const handleMvuFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

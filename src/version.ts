@@ -2,5 +2,5 @@
 // BUMP `APP_VERSION` on every fix so builds are distinguishable in the UI (shown in the
 // sidebar header). Use the patch number for small fixes; keep `APP_VERSION_NOTE` to a one-line
 // summary of the most recent change (shown on hover).
-export const APP_VERSION = '1.26.0';
-export const APP_VERSION_NOTE = '[Hub + Trích Card] (1) Hub tự quét cập nhật mỗi 30 phút, có commit mới hơn thì bật popup báo (không lặp lại cùng 1 bản). (2) Trích Card: export nhiều nhân vật giờ tạo MỖI nhân vật 1 mục Lorebook riêng (kích hoạt theo tên) thay vì nhồi hết vào ô Mô tả — fix theo feedback PhatSiz. (3) 6 nút "Nội dung cần tạo" có icon ⓘ chú thích (rê chuột hoặc bấm).';
+export const APP_VERSION = '1.27.0';
+export const APP_VERSION_NOTE = '[Audit hardening] Củng cố bảo mật + độ bền theo đợt audit: (1) dev-server chặn CSRF same-origin cho các endpoint git/ghi-file/proxy (chống website khác lén gọi git reset --hard làm mất việc). (2) localStorage.setItem bọc an toàn — chat/file lớn tràn quota không còn làm vỡ giao diện. (3) Dọn rác _dev-scratch khỏi repo + gỡ 1 warning build (dynamic-import apiClient). Không đổi tính năng người dùng.';

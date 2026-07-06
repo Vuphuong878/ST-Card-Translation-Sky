@@ -2703,8 +2703,8 @@ If everything is correct, return: {"issues": [], "summary": "All functional elem
 ${sections.join('\n\n---\n\n')}`;
 
   try {
-    // Import callProvider dynamically to avoid circular dependencies
-    const { callProvider } = await import('./apiClient');
+    // callProvider is statically imported at the top of this file (no circular
+    // dependency: apiClient.ts does not import aiVerify.ts, directly or indirectly).
     const rotatedConfig = { ...config, temperature: 0.2 };
     const responseText = await callProvider(rotatedConfig, systemPrompt, userPrompt, signal);
 

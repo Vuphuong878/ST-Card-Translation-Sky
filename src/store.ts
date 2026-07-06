@@ -36,7 +36,11 @@ const LS = {
     }
   },
   set: (key: string, value: unknown) => {
-    localStorage.setItem(key, JSON.stringify(value));
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.warn('[store] localStorage.setItem failed (quota?)', key, e);
+    }
   },
 };
 
