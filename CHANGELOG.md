@@ -2,6 +2,9 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.29.1 — Dịch Card: chống giật khi dịch card lớn (giới hạn log)
+- Mảng log trong bộ nhớ trước đây **phình vô hạn** (mỗi field/chunk/retry thêm 1 dòng → hàng nghìn dòng với card lớn). Mỗi lần thêm phải copy + lọc cả mảng → **O(n²)**, khiến app **giật dần** về cuối lượt dịch và ăn RAM. Nay **giữ tối đa 800 dòng gần nhất** (panel vốn chỉ hiển thị 300 dòng cuối) → mượt đều, RAM ổn định.
+
 ## v1.29.0 — Dịch Card: gọn hiển thị lỗi 5xx + tự retry (không skip)
 Sửa 2 vấn đề user báo khi proxy trả lỗi **524 (Cloudflare timeout)**:
 - **Hiển thị lỗi bị xổ dài:** trước đây nhồi nguyên trang HTML lỗi của Cloudflare vào dòng lỗi → xổ dài cả màn hình. Nay message lỗi HTTP được **rút gọn ở nguồn** (trang HTML → chỉ lấy tiêu đề, vd `524: A timeout occurred`), cộng **line-clamp 3 dòng** + tooltip đầy đủ khi rê chuột.

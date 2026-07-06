@@ -865,9 +865,15 @@ export const useStore = create<AppState>((set) => ({
   logFilter: 'all',
   setLogFilter: (f) => set({ logFilter: f }),
   addLog: (level, message) =>
-    set((s) => ({
-      logs: [...s.logs, { id: crypto.randomUUID(), timestamp: Date.now(), level, message }],
-    })),
+    set((s) => {
+      // Giới hạn số dòng log giữ trong bộ nhớ. Dịch card lớn gọi addLog hàng nghìn lần
+      // (mỗi field/chunk/retry 1 dòng); nếu để mảng phình vô hạn thì mỗi lần append copy cả
+      // mảng + panel filter cả mảng → O(n²), gây giật dần về cuối. Panel chỉ hiển thị 300 dòng
+      // cuối nên giữ 800 là thừa cho mọi bộ lọc.
+      const MAX_LOGS = 800;
+      const next = [...s.logs, { id: crypto.randomUUID(), timestamp: Date.now(), level, message }];
+      return { logs: next.length > MAX_LOGS ? next.slice(next.length - MAX_LOGS) : next };
+    }),
   clearLogs: () => set({ logs: [] }),
 
   // ─── Toasts ───
