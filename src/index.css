@@ -27,8 +27,9 @@
   --accent-warning: #f0c46a;
   --accent-success: #6af08a;
 
-  --font-sans: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  /* Font thống nhất cho cả 5 app (xem đồng bộ ở tao-card / preset / mod-card / novalcard). */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'Be Vietnam Pro', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 
   --radius-sm: 6px;
   --radius-md: 10px;

@@ -63,6 +63,10 @@
   * {
     @apply border-border;
   }
+  /* Đồng bộ với Hub: root 14px để size text/spacing khớp cả 5 app. */
+  html {
+    font-size: 14px;
+  }
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }

@@ -3,6 +3,7 @@ import App from './App';
 import { FLOWS, type FlowDef } from './flows';
 import { RotateCw, ExternalLink } from 'lucide-react';
 import HubUpdateButton from './components/HubUpdateButton';
+import { APP_VERSION } from './version';
 
 const RAIL_WIDTH = 66;
 const LS_KEY = 'hub-active-flow';
@@ -30,53 +31,107 @@ export default function AppHub() {
   }, []);
 
   const iframeFlows = FLOWS.filter((f) => f.kind === 'iframe');
+  const activeFlow = FLOWS.find((f) => f.id === active);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
-      {/* ─── Flow rail ─── */}
-      <nav
-        style={{
-          width: RAIL_WIDTH,
-          flexShrink: 0,
-          background: 'var(--bg-secondary, #16161e)',
-          borderRight: '1px solid var(--border-subtle, #2a2a3e)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          padding: '10px 0',
-          gap: '6px',
-        }}
-      >
-        {FLOWS.map((f) => (
-          <RailButton key={f.id} flow={f} active={active === f.id} onClick={() => select(f.id)} />
-        ))}
-        {/* Update button — ngay dưới các luồng (tự tụt xuống nếu thêm luồng thứ 5, 6...) */}
-        <div style={{ height: 4 }} />
-        <HubUpdateButton />
-      </nav>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+      {/* ─── Header chung trên cả 5 app ─── */}
+      <GlobalHeader activeFlow={activeFlow} />
 
-      {/* ─── Content ─── */}
-      <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-        {/* Native translate tool — always mounted, hidden when inactive so it never stops */}
-        <div
+      {/* ─── Rail + Content ─── */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        {/* Flow rail */}
+        <nav
           style={{
-            position: 'absolute',
-            inset: 0,
-            overflow: 'auto',
-            display: active === 'translate' ? 'block' : 'none',
+            width: RAIL_WIDTH,
+            flexShrink: 0,
+            background: 'var(--bg-secondary, #16161e)',
+            borderRight: '1px solid var(--border-subtle, #2a2a3e)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: '10px 0',
+            gap: '6px',
           }}
         >
-          <App />
-        </div>
+          {FLOWS.map((f) => (
+            <RailButton key={f.id} flow={f} active={active === f.id} onClick={() => select(f.id)} />
+          ))}
+          {/* Update button — ngay dưới các luồng (tự tụt xuống nếu thêm luồng thứ 5, 6...) */}
+          <div style={{ height: 4 }} />
+          <HubUpdateButton />
+        </nav>
 
-        {/* Iframe tools — mounted on first visit, then kept alive */}
-        {iframeFlows.map((f) =>
-          visited.has(f.id) ? (
-            <IframeFlow key={f.id} flow={f} active={active === f.id} />
-          ) : null
-        )}
+        {/* Content */}
+        <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+          {/* Native translate tool — always mounted, hidden when inactive so it never stops */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              overflow: 'auto',
+              display: active === 'translate' ? 'block' : 'none',
+            }}
+          >
+            <App />
+          </div>
+
+          {/* Iframe tools — mounted on first visit, then kept alive */}
+          {iframeFlows.map((f) =>
+            visited.has(f.id) ? (
+              <IframeFlow key={f.id} flow={f} active={active === f.id} />
+            ) : null
+          )}
+        </div>
       </div>
     </div>
+  );
+}
+
+/** Header thương hiệu chung — nằm trên shell Hub nên hiển thị nhất quán trên cả 5 app. */
+function GlobalHeader({ activeFlow }: { activeFlow?: FlowDef }) {
+  return (
+    <header
+      style={{
+        flexShrink: 0,
+        height: 46,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '0 16px',
+        background: 'linear-gradient(90deg, var(--bg-secondary, #16161e) 0%, #191826 100%)',
+        borderBottom: '1px solid var(--border-subtle, #2a2a3e)',
+        fontFamily: 'var(--font-sans)',
+      }}
+    >
+      {/* Logo mark */}
+      <div
+        style={{
+          width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 15, fontWeight: 800, color: '#0f0f14',
+          background: 'linear-gradient(135deg, #7c6af0, #4ecdc4)',
+          boxShadow: '0 0 10px rgba(124,106,240,0.5)',
+        }}
+      >
+        ST
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+        <span style={{ fontSize: '0.98rem', fontWeight: 800, letterSpacing: 0.3, whiteSpace: 'nowrap',
+          background: 'linear-gradient(90deg, #a99cff, #4ecdc4)', WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          Silly Tavern Multitools
+        </span>
+        <span style={{ fontSize: '0.66rem', color: 'var(--text-muted, #9b98ae)' }}>v{APP_VERSION}</span>
+      </div>
+      {activeFlow && (
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6,
+          fontSize: '0.72rem', color: activeFlow.color || 'var(--text-secondary, #a09cb5)', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.95rem' }}>{activeFlow.emoji}</span>
+          <span>{activeFlow.label}</span>
+        </div>
+      )}
+    </header>
   );
 }
 
