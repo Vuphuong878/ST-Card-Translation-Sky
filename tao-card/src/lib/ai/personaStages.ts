@@ -16,6 +16,14 @@ export interface StagePersona {
   raw: string;
 }
 
+export interface PersonaOptions {
+  /** Tên nhân vật trong truyện sẽ ĐÓNG VAI {{user}} (người chơi). */
+  userReplaceName?: string;
+  /** Mô tả mối quan hệ giữa nhân vật (thẻ) và {{user}}. */
+  relationship?: string;
+  signal?: AbortSignal;
+}
+
 const SYSTEM_PROMPT = `Bạn là chuyên gia viết THẺ NHÂN VẬT SillyTavern, chuyên tạo "persona theo giai đoạn quan hệ".
 
 NHIỆM VỤ: Từ tư liệu nhân vật người dùng đưa, viết persona được CHIA THEO 3 GIAI ĐOẠN quan hệ với {{user}} (dựa trên mức thiện cảm), cộng phần xuyên suốt:
@@ -38,10 +46,23 @@ QUY TẮC:
 <stage_common>...nét xuyên suốt; để trống nếu không có...</stage_common>
 </multistage_persona>`;
 
-function buildUserMessage(seed: string): string {
+function buildUserMessage(seed: string, opts: PersonaOptions = {}): string {
+  const directives: string[] = [];
+  if (opts.userReplaceName?.trim()) {
+    const n = opts.userReplaceName.trim();
+    directives.push(
+      `[THAY BẰNG {{user}}] Trong truyện, nhân vật "${n}" chính là {{user}} (người chơi). ` +
+      `Persona bạn viết là của nhân vật CHÍNH (KHÔNG phải {{user}}). Mọi chỗ nhắc tới "${n}" hãy thay bằng macro {{user}}. ` +
+      `TUYỆT ĐỐI không mô tả nội tâm/hành động thay cho {{user}}; chỉ mô tả nhân vật chính phản ứng với {{user}}.`
+    );
+  }
+  if (opts.relationship?.trim()) {
+    directives.push(`[QUAN HỆ VỚI {{user}}] Persona phải thể hiện rõ mối quan hệ giữa nhân vật và {{user}}: ${opts.relationship.trim()}`);
+  }
   return [
     '【Tư liệu nhân vật】',
     'Hãy dựa CHỈ vào tư liệu dưới đây để viết persona theo giai đoạn. Không bịa thế giới quan ngoài lề, không viết cấu hình ghi thẻ.',
+    ...(directives.length ? ['', ...directives] : []),
     '',
     seed.trim(),
   ].join('\n');
@@ -71,16 +92,16 @@ export async function generateStagePersona(
   seed: string,
   profile: ProxyProfile,
   params: GenerationParams,
-  signal?: AbortSignal,
+  opts: PersonaOptions = {},
 ): Promise<StagePersona> {
   const { text } = await callAI({
     profile,
     params,
-    signal,
+    signal: opts.signal,
     label: 'Persona theo giai đoạn',
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: buildUserMessage(seed) },
+      { role: 'user', content: buildUserMessage(seed, opts) },
     ],
   });
   return parseStages(text);

@@ -22,6 +22,8 @@ export default function StagePersonaButton({
   const [seed, setSeed] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<StagePersona | null>(null);
+  const [userReplaceName, setUserReplaceName] = useState('');
+  const [relationship, setRelationship] = useState('');
 
   const activeProfile = settings.profiles.find((p) => p.id === settings.activeProfileId);
 
@@ -37,7 +39,10 @@ export default function StagePersonaButton({
     setLoading(true);
     setResult(null);
     try {
-      const r = await generateStagePersona(seed, activeProfile, settings.generationParams);
+      const r = await generateStagePersona(seed, activeProfile, settings.generationParams, {
+        userReplaceName: userReplaceName.trim() || undefined,
+        relationship: relationship.trim() || undefined,
+      });
       if (!r.early && !r.middle && !r.close) {
         toast.error('AI không trả về đúng định dạng. Thử lại hoặc đổi model.');
       }
@@ -85,6 +90,22 @@ export default function StagePersonaButton({
                   className="settings-input text-sm resize-y" style={{ width: '100%' }} disabled={loading}
                   placeholder="Dán mô tả nhân vật / trích đoạn truyện. AI sẽ chia persona theo 3 giai đoạn thân thiết + nét xuyên suốt." />
               </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#9b98ae', marginBottom: 4 }}>Nhân vật đóng vai {'{{user}}'} (tùy chọn)</div>
+                  <input value={userReplaceName} onChange={(e) => setUserReplaceName(e.target.value)} disabled={loading}
+                    className="settings-input text-sm" style={{ width: '100%' }}
+                    placeholder="Tên nhân vật sẽ thành {{user}}" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#9b98ae', marginBottom: 4 }}>Quan hệ với {'{{user}}'} (tùy chọn)</div>
+                  <input value={relationship} onChange={(e) => setRelationship(e.target.value)} disabled={loading}
+                    className="settings-input text-sm" style={{ width: '100%' }}
+                    placeholder="vd: thanh mai trúc mã, chủ - tớ..." />
+                </div>
+              </div>
+
               <button onClick={run} disabled={loading}
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md font-semibold"
                 style={{ background: loading ? '#3a3352' : '#a855f7', color: 'white', border: 'none', cursor: loading ? 'default' : 'pointer' }}>
