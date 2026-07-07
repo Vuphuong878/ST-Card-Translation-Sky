@@ -2,6 +2,11 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.36.1 — Trích Card: số luồng song song bám theo RPM
+- **Sửa lỗi kẹt 4 luồng**: `poolConcurrency` trước tính số luồng = (provider × số key × số model), **bỏ qua RPM** — nên đặt RPM 17 cho flash mà vẫn chỉ chạy 4 luồng.
+- Nay số luồng = **ngân sách RPM của (các) model dùng cho tác vụ** (sàn = số lane cũ, trần 20). Ví dụ: model phụ flash RPM 17, 1 key → ~17 luồng; 2 key → chạm trần 20.
+- Bước **Quét** truyền `tier` model phụ (flash) vào để số luồng phản ánh đúng lane flash; bước **Tạo thẻ** dùng ngân sách chung. RPM=0 (không đặt) → giữ hành vi cũ.
+
 ## v1.36.0 — Trích Card: sắp xếp + quét trùng lặp & tự gộp nhân vật
 Theo đề xuất client (PhatSiz) cho bước 3 (Chọn nhân vật):
 - **Sắp xếp danh sách**: ô chọn *Số lần xuất hiện (mặc định)* · *Tên A→Z* · *Vai (Chính→Phụ→NPC)*. Nhớ lựa chọn.

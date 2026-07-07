@@ -867,8 +867,21 @@ function resolveConn(charCount,tier){
   }
   const p=pool[_laneCursor%n]; _laneCursor=(_laneCursor+1)%n; const L=laneOrder(p,charCount,tier)[0]; _rlHit(_rlK(p.name,L.model)); return connFromProfile(p,L.model);
 }
-// Số lane song song đề xuất = tổng (provider × số key), giới hạn hợp lý.
-function poolConcurrency(){ let c=0; for(const p of poolProviders()){ c+=Math.max(1,profileKeys(p).length)*(String(p.secondaryModel||"").trim()?2:1); } return Math.max(1,Math.min(c,12)); }
+// Số lane song song đề xuất. Bám theo NGÂN SÁCH RPM của (các) model sẽ dùng cho `tier`:
+// RPM cao → cho phép nhiều luồng hơn (vd model phụ flash RPM 17 → tới ~17 luồng), thay vì
+// kẹt cứng ở (provider × key × model). Sàn = số lane thật (đảm bảo ≥ như trước); trần 20 để
+// không nổ đồng thời quá mức. RPM=0 (không đặt) → giữ hành vi cũ theo số lane.
+function poolConcurrency(tier){
+  let lanes=0, rpmSum=0, hasRpm=false;
+  for(const p of poolProviders()){
+    const kc=Math.max(1,profileKeys(p).length);
+    const order=laneOrder(p,null,tier);           // lane khả dụng cho tier này (đã ×kc ở rpm)
+    lanes += order.length*kc;
+    for(const L of order){ if(L.rpm>0){ hasRpm=true; rpmSum+=L.rpm; } }
+  }
+  const want = hasRpm ? Math.max(lanes,rpmSum) : lanes;
+  return Math.max(1,Math.min(want,20));
+}
 // tier cho bước QUÉT: 's' nếu bật "Quét bằng model phụ" → dùng model phụ (flash); ngược lại theo mặc định.
 function scanTier(){ const e=$("scanFlash"); return (e&&e.checked)?"s":undefined; }
 // Runner song song: chạy tối đa `conc` worker cùng lúc trên `items`.
@@ -1164,7 +1177,7 @@ $("scanBtn").onclick=async()=>{
   if(!scanState.okArr) scanState.okArr=new Array(cap).fill(false);
   const _spend=[]; for(let i=startI;i<cap;i++) if(!scanState.okArr[i]) _spend.push(i);
   let _scDone=scanState.okArr.filter(Boolean).length;
-  const _scConc=poolConcurrency();
+  const _scConc=poolConcurrency(scanTier());
   try{
     async function _scOne(i){
       if(signal.aborted) return;
