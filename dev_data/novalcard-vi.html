@@ -867,20 +867,51 @@ function resolveConn(charCount,tier){
   }
   const p=pool[_laneCursor%n]; _laneCursor=(_laneCursor+1)%n; const L=laneOrder(p,charCount,tier)[0]; _rlHit(_rlK(p.name,L.model)); return connFromProfile(p,L.model);
 }
-// Số lane song song đề xuất. Bám theo NGÂN SÁCH RPM của (các) model sẽ dùng cho `tier`:
-// RPM cao → cho phép nhiều luồng hơn (vd model phụ flash RPM 17 → tới ~17 luồng), thay vì
-// kẹt cứng ở (provider × key × model). Sàn = số lane thật (đảm bảo ≥ như trước); trần 20 để
-// không nổ đồng thời quá mức. RPM=0 (không đặt) → giữ hành vi cũ theo số lane.
+// Chờ nhịp RPM: trả về ms tới khi có ≥1 lane còn quota (0 = có ngay; lane không đặt RPM luôn có).
+function _msUntilSlot(charCount,tier){
+  const pool=poolProviders(), now=Date.now(); let soonest=Infinity, anyRpm=false;
+  for(const p of pool){
+    for(const L of laneOrder(p,charCount,tier)){
+      if(!(L.rpm>0)) return 0;                                  // lane không giới hạn → luôn có slot
+      anyRpm=true;
+      const k=_rlK(p.name,L.model);
+      const a=(_rlHits[k]||[]).filter(t=>now-t<60000); _rlHits[k]=a;
+      if(a.length<L.rpm) return 0;                              // còn quota ngay
+      soonest=Math.min(soonest, 60000-(now-a[0]));             // chờ hit cũ nhất rơi khỏi cửa sổ 60s
+    }
+  }
+  return anyRpm ? Math.max(50,soonest) : 0;
+}
+// Lấy 1 kết nối, TÔN TRỌNG RPM: nếu mọi lane đã đầy quota trong phút thì CHỜ (không bắn bừa),
+// nhờ đó luồng song song có thể cao (= tổng RPM) mà tổng call/phút vẫn không vượt RPM → tránh 429.
+async function acquireConn(charCount,tier,signal){
+  for(;;){
+    if(signal&&signal.aborted) return resolveConn(charCount,tier);   // để abort nổ ở fetch
+    const wait=_msUntilSlot(charCount,tier);
+    if(wait<=0) return resolveConn(charCount,tier);                   // resolveConn sẽ _rlHit lane còn quota
+    await new Promise(r=>setTimeout(r, Math.min(wait,1000)));
+  }
+}
+// Số lane song song = TỔNG NGÂN SÁCH RPM của (các) model dùng cho `tier` (RPM đã ×số key trong
+// laneOrder). Vd model phụ flash RPM 17, 3 key → 17×3 = 51 luồng bắn cùng lúc. Người dùng tự đặt
+// RPM/key dưới hạn thật của provider nên cứ để chạy full. Sàn = số lane thật; trần cứng 64 chỉ để
+// chặn cấu hình gõ nhầm (vd RPM 9999). RPM=0 (không đặt) → giữ hành vi cũ theo số lane.
+// Việc KHÔNG vượt RPM trong 1 phút do acquireConn() lo (chờ nhịp), nên trần cao vẫn an toàn.
+const POOL_CONC_CAP=64;
 function poolConcurrency(tier){
   let lanes=0, rpmSum=0, hasRpm=false;
   for(const p of poolProviders()){
     const kc=Math.max(1,profileKeys(p).length);
     const order=laneOrder(p,null,tier);           // lane khả dụng cho tier này (đã ×kc ở rpm)
     lanes += order.length*kc;
-    for(const L of order){ if(L.rpm>0){ hasRpm=true; rpmSum+=L.rpm; } }
+    // tier ÉP ('s' Quét=flash / 'p') → chỉ tính lane ƯU TIÊN (order[0]) để số luồng = đúng RPM
+    // model đó (vd flash 17×3=51), không phồng thêm vì RPM model fallback. tier mặc định (Tạo thẻ,
+    // trộn 2 model theo ngưỡng) → tính tổng cả 2. Fallback vẫn dùng được qua acquireConn.
+    const budgetLanes = tier ? order.slice(0,1) : order;
+    for(const L of budgetLanes){ if(L.rpm>0){ hasRpm=true; rpmSum+=L.rpm; } }
   }
   const want = hasRpm ? Math.max(lanes,rpmSum) : lanes;
-  return Math.max(1,Math.min(want,20));
+  return Math.max(1,Math.min(want,POOL_CONC_CAP));
 }
 // tier cho bước QUÉT: 's' nếu bật "Quét bằng model phụ" → dùng model phụ (flash); ngược lại theo mặc định.
 function scanTier(){ const e=$("scanFlash"); return (e&&e.checked)?"s":undefined; }
@@ -945,7 +976,7 @@ async function geminiStream(messages,{maxTokens,onDelta,signal,conn,meta}){
 }
 
 async function chat(messages, {maxTokens=1500, signal, charCount, conn, meta, tier}={}){
-  conn = conn || resolveConn(charCount, tier);
+  conn = conn || await acquireConn(charCount, tier, signal);
   if((conn.fmt||fmt())==="gemini") return geminiChat(messages,{maxTokens,signal,conn,meta});
   const res=await fetchWithTimeout(endpoint(conn),{
     method:"POST",signal,
@@ -1896,7 +1927,7 @@ function collectContext(name, extra){
 
 // ---------- 流式请求 ----------
 async function chatStream(messages,{maxTokens=4000,onDelta,signal,charCount,conn,meta,tier}={}){
-  conn = conn || resolveConn(charCount, tier);
+  conn = conn || await acquireConn(charCount, tier, signal);
   if((conn.fmt||fmt())==="gemini") return geminiStream(messages,{maxTokens,onDelta,signal,conn,meta});
   const res=await fetchWithTimeout(endpoint(conn),{
     method:"POST",signal,

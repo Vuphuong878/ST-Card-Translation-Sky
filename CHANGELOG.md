@@ -2,6 +2,11 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.36.2 — Trích Card: mở full luồng theo RPM + chờ nhịp chống 429
+- **Bỏ trần 20** → số luồng song song = **đúng tổng RPM của model đang dùng** (trần cứng 64 chỉ để chặn gõ nhầm). Mỗi API key thêm vào là cộng thẳng luồng: flash RPM 17 × 3 key → **51 luồng bắn cùng lúc**.
+- Bước **Quét** chỉ tính RPM **model phụ** (flash) cho số luồng (đúng "17+17+17"); model chính vẫn được dùng làm **dự phòng** khi flash cạn quota. Bước **Tạo thẻ** dùng ngân sách chung 2 model.
+- **Chờ nhịp RPM (`acquireConn`)**: khi mọi lane đã đầy quota trong 60s, lane **chờ** tới khi có slot thay vì bắn bừa. Nhờ đó luồng có thể rất cao mà **tổng call/phút vẫn không vượt RPM** → hạn chế 429. (RPM=0 = không giới hạn → chạy tự do như cũ.)
+
 ## v1.36.1 — Trích Card: số luồng song song bám theo RPM
 - **Sửa lỗi kẹt 4 luồng**: `poolConcurrency` trước tính số luồng = (provider × số key × số model), **bỏ qua RPM** — nên đặt RPM 17 cho flash mà vẫn chỉ chạy 4 luồng.
 - Nay số luồng = **ngân sách RPM của (các) model dùng cho tác vụ** (sàn = số lane cũ, trần 20). Ví dụ: model phụ flash RPM 17, 1 key → ~17 luồng; 2 key → chạm trần 20.
