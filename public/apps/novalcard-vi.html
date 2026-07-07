@@ -899,7 +899,8 @@ async function acquireConn(charCount,tier,signal){
 // RPM/key dưới hạn thật của provider nên cứ để chạy full. Sàn = số lane thật; trần cứng 64 chỉ để
 // chặn cấu hình gõ nhầm (vd RPM 9999). RPM=0 (không đặt) → giữ hành vi cũ theo số lane.
 // Việc KHÔNG vượt RPM trong 1 phút do acquireConn() lo (chờ nhịp), nên trần cao vẫn an toàn.
-const POOL_CONC_CAP=64;
+// (Trần 64 inline thẳng, KHÔNG dùng const top-level: init gọi updatePoolStatus()→poolConcurrency()
+//  ngay lúc load, sẽ chạy TRƯỚC dòng const → lỗi TDZ "Cannot access before initialization".)
 function poolConcurrency(tier){
   let lanes=0, rpmSum=0, hasRpm=false;
   for(const p of poolProviders()){
@@ -913,7 +914,7 @@ function poolConcurrency(tier){
     for(const L of budgetLanes){ if(L.rpm>0){ hasRpm=true; rpmSum+=L.rpm; } }
   }
   const want = hasRpm ? Math.max(lanes,rpmSum) : lanes;
-  return Math.max(1,Math.min(want,POOL_CONC_CAP));
+  return Math.max(1,Math.min(want,64));   // trần cứng 64 (inline — tránh TDZ khi init gọi sớm)
 }
 // tier cho bước QUÉT: 's' nếu bật "Quét bằng model phụ" → dùng model phụ (flash); ngược lại theo mặc định.
 function scanTier(){ const e=$("scanFlash"); return (e&&e.checked)?"s":undefined; }

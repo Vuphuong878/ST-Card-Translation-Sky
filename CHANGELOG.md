@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.36.4 — Trích Card: HOTFIX treo trang khi tải (regression 1.36.2)
+- **Triệu chứng**: import truyện xong không hiện nội dung, không đếm ký tự, các nút không phản hồi.
+- **Nguyên nhân**: v1.36.2 thêm `const POOL_CONC_CAP` (top-level) đặt SAU đoạn init gọi `applyProfileToFields()→updatePoolStatus()→poolConcurrency()`. Vì `const` không được hoisted (TDZ), lúc init chạy tới đã ném `ReferenceError: Cannot access 'POOL_CONC_CAP' before initialization` → **toàn bộ init dừng** → không gắn được listener (file input, ô đếm ký tự, các nút…).
+- **Sửa**: bỏ hằng số top-level, **inline thẳng số 64** trong `poolConcurrency` → hết TDZ.
+- Đã test lại: load không còn lỗi console; `poolStatus` render; nhập/import văn bản đếm ký tự đúng; nút Xóa/Làm lại, Quét hoạt động.
+- ⚠️ Ai đang chạy **1.36.2 hoặc 1.36.3** cập nhật ngay (2 bản đó dính lỗi này).
+
 ## v1.36.3 — Trích Card: nút "Xóa / Làm lại" ở mục 4 & 5
 Theo báo cáo client (PhatSiz): bấm tạo lại thì tool chỉ *"Tiếp tục tạo — bỏ qua các mục đã tạo"* nên cứ hiện kết quả cũ, không có cách làm lại từ đầu.
 - Thêm nút **"🗑 Xóa / Làm lại"** cạnh nút chính ở **mục 4 (Tạo thẻ)** và **mục 5 (Tạo Lorebook)**.
