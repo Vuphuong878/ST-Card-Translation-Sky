@@ -2,6 +2,14 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.35.0 — Mod Card: mod riêng Lorebook (không cần cả thẻ)
+Theo yêu cầu client (*add cả card vào ST bị lag → muốn mod & xuất riêng Lorebook*):
+- **Tải thẳng 1 file Lorebook** (JSON có `entries` — cả format ST `{entries:{...}}` lẫn array). Tool **tự nhận diện** card hay lorebook khi tải.
+- Chạy **đầy đủ chức năng mod** trên các mục lorebook (mở rộng/đào sâu, rule, prompt tùy chỉnh, đồng bộ từ khóa).
+- **Xuất RIÊNG Lorebook** (nút "⬇️ Tải Lorebook JSON") — **giữ đúng format gốc** (object/array, field `key`/`keys`, `uid` đều bảo toàn; chỉ nội dung/từ khóa được mod thay đổi) → import thẳng vào Worldbook của ST, không phải add cả thẻ.
+- Có badge **"📖 Chế độ Mod LOREBOOK"** khi đang ở mode này.
+- *Lưu ý:* đổi tên biến MVU-Zod cần schema (nằm trong script của thẻ) nên với lorebook rời không có sẵn — dùng mở rộng/rule/prompt tùy chỉnh (các chức năng chính) vẫn đủ.
+
 ## v1.34.0 — Trích Card: model riêng cho Quét vs Tạo thẻ
 Theo yêu cầu client (*"scan bằng flash cho nhanh, model scan với tạo khác nhau"*):
 - Thêm toggle **"⚡ Quét bằng model phụ (flash — nhanh)"** ở bước 3. Bật → **bước Quét** dùng **model phụ** của mỗi provider (thường là flash, nhanh & rẻ); **bước Tạo thẻ** vẫn dùng **model chính** (pro/chất lượng).

@@ -5,7 +5,7 @@ import { CardParser } from '../lib/parser';
 import { CardV3 } from '../types/card';
 
 interface FileUploaderProps {
-  onCardLoaded: (card: CardV3, rawJson?: string) => void;
+  onCardLoaded: (card: CardV3, rawJson?: string, isLorebook?: boolean) => void;
 }
 
 export default function FileUploader({ onCardLoaded }: FileUploaderProps) {
@@ -17,10 +17,10 @@ export default function FileUploader({ onCardLoaded }: FileUploaderProps) {
     reader.onload = (event) => {
       const result = event.target?.result as string;
       try {
-        const card = CardParser.parse(result);
-        onCardLoaded(card, result);
+        const { card, isLorebook } = CardParser.load(result);
+        onCardLoaded(card, result, isLorebook);
       } catch (err) {
-        alert('Lỗi parse file JSON. Đây có phải file SillyTavern V3?');
+        alert('Lỗi đọc file JSON. Cần là Character Card V3 hoặc file Lorebook (có "entries").\n' + (err as Error).message);
         console.error(err);
       }
     };
@@ -29,8 +29,8 @@ export default function FileUploader({ onCardLoaded }: FileUploaderProps) {
 
   return (
     <div className="p-8 border-2 border-dashed border-gray-400 rounded-lg text-center hover:bg-gray-100 transition-colors">
-      <h3 className="text-lg font-bold text-gray-950 mb-2">Tải thẻ nhân vật (Character Card JSON)</h3>
-      <p className="text-gray-800 font-semibold mb-4">Hỗ trợ định dạng SillyTavern V3</p>
+      <h3 className="text-lg font-bold text-gray-950 mb-2">Tải thẻ nhân vật HOẶC Lorebook (JSON)</h3>
+      <p className="text-gray-800 font-semibold mb-4">Character Card V3 → mod cả thẻ · Lorebook (có "entries") → mod & xuất riêng Lorebook</p>
       <input
         type="file"
         accept=".json"

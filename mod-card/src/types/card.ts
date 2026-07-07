@@ -124,4 +124,8 @@ export interface CardV3 {
   fav?: boolean;
   tags?: string[];
   data: CardV3Data;
+  /** Đánh dấu card này thực ra là 1 Lorebook standalone được BỌC để tái dùng pipeline mod. */
+  __lorebookOnly?: boolean;
+  /** Lorebook gốc (giữ nguyên format) để export lại đúng khi ở chế độ mod Lorebook. */
+  __lorebookRaw?: unknown;
 }

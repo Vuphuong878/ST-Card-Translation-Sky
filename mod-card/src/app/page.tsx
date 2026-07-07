@@ -80,9 +80,12 @@ export default function Home() {
   const [validationResult, setValidationResult] = usePersistedState<ValidationResult | null>('modcard.validationResult', null);
   const [isMvuCard, setIsMvuCard] = usePersistedState<boolean>('modcard.isMvuCard', false);
   const [mvuVariables, setMvuVariables] = usePersistedState<string[]>('modcard.mvuVariables', []);
+  // Chế độ mod chỉ Lorebook (import LB riêng → mod → xuất LB riêng, không đụng cả thẻ).
+  const [isLorebookOnly, setIsLorebookOnly] = usePersistedState<boolean>('modcard.isLorebookOnly', false);
 
-  const handleCardLoaded = (loadedCard: CardV3) => {
+  const handleCardLoaded = (loadedCard: CardV3, _raw?: string, isLorebook?: boolean) => {
     setCard(loadedCard);
+    setIsLorebookOnly(!!isLorebook);
     const mvu = CardParser.detectMvuZod(loadedCard);
     setIsMvuCard(mvu);
     if (mvu) {
@@ -242,11 +245,17 @@ export default function Home() {
 
   const handleDownload = () => {
     if (!moddedCard) return;
-    const blob = new Blob([JSON.stringify(moddedCard, null, 2)], { type: 'application/json' });
+    // Chế độ Lorebook: xuất RIÊNG lorebook (đúng format gốc), không phải cả thẻ.
+    const isLB = isLorebookOnly || (moddedCard as CardV3).__lorebookOnly;
+    const payload = isLB ? CardParser.unwrapLorebook(moddedCard) : moddedCard;
+    const name = isLB
+      ? ((moddedCard.data?.character_book?.name || moddedCard.data?.name || 'lorebook'))
+      : (moddedCard.data?.name || 'card');
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `MODDED_${moddedCard.data?.name || 'card'}.json`;
+    a.download = `${isLB ? 'LOREBOOK_MODDED' : 'MODDED'}_${name}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -281,19 +290,26 @@ export default function Home() {
             ) : (
               <div className="p-3 bg-green-50 border border-green-300 rounded text-sm">
                 <p className="font-bold text-green-950">✅ Đã tải: {card.data?.name || 'Vô danh'}</p>
+                {isLorebookOnly && (
+                  <span className="inline-block mt-1 mr-1 px-2 py-0.5 bg-amber-100 text-amber-950 border border-amber-400 rounded text-xs font-black">
+                    📖 Chế độ Mod LOREBOOK ({card.data?.character_book?.entries?.length || 0} mục) → xuất riêng Lorebook
+                  </span>
+                )}
                 {isMvuCard && (
                   <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-950 border border-purple-300 rounded text-xs font-black animate-pulse">
                     🧬 Kiến trúc RPG: MVU-ZOD Card
                   </span>
                 )}
-                <p className="text-green-900 text-xs mt-1 font-semibold truncate">
-                  {card.data?.description?.substring(0, 80)}...
-                </p>
-                <button 
-                  onClick={() => { setCard(null); setAnalysisResult(null); setIsMvuCard(false); setMvuVariables([]); setActiveTab('upload'); }}
+                {!isLorebookOnly && (
+                  <p className="text-green-900 text-xs mt-1 font-semibold truncate">
+                    {card.data?.description?.substring(0, 80)}...
+                  </p>
+                )}
+                <button
+                  onClick={() => { setCard(null); setAnalysisResult(null); setIsMvuCard(false); setMvuVariables([]); setIsLorebookOnly(false); setActiveTab('upload'); }}
                   className="mt-3 text-xs text-red-600 hover:underline"
                 >
-                  Tải thẻ khác
+                  Tải tệp khác
                 </button>
               </div>
             )}
@@ -515,7 +531,7 @@ export default function Home() {
                           onClick={handleDownload}
                           className="px-4 py-2 bg-emerald-600 text-white rounded font-medium hover:bg-emerald-700 shadow"
                         >
-                          ⬇️ Tải xuống JSON (Đã ghép Avatar)
+                          {isLorebookOnly ? '⬇️ Tải Lorebook JSON (riêng)' : '⬇️ Tải xuống JSON (Đã ghép Avatar)'}
                         </button>
                       </div>
 

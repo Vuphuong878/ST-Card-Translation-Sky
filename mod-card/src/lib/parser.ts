@@ -22,6 +22,71 @@ export class CardParser {
     }
   }
 
+  /** Nhận diện file là LOREBOOK standalone (có `entries`, không phải card có `spec`/`data`). */
+  static isLorebook(json: unknown): boolean {
+    const j = json as { spec?: unknown; data?: unknown; entries?: unknown };
+    return !!j && !j.spec && !j.data && j.entries != null &&
+      (Array.isArray(j.entries) || typeof j.entries === 'object');
+  }
+
+  /** Bọc Lorebook standalone thành CardV3 tối thiểu để tái dùng pipeline mod. Giữ raw để export lại đúng format. */
+  static wrapLorebook(raw: Record<string, unknown>): CardV3 {
+    const rawEntries = raw.entries;
+    const rawArr: Record<string, unknown>[] = Array.isArray(rawEntries)
+      ? rawEntries as Record<string, unknown>[]
+      : Object.values((rawEntries || {}) as Record<string, Record<string, unknown>>);
+    const entries = rawArr.map((e) => ({
+      ...e,
+      keys: Array.isArray(e.keys) ? e.keys : (Array.isArray(e.key) ? e.key : []),
+      content: typeof e.content === 'string' ? e.content : '',
+      comment: (e.comment ?? e.name ?? '') as string,
+    }));
+    const name = (raw.name as string) || 'Lorebook';
+    return {
+      spec: 'chara_card_v3', spec_version: '3.0', create_date: new Date().toISOString(), name,
+      data: {
+        name, description: '', personality: '', scenario: '', first_mes: '', mes_example: '',
+        creator_notes: '', system_prompt: '', post_history_instructions: '', tags: [], creator: '',
+        character_version: '1.0', alternate_greetings: [], extensions: {},
+        character_book: { name, entries },
+      },
+      __lorebookOnly: true, __lorebookRaw: raw,
+    } as unknown as CardV3;
+  }
+
+  /** Từ card đã mod (chế độ lorebook) → dựng lại Lorebook standalone: giữ format gốc, cập nhật content/keys đã đổi. */
+  static unwrapLorebook(card: CardV3): Record<string, unknown> {
+    const raw = (card.__lorebookRaw || {}) as Record<string, unknown>;
+    const modEntries = (card.data?.character_book?.entries || []) as unknown as Record<string, unknown>[];
+    const rawArr: Record<string, unknown>[] = Array.isArray(raw.entries)
+      ? raw.entries as Record<string, unknown>[]
+      : Object.values((raw.entries || {}) as Record<string, Record<string, unknown>>);
+    const usesKeyField = rawArr.length > 0 && rawArr[0].key !== undefined && rawArr[0].keys === undefined;
+    const rebuilt = modEntries.map((me, i) => {
+      const orig = rawArr[i] || {};
+      const out: Record<string, unknown> = { ...orig, content: me.content };
+      if (me.keys) { if (usesKeyField) out.key = me.keys; else out.keys = me.keys; }
+      if (me.comment !== undefined && orig.comment !== undefined) out.comment = me.comment;
+      return out;
+    });
+    const wasObject = !!raw.entries && !Array.isArray(raw.entries) && typeof raw.entries === 'object';
+    if (wasObject) {
+      const obj: Record<string, unknown> = {};
+      rebuilt.forEach((e, i) => { obj[String((e.uid ?? e.id ?? i))] = e; });
+      return { ...raw, entries: obj };
+    }
+    return { ...raw, entries: rebuilt };
+  }
+
+  /** Load 1 file JSON: trả về Card V3 (bọc nếu là Lorebook) + cờ isLorebook. */
+  static load(jsonString: string): { card: CardV3; isLorebook: boolean } {
+    const json = JSON.parse(jsonString);
+    if (json && json.spec === 'chara_card_v3') return { card: json as CardV3, isLorebook: false };
+    if (CardParser.isLorebook(json)) return { card: CardParser.wrapLorebook(json), isLorebook: true };
+    if (json && json.data && json.data.character_book) return { card: json as CardV3, isLorebook: false };
+    throw new Error('File không phải Character Card V3, cũng không phải Lorebook (JSON cần có "entries").');
+  }
+
   static detectMvuZod(card: CardV3): boolean {
     const scripts = card?.data?.extensions?.tavern_helper?.scripts || [];
     const entries = card?.data?.character_book?.entries || [];
