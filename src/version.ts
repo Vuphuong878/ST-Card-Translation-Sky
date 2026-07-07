@@ -2,5 +2,5 @@
 // BUMP `APP_VERSION` on every fix so builds are distinguishable in the UI (shown in the
 // sidebar header). Use the patch number for small fixes; keep `APP_VERSION_NOTE` to a one-line
 // summary of the most recent change (shown on hover).
-export const APP_VERSION = '1.33.1';
-export const APP_VERSION_NOTE = '[Trích Card] Sửa câu log retry cho gọn/đúng: bỏ chữ "HTTP" thừa đứng trước nhãn — nay hiện "Đoạn 3: Bị lọc → thử lại sau 4.5s (lần 3)"; mã lỗi HTTP số hiện đầy đủ "HTTP 503". Bị lọc = API trả rỗng/bị bộ lọc an toàn chặn; Timeout = quá 180s; Lỗi mạng = mất kết nối.';
+export const APP_VERSION = '1.34.0';
+export const APP_VERSION_NOTE = '[Trích Card] Model riêng cho QUÉT vs TẠO THẺ: thêm toggle "⚡ Quét bằng model phụ (flash)" ở bước 3 → bước Quét dùng model PHỤ (flash) cho nhanh/rẻ, bước Tạo thẻ vẫn dùng model chính (pro). Tận dụng model chính/phụ mỗi provider trong Pool; vẫn giữ nguyên đa-luồng + đa-provider. Đặt Model phụ = flash cho từng provider ở mục Pool đa-luồng.';

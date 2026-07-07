@@ -247,6 +247,11 @@
       <label class="toggle"><input type="checkbox" id="scanGomorrah"> Gomorrah Rules</label>
       <span class="faint" style="font-size:11px;align-self:center">— áp cho bước quét (đồng bộ với bước 4)</span>
     </div>
+    <div class="btnrow" style="margin-top:0;margin-bottom:2px">
+      <label class="toggle" title="Bước Quét dùng MODEL PHỤ (đặt ở mục Pool đa-luồng — thường là flash) cho nhanh/tiết kiệm; bước Tạo thẻ vẫn dùng model chính. Cần đã đặt Model phụ cho provider.">
+        <input type="checkbox" id="scanFlash"> ⚡ Quét bằng model phụ (flash — nhanh)</label>
+      <span class="faint" style="font-size:11px;align-self:center">Tạo thẻ vẫn dùng model chính</span>
+    </div>
     <div class="log" id="scanLog"></div>
     <div class="charlist" id="charList" style="margin-top:16px"></div>
   </div>
@@ -693,6 +698,8 @@ function linkToggles(masterId, mirrorId, saveKey){
 linkToggles("nsfw","scanNsfw", null);
 linkToggles("jailbreak","scanJailbreak","cc_jailbreak");
 linkToggles("gomorrahNsfw","scanGomorrah","cc_gomorrahNsfw");
+// Quét bằng model phụ (tier 's') — nhớ trạng thái.
+{ const sf=$("scanFlash"); if(sf){ sf.checked=(store.get("cc_scan_flash")==="true"); sf.addEventListener("change",()=>store.set("cc_scan_flash", sf.checked.toString())); } }
 
 // 附加系统提示：拼到每次请求最前
 function customSys(){
@@ -825,28 +832,34 @@ function poolProviders(){
 }
 let _laneCursor=0;
 function connFromProfile(p,model){ return { name:p.name, fmt:p.apiFormat||"openai", baseUrl:String(p.baseUrl||"").trim(), model:String(model||"").trim(), key:pickKeyFor(p), temp:(p.temp!==undefined&&p.temp!=="")?p.temp:els.temp.value }; }
-function laneOrder(p,charCount){
+// tier: 's' = ép model PHỤ (vd Quét bằng flash cho nhanh), 'p' = ép model CHÍNH,
+//       undefined = theo ngưỡng ký tự (mặc định, dùng cho Tạo thẻ).
+function laneOrder(p,charCount,tier){
   const kc=Math.max(1,profileKeys(p).length);
   const prm={model:String(p.model||"").trim(), rpm:(+p.primaryRpm||0)*kc};
   const sec=String(p.secondaryModel||"").trim();
   if(!sec) return [prm];
   const s={model:sec, rpm:(+p.secondaryRpm||0)*kc};
+  if(tier==="s") return [s,prm];   // ưu tiên model phụ (fallback model chính nếu phụ đầy RPM)
+  if(tier==="p") return [prm,s];
   const th=+p.charThreshold||0;
   return (th>0 && charCount!=null && charCount<=th) ? [s,prm] : [prm,s];
 }
 // Chọn lane kế tiếp còn RPM (round-robin đều); tất cả đầy → dùng lane con trỏ (best-effort, không chặn cứng).
-function resolveConn(charCount){
+function resolveConn(charCount,tier){
   const pool=poolProviders(), n=pool.length;
   for(let i=0;i<n;i++){
     const p=pool[(_laneCursor+i)%n];
-    for(const L of laneOrder(p,charCount)){
+    for(const L of laneOrder(p,charCount,tier)){
       if(_rlOk(_rlK(p.name,L.model),L.rpm)){ _rlHit(_rlK(p.name,L.model)); _laneCursor=(_laneCursor+i+1)%n; return connFromProfile(p,L.model); }
     }
   }
-  const p=pool[_laneCursor%n]; _laneCursor=(_laneCursor+1)%n; const L=laneOrder(p,charCount)[0]; _rlHit(_rlK(p.name,L.model)); return connFromProfile(p,L.model);
+  const p=pool[_laneCursor%n]; _laneCursor=(_laneCursor+1)%n; const L=laneOrder(p,charCount,tier)[0]; _rlHit(_rlK(p.name,L.model)); return connFromProfile(p,L.model);
 }
 // Số lane song song đề xuất = tổng (provider × số key), giới hạn hợp lý.
 function poolConcurrency(){ let c=0; for(const p of poolProviders()){ c+=Math.max(1,profileKeys(p).length)*(String(p.secondaryModel||"").trim()?2:1); } return Math.max(1,Math.min(c,12)); }
+// tier cho bước QUÉT: 's' nếu bật "Quét bằng model phụ" → dùng model phụ (flash); ngược lại theo mặc định.
+function scanTier(){ const e=$("scanFlash"); return (e&&e.checked)?"s":undefined; }
 // Runner song song: chạy tối đa `conc` worker cùng lúc trên `items`.
 async function runPool(items, worker, conc, signal){
   const N=items.length; let idx=0; const results=new Array(N);
@@ -907,8 +920,8 @@ async function geminiStream(messages,{maxTokens,onDelta,signal,conn,meta}){
   return full;
 }
 
-async function chat(messages, {maxTokens=1500, signal, charCount, conn, meta}={}){
-  conn = conn || resolveConn(charCount);
+async function chat(messages, {maxTokens=1500, signal, charCount, conn, meta, tier}={}){
+  conn = conn || resolveConn(charCount, tier);
   if((conn.fmt||fmt())==="gemini") return geminiChat(messages,{maxTokens,signal,conn,meta});
   const res=await fetchWithTimeout(endpoint(conn),{
     method:"POST",signal,
@@ -1007,7 +1020,7 @@ async function retry(fn,{tries=6,onWait}={}){
 }
 
 // ---------- 生成（自动续写：被 max_tokens 截断就接着写） ----------
-async function generate(messages,{maxTokens,useStream,signal,onText,onWait,maxCont=0,logEl,label,charCount}={}){
+async function generate(messages,{maxTokens,useStream,signal,onText,onWait,maxCont=0,logEl,label,charCount,tier}={}){
   let full="";
   for(let round=0; round<=maxCont; round++){
     const msgs = round===0 ? messages
@@ -1017,10 +1030,10 @@ async function generate(messages,{maxTokens,useStream,signal,onText,onWait,maxCo
         ]);
     let part=""; const meta={};   // meta.finish per-call → an toàn khi chạy song song (không dựa lastFinish toàn cục)
     if(useStream){
-      try{ part=await retry(()=>chatStream(msgs,{maxTokens,onDelta:(f)=>{ onText&&onText(full+f); },signal,charCount,meta}),{onWait}); }
-      catch(err){ if(isAbort(err,signal)) throw err; part=await retry(()=>chat(msgs,{maxTokens,signal,charCount,meta}),{onWait}); }
+      try{ part=await retry(()=>chatStream(msgs,{maxTokens,onDelta:(f)=>{ onText&&onText(full+f); },signal,charCount,meta,tier}),{onWait}); }
+      catch(err){ if(isAbort(err,signal)) throw err; part=await retry(()=>chat(msgs,{maxTokens,signal,charCount,meta,tier}),{onWait}); }
     }else{
-      part=await retry(()=>chat(msgs,{maxTokens,signal,charCount,meta}),{onWait});
+      part=await retry(()=>chat(msgs,{maxTokens,signal,charCount,meta,tier}),{onWait});
     }
     full += part;
     onText && onText(full);
@@ -1161,7 +1174,7 @@ $("scanBtn").onclick=async()=>{
       let rawText="";
       try{
         rawText=await retry(
-          ()=>chat(userMsgs(prompt),{maxTokens:withRole?8000:4000,signal,charCount:(chunks[i]||"").length}),
+          ()=>chat(userMsgs(prompt),{maxTokens:withRole?8000:4000,signal,charCount:(chunks[i]||"").length,tier:scanTier()}),
           {onWait:(n,code,w)=>logTo("scanLog","Đoạn "+(i+1)+": "+code+" → thử lại sau "+(w/1000)+"s (lần "+n+")","e")}
         );
       }
@@ -1745,8 +1758,8 @@ function collectContext(name, extra){
 }
 
 // ---------- 流式请求 ----------
-async function chatStream(messages,{maxTokens=4000,onDelta,signal,charCount,conn,meta}={}){
-  conn = conn || resolveConn(charCount);
+async function chatStream(messages,{maxTokens=4000,onDelta,signal,charCount,conn,meta,tier}={}){
+  conn = conn || resolveConn(charCount, tier);
   if((conn.fmt||fmt())==="gemini") return geminiStream(messages,{maxTokens,onDelta,signal,conn,meta});
   const res=await fetchWithTimeout(endpoint(conn),{
     method:"POST",signal,

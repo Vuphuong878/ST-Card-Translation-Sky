@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.34.0 — Trích Card: model riêng cho Quét vs Tạo thẻ
+Theo yêu cầu client (*"scan bằng flash cho nhanh, model scan với tạo khác nhau"*):
+- Thêm toggle **"⚡ Quét bằng model phụ (flash — nhanh)"** ở bước 3. Bật → **bước Quét** dùng **model phụ** của mỗi provider (thường là flash, nhanh & rẻ); **bước Tạo thẻ** vẫn dùng **model chính** (pro/chất lượng).
+- Tận dụng đúng cặp **model chính/phụ** đã có ở mục **Pool đa-luồng** — không thêm rối. Cách dùng: đặt Model chính = model tốt, Model phụ = flash cho từng provider, bật toggle → xong.
+- Vẫn giữ nguyên **đa-luồng + đa-provider + rate-limit** (engine thêm tham số `tier` để ép model phụ khi quét, fallback model chính nếu phụ hết RPM/không có).
+
 ## v1.33.1 — Trích Card: gọn lại câu log retry
 - Log retry trước đây đọc kỳ (*"gặp lỗi **HTTP** Bị lọc"* — chữ "HTTP" đứng trước "Bị lọc"/"Timeout" nghe sai vì đó không phải mã HTTP). Nay gọn và đúng: **"Đoạn 3: Bị lọc → thử lại sau 4.5s (lần 3)"**. Lỗi HTTP theo mã hiện đầy đủ **"HTTP 503"**.
 - Nhắc lại ý nghĩa nhãn: **Bị lọc** = API trả rỗng / bị bộ lọc an toàn chặn (thường do nội dung nhạy cảm) · **Timeout** = quá 180s không phản hồi (proxy chậm/treo) · **Lỗi mạng** = mất kết nối. Đây là log *đang thử lại*, chỉ khi hết lượt mới bỏ đoạn.
