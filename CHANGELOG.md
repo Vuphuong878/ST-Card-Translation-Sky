@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.36.5 — Dịch Card: tải thẻ qua link Discord (tự sửa link webp)
+- **Vấn đề**: dán link ảnh thẻ dạng `media.discordapp.net/...&format=webp&width=&height=` thì tải về là **WEBP đã resize** → Discord đã **re-encode ảnh, xoá mất chunk `tEXt` (chara/ccv3)** chứa dữ liệu thẻ trong PNG. Kể cả tải được cũng chỉ ra ảnh rỗng, không có thẻ. (Không phải lỗi app — do link proxy của Discord.)
+- **Sửa**: khi phát hiện link Discord, tự **chuẩn hoá** trước khi tải: đổi host `media.discordapp.net → cdn.discordapp.com` (file gốc), **bỏ** `format/width/height/quality`, chỉ giữ chữ ký `ex/is/hm`. `cdn` trả **PNG gốc còn nguyên thẻ** và có CORS (`Access-Control-Allow-Origin: *`) nên trình duyệt tải được.
+- Link không phải Discord giữ nguyên. Có ghi log khi đã chuẩn hoá.
+- Đã test end-to-end: dán đúng link webp của client → nạp đủ thẻ (spec chara_card_v3, 307 mục Lorebook, 939 field dịch).
+
 ## v1.36.4 — Trích Card: HOTFIX treo trang khi tải (regression 1.36.2)
 - **Triệu chứng**: import truyện xong không hiện nội dung, không đếm ký tự, các nút không phản hồi.
 - **Nguyên nhân**: v1.36.2 thêm `const POOL_CONC_CAP` (top-level) đặt SAU đoạn init gọi `applyProfileToFields()→updatePoolStatus()→poolConcurrency()`. Vì `const` không được hoisted (TDZ), lúc init chạy tới đã ném `ReferenceError: Cannot access 'POOL_CONC_CAP' before initialization` → **toàn bộ init dừng** → không gắn được listener (file input, ô đếm ký tự, các nút…).

@@ -20,6 +20,24 @@ import {
   Link as LinkIcon,
 } from 'lucide-react';
 
+// Discord "media.discordapp.net" là proxy re-encode ảnh (format=webp + resize width/height) →
+// LÀM MẤT chunk tEXt (chara/ccv3) chứa dữ liệu thẻ trong PNG. Chuyển host về "cdn.discordapp.com"
+// (file gốc) và bỏ các tham số biến đổi, chỉ giữ chữ ký ex/is/hm để link còn hợp lệ.
+function normalizeCardUrl(raw: string): { url: string; rewritten: boolean } {
+  const trimmed = raw.trim();
+  try {
+    const u = new URL(trimmed);
+    if (!/(^|\.)discordapp\.(net|com)$/.test(u.hostname)) return { url: trimmed, rewritten: false };
+    const before = u.href;
+    if (u.hostname === 'media.discordapp.net') u.hostname = 'cdn.discordapp.com';
+    const keep = new Set(['ex', 'is', 'hm']);   // chữ ký; bỏ format/width/height/quality/…
+    for (const k of [...u.searchParams.keys()]) if (!keep.has(k)) u.searchParams.delete(k);
+    return { url: u.href, rewritten: u.href !== before };
+  } catch {
+    return { url: trimmed, rewritten: false };
+  }
+}
+
 export default function FileUpload() {
   const { parseCardFile, updateCardFromOriginal, clearCard, isParsing, parseProgress } = useCardParser();
   const { card, cardFileName, contentType, originalWorldbook, loadTranslationCache, addLog } = useStore();
@@ -32,13 +50,15 @@ export default function FileUpload() {
     if (!urlInput.trim()) return;
     setIsFetchingUrl(true);
     try {
-      const response = await fetch(urlInput.trim());
+      const { url: fetchUrl, rewritten } = normalizeCardUrl(urlInput);
+      if (rewritten) addLog('info', '🔧 Đã chuẩn hoá link Discord về ảnh gốc (cdn, bỏ webp/resize) để giữ dữ liệu thẻ');
+      const response = await fetch(fetchUrl);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
-      
+
       let fileName = 'url_card';
       try {
-        const urlPath = new URL(urlInput.trim()).pathname;
+        const urlPath = new URL(fetchUrl).pathname;
         const urlFile = urlPath.split('/').pop();
         if (urlFile && (urlFile.endsWith('.json') || urlFile.endsWith('.png'))) {
           fileName = urlFile;
