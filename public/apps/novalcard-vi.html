@@ -253,6 +253,17 @@
       <span class="faint" style="font-size:11px;align-self:center">Tạo thẻ vẫn dùng model chính</span>
     </div>
     <div class="log" id="scanLog"></div>
+    <div class="btnrow" id="charToolsRow" style="margin-top:10px;margin-bottom:0;align-items:center;display:none">
+      <label class="faint" style="font-size:12px;align-self:center">Sắp xếp:</label>
+      <select id="sortMode" class="mono" style="max-width:230px;padding:4px 6px">
+        <option value="count">Số lần xuất hiện (nhiều→ít)</option>
+        <option value="name">Tên A→Z</option>
+        <option value="tier">Vai (Chính→Phụ→NPC)</option>
+      </select>
+      <button class="ghost" id="dedupBtn" type="button" title="Tìm các nhân vật thực ra là MỘT người (biệt danh, tên khác) rồi gợi ý gộp để bạn duyệt">🔍 Quét trùng &amp; gợi ý gộp</button>
+      <span id="dedupMsg" class="faint" style="font-size:12px;align-self:center"></span>
+    </div>
+    <div id="dedupBox" style="display:none;margin-top:8px"></div>
     <div class="charlist" id="charList" style="margin-top:16px"></div>
   </div>
 
@@ -980,7 +991,7 @@ async function fetchWithTimeout(url, opts, ms=180000){
   }finally{ clearTimeout(t); if(outer) outer.removeEventListener("abort",onOuter); }
 }
 // 所有会发请求的按钮：同一时刻只允许一个在跑，其余禁用，避免并发抢占 runController 导致卡死
-const ASYNC_BTNS=["scanBtn","genBtn","contBtn","reviseBtn","wbRunBtn","wbContBtn","wbReviseBtn","styleBtn","checkRunBtn"];
+const ASYNC_BTNS=["scanBtn","genBtn","contBtn","reviseBtn","wbRunBtn","wbContBtn","wbReviseBtn","styleBtn","checkRunBtn","dedupBtn"];
 let runningBtn=null;
 function setRunning(btn,on){
   if(on){
@@ -1233,9 +1244,19 @@ function tierBadge(t){
   if(r===1) return '<span style="background:rgba(150,150,165,.22);color:var(--faint);padding:0 6px;border-radius:6px">NPC</span>';
   return "";
 }
+// Sắp xếp danh sách hiển thị (không đổi thứ tự mảng gốc).
+function sortedChars(){
+  const mode=($("sortMode")&&$("sortMode").value)||"count";
+  const a=characters.slice();
+  if(mode==="name") a.sort((x,y)=>String(x.vi||x.name).localeCompare(String(y.vi||y.name),"vi",{sensitivity:"base"}));
+  else if(mode==="tier") a.sort((x,y)=>(tierRank(y.tier)-tierRank(x.tier))||((y.count||0)-(x.count||0)));
+  else a.sort((x,y)=>(y.count||0)-(x.count||0));
+  return a;
+}
 function renderChars(){
   const box=$("charList"); box.innerHTML="";
-  characters.forEach(c=>{
+  const tools=$("charToolsRow"); if(tools) tools.style.display=characters.length?"":"none";
+  sortedChars().forEach(c=>{
     const on=selectedNames.includes(c.name);
     const d=document.createElement("div");
     d.className="chip"+(on?" sel":"");
@@ -1310,24 +1331,127 @@ $("manualNames").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventD
 $("clearCharsBtn").onclick=()=>{ if(runningBtn){ flash($("scanMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; } characters=[]; selectedNames=[]; scanState=null; renderChars(); updateGenBtn(); flash($("scanMsg"),"Đã xóa danh sách"); };
 
 // 手动合并：把选中的多个角色并成一个（第一个为主名，其余记为别名）
+// Gộp danh sách tên vào tên ĐẦU (primary): còn lại thành biệt danh; cộng count; giữ vai/giới cao nhất.
+function doMerge(names){
+  names=[...new Set((names||[]).filter(Boolean))];
+  if(names.length<2) return false;
+  const primaryName=names[0];
+  const primary=characters.find(c=>c.name===primaryName);
+  if(!primary) return false;
+  if(!Array.isArray(primary.aliases)) primary.aliases=[];
+  for(const nm of names.slice(1)){
+    const o=characters.find(c=>c.name===nm); if(!o||o===primary) continue;
+    if(!primary.aliases.includes(nm)) primary.aliases.push(nm);
+    for(const a of (o.aliases||[])) if(!primary.aliases.includes(a)&&a!==primaryName) primary.aliases.push(a);
+    primary.count += o.count||0;
+    if(o.gender && !primary.gender) primary.gender=o.gender;
+    if(o.tier && tierRank(o.tier)>tierRank(primary.tier)) primary.tier=o.tier;
+    if(o.vi && !primary.vi) primary.vi=o.vi;
+    if(o.role && !primary.role) primary.role=o.role;
+    characters=characters.filter(c=>c.name!==nm);
+  }
+  return true;
+}
 $("mergeBtn").onclick=()=>{
   if(runningBtn){ flash($("scanMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; }
   if(selectedNames.length<2){ flash($("scanMsg"),"Chọn từ 2 nhân vật trở lên để gộp",true); return; }
   const primaryName=selectedNames[0];
-  const primary=characters.find(c=>c.name===primaryName);
-  if(!primary){ flash($("scanMsg"),"Không tìm thấy nhân vật chính để gộp",true); return; }
-  if(!Array.isArray(primary.aliases)) primary.aliases=[];
-  for(const nm of selectedNames.slice(1)){
-    const o=characters.find(c=>c.name===nm); if(!o) continue;
-    if(!primary.aliases.includes(nm)) primary.aliases.push(nm);
-    for(const a of (o.aliases||[])) if(!primary.aliases.includes(a)&&a!==primaryName) primary.aliases.push(a);
-    primary.count += o.count||0;
-    characters=characters.filter(c=>c.name!==nm);
-  }
+  if(!doMerge(selectedNames)){ flash($("scanMsg"),"Không tìm thấy nhân vật chính để gộp",true); return; }
   selectedNames=[primaryName];
   renderChars(); updateGenBtn();
   flash($("scanMsg"),"Đã gộp thành \u201c"+primaryName+"\u201d");
 };
+// ── Sắp xếp danh sách nhân vật ──
+{ const sm=$("sortMode"); if(sm){ sm.value=store.get("cc_sort_mode")||"count"; sm.addEventListener("change",()=>{ store.set("cc_sort_mode",sm.value); renderChars(); }); } }
+
+// ── Quét trùng lặp: deterministic (an toàn, không tốn API) + AI (bắt biệt danh khác chữ) → GỢI Ý gộp để duyệt ──
+function _normNm(s){ return String(s||"").toLowerCase().trim(); }
+function detDupGroups(){
+  const cs=characters, n=cs.length, parent=cs.map((_,i)=>i);
+  const find=i=>{ while(parent[i]!==i){ parent[i]=parent[parent[i]]; i=parent[i]; } return i; };
+  const uni=(a,b)=>{ parent[find(a)]=find(b); };
+  const info=cs.map(c=>({ name:_normNm(c.name), vi:_normNm(c.vi), al:new Set([...(c.aliases||[]).map(_normNm), _normNm(c.name)].filter(Boolean)) }));
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+    const A=info[i],B=info[j];
+    const same=(A.vi&&A.vi===B.vi)||(A.name&&A.name===B.name)||A.al.has(B.name)||B.al.has(A.name)||[...A.al].some(x=>x&&B.al.has(x));
+    if(same) uni(i,j);
+  }
+  const g={}; for(let i=0;i<n;i++){ const r=find(i); (g[r]=g[r]||[]).push(cs[i].name); }
+  return Object.values(g).filter(x=>x.length>=2);
+}
+async function aiDupGroups(signal){
+  if(characters.length<2) return [];
+  const list=characters.map((c,i)=>"["+i+"] name=\""+c.name+"\" vi=\""+(c.vi||"")+"\" vai="+(c.tier||"?")+" role=\""+String(c.role||"").replace(/"/g,"'").slice(0,60)+"\"").join("\n");
+  const prompt=
+    "Dưới đây là danh sách nhân vật quét từ 1 tiểu thuyết. Một số dòng có thể là CÙNG MỘT NHÂN VẬT (biệt danh, tên gọi khác, tên kèm chức danh, tên gốc vs tên dịch...).\n"+
+    "Hãy nhóm các dòng chỉ CÙNG MỘT người. QUY TẮC:\n"+
+    "- Chỉ nhóm khi CHẮC CHẮN là một người (khớp thân phận/vai trò/mối quan hệ). Tên hao hao nhưng là người khác thì KHÔNG nhóm.\n"+
+    "- Nếu tên ghi GIAI ĐOẠN khác nhau trong ngoặc (vd (Thiếu niên) vs (Trưởng thành)) thì GIỮ RIÊNG, KHÔNG gộp.\n"+
+    "Chỉ xuất JSON: mảng các nhóm, mỗi nhóm là mảng chỉ số [i] (≥2 phần tử), vd [[0,3],[5,7,9]]. Không có nhóm nào thì xuất [].\n\nDanh sách:\n"+list;
+  let raw="";
+  try{ raw=await retry(()=>chat(userMsgs(prompt),{maxTokens:4000,signal,charCount:list.length,tier:scanTier()}),{onWait:(n,code,w)=>logTo("scanLog","Quét trùng (AI): "+code+" → thử lại (lần "+n+")","e")}); }
+  catch(e){ if(isAbort(e,signal)) return []; logTo("scanLog","Quét trùng (AI) lỗi: "+e.message,"e"); return []; }
+  const arr=extractJsonArray(raw); if(!Array.isArray(arr)) return [];
+  const out=[];
+  for(const g of arr){ if(!Array.isArray(g)) continue; const names=g.map(idx=>characters[idx]&&characters[idx].name).filter(Boolean); if(names.length>=2) out.push([...new Set(names)]); }
+  return out;
+}
+function unionGroups(list){
+  const groups=[];
+  for(const g of list){
+    let target=groups.find(ex=>g.some(nm=>ex.has(nm)));
+    if(target){ g.forEach(x=>target.add(x)); }
+    else groups.push(new Set(g));
+  }
+  // gộp tiếp các nhóm còn chồng lấn (2 lượt cho chắc)
+  for(let pass=0;pass<2;pass++) for(let i=0;i<groups.length;i++) for(let j=i+1;j<groups.length;j++){
+    if([...groups[j]].some(x=>groups[i].has(x))){ groups[j].forEach(x=>groups[i].add(x)); groups.splice(j,1); j--; }
+  }
+  return groups.map(s=>[...s].filter(nm=>characters.some(c=>c.name===nm))).filter(g=>g.length>=2);
+}
+let _dupSuggest=[];
+function _dispName(nm){ const c=characters.find(x=>x.name===nm); return c?(c.vi||c.name):nm; }
+$("dedupBtn").onclick=async()=>{
+  const btn=$("dedupBtn");
+  if(btn.dataset.running){ stopRun(); return; }
+  if(runningBtn){ flash($("dedupMsg"),"Có tác vụ đang chạy, dừng trước đã",true); return; }
+  if(characters.length<2){ flash($("dedupMsg"),"Cần ≥2 nhân vật",true); return; }
+  setRunning(btn,true);
+  $("dedupMsg").innerHTML='<span class="spinner"></span>Đang quét trùng…';
+  const signal=runSignal();
+  try{
+    const det=detDupGroups();
+    let ai=[];
+    if(els.baseUrl.value.trim()&&els.model.value.trim()) ai=await aiDupGroups(signal);
+    _dupSuggest=unionGroups([...det,...ai]);
+    renderDupSuggest();
+    $("dedupMsg").textContent=_dupSuggest.length?("Thấy "+_dupSuggest.length+" nhóm nghi trùng — duyệt bên dưới"):"Không thấy nhóm trùng nào";
+  }catch(e){ if(isAbort(e,signal)) $("dedupMsg").textContent="Đã dừng"; else flash($("dedupMsg"),"Lỗi: "+e.message,true); }
+  finally{ setRunning(btn,false); }
+};
+function mergeSuggest(ordered){ if(doMerge(ordered)){ selectedNames=selectedNames.filter(n=>characters.some(c=>c.name===n)); return true; } return false; }
+function renderDupSuggest(){
+  const box=$("dedupBox"); box.innerHTML="";
+  if(!_dupSuggest.length){ box.style.display="none"; return; }
+  box.style.display="block";
+  const head=document.createElement("div"); head.style.cssText="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap";
+  const t=document.createElement("b"); t.style.fontSize="13px"; t.textContent="Nghi trùng ("+_dupSuggest.length+" nhóm) — mũi tên chỉ nhân vật GIỮ LẠI:"; head.appendChild(t);
+  const allBtn=document.createElement("button"); allBtn.type="button"; allBtn.className="ghost"; allBtn.style.fontSize="12px"; allBtn.textContent="✓ Gộp tất cả";
+  allBtn.onclick=()=>{ _dupSuggest.slice().forEach(g=>{ const ord=g.slice().sort((a,b)=>((characters.find(c=>c.name===b)||{}).count||0)-((characters.find(c=>c.name===a)||{}).count||0)); mergeSuggest(ord); }); _dupSuggest=[]; renderDupSuggest(); renderChars(); updateGenBtn(); flash($("dedupMsg"),"Đã gộp tất cả nhóm nghi trùng"); };
+  const closeBtn=document.createElement("button"); closeBtn.type="button"; closeBtn.className="ghost"; closeBtn.style.fontSize="12px"; closeBtn.textContent="Đóng"; closeBtn.onclick=()=>{ _dupSuggest=[]; renderDupSuggest(); };
+  head.appendChild(allBtn); head.appendChild(closeBtn); box.appendChild(head);
+  _dupSuggest.forEach((g,gi)=>{
+    const ordered=g.slice().sort((a,b)=>((characters.find(c=>c.name===b)||{}).count||0)-((characters.find(c=>c.name===a)||{}).count||0));
+    const row=document.createElement("div"); row.className="chip"; row.style.cssText="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:8px 10px;flex-wrap:wrap";
+    const label=document.createElement("div"); label.style.cssText="flex:1;min-width:0;font-size:12.5px";
+    label.innerHTML="<b>"+_dispName(ordered[0]).replace(/</g,"&lt;")+"</b> <span class='faint'>← "+ordered.slice(1).map(n=>_dispName(n).replace(/</g,"&lt;")).join(" · ")+"</span>";
+    const mBtn=document.createElement("button"); mBtn.type="button"; mBtn.className="primary"; mBtn.style.cssText="font-size:12px;padding:3px 10px"; mBtn.textContent="Gộp nhóm";
+    mBtn.onclick=()=>{ mergeSuggest(ordered); _dupSuggest.splice(gi,1); renderDupSuggest(); renderChars(); updateGenBtn(); flash($("dedupMsg"),"Đã gộp"); };
+    const sBtn=document.createElement("button"); sBtn.type="button"; sBtn.className="ghost"; sBtn.style.cssText="font-size:12px;padding:3px 8px"; sBtn.textContent="Bỏ qua";
+    sBtn.onclick=()=>{ _dupSuggest.splice(gi,1); renderDupSuggest(); };
+    row.appendChild(label); row.appendChild(mBtn); row.appendChild(sBtn); box.appendChild(row);
+  });
+}
 function updateGenBtn(){
   const n=selectedNames.length;
   if(runningBtn){ $("genMsg").textContent = n ? ("Đã chọn "+n+" mục") : ""; return; } // 运行中不改动生成按钮，交给 setRunning 管

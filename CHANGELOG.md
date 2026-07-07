@@ -2,6 +2,15 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.36.0 — Trích Card: sắp xếp + quét trùng lặp & tự gộp nhân vật
+Theo đề xuất client (PhatSiz) cho bước 3 (Chọn nhân vật):
+- **Sắp xếp danh sách**: ô chọn *Số lần xuất hiện (mặc định)* · *Tên A→Z* · *Vai (Chính→Phụ→NPC)*. Nhớ lựa chọn.
+- **Quét trùng lặp tự động** (nút "🔍 Quét trùng & gợi ý gộp") — làm 2 tầng:
+  1. **Deterministic** (không tốn API): gộp các nhân vật CHẮC CHẮN trùng — cùng tên gốc, cùng tên Việt, hoặc đã chung biệt danh.
+  2. **AI**: gửi danh sách (tên/tên Việt/vai/mô tả) cho AI nhận diện **cùng một người dù tên khác hẳn** (biệt danh), giữ riêng các giai đoạn "(Thiếu niên)/(Trưởng thành)".
+- Kết quả hiện thành **nhóm nghi trùng để bạn DUYỆT** — bấm **"Gộp nhóm"** từng nhóm, **"Gộp tất cả"**, hoặc **"Bỏ qua"**. Không tự gộp bừa.
+- Gộp giữ **vai/giới tính cao nhất**, **cộng số lần xuất hiện**, tên phụ thành biệt danh; vẫn có nút **"Tách"** để hoàn tác.
+
 ## v1.35.0 — Mod Card: mod riêng Lorebook (không cần cả thẻ)
 Theo yêu cầu client (*add cả card vào ST bị lag → muốn mod & xuất riêng Lorebook*):
 - **Tải thẳng 1 file Lorebook** (JSON có `entries` — cả format ST `{entries:{...}}` lẫn array). Tool **tự nhận diện** card hay lorebook khi tải.
