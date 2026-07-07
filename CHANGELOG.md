@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.36.3 — Trích Card: nút "Xóa / Làm lại" ở mục 4 & 5
+Theo báo cáo client (PhatSiz): bấm tạo lại thì tool chỉ *"Tiếp tục tạo — bỏ qua các mục đã tạo"* nên cứ hiện kết quả cũ, không có cách làm lại từ đầu.
+- Thêm nút **"🗑 Xóa / Làm lại"** cạnh nút chính ở **mục 4 (Tạo thẻ)** và **mục 5 (Tạo Lorebook)**.
+- Mục 4: reset cache đã tạo (`genDone`/`genSelKey`) + xóa ô kết quả + log → lần bấm tới tạo lại toàn bộ.
+- Mục 5: reset trạng thái trích (`wbState`) + kết quả + log → tạo lại từ đoạn đầu.
+- Có chặn khi đang chạy tác vụ (bấm sẽ nhắc dừng trước).
+
 ## v1.36.2 — Trích Card: mở full luồng theo RPM + chờ nhịp chống 429
 - **Bỏ trần 20** → số luồng song song = **đúng tổng RPM của model đang dùng** (trần cứng 64 chỉ để chặn gõ nhầm). Mỗi API key thêm vào là cộng thẳng luồng: flash RPM 17 × 3 key → **51 luồng bắn cùng lúc**.
 - Bước **Quét** chỉ tính RPM **model phụ** (flash) cho số luồng (đúng "17+17+17"); model chính vẫn được dùng làm **dự phòng** khi flash cạn quota. Bước **Tạo thẻ** dùng ngân sách chung 2 model.

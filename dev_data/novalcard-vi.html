@@ -327,6 +327,7 @@
     </details>
     <div class="btnrow">
       <button class="primary" id="genBtn" disabled>Tạo Thẻ Nhân vật</button>
+      <button class="ghost" id="genClearBtn" type="button" title="Xóa kết quả + trạng thái đã tạo để TẠO LẠI TỪ ĐẦU (bỏ tính năng tiếp tục/bỏ qua mục cũ)">🗑 Xóa / Làm lại</button>
       <span id="genMsg" class="faint" style="font-size:12px"></span>
     </div>
     <div class="warnbox" style="margin-top:10px;border-color:var(--gold-dim)">
@@ -399,6 +400,7 @@
     </div>
     <div class="btnrow">
       <button class="primary" id="wbRunBtn" type="button">Tạo Lorebook đã chọn</button>
+      <button class="ghost" id="wbClearBtn" type="button" title="Xóa kết quả + trạng thái đã trích để TẠO LẠI TỪ ĐẦU (bỏ tính năng tiếp tục/bỏ qua đoạn cũ)">🗑 Xóa / Làm lại</button>
       <span id="wbMsg" class="faint" style="font-size:12px"></span>
     </div>
     <div class="log" id="wbLog"></div>
@@ -1373,6 +1375,10 @@ function addManualNames(){
 $("addNamesBtn").onclick=addManualNames;
 $("manualNames").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); addManualNames(); } });
 $("clearCharsBtn").onclick=()=>{ if(runningBtn){ flash($("scanMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; } characters=[]; selectedNames=[]; scanState=null; renderChars(); updateGenBtn(); flash($("scanMsg"),"Đã xóa danh sách"); };
+// Mục 4 (Tạo thẻ) — Xóa/Làm lại: reset cache "đã tạo" để lần bấm tới TẠO LẠI TỪ ĐẦU (không tiếp tục/bỏ qua mục cũ).
+$("genClearBtn").onclick=()=>{ if(runningBtn){ flash($("genMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; } genDone={}; genSelKey=""; $("output").value=""; clearLog("genLog"); flash($("genMsg"),"Đã xóa — lần tạo tới sẽ làm lại từ đầu"); };
+// Mục 5 (Lorebook) — Xóa/Làm lại: reset trạng thái trích + kết quả để tạo lại từ đầu.
+$("wbClearBtn").onclick=()=>{ if(runningBtn){ flash($("wbMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; } wbState=null; wbEntries=[]; $("wbOut").value=""; clearLog("wbLog"); flash($("wbMsg"),"Đã xóa — lần tạo tới sẽ làm lại từ đầu"); };
 
 // 手动合并：把选中的多个角色并成一个（第一个为主名，其余记为别名）
 // Gộp danh sách tên vào tên ĐẦU (primary): còn lại thành biệt danh; cộng count; giữ vai/giới cao nhất.
