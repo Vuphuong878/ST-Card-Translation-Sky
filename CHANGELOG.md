@@ -2,6 +2,11 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.42.3 — Toàn bộ: tăng cỡ chữ nền (khỏi phải zoom 125%)
+- Base `html { font-size }` của **cả 5 app** (Dịch/Tạo Card/Tạo Preset/Mod Card/Trích Card) tăng **14px → 16px**. Vì UI dùng `rem` nên mọi chữ to lên đồng đều ~14% → dễ đọc mà không cần zoom Chrome 125%.
+- Không dùng `zoom` (tránh double-scale iframe/vỡ layout); chỉ nâng base font-size nên layout co giãn tự nhiên.
+- Có thể chỉnh thêm 17–18px nếu muốn to hơn nữa.
+
 ## v1.42.2 — Hub: ghi công tác giả dưới tiêu đề
 - Thêm dòng nhỏ dưới "Silly Tavern Multitools": **"✦ Kết hợp của Guillichan × Sky"** — tên hai tác giả phối màu gradient (tím→teal) khớp phong cách tiêu đề, chữ nhỏ gọn không chiếm chỗ.
 
