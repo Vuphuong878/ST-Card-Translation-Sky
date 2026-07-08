@@ -452,6 +452,7 @@
     <p class="hint">Bước cuối cùng: Đóng gói thẻ nhân vật, Lorebook và phong cách viết đã tạo ở trên thành <b>một Thẻ Nhân vật hoàn chỉnh có thể nhập trực tiếp vào SillyTavern</b> (Lorebook được tích hợp bên trong thẻ, phong cách viết tự động ghi vào mục từ). Thiếu phần nào thì chỉ đóng gói những phần đã có.</p>
     <div class="btnrow">
       <button class="primary" id="fullCardBtn" type="button">Xuất thẻ nhân vật hoàn chỉnh .json</button>
+      <button class="ghost" id="charLbBtn" type="button" title="Chỉ xuất Lorebook chứa các NHÂN VẬT đã tạo ở mục 4 (mỗi nhân vật 1 entry, kích hoạt theo tên) — không cần làm bước Lorebook bối cảnh/vật phẩm">Tải Lorebook nhân vật .json</button>
       <span id="fullCardMsg" class="faint" style="font-size:12px"></span>
     </div>
     <div class="warnbox" style="margin-top:12px">
@@ -1310,11 +1311,19 @@ function renderChars(){
     d.style.position="relative";
     d.innerHTML=`<div class="n"></div><div class="r"></div><div class="c"></div>`;
     d.querySelector(".n").textContent=c.vi||c.name;
-    if(c.gender||c.tier){
+    {
       const b=document.createElement("span");
       b.style.cssText="margin-left:6px;font-size:10px;display:inline-flex;gap:5px;align-items:center;vertical-align:middle";
-      b.innerHTML=[genderBadge(c.gender),tierBadge(c.tier)].filter(Boolean).join(" ");
-      if(b.innerHTML) d.querySelector(".n").appendChild(b);
+      const gb=genderBadge(c.gender);
+      if(gb){ const gs=document.createElement("span"); gs.innerHTML=gb; b.appendChild(gs); }
+      // Tier badge = NÚT: bấm để đổi vai. Đang Chính → Phụ; ngược lại (Phụ/NPC/chưa đặt) → Chính.
+      const ts=document.createElement("span");
+      ts.innerHTML=tierBadge(c.tier)||'<span style="color:var(--faint);border:1px dashed var(--faint);padding:0 6px;border-radius:6px">vai?</span>';
+      ts.style.cursor="pointer"; ts.title="Bấm để đổi vai (Chính ↔ Phụ)";
+      ts.onclick=ev=>{ ev.stopPropagation(); if(runningBtn){ flash($("scanMsg"),"Có tác vụ đang chạy, vui lòng dừng trước",true); return; }
+        c.tier=(tierRank(c.tier)===3)?"Phụ":"Chính"; renderChars(); updateGenBtn(); flash($("scanMsg"),"Đã đổi “"+(c.vi||c.name)+"” → "+c.tier); };
+      b.appendChild(ts);
+      d.querySelector(".n").appendChild(b);
     }
     d.querySelector(".r").textContent=c.role||"";
     const orig=(c.vi && c.vi!==c.name)? " · Gốc: "+c.name : "";
@@ -2392,7 +2401,9 @@ function buildWbJson(entries){
       useProbability:true,
       disable:false,
       addMemo:true,
-      excludeRecursion:false,
+      excludeRecursion:true,     // Non-recursable — mặc định BẬT (entry không bị kích hoạt do đệ quy)
+      preventRecursion:true,     // Ngăn đệ quy tiếp theo — mặc định BẬT (entry này không kích hoạt đệ quy sang mục khác)
+      delayUntilRecursion:false,
       group:"",
       groupOverride:false,
       scanDepth:null,
@@ -2673,7 +2684,7 @@ function bookEntries(entries){
     content:"【"+(wbSub(e.title)||"")+"】"+(e.category?("（"+e.category+"）"):"")+"\n"+(wbSub(e.content)||""),
     enabled:true, constant:!!e.constant, selective:!e.constant,
     insertion_order:100, position:"before_char", case_sensitive:false, priority:10,
-    extensions:{ position:0, exclude_recursion:false, display_index:i, probability:100, useProbability:true, depth:4, selectiveLogic:0, group:"", vectorized:false }
+    extensions:{ position:0, exclude_recursion:true, prevent_recursion:true, delay_until_recursion:false, display_index:i, probability:100, useProbability:true, depth:4, selectiveLogic:0, group:"", vectorized:false }
   }));
 }
 // Tách output NHIỀU nhân vật theo header "# ===== Tên =====" (do genBtn chèn khi chọn ≥2 NV).
@@ -2730,7 +2741,7 @@ function buildFullCard(){
         content:"# "+c.name+"\n"+c.body,
         enabled:true, constant:false, selective:true,
         insertion_order:100, position:"before_char", case_sensitive:false, priority:10,
-        extensions:{ position:0, exclude_recursion:false, display_index:idx, probability:100, useProbability:true, depth:4, selectiveLogic:0, group:"Nhân vật", vectorized:false }
+        extensions:{ position:0, exclude_recursion:true, prevent_recursion:true, delay_until_recursion:false, display_index:idx, probability:100, useProbability:true, depth:4, selectiveLogic:0, group:"Nhân vật", vectorized:false }
       };
     });
     // description = bối cảnh chung (nếu user đã tạo) để AI luôn nắm khung thế giới; nếu không, ghi chú ensemble.
@@ -2768,6 +2779,36 @@ $("fullCardBtn").onclick=()=>{
   if(card._charCount>1) note="（"+card._charCount+" nhân vật → "+card._charCount+" mục Lorebook riêng"+(total>card._charCount?(" + "+(total-card._charCount)+" mục thiết lập"):"")+"）";
   else note = total?("（Kèm Lorebook "+total+" mục）"):"（Chỉ xuất Thẻ Nhân vật）";
   flash($("fullCardMsg"),"Đã xuất file "+note);
+};
+
+// #5 — Xuất RIÊNG một Lorebook chỉ gồm các NHÂN VẬT đã tạo ở mục 4 (mỗi người 1 entry, kích hoạt
+// theo tên). Dùng khi chỉ cần Lorebook nhân vật, không cần bước 7 (bối cảnh/vật phẩm). Cùng format
+// {entries:{…}} như buildWbJson + cờ recursion mặc định giống #4.
+function buildCharLorebookJson(){
+  const cardText=$("output").value.trim();
+  if(!cardText) return null;
+  let cards=splitCharCards(cardText);
+  if(cards.length===0){ const nm=(selectedNames[0])||parseCardName(cardText)||"Nhân vật"; cards=[{name:nm, body:cardText}]; }
+  const out={entries:{}};
+  cards.forEach((c,i)=>{
+    out.entries[String(i)]={
+      uid:i, key:charEntryKeys(c.name,c.body), keysecondary:[],
+      comment:c.name, content:"# "+c.name+"\n"+c.body,
+      constant:false, selective:true, selectiveLogic:0, order:100, position:0, depth:4,
+      probability:100, useProbability:true, disable:false, addMemo:true,
+      excludeRecursion:true, preventRecursion:true, delayUntilRecursion:false,
+      group:"Nhân vật", groupOverride:false, scanDepth:null, caseSensitive:null, matchWholeWords:null,
+      automationId:"", role:null, vectorized:false, displayIndex:i
+    };
+  });
+  return { json:JSON.stringify(out,null,2), count:cards.length };
+}
+$("charLbBtn").onclick=()=>{
+  const r=buildCharLorebookJson();
+  if(!r){ flash($("fullCardMsg"),"Vui lòng tạo Thẻ Nhân vật ở mục 4 trước",true); return; }
+  const base=(($("wbName").value.trim()||"Lorebook nhan vat").replace(/[\\/:*?"<>|]/g,"_"));
+  downloadBlob(r.json, base+".json", "application/json");
+  flash($("fullCardMsg"),"Đã xuất Lorebook "+r.count+" nhân vật (mỗi người 1 entry, kích hoạt theo tên)");
 };
 
 // 共享背景 / 世界大纲：把多角色共同的时代背景、共同经历抽成一条常驻条目

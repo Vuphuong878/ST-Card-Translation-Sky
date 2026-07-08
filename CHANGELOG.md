@@ -2,6 +2,11 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.38.0 — Trích Card: đổi vai nhanh + cờ đệ quy mặc định + xuất LB nhân vật
+- **#3 Đổi vai Chính/Phụ**: ở mục 3, **bấm vào badge vai** (★Chính / Phụ / vai?) của nhân vật để đổi qua lại — đang Chính → Phụ, còn lại → Chính. Cập nhật ngay, giữ khi sắp xếp.
+- **#4 Mặc định chống đệ quy**: mọi entry Lorebook xuất ra (LB chuẩn + character_book nhúng) nay mặc định **`excludeRecursion:true`** (Non-recursable) **+ `preventRecursion:true`** (Ngăn đệ quy tiếp theo).
+- **#5 Xuất Lorebook nhân vật**: thêm nút **"Tải Lorebook nhân vật .json"** ở mục 7 — xuất riêng một Lorebook chỉ gồm các nhân vật đã tạo ở mục 4 (mỗi người 1 entry, kích hoạt theo tên + tên gốc + biệt danh), **không cần** làm bước Lorebook bối cảnh/vật phẩm.
+
 ## v1.37.0 — Dịch Card: đa luồng chạy tối đa RPM (mọi key × provider)
 - **Số luồng song song** nay tự tính = **tổng ngân sách RPM toàn pool**: mỗi provider (config chính + provider phụ), **mỗi API key** đóng góp `(RPM model chính + RPM model phụ)`. Ví dụ: config chính 4 key + provider phụ 2 key, mỗi key 5+20 rpm → **(5+20)×4 + (5+20)×2 = 150 luồng**.
 - **Sửa**: trước đây thêm key vào *cấu hình chính* không tăng tốc vì số luồng lấy từ ô "Số batch gửi song song" (mặc định 6). Nay engine (`computePoolConcurrency`) cộng thẳng theo key×RPM → thêm key = chạy hết công suất.
