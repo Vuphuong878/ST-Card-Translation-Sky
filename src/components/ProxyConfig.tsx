@@ -6,8 +6,6 @@ import ProviderPoolConfig from './ProviderPoolConfig';
 import type { AIProvider } from '../types/card';
 import {
   Settings,
-  Eye,
-  EyeOff,
   ChevronDown,
   ChevronRight,
   Wifi,
@@ -32,13 +30,11 @@ const PROVIDERS: { value: AIProvider; label: string }[] = [
 export default function ProxyConfig() {
   const { proxy, setProxy, connectionStatus, setConnectionStatus, scannedModels, setScannedModels, addToast, locale, resetProxy } = useStore();
   const t = useT();
-  const [showKey, setShowKey] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testMessage, setTestMessage] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showSecondarySuggestions, setShowSecondarySuggestions] = useState(false);
-  const [showKeyRotation, setShowKeyRotation] = useState(false);
   const [scanning, setScanning] = useState(false);
 
   const suggestions = [
@@ -136,88 +132,39 @@ export default function ProxyConfig() {
           />
         </div>
 
-        {/* API Key */}
-        <div>
-          <label className="label">{t.apiKey}</label>
-          <div style={{ position: 'relative' }}>
-            <input
-              className="input input-mono"
-              type={showKey ? 'text' : 'password'}
-              value={proxy.apiKey}
-              onChange={(e) => setProxy({ apiKey: e.target.value })}
-              placeholder="sk-..."
-              style={{ paddingRight: '40px' }}
-            />
-            <button
-              className="btn btn-ghost btn-xs"
-              onClick={() => setShowKey(!showKey)}
-              style={{
-                position: 'absolute',
-                right: '4px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                padding: '4px',
-              }}
-              type="button"
-            >
-              {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
-          </div>
-        </div>
-
-        {/* API Key Rotation */}
-        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '8px' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              fontSize: '0.8rem',
-              color: 'var(--text-secondary)',
-              userSelect: 'none',
-            }}
-            onClick={() => setShowKeyRotation(!showKeyRotation)}
-          >
-            {showKeyRotation ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <RefreshCw size={13} />
-            API Key Rotation
-            {proxy.apiKeys.filter(k => k.trim()).length > 0 && (
-              <span style={{
-                fontSize: '0.65rem',
-                padding: '1px 6px',
-                background: 'rgba(124,106,240,0.1)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--accent-primary)',
-                fontWeight: 600,
-              }}>
-                {proxy.apiKeys.filter(k => k.trim()).length + 1} keys
-              </span>
-            )}
-          </div>
-
-          {showKeyRotation && (
-            <div className="fade-in" style={{ marginTop: '8px' }}>
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                {t.apiKey} pool — one per line. Auto-rotates on rate limit (429). Primary key above is always included.
-              </div>
+        {/* API Key — 1 ô đa key (mỗi dòng hoặc dấu phẩy 1 key), tự xoay vòng như provider. Gộp
+            "API Key" + "API Key Rotation" cũ làm một cho gọn. Map về data model: key đầu = apiKey,
+            còn lại = apiKeys[]; engine (getUniqueKeys) gộp lại + nhân RPM theo tổng số key. */}
+        {(() => {
+          const allKeys = [proxy.apiKey, ...(proxy.apiKeys || [])].filter(Boolean);
+          const keyCount = allKeys.filter(k => k.trim()).length;
+          return (
+            <div>
+              <label className="label" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span>{t.apiKey}</span>
+                {keyCount > 0 && (
+                  <span style={{ fontSize: '0.65rem', padding: '1px 6px', background: 'rgba(124,106,240,0.1)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                    {keyCount} key
+                  </span>
+                )}
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                  mỗi dòng hoặc dấu phẩy 1 key — tự xoay vòng khi bị 429
+                </span>
+              </label>
               <textarea
                 className="input input-mono"
-                rows={4}
-                value={proxy.apiKeys.join('\n')}
-                onChange={(e) => setProxy({ apiKeys: e.target.value.split('\n') })}
-                placeholder={`sk-key2...\nsk-key3...\nAIza...`}
+                rows={2}
+                value={allKeys.join('\n')}
+                onChange={(e) => {
+                  const keys = e.target.value.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+                  setProxy({ apiKey: keys[0] || '', apiKeys: keys.slice(1) });
+                }}
+                placeholder={'sk-...\nsk-... (key thứ 2, 3… để chạy nhiều luồng)'}
                 style={{ fontSize: '0.75rem', resize: 'vertical' }}
               />
-              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '3px' }}>
-                {proxy.apiKeys.filter(k => k.trim()).length === 0
-                  ? 'No extra keys. Using primary key only.'
-                  : `${proxy.apiKeys.filter(k => k.trim()).length} extra key(s) + 1 primary = ${proxy.apiKeys.filter(k => k.trim()).length + 1} keys in rotation`
-                }
-              </div>
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Model */}
         <div style={{ position: 'relative' }}>
@@ -296,73 +243,43 @@ export default function ProxyConfig() {
           )}
         </div>
 
-        {/* ─── Dual-Model RPM Section ─── */}
-        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
-          {/* Primary RPM row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+        {/* ─── RPM model chính + Model phụ (gọn như provider) ─── */}
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* RPM model chính */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Layers size={13} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', flex: 1 }}>
-              Model chính (RPM)
+              RPM model chính <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 400 }}>(× số key = số luồng)</span>
             </span>
             <input
-              className="input"
-              type="number"
-              min={1}
-              max={120}
+              className="input" type="number" min={1} max={1000}
               value={proxy.primaryModelRpm ?? 5}
               onChange={(e) => setProxy({ primaryModelRpm: Math.max(1, parseInt(e.target.value) || 5) })}
-              style={{ width: '60px', padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
-              title="Số request/phút tối đa cho model chính"
+              style={{ width: '72px', padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
+              title="Số request/phút cho model chính (nhân với số API key)"
             />
           </div>
 
-          {/* Secondary model toggle row */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '7px 10px',
-              background: proxy.enableSecondaryModel
-                ? 'rgba(124,106,240,0.06)'
-                : 'rgba(180,180,180,0.04)',
-              borderRadius: 'var(--radius-sm)',
-              border: `1px solid ${proxy.enableSecondaryModel ? 'rgba(124,106,240,0.2)' : 'rgba(180,180,180,0.1)'}`,
-              marginBottom: proxy.enableSecondaryModel ? '8px' : '0',
-              transition: 'all 0.2s',
-            }}
-          >
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              <span style={{ fontWeight: 600 }}>Model phụ</span>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginLeft: '6px' }}>
-                tự dùng khi model chính hết RPM
-              </span>
-            </div>
-            <label style={{ position: 'relative', display: 'inline-block', width: '32px', height: '18px', flexShrink: 0, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={!!proxy.enableSecondaryModel}
-                onChange={(e) => setProxy({ enableSecondaryModel: e.target.checked })}
-                style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
-              />
-              <span style={{ position: 'absolute', inset: 0, borderRadius: '9px', background: proxy.enableSecondaryModel ? 'var(--accent-primary)' : 'var(--border-default)', transition: 'background 0.2s' }} />
-              <span style={{ position: 'absolute', top: '2px', left: proxy.enableSecondaryModel ? '16px' : '2px', width: '14px', height: '14px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-            </label>
-          </div>
+          {/* Toggle model phụ (checkbox gọn như provider) */}
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={!!proxy.enableSecondaryModel} onChange={(e) => setProxy({ enableSecondaryModel: e.target.checked })} />
+            <span style={{ fontWeight: 600 }}>Model phụ</span>
+            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>tràn khi model chính hết RPM</span>
+          </label>
 
-          {/* Secondary model inputs — only shown when enabled */}
+          {/* Model phụ + RPM phụ + Ngưỡng — 1 hàng grid như provider */}
           {proxy.enableSecondaryModel && (
-            <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {/* Secondary model name */}
+            <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 74px 90px', gap: '8px', alignItems: 'end' }}>
               <div style={{ position: 'relative' }}>
+                <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>Model phụ</label>
                 <input
                   className="input input-mono"
                   value={proxy.secondaryModel ?? ''}
                   onChange={(e) => setProxy({ secondaryModel: e.target.value })}
                   onFocus={() => setShowSecondarySuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSecondarySuggestions(false), 200)}
-                  placeholder="gemini-2.0-flash"
-                  style={{ fontSize: '0.8rem' }}
+                  placeholder="flash…"
+                  style={{ fontSize: '0.76rem' }}
                 />
                 {showSecondarySuggestions && suggestions.length > 0 && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', marginTop: '4px', maxHeight: '140px', overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
@@ -380,42 +297,25 @@ export default function ProxyConfig() {
                   </div>
                 )}
               </div>
-              {/* Secondary RPM */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flex: 1 }}>RPM model phụ</span>
+              <div>
+                <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>RPM phụ</label>
                 <input
-                  className="input"
-                  type="number"
-                  min={1}
-                  max={120}
+                  className="input" type="number" min={1} max={1000}
                   value={proxy.secondaryModelRpm ?? 17}
                   onChange={(e) => setProxy({ secondaryModelRpm: Math.max(1, parseInt(e.target.value) || 17) })}
-                  style={{ width: '60px', padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
-                  title="Số request/phút tối đa cho model phụ"
+                  style={{ padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
+                  title="Số request/phút cho model phụ (× số key)"
                 />
               </div>
-              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                Gemini Pro: 5 RPM · Flash: 20 RPM (tạm đặt 17 để có buffer)
-              </div>
-              {/* Threshold row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', flex: 1 }}>
-                  Dưới bao nhiêu ký tự thì dùng model phụ
-                </span>
+              <div>
+                <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }} title="Entry ngắn hơn ngưỡng SỐ KÝ TỰ → dùng model phụ cho nhanh (0 = tắt)">Ngưỡng ký tự</label>
                 <input
-                  className="input"
-                  type="number"
-                  min={0}
-                  max={100000}
+                  className="input" type="number" min={0} max={100000}
                   value={proxy.secondaryModelThreshold ?? 0}
                   onChange={(e) => setProxy({ secondaryModelThreshold: Math.max(0, parseInt(e.target.value) || 0) })}
-                  style={{ width: '70px', padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
-                  title="Entry dưới ngưỡng SỐ KÝ TỰ này → tự động dùng model phụ cho nhanh (0 = tắt)"
+                  style={{ padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
                   placeholder="0"
                 />
-              </div>
-              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                0 = tắt · Ví dụ: 300 → entry &lt; ~300 token dùng Flash cho nhanh (token ≈ ký tự ÷ 4)
               </div>
             </div>
           )}

@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.39.1 — Dịch Card: gọn giao diện API cấu hình chính (như provider)
+Vì cấu hình chính nay hành xử y như 1 provider (đa key + RPM riêng), gom UI cho gọn:
+- **Gộp "API Key" + "API Key Rotation" → MỘT ô** đa key: mỗi dòng hoặc dấu phẩy 1 key. Key đầu = key chính, còn lại xoay vòng; engine nhân RPM theo tổng số key (như provider). Bỏ khối "API Key Rotation" xổ ra riêng.
+- **Gom phần RPM**: RPM model chính 1 hàng (kèm chú "× số key = số luồng"); khi bật Model phụ thì Model phụ / RPM phụ / Ngưỡng ký tự nằm gọn trên **1 hàng grid** (như ProviderCard).
+- Không đổi logic/dữ liệu (vẫn `apiKey` + `apiKeys[]`), chỉ gọn giao diện.
+
 ## v1.39.0 — Dịch Card: Lorebook dịch từng-mục-song-song + Dừng hẳn (#2,#6,#7,#10)
 - **#6/#7 — hết trộn/đè bản dịch**: chế độ Lorebook "Hàng loạt" trước đây gộp nhiều mục vào **1 call AI** rồi gán kết quả **theo chỉ số** — nếu AI trả sai thứ tự/số lượng thì mục này nhận nhầm bản dịch của mục kia ("dịch đè"), và khi 1 mục lỗi thì **retry cả nhóm** (dịch lại mục đã xong). Nay **mỗi mục là 1 request riêng**, đi qua `translateSingleField` (có khoá `inFlightPaths` chống 2 luồng ghi cùng field, chunk + resume, retry riêng từng mục). Không còn prompt gộp → không thể trộn/đè.
 - **Tốc độ** vẫn cao nhờ **đa luồng RPM (#1)** dispatch nhiều mục song song (số luồng = tổng RPM mọi key × provider).
