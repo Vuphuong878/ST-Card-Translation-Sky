@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Loader2, ScanLine, Sparkles, User, Wand2, Users, BookOpen, Settings2, Merge, Trash2 } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
 import { useCardStore } from '../store/cardStore';
@@ -46,6 +46,12 @@ export function StoryToCardPage() {
   const profile = settings.profiles.find((p) => p.id === settings.activeProfileId);
   const set = (patch: Partial<StoryCardOptions>) => setOpts((o) => ({ ...o, ...patch }));
 
+  // #9.4 — nút Dừng: abort mọi call AI đang chạy (quét / tạo thẻ). callAI nhận signal → fetch huỷ ngay.
+  const abortRef = useRef<AbortController | null>(null);
+  const isAbortErr = (e: unknown) => e instanceof DOMException && e.name === 'AbortError'
+    || (e instanceof Error && /abort/i.test(e.message));
+  const stopWork = () => { abortRef.current?.abort(); };
+
   const clearWork = () => {
     if (!confirm('Xoá toàn bộ truyện, roster và thẻ đã tạo trong trang này?')) return;
     setStory(''); setRoster([]); setChecked([]); setManualName(''); setCard(null); setBatch([]);
@@ -63,15 +69,17 @@ export function StoryToCardPage() {
     if (!requireApi()) return;
     if (!story.trim()) { toast.error('Dán nội dung truyện trước.'); return; }
     setScanning(true); setRoster([]); setCard(null); setBatch([]); setChecked([]); setScanProg({ d: 0, t: 1 });
+    abortRef.current = new AbortController();
     try {
       const chars = await scanCharacters(story, profile!, settings.generationParams, {
         chunkSize, maxChunks, includeIdentity,
+        signal: abortRef.current.signal,
         onProgress: (d, t) => setScanProg({ d, t }),
       });
       if (chars.length === 0) toast.error('Không quét được nhân vật. Thử lại hoặc nhập tên thủ công.');
       setRoster(chars);
       if (chars[0]) setChecked([chars[0].name]);
-    } catch (e) { toast.error(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { if (isAbortErr(e)) toast.error('Đã dừng quét.'); else toast.error(e instanceof Error ? e.message : String(e)); }
     finally { setScanning(false); setScanProg(null); }
   };
 
@@ -101,19 +109,21 @@ export function StoryToCardPage() {
     if (names.length === 0) { toast.error('Tick nhân vật hoặc nhập tên thủ công.'); return; }
     if (!story.trim()) { toast.error('Cần có nội dung truyện.'); return; }
     setGenerating(true); setCard(null); setBatch([]);
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
     try {
       if (names.length === 1) {
-        const c = await generateCardFromStory(story, names[0], profile!, settings.generationParams, opts);
+        const c = await generateCardFromStory(story, names[0], profile!, settings.generationParams, opts, signal);
         setCard(c);
       } else {
         setBatchProg({ d: 0, t: names.length, name: '' });
-        const res = await generateCardsForMany(story, names, profile!, settings.generationParams, opts, undefined,
+        const res = await generateCardsForMany(story, names, profile!, settings.generationParams, opts, signal,
           (d, t, name) => setBatchProg({ d, t, name }));
         setBatch(res);
         const ok = res.filter((r) => r.card).length;
         toast.success(`Tạo xong ${ok}/${names.length} thẻ.`);
       }
-    } catch (e) { toast.error(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { if (isAbortErr(e)) toast.error('Đã dừng tạo thẻ.'); else toast.error(e instanceof Error ? e.message : String(e)); }
     finally { setGenerating(false); setBatchProg(null); }
   };
 
@@ -231,11 +241,18 @@ export function StoryToCardPage() {
           </div>
         )}
 
-        <button onClick={runScan} disabled={scanning}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-white"
-          style={{ background: scanning ? '#3a3352' : '#7c6af0', border: 'none', cursor: scanning ? 'default' : 'pointer' }}>
-          {scanning ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang quét{scanProg && scanProg.t > 1 ? ` ${scanProg.d}/${scanProg.t} đoạn` : ''}...</> : <><ScanLine className="w-4 h-4" /> Quét nhân vật</>}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={runScan} disabled={scanning}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-white"
+            style={{ background: scanning ? '#3a3352' : '#7c6af0', border: 'none', cursor: scanning ? 'default' : 'pointer' }}>
+            {scanning ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang quét{scanProg && scanProg.t > 1 ? ` ${scanProg.d}/${scanProg.t} đoạn` : ''}...</> : <><ScanLine className="w-4 h-4" /> Quét nhân vật</>}
+          </button>
+          {scanning && (
+            <button onClick={stopWork}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-white"
+              style={{ background: '#ef4444', border: 'none', cursor: 'pointer' }}>■ Dừng</button>
+          )}
+        </div>
       </section>
 
       {/* 02 — Chọn nhân vật (đa chọn) */}
@@ -269,13 +286,20 @@ export function StoryToCardPage() {
           </div>
           <input value={manualName} onChange={(e) => setManualName(e.target.value)} className="settings-input text-sm w-full"
             placeholder="…hoặc nhập tên thủ công (thêm vào danh sách tạo)" />
-          <button onClick={runGenerate} disabled={generating}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-white"
-            style={{ background: generating ? '#3a3352' : '#a855f7', border: 'none', cursor: generating ? 'default' : 'pointer' }}>
-            {generating
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> {batchProg ? `Đang tạo ${batchProg.d}/${batchProg.t}${batchProg.name ? ` · ${batchProg.name}` : ''}` : 'Đang tạo thẻ...'}</>
-              : <><Sparkles className="w-4 h-4" /> {multi ? `Tạo ${checked.length + (manualName.trim() ? 1 : 0)} thẻ (song song)` : 'Tạo thẻ nhân vật'}</>}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={runGenerate} disabled={generating}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-white"
+              style={{ background: generating ? '#3a3352' : '#a855f7', border: 'none', cursor: generating ? 'default' : 'pointer' }}>
+              {generating
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> {batchProg ? `Đang tạo ${batchProg.d}/${batchProg.t}${batchProg.name ? ` · ${batchProg.name}` : ''}` : 'Đang tạo thẻ...'}</>
+                : <><Sparkles className="w-4 h-4" /> {multi ? `Tạo ${checked.length + (manualName.trim() ? 1 : 0)} thẻ (song song)` : 'Tạo thẻ nhân vật'}</>}
+            </button>
+            {generating && (
+              <button onClick={stopWork}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-white"
+                style={{ background: '#ef4444', border: 'none', cursor: 'pointer' }}>■ Dừng</button>
+            )}
+          </div>
         </section>
       )}
 

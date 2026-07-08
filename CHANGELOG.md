@@ -2,6 +2,11 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.40.1 — Tạo Card: nút Dừng cho "Tạo thẻ từ truyện" (#9.4)
+- **#9.4 — Dừng hẳn**: thêm `AbortController` + nút **"■ Dừng"** (hiện khi đang quét/tạo). Truyền `signal` xuống `scanCharacters` / `generateCardFromStory` / `generateCardsForMany` → `callAI` huỷ fetch ngay, loop kết thúc, không chạy nền. Trước đây truyền `undefined` nên không dừng được.
+- **#9.3 — giữ input khi đổi tab**: kiểm tra thấy trang này **đã** dùng `usePersistedState` cho toàn bộ truyện/tuỳ chọn/roster/thẻ (localStorage) — đổi tab/F5 không mất. Giữ nguyên.
+- *(Còn #9.1 web-search rộng hơn + #9.2 bỏ ép JSON: cần bạn chỉ rõ thao tác/feature cụ thể để sửa đúng, tránh phá parser JSON của các phần MVU/Zod/EJS đang cần JSON — xem ghi chú khi bạn về.)*
+
 ## v1.40.0 — Tạo Card: ép tiếng Việt (#8a) + đa luồng tối đa RPM (#11)
 - **#8a — Tạo thẻ từ truyện ra tiếng Việt**: truyện gốc thường tiếng Trung → model hay chép nguyên văn. Thêm `LANGUAGE_RULE` bắt buộc: TOÀN BỘ thành phẩm phải là **tiếng Việt tự nhiên**, dịch tên riêng (Hán→Hán Việt, Nhật→Romaji, Hàn→Romanization), rà soát xoá mọi chữ Hán/Kanji/Hangul sót; chỉ giữ macro `{{user}}`/`{{char}}`.
 - **#11 — Đa luồng chạy tối đa RPM (Tạo Card)**: thêm `computePoolConcurrency(profile)` (= Σ pool: RPM chính+phụ × số key). Thay các trần cứng cũ (`Math.min(8/4/24/10)`) ở: tạo thẻ nhiều nhân vật, quét nhân vật, sinh Lorebook hàng loạt, refiner Lorebook, wiki scraper. `RPMLimiter` (chốt-giờ-bắt-đầu) sẵn có ở client.ts giữ không vượt 429.
