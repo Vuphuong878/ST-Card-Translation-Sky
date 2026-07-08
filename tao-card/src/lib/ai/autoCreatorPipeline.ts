@@ -9,6 +9,7 @@ import type { ProxyProfile, GenerationParams, CardExtensions } from '../../types
 import type { RegexPlacement } from '../../types';
 import type { MVUZODSchema } from '../../types';
 import { useCardStore } from '../../store/cardStore';
+import { buildSchemaContextForBatch } from '../mvuzod/schemaContextBuilder';
 import { useAutoCreatorStore } from '../../store/autoCreatorStore';
 import { callAI } from './client';
 import { runBatchGeneration } from './batchGenerator';
@@ -285,6 +286,12 @@ BẠN PHẢI TẬN DỤNG TỐI ĐA dung lượng này để tạo ra nội dung
         category: lbConfig.category,
         cardType: lbConfig.cardType,
         useWebSearch: lbConfig.useWebSearch,
+        // Bám SCHEMA biến (MVU-ZOD) nếu card đã có (vd NPC có võ lực/trí lực) → entry sinh ra tham
+        // chiếu đúng các chỉ số/cấu trúc đã định thay vì viết linh tinh không liên quan.
+        schemaContext: (() => {
+          const sch = (cardStore.card?.data?.extensions as unknown as Record<string, any>)?.mvuzod?.schema;
+          return sch ? buildSchemaContextForBatch(sch) : undefined;
+        })(),
       }, {
         card: cardStore.card,
         profile: ctx.profile,

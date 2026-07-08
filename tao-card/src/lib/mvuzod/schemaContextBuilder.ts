@@ -26,13 +26,12 @@ export function buildSchemaContextForBatch(schema: MVUZODSchema): string {
   flattenFields(schema.fields, lines, 0);
 
   lines.push('');
-  lines.push('--- HƯỚNG DẪN VIẾT ENTRY KHI CÓ SCHEMA ---');
-  lines.push('• Entries NÊN đề cập đến các biến liên quan (nếu phù hợp ngữ cảnh)');
-  lines.push('• Ví dụ: Entry mô tả NPC → đề cập ảnh hưởng đến biến quan hệ (好感度, 信赖度)');
-  lines.push('• Ví dụ: Entry mô tả địa điểm → đề cập biến 当前地点 sẽ thay đổi khi di chuyển');
-  lines.push('• Ví dụ: Entry mô tả vật phẩm → đề cập đến biến 物品栏, số lượng, hiệu ứng');
-  lines.push('• KHÔNG viết code EJS/getvar trong content — chỉ mô tả bằng ngôn ngữ tự nhiên');
-  lines.push('• Content vẫn phải tuân theo format database (YAML/danh sách), viết ngôi thứ ba');
+  lines.push('--- HƯỚNG DẪN VIẾT ENTRY BÁM SCHEMA (QUAN TRỌNG) ---');
+  lines.push('• BẮT BUỘC: entry mô tả NHÂN VẬT/NPC phải GÁN GIÁ TRỊ CỤ THỂ cho các chỉ số của nhân vật CÓ TRONG SCHEMA ở trên. Ví dụ nếu schema có võ lực / trí lực / thể lực / mị lực… thì mỗi entry NPC phải ghi rõ từng chỉ số một con số/mức hợp lý theo nhân vật đó (vd "Võ lực: 85, Trí lực: 60").');
+  lines.push('• Entry mô tả địa điểm / vật phẩm / thế lực → đề cập các biến liên quan tương ứng trong schema (nếu schema có).');
+  lines.push('• DÙNG ĐÚNG TÊN biến như liệt kê trong schema ở trên; KHÔNG bịa thêm biến ngoài schema, KHÔNG bỏ sót các chỉ số chính của nhân vật.');
+  lines.push('• KHÔNG viết code EJS/getvar trong content — chỉ ghi giá trị bằng ngôn ngữ tự nhiên / danh sách.');
+  lines.push('• Content theo format database (YAML/danh sách), viết ngôi thứ ba.');
 
   return lines.join('\n');
 }

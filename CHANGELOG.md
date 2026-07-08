@@ -2,6 +2,15 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.42.0 — Tạo Card: sinh Lorebook BÁM SCHEMA biến (võ lực/trí lực…)
+Client báo: sinh batch Lorebook **không dựa theo schema** — vd NPC có chỉ số võ lực/trí lực trong schema nhưng entry tạo ra chẳng liên quan.
+- **Nguyên nhân**: code ĐÃ hỗ trợ inject schema (`config.schemaContext`), nhưng (1) tuỳ chọn "bám schema" trong bảng tạo tay **mặc định TẮT**, và (2) luồng **Tạo tự động** (autoCreatorPipeline) **không truyền schema** vào.
+- **Sửa**:
+  - Bảng tạo tay (`BatchGeneratorPanel`): tuỳ chọn bám schema **mặc định BẬT** (thẻ có schema thì tự dùng; không có thì tự bỏ qua).
+  - Luồng Tạo tự động: **build + truyền `schemaContext`** từ `card.data.extensions.mvuzod.schema`.
+  - Prompt mạnh hơn (`schemaContextBuilder` + `schemaAddon`): entry mô tả **NHÂN VẬT/NPC BẮT BUỘC gán giá trị cụ thể** cho các chỉ số CÓ TRONG schema (vd "Võ lực: 85, Trí lực: 60"), **dùng đúng tên biến**, không bịa biến ngoài schema, không viết code EJS.
+  - Refiner đã bám schema sẵn; luồng "fill entry thiếu" (verifier) kế thừa qua `...config` nên cũng bám schema.
+
 ## v1.41.1 — Dịch Card: dịch "phẫu thuật" (surgical) chạy tối đa RPM
 Surgical = cơ chế dịch cho field **regex/code**: rút riêng các đoạn chữ Trung ra dịch rồi ghép lại **theo id**, giữ nguyên 100% cấu trúc code (khác với chia chunk cho entry).
 - Trước đây surgical **kẹt cứng 4 batch song song** (`PARALLEL_CONCUR = 4`) + giãn khởi động **2000ms** — dù RPM/key nhiều tới đâu cũng chỉ 4 luồng.

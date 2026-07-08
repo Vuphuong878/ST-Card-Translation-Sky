@@ -594,7 +594,7 @@ export async function runBatchGeneration(config: BatchGenConfig, ctx: BatchRunCo
 
       const userMessage = buildBatchUserMessage(config, ctx.card, seen, ragCtx.injectionText, coherenceCtx, webInjection, countThisBatch, i, totalBatches, createdEntries);
       const schemaAddon = config.schemaContext
-        ? '\n\n--- SCHEMA-AWARE MODE ---\nCard này có hệ biến MVU-ZOD. Khi viết content, hãy THAM CHIẾU đến các biến liên quan (nếu phù hợp ngữ cảnh entry). Ví dụ: mô tả NPC thì đề cập ảnh hưởng đến biến quan hệ, mô tả vật phẩm thì đề cập biến inventory. KHÔNG viết code EJS trong content.'
+        ? '\n\n--- SCHEMA-AWARE MODE (BẮT BUỘC) ---\nCard này có hệ biến MVU-ZOD (xem "### Schema biến" ở trên). Entry mô tả NHÂN VẬT/NPC PHẢI gán giá trị cụ thể cho các chỉ số của nhân vật có trong schema (vd võ lực/trí lực/thể lực… → ghi rõ từng con số). Entry địa điểm/vật phẩm/thế lực thì đề cập các biến liên quan tương ứng. Dùng ĐÚNG TÊN biến trong schema, KHÔNG bịa biến ngoài schema, KHÔNG viết code EJS/getvar trong content (chỉ ghi giá trị bằng ngôn ngữ tự nhiên).'
         : '';
       const categoryDirective = buildCategoryDirective(config.category, config.cardType);
       const tokenBudgetDirective = buildTokenBudgetDirective(config.tokensPerEntry);

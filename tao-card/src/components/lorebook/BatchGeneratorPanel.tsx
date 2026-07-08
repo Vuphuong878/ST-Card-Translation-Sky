@@ -62,7 +62,9 @@ export function BatchGeneratorPanel() {
 
   const [useCardContext, setUseCardContext] = useState(true);
   const [useWebSearch, setUseWebSearch] = useState(false);
-  const [useSchemaContext, setUseSchemaContext] = useState(false);
+  // Mặc định BẬT: nếu card có schema biến (MVU-ZOD, vd võ lực/trí lực), entry sinh ra sẽ bám theo
+  // các chỉ số đó. Nếu card không có schema thì tự bỏ qua (mvuzodSchema=null → không inject).
+  const [useSchemaContext, setUseSchemaContext] = useState(true);
   const [autoConfig, setAutoConfig] = useState(true);
   const [totalEntries, setTotalEntries] = useState(10);
   const [entriesPerBatch, setEntriesPerBatch] = useState(5);
