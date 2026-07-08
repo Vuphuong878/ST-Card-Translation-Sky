@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.42.1 — Dịch Card: sửa nút Dừng/Hủy không dừng call đang treo
+- **Triệu chứng**: bấm **Tạm dừng** hoặc **Hủy** nhưng các call AI đang chạy **không dừng** (monitor thấy call treo cả trăm giây), rõ nhất ở giai đoạn **Chiến lược B/C** (dựng từ điển MVU/EJS).
+- **Nguyên nhân**: khi proxy **treo** (nhận request nhưng không gửi dữ liệu về), vòng đọc stream `reader.read()` **block vô hạn** chờ dữ liệu. Lệnh abort native của fetch **không cắt được** một `read()` đang kẹt như vậy → call không kết thúc, `finally` không chạy nên vẫn hiện "đang chạy", Dừng/Hủy vô hiệu.
+- **Sửa**: thêm `readChunkOrAbort()` — mỗi lần đọc stream được **RACE với tín hiệu Dừng/timeout**; ngay khi bấm Dừng/Hủy (hoặc quá giờ), read đang kẹt bị **reject tức thì** → thoát vòng, kết thúc call, giải phóng. Áp cho **cả 3** loại API (OpenAI-compat, Gemini, Anthropic). Các nút vốn đã gọi đúng `pauseTranslation`/`cancelTranslation` (abort `AbortController`); vấn đề chỉ ở chỗ read stream không phản hồi abort — nay đã xử lý.
+- Giai đoạn Chiến lược B/C vốn đã bắt `AbortError` êm (chuyển "tạm dừng"/"đã hủy") nên sau fix, bấm Dừng/Hủy lúc đang dựng từ điển cũng dừng sạch.
+
 ## v1.42.0 — Tạo Card: sinh Lorebook BÁM SCHEMA biến (võ lực/trí lực…)
 Client báo: sinh batch Lorebook **không dựa theo schema** — vd NPC có chỉ số võ lực/trí lực trong schema nhưng entry tạo ra chẳng liên quan.
 - **Nguyên nhân**: code ĐÃ hỗ trợ inject schema (`config.schemaContext`), nhưng (1) tuỳ chọn "bám schema" trong bảng tạo tay **mặc định TẮT**, và (2) luồng **Tạo tự động** (autoCreatorPipeline) **không truyền schema** vào.

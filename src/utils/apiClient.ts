@@ -63,6 +63,27 @@ function withTimeout(userSignal: AbortSignal | undefined, ms: number): { signal:
 }
 
 /**
+ * Đọc 1 chunk từ stream reader nhưng NGẮT NGAY khi `signal` abort — kể cả lúc read đang KẸT vì proxy
+ * treo (không gửi dữ liệu). Abort native của fetch đôi khi không cắt được một `reader.read()` đang
+ * block chờ dữ liệu → call treo cả trăm giây, bấm Dừng/Hủy không ăn. Race read với abort để thoát ngay.
+ */
+function readChunkOrAbort(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  signal: AbortSignal | undefined,
+): Promise<ReadableStreamReadResult<Uint8Array>> {
+  if (!signal) return reader.read();
+  if (signal.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+  return new Promise<ReadableStreamReadResult<Uint8Array>>((resolve, reject) => {
+    const onAbort = () => reject(new DOMException('Aborted', 'AbortError'));
+    signal.addEventListener('abort', onAbort, { once: true });
+    reader.read().then(
+      (r) => { signal.removeEventListener('abort', onAbort); resolve(r); },
+      (e) => { signal.removeEventListener('abort', onAbort); reject(e); },
+    );
+  });
+}
+
+/**
  * ChunkError — thrown when a multi-chunk translation fails partway through.
  * Carries the successfully translated chunks so the caller can save partial progress.
  */
@@ -1206,7 +1227,7 @@ async function callOpenAICompatible(
   
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readChunkOrAbort(reader, _to.signal);
       if (done) {
         if (buffer) {
           // Process any remaining buffered text
@@ -1345,7 +1366,7 @@ async function callAnthropic(
   
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readChunkOrAbort(reader, _to.signal);
       if (done) {
         if (buffer) {
           const line = buffer.trim();
@@ -1507,7 +1528,7 @@ async function callGemini(
 
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readChunkOrAbort(reader, _to.signal);
       if (done) {
         if (buffer) {
           const line = buffer.trim();
