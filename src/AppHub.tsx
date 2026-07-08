@@ -116,13 +116,23 @@ function GlobalHeader({ activeFlow }: { activeFlow?: FlowDef }) {
       >
         ST
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, minWidth: 0 }}>
-        <span style={{ fontSize: '1.18rem', fontWeight: 800, letterSpacing: 0.3, whiteSpace: 'nowrap',
-          background: 'linear-gradient(90deg, #a99cff, #4ecdc4)', WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-          Silly Tavern Multitools
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, minWidth: 0 }}>
+          <span style={{ fontSize: '1.18rem', fontWeight: 800, letterSpacing: 0.3, whiteSpace: 'nowrap',
+            background: 'linear-gradient(90deg, #a99cff, #4ecdc4)', WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            Silly Tavern Multitools
+          </span>
+          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted, #b6b2c9)' }}>v{APP_VERSION}</span>
+        </div>
+        <span style={{ fontSize: '0.64rem', fontWeight: 500, letterSpacing: 0.2, whiteSpace: 'nowrap',
+          color: 'var(--text-muted, #8b88a0)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ opacity: 0.7 }}>✦ Kết hợp của</span>
+          <span style={{ fontWeight: 700, background: 'linear-gradient(90deg, #a99cff, #4ecdc4)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            Guillichan&nbsp;×&nbsp;Sky
+          </span>
         </span>
-        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted, #b6b2c9)' }}>v{APP_VERSION}</span>
       </div>
       {activeFlow && (
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7,

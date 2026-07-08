@@ -2,6 +2,9 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.42.2 — Hub: ghi công tác giả dưới tiêu đề
+- Thêm dòng nhỏ dưới "Silly Tavern Multitools": **"✦ Kết hợp của Guillichan × Sky"** — tên hai tác giả phối màu gradient (tím→teal) khớp phong cách tiêu đề, chữ nhỏ gọn không chiếm chỗ.
+
 ## v1.42.1 — Dịch Card: sửa nút Dừng/Hủy không dừng call đang treo
 - **Triệu chứng**: bấm **Tạm dừng** hoặc **Hủy** nhưng các call AI đang chạy **không dừng** (monitor thấy call treo cả trăm giây), rõ nhất ở giai đoạn **Chiến lược B/C** (dựng từ điển MVU/EJS).
 - **Nguyên nhân**: khi proxy **treo** (nhận request nhưng không gửi dữ liệu về), vòng đọc stream `reader.read()` **block vô hạn** chờ dữ liệu. Lệnh abort native của fetch **không cắt được** một `read()` đang kẹt như vậy → call không kết thúc, `finally` không chạy nên vẫn hiện "đang chạy", Dừng/Hủy vô hiệu.
