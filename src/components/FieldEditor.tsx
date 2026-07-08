@@ -191,17 +191,16 @@ function ChunkStatusAndResume({
   const { proxy, translationConfig } = useStore();
   const [expanded, setExpanded] = useState(false);
 
-  const currentMaxTokens = proxy.maxTokens;
-  const currentChunkSize = translationConfig.chunkSize;
-  const CHUNK_THRESHOLD = currentChunkSize && currentChunkSize >= 100
-    ? currentChunkSize
-    : (currentMaxTokens && currentMaxTokens > 0 ? Math.min(Math.floor(currentMaxTokens * 3.5), 200000) : 100000);
-
-  const isChunked = field.original.length > CHUNK_THRESHOLD;
+  // Ngưỡng chia chunk THỰC TẾ = 15.000 ký tự (khớp chunkText ở apiClient). Nguồn tin cậy nhất là
+  // field.totalChunks do engine báo qua onChunkComplete; nếu chưa có thì ước lượng theo độ dài.
+  const CHUNK_CHARS = 15000;
+  // completedChunks có thể là mảng thưa (song song hoàn thành lệch thứ tự) → đếm phần ĐÃ XONG (khác rỗng).
+  const completedCount = field.completedChunks?.filter(Boolean).length || 0;
+  const totalChunks = (field.totalChunks && field.totalChunks > 1)
+    ? field.totalChunks
+    : Math.max(1, Math.ceil(field.original.length / CHUNK_CHARS));
+  const isChunked = totalChunks > 1 || completedCount > 0;
   if (!isChunked) return null;
-
-  const completedCount = field.completedChunks?.length || 0;
-  const totalChunks = field.totalChunks || Math.ceil(field.original.length / CHUNK_THRESHOLD);
   const failedIdx = field.failedChunkIndex !== undefined ? field.failedChunkIndex : (field.status === 'error' ? completedCount : undefined);
 
   const downloadChunk = (idx: number) => {
@@ -360,10 +359,10 @@ function ChunkStatusAndResume({
       <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
         <div style={{ fontSize: '0.62rem', color: 'var(--accent-info)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ padding: '1px 5px', background: 'rgba(124,106,240,0.12)', borderRadius: '3px', fontWeight: 600 }}>
-            Dịch chunk: {completedCount + 1}/{totalChunks}
+            🔗 Mục lớn — chia {totalChunks} phần, đang dịch SONG SONG
           </span>
           <span style={{ color: 'var(--text-muted)' }}>
-            (Đã hoàn thành {completedCount} chunk)
+            (đã xong {completedCount}/{totalChunks} phần)
           </span>
         </div>
         {renderDetailsButton()}

@@ -2,6 +2,14 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.41.0 — Dịch Card: mục/entry LỚN → cắt phần & dịch SONG SONG
+Vấn đề: có card entry rất lớn, 1 call Gemini Pro **rất lâu và kém chính xác**.
+- **Cắt phần cho entry lớn**: mục >**15.000 ký tự** được cắt thành nhiều phần ~15k tại **ranh giới an toàn** (không cắt giữa code/tag), rồi **dịch SONG SONG** qua pool đa-luồng và **ghép lại** (có `verifySeams` kiểm mối nối). Ví dụ entry 90k → ~6 phần chạy cùng lúc. Mục ≤15k vẫn dịch 1 lần như cũ. (Theo feedback user: 12–15k/lần call cho kết quả tốt nhất.)
+- **Kết hợp đa luồng RPM**: các phần của 1 entry chia sẻ **chung ngân sách RPM** với các entry khác (qua `pickLane`/rate-limiter) → không vượt 429; tự cân giữa "nhiều entry song song" và "nhiều phần song song trong 1 entry".
+- **Giao diện hiện tiến trình chia phần**: log `🔗 Mục lớn "…" (90.000 ký tự) → chia ~6 phần, dịch SONG SONG`; và ở dòng field: `🔗 Mục lớn — chia 6 phần, đang dịch SONG SONG (đã xong 3/6 phần)`. Trước đây FE chỉ hiện chi tiết chunk khi >100k nên entry 90k không thấy gì — nay bám theo số phần thật engine báo.
+- **An toàn**: bấm Dừng vẫn hủy sạch mọi phần; nếu lỗi giữa chừng, các phần đã xong được lưu để **chạy tiếp** (resume) thay vì dịch lại từ đầu. Chunk size code-heavy vẫn giữ 12k cho an toàn.
+- *Đánh đổi*: các phần dịch song song không thấy bản dịch của phần trước (chỉ thấy ranh giới gốc) nên thuật ngữ có thể lệch nhẹ giữa các phần — được bù bằng `verifySeams` + từ điển MVU + glossary. Đổi lại tốc độ nhanh hơn nhiều cho entry lớn.
+
 ## v1.40.2 — Dịch Card: log dễ đọc, tường minh (#8b + dò log)
 - **#8b — log bộ "AI tự sửa lỗi"**: khi một bản-sửa của AI bị loại, log cũ ghi `❌ Rejected … Fix worsened severity score: 3 → 522` rất khó hiểu (dễ tưởng tool làm hỏng). Nay ghi rõ tiếng Việt, đúng bản chất **an toàn**: `🛡️ Giữ bản gốc cho "…": bản AI sửa lại còn NHIỀU LỖI HƠN bản gốc (điểm lỗi 3 → 522). KHÔNG áp dụng để không làm hỏng thẻ.` Toàn bộ lý do loại bản sửa (ngắn/dài bất thường, mất macro, lệch ngoặc, hỏng regex…) đều Việt hoá + nói rõ "giữ bản gốc". Dòng tổng kết: "đã áp dụng N bản sửa tốt · giữ nguyên M mục".
 - **Dò log Dịch Card**: Việt hoá + làm rõ ~50 dòng log hay gặp — *Đang dịch / Xong lô / Đã dừng dịch / Tiếp tục / Kiểm tra lô / mục bị trống → thử lại / dịch RIÊNG từng mục*, các *Chiến lược B (đồng bộ biến MVU)* & *C (đồng bộ EJS)*, đối chiếu chéo lô, và log tổng kết "🎉 Dịch xong: X thành công, Y lỗi". (Log dev trong console giữ nguyên.)

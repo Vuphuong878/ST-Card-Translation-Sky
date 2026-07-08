@@ -872,14 +872,16 @@ function findSafeBoundary(text: string, targetPos: number, minPos: number): numb
 }
 
 export function chunkText(text: string, maxChars?: number, _maxTokens?: number): string[] {
-  // Default chunk size is reduced to a safe 12,000 characters limit.
+  // Chunk size mặc định 15.000 ký tự (theo feedback user: 12–15k/lần call cho kết quả tốt nhất).
+  // → entry ≤15k dịch 1 lần; entry lớn (vd 90k) cắt ~6 phần đều nhau tại ranh giới AN TOÀN
+  //   (isSafeBoundary, không cắt giữa code/tag), rồi dịch SONG SONG + ghép lại.
   if (maxChars === undefined) {
-    maxChars = 12000;
+    maxChars = 15000;
   }
 
-  // ═══ HARD CAP: 12,000 chars per chunk ═══
-  // Giảm giới hạn xuống mức an toàn để tránh bị cắt cụt đầu ra AI
-  const HARD_CAP = 12000;
+  // ═══ HARD CAP: 15.000 ký tự/chunk ═══ (fields code-heavy tự truyền 12.000 để an toàn hơn)
+  // Giữ dưới ngưỡng để tránh cắt cụt đầu ra AI (flash: 15k ký tự CJK ≈ 7,5k token < 8,2k limit).
+  const HARD_CAP = 15000;
   maxChars = Math.min(maxChars, HARD_CAP);
 
   if (text.length <= maxChars) return [text];

@@ -260,11 +260,12 @@ export function useTranslation() {
     ) ? store.proxy.secondaryModel : targetModel;
     const effectiveProxy = resolvedModel !== store.proxy.model ? { ...store.proxy, model: resolvedModel } : store.proxy;
 
-    if (charCount > CHUNK_THRESHOLD) {
-      const estimatedChunks = Math.ceil(charCount / CHUNK_THRESHOLD);
-      store.addLog('active', `Đang dịch: ${field.label} (${charCount.toLocaleString()} ký tự → ~${estimatedChunks} phần)${targetModel !== store.proxy.model ? ` [Model: ${targetModel}]` : ''}`);
+    // Mục >15k ký tự sẽ được cắt ~15k/phần (chunkText) rồi dịch SONG SONG qua pool → log cho user rõ.
+    const estimatedChunks = Math.ceil(charCount / 15000);
+    if (estimatedChunks > 1) {
+      store.addLog('active', `🔗 Mục lớn "${field.label}" (${charCount.toLocaleString()} ký tự) → chia ~${estimatedChunks} phần, dịch SONG SONG${targetModel !== store.proxy.model ? ` [Model: ${targetModel}]` : ''}`);
     } else {
-      store.addLog('active', `Translating: ${field.label} (${charCount.toLocaleString()} chars)${targetModel !== store.proxy.model ? ` [Model: ${targetModel}]` : ''}`);
+      store.addLog('active', `Đang dịch: ${field.label} (${charCount.toLocaleString()} ký tự)${targetModel !== store.proxy.model ? ` [Model: ${targetModel}]` : ''}`);
     }
 
     // IMPORTANT: read fresh retries from store (not stale `field` parameter) to prevent infinite retry loops
@@ -435,7 +436,7 @@ export function useTranslation() {
             });
           },
           // parallelChunks
-          store.translationConfig.parallelChunks,
+          computePoolConcurrency(store.proxy),
           // enableChunkVerification
           store.translationConfig.enableChunkVerification,
           // onChunksReady
@@ -2111,7 +2112,7 @@ export function useTranslation() {
                   updatedChunks[chunkIdx] = translatedChunk;
                   store.updateField(rf.path, { completedChunks: updatedChunks, totalChunks });
                 },
-                store.translationConfig.parallelChunks,
+                computePoolConcurrency(store.proxy),
                 store.translationConfig.enableChunkVerification,
                 // onChunksReady
                 (rawChunks) => {
@@ -2699,7 +2700,7 @@ export function useTranslation() {
             totalChunks,
           });
         },
-        store.translationConfig.parallelChunks,
+        computePoolConcurrency(store.proxy),
         store.translationConfig.enableChunkVerification,
         // onChunksReady
         (rawChunks) => {
@@ -2912,7 +2913,7 @@ export function useTranslation() {
                 totalChunks,
               });
             },
-            store.translationConfig.parallelChunks,
+            computePoolConcurrency(store.proxy),
             store.translationConfig.enableChunkVerification,
             // onChunksReady
             (rawChunks) => {
