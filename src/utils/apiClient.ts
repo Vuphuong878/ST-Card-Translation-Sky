@@ -1687,6 +1687,23 @@ function _toPoolProvider(id: string, c: { provider: AIProvider; proxyUrl: string
 function buildPool(base: ProxySettings): PoolProvider[] {
   return [_toPoolProvider('default', base), ..._extraProviders.map((p) => _toPoolProvider(p.id, p))];
 }
+/**
+ * SỐ LUỒNG SONG SONG = tổng NGÂN SÁCH RPM của toàn pool. Mỗi provider (config chính + provider
+ * phụ), mỗi KEY đóng góp (primaryRpm + secondaryRpm nếu bật model phụ). Vd: config chính 4 key
+ * (5+20 rpm/key) = 100, provider phụ 2 key (5+20) = 50 → 150 luồng. Provider = phân biệt nguồn AI;
+ * mỗi key thêm vào là nhân thẳng công suất. Không giới hạn thủ công (user tự đặt RPM < hạn thật);
+ * trần cứng 512 chỉ để chặn cấu hình gõ nhầm. pickLane() đã tự CHỜ ĐÚNG NHỊP RPM nên luồng cao vẫn
+ * không vượt RPM (không 429). Dùng cho tầng dispatch batch/entry ở useTranslation.
+ */
+export function computePoolConcurrency(base: ProxySettings): number {
+  let total = 0;
+  for (const p of buildPool(base)) {
+    const kc = Math.max(1, p.keys.length || 1);
+    const perKey = p.primaryRpm + (p.enableSecondary ? p.secondaryRpm : 0);
+    total += Math.max(1, perKey) * kc;
+  }
+  return Math.max(1, Math.min(total, 512));
+}
 /** Thứ tự lane ưu tiên của 1 provider: entry NGẮN (≤ ngưỡng KÝ TỰ) → ưu tiên model phụ cho nhanh.
  *  Ngưỡng đo theo SỐ KÝ TỰ để đồng nhất với UI + path không-pool (useTranslation so charCount trực
  *  tiếp). Trước đây path pool quy đổi token ≈ ceil(ký tự/4) nên entry 2200 ký tự (~550 token) vẫn

@@ -713,19 +713,8 @@ export default function TranslateConfig() {
                         onChange={(e) => setTranslationConfig({ lorebookBatchSize: parseInt(e.target.value) || 5 })}
                       />
                     </div>
-                    <div>
-                      <label className="label">{t.concurrentBatches}</label>
-                      <input
-                        className="input"
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={translationConfig.concurrentBatches}
-                        onChange={(e) => setTranslationConfig({ concurrentBatches: parseInt(e.target.value) || 1 })}
-                      />
-                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {t.concurrentBatchesHint}
-                      </div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      Số luồng song song nay TỰ tính theo tổng RPM của mọi key × provider (không cần nhập tay).
                     </div>
                   </div>
                 )}

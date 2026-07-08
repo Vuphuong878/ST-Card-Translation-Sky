@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useStore } from '../store';
-import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError, ApiError, setExtraProviders, resetProviderPool } from '../utils/apiClient';
+import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError, ApiError, setExtraProviders, resetProviderPool, computePoolConcurrency } from '../utils/apiClient';
 import { extractTranslatableFields, applyTranslationsToCard, autoTranslateLorebookTriggerKeys, injectNewLorebookEntries } from '../utils/cardFields';
 import { syncMvuVariables, postProcessRegexHtml, normalizeSmartQuotesInCode, fixNestedQuoteBracketPaths, fixBrokenLodashPaths, fixDotNotationPaths, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency, enforceVariableCasing, fixZodSyntaxErrors, validateDictionaryConflicts, aiResolveMvuConflicts } from '../utils/mvuSync';
 import { shouldSkipTranslation, detectLanguage } from '../utils/langDetect';
@@ -1695,7 +1695,7 @@ export function useTranslation() {
             ejsContext,
             store.translationConfig.ejsTranslationPrompt,
             {
-              concurrency: Math.max(6, store.translationConfig.concurrentBatches || 0),
+              concurrency: computePoolConcurrency(store.proxy),   // tổng ngân sách RPM toàn pool (mọi key×provider)
               onProgress: (done, total) => {
                 const pct = Math.floor((done / Math.max(1, total)) * 100);
                 if (pct - lastPct >= 25 || done >= total) {
@@ -1767,7 +1767,7 @@ export function useTranslation() {
 
       // ─── Batch mode for lorebook fields ───
       if (isBatchLorebook && lorebookGroups.includes(field.group)) {
-        const concurrency = store.translationConfig.concurrentBatches || 1;
+        const concurrency = computePoolConcurrency(store.proxy);   // tổng ngân sách RPM toàn pool (mọi key×provider)
         const MAX_BATCH_CHARS = Math.max(store.proxy.maxTokens || 65536, 10000);
         // ═══ SAFETY: Dynamic soft cap to prevent AI from losing track of sections ═══
         const SOFT_CHAR_CAP = 30000; // If total chars > 30K, auto-reduce effective batch size
@@ -3775,7 +3775,7 @@ export function useTranslation() {
 
       // ─── Batch mode for lorebook fields (same as startTranslation) ───
       if (isBatchLorebook && lorebookGroups.includes(field.group)) {
-        const concurrency = store.translationConfig.concurrentBatches || 1;
+        const concurrency = computePoolConcurrency(store.proxy);   // tổng ngân sách RPM toàn pool (mọi key×provider)
         const MAX_BATCH_CHARS = Math.max(store.proxy.maxTokens || 65536, 10000);
         const isMvuEnabled = store.translationConfig.enableMvuSync;
 

@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.37.0 — Dịch Card: đa luồng chạy tối đa RPM (mọi key × provider)
+- **Số luồng song song** nay tự tính = **tổng ngân sách RPM toàn pool**: mỗi provider (config chính + provider phụ), **mỗi API key** đóng góp `(RPM model chính + RPM model phụ)`. Ví dụ: config chính 4 key + provider phụ 2 key, mỗi key 5+20 rpm → **(5+20)×4 + (5+20)×2 = 150 luồng**.
+- **Sửa**: trước đây thêm key vào *cấu hình chính* không tăng tốc vì số luồng lấy từ ô "Số batch gửi song song" (mặc định 6). Nay engine (`computePoolConcurrency`) cộng thẳng theo key×RPM → thêm key = chạy hết công suất.
+- Bỏ ô nhập **"Số batch gửi song song"** (tự tính, không cần chỉnh tay). Provider = phân biệt nguồn AI (Google/Amazon…); mỗi key = nhân công suất.
+- An toàn 429: `pickLane` vẫn **chờ đúng nhịp RPM** theo từng (provider, model) nên luồng cao cỡ nào cũng không vượt RPM user nhập. Trần cứng 512 chỉ để chặn gõ nhầm.
+- (Áp cho cả luồng dịch Lorebook hàng loạt lẫn EJS; các mục #6/#7/#10 còn lại của batch sẽ xử lý tiếp.)
+
 ## v1.36.5 — Dịch Card: tải thẻ qua link Discord (tự sửa link webp)
 - **Vấn đề**: dán link ảnh thẻ dạng `media.discordapp.net/...&format=webp&width=&height=` thì tải về là **WEBP đã resize** → Discord đã **re-encode ảnh, xoá mất chunk `tEXt` (chara/ccv3)** chứa dữ liệu thẻ trong PNG. Kể cả tải được cũng chỉ ra ảnh rỗng, không có thẻ. (Không phải lỗi app — do link proxy của Discord.)
 - **Sửa**: khi phát hiện link Discord, tự **chuẩn hoá** trước khi tải: đổi host `media.discordapp.net → cdn.discordapp.com` (file gốc), **bỏ** `format/width/height/quality`, chỉ giữ chữ ký `ex/is/hm`. `cdn` trả **PNG gốc còn nguyên thẻ** và có CORS (`Access-Control-Allow-Origin: *`) nên trình duyệt tải được.
