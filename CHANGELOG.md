@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.44.0 — Đợt 2/6: Nút Dừng cắt luôn call AI đang chạy (Mod Card + Tạo Card)
+> Đợt này rà soát khả năng "dừng" trên cả 5 app và vá các chỗ nút Dừng chưa thật sự cắt được call AI đang chạy (giống bug đã sửa cho Dịch Card trước đây).
+- **Mod Card — thêm nút ⏹ Dừng.** Trước: bấm "Chạy Mod" là chạy hết mọi bước (phân tích → mod từng section → đồng bộ → kiểm định), **không có cách nào dừng**. Nay: khi đang chạy, nút chuyển thành **⏹ Dừng** — bấm là hủy call đang chạy ngay lập tức và cắt vòng lặp; các bước đã xong vẫn giữ nguyên, báo "Đã dừng theo yêu cầu" (không phải lỗi). (Kỹ thuật: luồng `AbortController` → `signal` xuyên `fetchLLM`/orchestrator.)
+- **Tạo Card (sinh Lorebook hàng loạt) — nút Dừng nay hủy tức thì.** Trước: Dừng chỉ có tác dụng **giữa các đợt** (call đang chạy vẫn phải chờ xong, tối đa tới 30 phút/timeout). Nay: bấm Dừng **abort luôn call đang chạy**, không tốn thêm token chờ.
+- **Kết quả rà soát (không sửa thừa):** Dịch Card (streaming + `readChunkOrAbort`) và Trích Card vốn đã cắt in-flight đúng → giữ nguyên. Tạo Preset là trợ lý chat 1-lượt (non-stream, có timeout) → không cần nút dừng riêng. **Không** nhân bản "lưới vá cú pháp acorn" của Dịch Card sang Mod/Tạo Card vì các app đó **không có bước ghép-lại-token** dễ gây vỡ JS như Dịch Card — thêm vào sẽ là logic trùng/thừa.
+
 ## v1.43.1 — Nội bộ (Đợt 1/6): Bộ test tự động cho phần lõi Dịch Card
 > Đây là đợt đầu trong kế hoạch rà soát & nâng cấp 6 đợt. Đợt này **không đổi hành vi app** — chỉ thêm lưới an toàn để những bug đã sửa gần đây (treo trang, nút Dừng, vỡ code JS regex) không tái phát khi chỉnh sửa sau này.
 - **Thêm `vitest`** vào app gốc (config + script `npm test` / `npm run test:run`); build production (`tsc`) đã loại trừ file test nên không ảnh hưởng.

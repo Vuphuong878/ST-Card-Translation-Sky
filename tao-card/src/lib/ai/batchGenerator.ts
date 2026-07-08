@@ -57,6 +57,7 @@ export interface BatchRunContext {
   // Control
   paused: boolean;
   stopped: boolean;
+  signal?: AbortSignal;   // hủy call AI đang chạy khi bấm Dừng
   // Callbacks
   log: (message: string) => void;
   onProgress: (progress: BatchProgress) => void;
@@ -615,11 +616,15 @@ export async function runBatchGeneration(config: BatchGenConfig, ctx: BatchRunCo
         if (ctx.stopped) return { batchIndex: task.batchIndex, entries: null };
         try {
           ctx.log(`📡 Batch ${task.batchIndex}/${totalBatches} — gọi AI${attempt > 0 ? ` (thử lại ${attempt})` : ''}...`);
-          const raw = await callAI({ profile, params: ctx.generationParams, messages: task.messages });
+          const raw = await callAI({ profile, params: ctx.generationParams, messages: task.messages, signal: ctx.signal });
           result = tryExtractJsonArray(raw.text);
           if (result) break;
           ctx.log(`⚠️ Batch ${task.batchIndex} — AI trả về không phải JSON array, thử lại...`);
         } catch (err) {
+          // Người dùng bấm Dừng → abort: thoát ngay, KHÔNG coi là lỗi/thử lại.
+          if (ctx.stopped || (err instanceof DOMException && err.name === 'AbortError')) {
+            return { batchIndex: task.batchIndex, entries: null };
+          }
           ctx.log(`⚠️ Batch ${task.batchIndex} — lỗi: ${err instanceof Error ? err.message : String(err)}`);
         }
       }

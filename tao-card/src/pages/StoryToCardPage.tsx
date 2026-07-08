@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Loader2, ScanLine, Sparkles, User, Wand2, Users, BookOpen, Settings2, Merge, Trash2 } from 'lucide-react';
+import { Loader2, ScanLine, Sparkles, Wand2, Users, BookOpen, Settings2, Merge, Trash2 } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
 import { useCardStore } from '../store/cardStore';
 import { useToastStore } from '../store/toastStore';

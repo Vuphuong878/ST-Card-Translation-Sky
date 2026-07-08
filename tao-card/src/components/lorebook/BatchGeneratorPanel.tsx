@@ -172,6 +172,7 @@ export function BatchGeneratorPanel() {
           generationParams: settings.generationParams,
           get paused() { return useBatchRunStore.getState().isPaused; },
           get stopped() { return useBatchRunStore.getState().stopped; },
+          get signal() { return useBatchRunStore.getState().abort?.signal; },
           log: addLog,
           onProgress: run.setProgress,
           appendEntry: (entry) => { addEntry(entry); },

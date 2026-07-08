@@ -57,11 +57,13 @@ export interface OrchestratorRule {
   enabled: boolean;
 }
 
-async function fetchLLM(systemPrompt: string, userPrompt: string, config: LLMConfig) {
+async function fetchLLM(systemPrompt: string, userPrompt: string, config: LLMConfig, signal?: AbortSignal) {
+  if (signal?.aborted) throw new DOMException('Người dùng đã dừng', 'AbortError');
   const res = await fetch('/api/llm', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ systemPrompt, userPrompt, config })
+    body: JSON.stringify({ systemPrompt, userPrompt, config }),
+    signal   // abort của người dùng → fetch reject ngay (AbortError), pipeline dừng tức thì
   });
   if (!res.ok) {
     const data = await res.json();
@@ -230,11 +232,14 @@ export class ModOrchestrator {
   config: LLMConfig;
   private pool: LLMConfig[];
   private cursor = 0;
+  private signal?: AbortSignal;   // nút Dừng của người dùng → hủy mọi call đang chạy
 
   /** Nhận provider chính + (tuỳ chọn) danh sách provider PHỤ → pool rải call round-robin
-   *  (nhiều provider chạy song song cho các bước mod). 1 provider ⇒ như cũ. */
-  constructor(config: LLMConfig, extraProviders: LLMConfig[] = []) {
+   *  (nhiều provider chạy song song cho các bước mod). 1 provider ⇒ như cũ.
+   *  `signal` (tuỳ chọn) để người dùng dừng cả pipeline giữa chừng. */
+  constructor(config: LLMConfig, extraProviders: LLMConfig[] = [], signal?: AbortSignal) {
     this.config = config;
+    this.signal = signal;
     const usable = (c?: LLMConfig) => !!(c?.apiKey?.trim() && c?.model?.trim());
     const pool = [config, ...extraProviders.filter(usable)].filter(usable);
     this.pool = pool.length ? pool : [config];
@@ -258,7 +263,7 @@ export class ModOrchestrator {
       .replace('{MOD_RULES}', formatRules(rules))
       .replace('{CARD_JSON}', JSON.stringify(sanitized, null, 2));
 
-    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg());
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
     
     // Extract JSON array from markdown if present
     const jsonMatch = response.match(/\[[\s\S]*\]/);
@@ -290,7 +295,7 @@ export class ModOrchestrator {
         .replace('{CONTENT_TYPE}', section.content_type || 'text_narrative')
         .replace('{ORIGINAL_CONTENT}', section.content)
         .replace('{PREVIOUSLY_MODIFIED_CONTEXT}', context || 'Chưa có context');
-      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg());
+      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
       return extractTag(response, 'expanded') || response.trim() || section.content;
     }
 
@@ -307,7 +312,7 @@ export class ModOrchestrator {
         .replace('{MOD_RULES}', formatRules(rules))
         .replace('{ORIGINAL_CONTENT}', section.content);
 
-      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg());
+      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
       // Output XML: lấy <modified> (fallback raw). Không parse JSON để tránh vỡ với nội dung lớn.
       return extractTag(response, 'modified') || response.trim() || section.content;
     }
@@ -332,7 +337,7 @@ export class ModOrchestrator {
         .replace('{PREVIOUSLY_MODIFIED_CONTEXT}', context || 'Chưa có context');
     }
 
-    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg());
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
     if (isCode) {
       // Output XML: lấy <modified_script> (fallback raw) — chắc hơn JSON cho script dài.
       return extractTag(response, 'modified_script') || response.trim() || section.content;
@@ -357,7 +362,7 @@ export class ModOrchestrator {
       const userPrompt = MVUZOD_VAR_REMAP_PROMPT
         .replace('{USER_REQUEST}', userRequest)
         .replace('{VARIABLE_LIST}', list);
-      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg());
+      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
       results.push(...parseRemapXml(response));
     }
     // Chỉ giữ remap có oldKey là biến THẬT + thực sự thay đổi.
@@ -372,7 +377,7 @@ export class ModOrchestrator {
       .replace('{INSTRUCTION}', instruction || '(chi tiết hoá tối đa, giữ đúng ý gốc)')
       .replace('{LORE_DIGEST}', buildLoreDigest(card))
       .replace('{ORIGINAL_CONTENT}', sectionContent);
-    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg());
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
     return extractTag(response, 'result') || response.trim() || sectionContent;
   }
 
@@ -383,7 +388,7 @@ export class ModOrchestrator {
       .replace('{MOD_RULES}', formatRules(rules))
       .replace('{MODIFIED_ENTRIES_JSON}', JSON.stringify(moddedEntries, null, 2));
 
-    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg());
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
     
     const jsonMatch = response.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
@@ -402,7 +407,7 @@ export class ModOrchestrator {
       .replace('{MOD_RULES}', formatRules(rules))
       .replace('{MODIFIED_CARD_JSON}', JSON.stringify(sanitized, null, 2));
 
-    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg());
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
     
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
@@ -436,7 +441,7 @@ export class ModOrchestrator {
         .replace('{EJS_CONTROLLER_PREVIEW}', ejsController.substring(0, 2000))
         .replace('{INITVAR_CONTENT}', initvar.substring(0, 2000));
 
-      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg());
+      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
       
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
@@ -471,7 +476,7 @@ export class ModOrchestrator {
       .replace('{ORIGINAL_CARD_JSON}', JSON.stringify(sanitizeOriginal, null, 2))
       .replace('{MODIFIED_CARD_JSON}', JSON.stringify(sanitizeModified, null, 2));
 
-    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg());
+    const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
     
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {

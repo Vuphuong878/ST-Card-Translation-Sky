@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import FileUploader from '@/components/FileUploader';
 import ModRulesManager, { ModRule } from '@/components/ModRulesManager';
 import VarRemapPanel from '@/components/VarRemapPanel';
@@ -73,6 +73,8 @@ export default function Home() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState<string>('');
+  // Nút Dừng: hủy MỌI call đang chạy (abort in-flight) + cắt vòng lặp mod giữa chừng.
+  const abortRef = useRef<AbortController | null>(null);
   // Kết quả cũng lưu lại để xem lại sau khi F5.
   const [analysisResult, setAnalysisResult] = usePersistedState<AnalysisItem[] | null>('modcard.analysisResult', null);
   const [moddedCard, setModdedCard] = usePersistedState<CardV3 | null>('modcard.moddedCard', null);
@@ -143,6 +145,10 @@ export default function Home() {
     setAuditResult(null);
     setValidationResult(null);
 
+    // Tạo AbortController mới cho lần chạy này → nút Dừng gọi abort() để cắt in-flight + vòng lặp.
+    const ac = new AbortController();
+    abortRef.current = ac;
+
     // Artificial delay to let user see initialization phase
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -172,7 +178,7 @@ export default function Home() {
     }
 
     try {
-      const orchestrator = new ModOrchestrator(llmConfig, extraProviders);
+      const orchestrator = new ModOrchestrator(llmConfig, extraProviders, ac.signal);
       
       // Step 2: Analyze
       setProcessStatus('Giai đoạn 2: Đang gọi LLM phân tích thẻ (Analyze Phase)...');
@@ -192,6 +198,7 @@ export default function Home() {
       const modOpts = { expand: expandMode, intensity: expandIntensity, loreDigest };
 
       for (const req of sectionsToMod) {
+        if (ac.signal.aborted) throw new DOMException('Người dùng đã dừng', 'AbortError');
         setProcessStatus(`Giai đoạn 3: Đang ${expandMode ? 'MỞ RỘNG' : 'mod'} section ${String(req.label)}...`);
         const sectionData = allSections.find(s => s.section_id === req.section_id);
         if (sectionData) {
@@ -235,12 +242,25 @@ export default function Home() {
       setProcessStatus('Hoàn tất toàn bộ quy trình Mod! Đã có kết quả ở Bảng Diff.');
       setActiveTab('diff');
     } catch (error: unknown) {
-      console.error(error);
-      alert('Gặp lỗi trong quá trình xử lý: ' + (error as Error).message);
-      setProcessStatus('Lỗi quy trình.');
+      const err = error as Error;
+      if (err?.name === 'AbortError' || /đã dừng|aborted/i.test(err?.message || '')) {
+        // Người dùng bấm Dừng — KHÔNG phải lỗi. Giữ nguyên kết quả các bước đã xong.
+        setProcessStatus('⏹ Đã dừng theo yêu cầu.');
+      } else {
+        console.error(error);
+        alert('Gặp lỗi trong quá trình xử lý: ' + err.message);
+        setProcessStatus('Lỗi quy trình.');
+      }
     } finally {
       setIsProcessing(false);
+      abortRef.current = null;
     }
+  };
+
+  /** Dừng pipeline mod: abort mọi call đang chạy + cắt vòng lặp giữa chừng. */
+  const stopModding = () => {
+    abortRef.current?.abort(new DOMException('Người dùng đã dừng', 'AbortError'));
+    setProcessStatus('⏹ Đang dừng…');
   };
 
   const handleDownload = () => {
@@ -395,13 +415,22 @@ export default function Home() {
               )}
             </div>
 
-            <button
-              onClick={runFullPipeline}
-              disabled={!card || isProcessing || (rules.filter(r => r.enabled).length === 0 && !customPrompt.trim())}
-              className="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              🚀 Chạy Mod Card Tự Động
-            </button>
+            {!isProcessing ? (
+              <button
+                onClick={runFullPipeline}
+                disabled={!card || (rules.filter(r => r.enabled).length === 0 && !customPrompt.trim())}
+                className="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                🚀 Chạy Mod Card Tự Động
+              </button>
+            ) : (
+              <button
+                onClick={stopModding}
+                className="w-full py-3 bg-red-600 text-white rounded-lg font-semibold shadow hover:bg-red-700 transition-colors"
+              >
+                ⏹ Dừng
+              </button>
+            )}
 
             {isProcessing && (
               <div className="mt-3 p-2 bg-blue-50 text-blue-800 text-xs rounded border border-blue-200 animate-pulse">
