@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.41.1 — Dịch Card: dịch "phẫu thuật" (surgical) chạy tối đa RPM
+Surgical = cơ chế dịch cho field **regex/code**: rút riêng các đoạn chữ Trung ra dịch rồi ghép lại **theo id**, giữ nguyên 100% cấu trúc code (khác với chia chunk cho entry).
+- Trước đây surgical **kẹt cứng 4 batch song song** (`PARALLEL_CONCUR = 4`) + giãn khởi động **2000ms** — dù RPM/key nhiều tới đâu cũng chỉ 4 luồng.
+- Nay: `PARALLEL_CONCUR = max(4, computePoolConcurrency(config))` → **số batch song song = tổng RPM mọi key × provider** (tối thiểu 4, giữ hành vi cũ cho cấu hình nhỏ); giãn khởi động **2000ms → 150ms** (pickLane đã pace theo RPM nên không cần giãn tay 2s).
+- **An toàn không đổi**: mỗi batch đi qua `callProvider → pickLane` nên vẫn **gate RPM** (không 429); các batch **độc lập**, ghép **theo id** nên kết quả không phụ thuộc thứ tự hoàn thành → chất lượng giữ nguyên; nút Dừng vẫn hủy sạch (qua `signal` sẵn có).
+- Kết quả: card **nhiều regex/code** dịch **nhanh hơn nhiều** (không còn nút thắt 4 luồng), đồng bộ với cơ chế đa luồng RPM của entry.
+
 ## v1.41.0 — Dịch Card: mục/entry LỚN → cắt phần & dịch SONG SONG
 Vấn đề: có card entry rất lớn, 1 call Gemini Pro **rất lâu và kém chính xác**.
 - **Cắt phần cho entry lớn**: mục >**15.000 ký tự** được cắt thành nhiều phần ~15k tại **ranh giới an toàn** (không cắt giữa code/tag), rồi **dịch SONG SONG** qua pool đa-luồng và **ghép lại** (có `verifySeams` kiểm mối nối). Ví dụ entry 90k → ~6 phần chạy cùng lúc. Mục ≤15k vẫn dịch 1 lần như cũ. (Theo feedback user: 12–15k/lần call cho kết quả tốt nhất.)

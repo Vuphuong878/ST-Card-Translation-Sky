@@ -2,5 +2,5 @@
 // BUMP `APP_VERSION` on every fix so builds are distinguishable in the UI (shown in the
 // sidebar header). Use the patch number for small fixes; keep `APP_VERSION_NOTE` to a one-line
 // summary of the most recent change (shown on hover).
-export const APP_VERSION = '1.41.0';
-export const APP_VERSION_NOTE = '[Dịch Card] Mục/entry LỚN (>15k ký tự) nay được CẮT thành nhiều phần ~15k rồi dịch SONG SONG qua pool đa-luồng (thay vì 1 call rất lâu & kém chính xác) — vd entry 90k → ~6 phần chạy cùng lúc, ghép lại + kiểm mối nối. Giao diện hiện rõ "🔗 Mục lớn — chia N phần, đang dịch song song (đã xong X/N)". Các phần vẫn dùng chung ngân sách RPM (không vượt 429), Dừng vẫn hủy sạch, có resume nếu lỗi giữa chừng.';
+export const APP_VERSION = '1.41.1';
+export const APP_VERSION_NOTE = '[Dịch Card] Dịch "phẫu thuật" (surgical — dùng cho regex/code, bắt & dịch chữ Trung trong code mà không đụng cấu trúc) nay chạy TỐI ĐA RPM: bỏ giới hạn cứng 4 luồng → số batch song song = tổng RPM mọi key×provider (tối thiểu 4), giãn khởi động 2000ms→150ms. Card nhiều regex/code dịch nhanh hơn nhiều; vẫn gate RPM (không 429), ghép theo id nên chất lượng không đổi, Dừng vẫn hủy sạch.';

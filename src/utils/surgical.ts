@@ -771,7 +771,7 @@ export async function surgicalTranslate(
   customPrompt?: string,
   fieldLabel?: string
 ): Promise<{ translated: string; success: boolean; fallbackTriggered: boolean }> {
-  const { callProvider } = await import('./apiClient');
+  const { callProvider, computePoolConcurrency } = await import('./apiClient');
 
   // ── Step 1: Extract CSS + URL protected zones, then CJK tokens ─────────────
   const cssZones = extractCSSPropertyZones(text);
@@ -913,8 +913,11 @@ ${langRules}${glossaryPrompt}${mvuPrompt}` +
   const FALLBACK_BATCH   = 500;
   const MICRO_BATCH      = 50;
   const MAX_RETRIES      = 2;
-  const PARALLEL_CONCUR  = 4;
-  const STAGGER_MS       = 2000;
+  // Số batch song song = tổng ngân sách RPM toàn pool (mọi key × provider), tối thiểu 4 (giữ hành vi
+  // cũ cho cấu hình nhỏ). Không còn kẹt cứng 4 luồng. pickLane vẫn gate RPM nên không vượt 429.
+  const PARALLEL_CONCUR  = Math.max(4, computePoolConcurrency(config));
+  // Giãn khởi động chỉ 150ms (trước 2000ms) — pickLane đã pace theo RPM nên không cần giãn tay 2s nữa.
+  const STAGGER_MS       = 150;
   const BATCH_TIMEOUT_MS = 500_000; // 500s per batch
 
   let tokenBatches: CJKToken[][] = [];
