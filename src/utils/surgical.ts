@@ -2,6 +2,7 @@
 import { extractTranslationFromResponse } from './masterPrompt';
 import type { ProxySettings, GlossaryEntry } from '../types/card';
 import { writeDebugLog } from './debugLogger';
+import { parse as acornParse } from 'acorn';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Public types
@@ -379,10 +380,23 @@ export function extractCJKTokens(
     const isCssVar = /--$/.test(contextBefore);
     if (isCssVar) continue;
 
+    // ═══ Guard "ĐANG Ở TRONG CHUỖI STRING" (đếm nháy '/" chưa đóng từ đầu dòng) ═══
+    // Vụ vỡ card thật: token CJK nằm TRONG chuỗi ('人，统领:' / '1. 回答…') bị coi là object-key /
+    // dot-notation → reinsert chèn thêm nháy hoặc ['…'] vào GIỮA chuỗi → SyntaxError, script sập.
+    // Trong chuỗi string thì mọi kiểu wrap đều sai — chỉ được thay chữ thuần tuý.
+    // KHÔNG đếm backtick: ${obj.<CJK>} trong template literal là code thật, cần giữ wrap.
+    const _lineStart = text.lastIndexOf('\n', mStart - 1) + 1;
+    const _lineBefore = text.slice(_lineStart, mStart);
+    const _sq = (_lineBefore.match(/(?<!\\)'/g) || []).length;
+    const _dq = (_lineBefore.match(/(?<!\\)"/g) || []).length;
+    const insideStringLiteral = _sq % 2 === 1 || _dq % 2 === 1;
+
     // 1. JS Object Key
     // Must be preceded by {, ,, or newline/spaces, optionally followed by a quote.
-    const isObjectKey = /(?:[{,]\s*|\n\s*|^['"\s]*)['"]?$/.test(contextBefore) && 
-                        /^['"]?\s*:/.test(contextAfter) && 
+    // (object-key thật dạng {'中文': …} có nháy bao sẵn → alreadyQuoted ở reinsert lo, không cần wrap)
+    const isObjectKey = !insideStringLiteral &&
+                        /(?:[{,]\s*|\n\s*|^['"\s]*)['"]?$/.test(contextBefore) &&
+                        /^['"]?\s*:/.test(contextAfter) &&
                         !/^['"]?\s*:\/\//.test(contextAfter);
 
     // 2. JS Dot Notation vs CSS Class
@@ -397,8 +411,23 @@ export function extractCJKTokens(
       isJsDotNotation = false;
     }
 
+    // ═══ CHẶN "VĂN XUÔI ĐÁNH SỐ" & "TRONG CHUỖI STRING" bị nhầm thành dot-notation/CSS class ═══
+    // Vụ vỡ card thật: sysPrompt+='1. <CJK>…' → "1." bị coi là dot-notation → reinsert bọc ['bản dịch']
+    // chèn dấu ' vào GIỮA chuỗi đang mở → SyntaxError, cả <script> sập, nút bấm liệt hết.
+    // 3 dấu hiệu prose (dot-notation THẬT không bao giờ có):
+    //   (a) CHỮ SỐ đứng ngay trước dấu chấm ("1." "2.") — JS không viết 1.prop (arr[0].prop có ']' trước chấm)
+    //   (b) CÓ KHOẢNG TRẮNG giữa dấu chấm và chữ ("1. <CJK>") — obj.prop luôn viết liền
+    //   (c) đang Ở TRONG string literal (đếm nháy '/" chưa đóng từ đầu dòng) — bọc ['…'] trong chuỗi luôn vỡ
+    let isProseContext = insideStringLiteral;   // (c) — trong chuỗi thì bracket-wrap luôn vỡ
+    if (isJsDotNotation && !isProseContext) {
+      const dm = contextBefore.match(/([a-zA-Z0-9_$\])}'"一-鿿㐀-䶿])\s*\??\s*\.(\s*)$/);
+      if (dm && (/[0-9]/.test(dm[1]) || dm[2].length > 0)) isProseContext = true;   // (a) + (b)
+    }
+    if (isProseContext) isJsDotNotation = false;
+
     // CSS class usually follows whitespace, quotes, tag names, or structural combinators
-    const isCssClass = !isJsDotNotation && /(?:^|['"\s,>+~{(])[a-zA-Z0-9-]*\.\s*$/.test(contextBefore);
+    // (prose "1. …" cũng khớp mẫu CSS class → chặn luôn, kẻo bản dịch bị thay space thành dấu chấm)
+    const isCssClass = !isProseContext && !isJsDotNotation && /(?:^|['"\s,>+~{(])[a-zA-Z0-9-]*\.\s*$/.test(contextBefore);
 
     // 3. HTML Attributes
     const isHtmlAttr = /(?:class|id|name|for|data-[a-zA-Z0-9_-]+)\s*=\s*(?:"[^"]*|'[^']*)$/.test(contextBefore);
@@ -420,6 +449,80 @@ export function extractCJKTokens(
     });
   }
   return tokens;
+}
+
+/* ═══ LƯỚI AN TOÀN CÚ PHÁP <script> SAU KHI GHÉP ═══
+ * Dù detector đã chặn prose (xem isProseContext), vẫn có thể lọt mẫu hỏng khác. Nguyên tắc:
+ * script GỐC parse OK mà bản GHÉP vỡ → chắc chắn hỏng do quá trình dịch → sửa TỰ ĐỘNG bằng acorn:
+ * parse lấy VỊ TRÍ lỗi chính xác → revert đúng cái bracket-wrap prose (['câu văn']) gần vị trí lỗi
+ * nhất → parse lại; lặp tới khi sạch lỗi (tối đa 25 vòng). Chỉ giữ bản vá khi parse OK hoàn toàn.
+ * Parse KHÔNG thực thi code nên an toàn. Bracket-wrap MVU hợp lệ (stat_data['Bản Tôn']) không gây
+ * lỗi parse nên không bao giờ bị đụng. Script gốc vốn vỡ sẵn thì bỏ qua (không phải lỗi dịch). */
+function extractScriptBodiesForCheck(html: string): string[] {
+  const out: string[] = [];
+  const re = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) { if (m[1].trim()) out.push(m[1]); }
+  return out;
+}
+function jsParseError(code: string): { pos: number; msg: string } | null {
+  try { acornParse(code, { ecmaVersion: 'latest' }); return null; }
+  catch (e: any) { return { pos: typeof e?.pos === 'number' ? e.pos : -1, msg: String(e?.message || e) }; }
+}
+export function repairScriptSyntaxCorruption(original: string, translated: string): { text: string; repaired: number } {
+  const origScripts = extractScriptBodiesForCheck(original);
+  const transScripts = extractScriptBodiesForCheck(translated);
+  if (origScripts.length === 0 || origScripts.length !== transScripts.length) return { text: translated, repaired: 0 };
+  let result = translated;
+  let repaired = 0;
+  for (let i = 0; i < transScripts.length; i++) {
+    if (jsParseError(origScripts[i])) continue;   // gốc đã vỡ sẵn → không phải do dịch
+    let body = transScripts[i];
+    let err = jsParseError(body);
+    if (!err) continue;                            // bản dịch lành
+    let iter = 0;
+    let reverts = 0;
+    while (err && err.pos >= 0 && iter++ < 40) {
+      // Ứng viên quanh vị trí lỗi ±400, 2 loại mẫu hỏng đã gặp thực tế:
+      //   #1 prose bị bọc bracket:   1['câu văn…']      → revert ". câu văn…"
+      //   #2 token bị bọc nháy TRONG chuỗi: 'người,'thống lĩnh':' → bỏ cặp nháy quanh "thống lĩnh"
+      const winStart = Math.max(0, err.pos - 400);
+      const win = body.slice(winStart, Math.min(body.length, err.pos + 400));
+      const cands: { start: number; end: number; replacement: string }[] = [];
+      let m;
+      const reBracket = /\['([^'\]]{2,600})'\]/g;
+      while ((m = reBracket.exec(win)) !== null) {
+        if (/\s/.test(m[1]) || /[À-ỹĐđ]/.test(m[1])) {
+          cands.push({ start: winStart + m.index, end: winStart + m.index + m[0].length, replacement: '. ' + m[1] });
+        }
+      }
+      const reQuoted = /'([^'\n]{2,160})'/g;
+      while ((m = reQuoted.exec(win)) !== null) {
+        // chỉ chuỗi CÓ dấu tiếng Việt (kết quả dịch) — chuỗi code thường không bị nghi oan
+        if (/[À-ỹĐđ]/.test(m[1])) {
+          cands.push({ start: winStart + m.index, end: winStart + m.index + m[0].length, replacement: m[1] });
+        }
+      }
+      if (!cands.length) break;
+      const errPos = err.pos;
+      cands.sort((a, b) => Math.abs((a.start + a.end) / 2 - errPos) - Math.abs((b.start + b.end) / 2 - errPos));
+      let progressed = false;
+      for (const c of cands) {
+        const candidate = body.slice(0, c.start) + c.replacement + body.slice(c.end);
+        const newErr = jsParseError(candidate);
+        if (!newErr || newErr.pos > errPos + 2) {   // hết lỗi hoặc lỗi lùi RA XA = có tiến triển
+          body = candidate; err = newErr; progressed = true; reverts++; break;
+        }
+      }
+      if (!progressed) break;                        // không candidate nào giúp → dừng, không phá thêm
+    }
+    if (!err && reverts > 0) {
+      result = result.replace(transScripts[i], body);
+      repaired++;
+      console.warn(`[surgicalTranslate] 🩹 Script ${i + 1}: vá ${reverts} chỗ "prose bị bọc bracket" → cú pháp lành trở lại`);
+    }
+  }
+  return { text: result, repaired };
 }
 
 /**
@@ -818,7 +921,7 @@ export async function surgicalTranslate(
 
   const pendingTokens = tokens.filter(t => !t.translated);
   if (pendingTokens.length === 0) {
-    const reinserted = reinsertTranslations(text, tokens);
+    const { text: reinserted } = repairScriptSyntaxCorruption(text, reinsertTranslations(text, tokens));
     onProgress?.(tokens.length, tokens.length, 'Done (local)');
     return { translated: reinserted, success: true, fallbackTriggered: false };
   }
@@ -1239,7 +1342,10 @@ CRITICAL RULES:
     const rawReinserted = reinsertTranslations(text, tokens);
     const normalized    = normalizeFullwidthPunctuation(rawReinserted);
     // Pass the original `text` so CSS property names can be compared and restored
-    const reinserted    = postValidateCSSProperties(text, normalized);
+    const cssValidated  = postValidateCSSProperties(text, normalized);
+    // Lưới an toàn: script gốc compile OK mà bản ghép vỡ → vá mẫu hỏng đã biết (compile-gated)
+    const { text: reinserted, repaired } = repairScriptSyntaxCorruption(text, cssValidated);
+    if (repaired > 0) writeDebugLog(`[surgicalTranslate] repaired ${repaired} corrupted <script> block(s)`);
     const isValid       = verifySurgicalResult(text, reinserted);
 
     const translatedCount = tokens.filter(t => t.translated !== t.text).length;

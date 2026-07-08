@@ -2,6 +2,16 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.43.0 — Dịch Card: FIX TRIỆT ĐỂ dịch regex/HTML làm vỡ code JS
+Client báo: dịch regex chứa HTML hay bị hỏng — bản dịch bị "chèn ký tự `['  ']`", `SyntaxError: Unexpected identifier`, **cả file JS sập, nút bấm liệt hoàn toàn**.
+- **Điều tra trên đúng card lỗi** (diff bản gốc vs bản dịch): thủ phạm KHÔNG phải AI mà là bộ ghép của "dịch phẫu thuật" (surgical) **nhận nhầm ngữ cảnh**:
+  1. Văn xuôi đánh số trong chuỗi (`sysPrompt+='1. 回答…'`) → tưởng `1.` là **đường dẫn biến** → bọc `['bản dịch']` → dấu `'` chèn vào giữa chuỗi đang mở → vỡ. (Tìm thấy 17+ chỗ.)
+  2. Chữ trong chuỗi (`'人，统领:'`) → tưởng là **key object** → bọc thêm cặp nháy `'thống lĩnh'` trong chuỗi → vỡ.
+- **Sửa tầng 1 — CHẶN GỐC** (không sinh lỗi nữa): bộ nhận diện nay loại trừ (a) chữ số đứng trước dấu chấm ("1./2./3." là danh sách, JS không viết `1.prop`), (b) có khoảng trắng sau dấu chấm (`obj.prop` luôn viết liền), (c) **đang ở trong chuỗi string** (đếm nháy chưa đóng) — trong chuỗi thì mọi kiểu bọc đều sai, chỉ thay chữ thuần tuý. Code thật (`wd.时势?.标题`, `${obj.中文}`) vẫn được bọc bracket đúng như cũ.
+- **Sửa tầng 2 — LƯỚI AN TOÀN + TỰ VÁ** (bắt mọi mẫu lọt): sau khi ghép xong, **parse cú pháp từng `<script>`** bằng acorn (chỉ parse, không chạy code). Nếu script gốc lành mà bản dịch vỡ → lấy **vị trí lỗi chính xác** → tự revert đúng mẫu hỏng gần đó (bracket-bọc-câu-văn / cặp-nháy-thừa) → parse lại, lặp tới khi sạch. Chỉ giữ bản vá khi cú pháp lành 100%; không đụng vào bracket-wrap MVU hợp lệ.
+- **Đã test trên đúng card lỗi của client**: tự vá **19 chỗ**, script compile lành trở lại (nút bấm sống lại) — không cần gọi thêm API nào.
+- Nút "Quét & Sửa Regex (AI)" nhờ đó cũng đỡ việc: lỗi cú pháp kiểu này giờ được chặn/vá tự động ngay trong lúc dịch, không cần chạy quét lại.
+
 ## v1.42.3 — Toàn bộ: tăng cỡ chữ nền (khỏi phải zoom 125%)
 - Base `html { font-size }` của **cả 5 app** (Dịch/Tạo Card/Tạo Preset/Mod Card/Trích Card) tăng **14px → 16px**. Vì UI dùng `rem` nên mọi chữ to lên đồng đều ~14% → dễ đọc mà không cần zoom Chrome 125%.
 - Không dùng `zoom` (tránh double-scale iframe/vỡ layout); chỉ nâng base font-size nên layout co giãn tự nhiên.
