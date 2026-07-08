@@ -2,6 +2,16 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.43.1 — Nội bộ (Đợt 1/6): Bộ test tự động cho phần lõi Dịch Card
+> Đây là đợt đầu trong kế hoạch rà soát & nâng cấp 6 đợt. Đợt này **không đổi hành vi app** — chỉ thêm lưới an toàn để những bug đã sửa gần đây (treo trang, nút Dừng, vỡ code JS regex) không tái phát khi chỉnh sửa sau này.
+- **Thêm `vitest`** vào app gốc (config + script `npm test` / `npm run test:run`); build production (`tsc`) đã loại trừ file test nên không ảnh hưởng.
+- **26 test** phủ các hàm lõi thuần (không gọi API):
+  - `chunkText` — bất biến cốt lõi **không mất/thêm ký tự** khi cắt entry lớn để dịch song song (join các phần == văn bản gốc), tôn trọng HARD_CAP 15k.
+  - `computePoolConcurrency` — công thức số luồng = Σ (RPM chính + phụ) × số key, khử trùng key, trần cứng 512 (khoá lại logic task #35).
+  - `surgical` (lưới vá cú pháp v1.43.0) — **regression trên đúng card lỗi thật** của client (`dev_data/`): xác nhận vá được ≥1 chỗ và **mọi `<script>` parse sạch bằng acorn**; thêm test detector không bọc `['…']` cho văn xuôi trong chuỗi.
+  - `mvuValidator` — phát hiện chữ Hán còn sót trong field code + dựng từ điển tên entry (gốc→Việt) — nền cho "bảng sức khoẻ thẻ" ở đợt sau.
+- **Đã tự kiểm test có tác dụng**: tắt thử 1 dòng guard của v1.43.0 → đúng 1 test chuyển đỏ; bật lại → xanh trở lại.
+
 ## v1.43.0 — Dịch Card: FIX TRIỆT ĐỂ dịch regex/HTML làm vỡ code JS
 Client báo: dịch regex chứa HTML hay bị hỏng — bản dịch bị "chèn ký tự `['  ']`", `SyntaxError: Unexpected identifier`, **cả file JS sập, nút bấm liệt hoàn toàn**.
 - **Điều tra trên đúng card lỗi** (diff bản gốc vs bản dịch): thủ phạm KHÔNG phải AI mà là bộ ghép của "dịch phẫu thuật" (surgical) **nhận nhầm ngữ cảnh**:
