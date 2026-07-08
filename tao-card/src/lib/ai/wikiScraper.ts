@@ -5,7 +5,7 @@
  */
 
 import type { CharacterCardV3, LorebookEntry, ChatMessage, ProxyProfile, GenerationParams } from '../../types';
-import { callAI } from './client';
+import { callAI, computePoolConcurrency } from './client';
 import { materializeEntry, nextEntryId } from '../converters/cardDefaults';
 import { tryExtractJsonArray, AUTO_CONFIG_ADDON } from './batchGenerator';
 import { TFIDFIndex } from '../rag/tfidfIndexer';
@@ -374,7 +374,7 @@ export async function runWikiScrape(config: WikiScrapeConfig, ctx: WikiScrapeCon
 
   // Step 3: Calculate batches — each chunk is a "batch"
   const totalBatches = Math.min(chunks.length, Math.ceil(config.maxEntries / config.entriesPerBatch));
-  const concurrency = Math.max(1, Math.min(config.concurrentBatches, 10));
+  const concurrency = Math.max(1, Math.min(computePoolConcurrency(ctx.profile), totalBatches));   // #11: theo tổng RPM pool
 
   ctx.log(`🚀 Bắt đầu trích xuất ${config.maxEntries} entries trong ${totalBatches} batches` +
     (concurrency > 1 ? ` (${concurrency} song song)` : ''));

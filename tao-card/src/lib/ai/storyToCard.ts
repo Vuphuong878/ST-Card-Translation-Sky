@@ -15,7 +15,7 @@
  * Dùng callAI của tao-card → hưởng multi-key + chạy song song theo RPM.
  */
 import type { ProxyProfile, GenerationParams } from '../../types';
-import { callAI } from './client';
+import { callAI, computePoolConcurrency } from './client';
 
 export interface ScannedCharacter { name: string; aliases: string[]; brief: string; }
 
@@ -91,6 +91,9 @@ const QUALITY_RULE = [
   'Nếu nêu một yếu tố (vd bối cảnh mùa đông) thì đào SÂU vào hệ quả đặc thù (lạnh tới mức nào, ảnh hưởng ra sao tới nhân vật/sự kiện), không viết cách ứng phó chung chung.',
   'KHÔNG để lọt từ công trình/placeholder (mẫu, prompt, "đang cập nhật", tên tool, tag nội bộ).',
 ].join('\n');
+
+// #8 — ÉP TIẾNG VIỆT: truyện gốc thường là tiếng Trung → model hay chép nguyên văn. Bắt buộc dịch.
+const LANGUAGE_RULE = '【NGÔN NGỮ — BẮT BUỘC】TOÀN BỘ thành phẩm PHẢI viết bằng TIẾNG VIỆT tự nhiên. Truyện gốc có thể là tiếng Trung/Anh/Nhật/Hàn — bạn phải DỊCH và diễn đạt lại sang tiếng Việt, TUYỆT ĐỐI KHÔNG chép nguyên văn ngôn ngữ gốc. Tên riêng: chữ Hán → âm Hán Việt (vd 夏冬 → Hạ Đông, 杨万春 → Dương Vạn Xuân); tên Nhật → Romaji; tên Hàn → Romanization; tên phương Tây bị phiên sang chữ Hán → khôi phục chữ Latinh. Sau khi viết xong, RÀ LẠI toàn bộ: nếu còn BẤT KỲ chữ Hán/Kanji/Hangul nào (kể cả trong ngoặc, nhãn, tiêu đề) thì dịch ngay. Chỉ giữ nguyên macro {{user}}, {{char}}.';
 
 // ─── Chunk truyện theo ranh giới đoạn văn, gần size mong muốn ───
 export function chunkStory(story: string, size: number): string[] {
@@ -181,7 +184,7 @@ CHỈ xuất đúng khối sau, mọi tag đóng, ngoài tag không viết gì:
 
   let done = 0;
   opts.onProgress?.(0, chunks.length);
-  const lists = await runPool(chunks, Math.min(4, chunks.length), async (chunk, i) => {
+  const lists = await runPool(chunks, Math.min(computePoolConcurrency(profile), chunks.length), async (chunk, i) => {
     const { text } = await callAI({
       profile, params, signal: opts.signal,
       label: multi ? `Quét nhân vật (đoạn ${i + 1}/${chunks.length})` : 'Quét nhân vật',
@@ -235,6 +238,7 @@ function buildCardSystem(characterName: string, opts: StoryCardOptions): string 
     : '';
 
   return `Bạn là chuyên gia viết THẺ NHÂN VẬT SillyTavern chất lượng cao, viết bằng tiếng Việt tự nhiên, văn phong nhập vai.
+${LANGUAGE_RULE}
 Từ truyện + tên nhân vật mục tiêu, viết một thẻ HOÀN CHỈNH cho nhân vật đó. Mức chi tiết: ${opts.detail ?? 'vừa phải'}. ${templateRule} ${opts.nsfw ? NSFW_RULE : SFW_RULE}
 ${QUALITY_RULE}
 QUY TẮC:
@@ -319,7 +323,7 @@ export async function generateCardsForMany(
 ): Promise<BatchCardResult[]> {
   let done = 0;
   // Trần đồng thời rộng — callAI tự gate theo RPM/đa key nên không lo vượt.
-  return runPool(names, Math.min(8, names.length), async (name) => {
+  return runPool(names, Math.min(computePoolConcurrency(profile), names.length), async (name) => {
     try {
       const card = await generateCardFromStory(story, name, profile, params, opts, signal);
       onEach?.(++done, names.length, name);

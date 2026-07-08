@@ -4,7 +4,7 @@
  */
 
 import type { ProxyProfile, GenerationParams, ChatMessage, AIGeneratedEntry, CharacterCardV3, LorebookEntry } from '../../types';
-import { callAI } from './client';
+import { callAI, computePoolConcurrency } from './client';
 import { materializeEntry, nextEntryId } from '../converters/cardDefaults';
 import { TFIDFIndex } from '../rag/tfidfIndexer';
 import { buildRAGContext } from '../rag/ragContextBuilder';
@@ -522,9 +522,9 @@ export async function runBatchGeneration(config: BatchGenConfig, ctx: BatchRunCo
   }
   
   const totalBatches = Math.ceil(config.totalEntries / config.entriesPerBatch);
-  // Cho phép tới 24 luồng song song (Flash 17 RPM cần ~17; nhân thêm nếu nhiều key).
-  // RPM limiter kiểu chốt-giờ-bắt-đầu ở client.ts đảm bảo không vượt trần 429.
-  const concurrency = Math.max(1, Math.min(config.concurrentBatches ?? 1, 24));
+  // #11 — Số luồng song song = tổng ngân sách RPM toàn pool (mỗi provider × key × RPM chính+phụ).
+  // RPM limiter (chốt-giờ-bắt-đầu) ở client.ts đảm bảo không vượt trần 429 dù luồng cao.
+  const concurrency = Math.max(1, Math.min(computePoolConcurrency(ctx.profile), totalBatches));
   let created = 0;
   let consecutiveErrors = 0;
   const seen: Array<{ comment: string; keys: string[] }> = (

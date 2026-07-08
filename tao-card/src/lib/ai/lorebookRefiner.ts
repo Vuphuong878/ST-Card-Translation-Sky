@@ -9,7 +9,7 @@ import type {
 } from '../../types/lorebookRefiner.types';
 import type { LorebookEntry } from '../../types/lorebook.types';
 import type { CharacterCardV3, ProxyProfile, GenerationParams, ChatMessage } from '../../types';
-import { callAI } from './client';
+import { callAI, computePoolConcurrency } from './client';
 import { buildRefinerSystemPrompt, buildRefinerUserMessage } from './refinerPrompts';
 import { checkWorldbookHealth } from '../worldbook/worldbookHealthCheck';
 import { isDuplicateEntry } from './deduplicator';
@@ -250,7 +250,7 @@ async function runAIAnalysis(
   }
 
   const totalBatches = batches.length;
-  const concurrency = Math.max(1, Math.min(config.concurrentBatches, 10));
+  const concurrency = Math.max(1, Math.min(computePoolConcurrency(ctx.profile), totalBatches));   // #11: theo tổng RPM pool
   const profile = config.modelOverride
     ? { ...ctx.profile, selectedModel: config.modelOverride }
     : ctx.profile;

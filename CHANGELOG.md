@@ -2,6 +2,11 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.40.0 — Tạo Card: ép tiếng Việt (#8a) + đa luồng tối đa RPM (#11)
+- **#8a — Tạo thẻ từ truyện ra tiếng Việt**: truyện gốc thường tiếng Trung → model hay chép nguyên văn. Thêm `LANGUAGE_RULE` bắt buộc: TOÀN BỘ thành phẩm phải là **tiếng Việt tự nhiên**, dịch tên riêng (Hán→Hán Việt, Nhật→Romaji, Hàn→Romanization), rà soát xoá mọi chữ Hán/Kanji/Hangul sót; chỉ giữ macro `{{user}}`/`{{char}}`.
+- **#11 — Đa luồng chạy tối đa RPM (Tạo Card)**: thêm `computePoolConcurrency(profile)` (= Σ pool: RPM chính+phụ × số key). Thay các trần cứng cũ (`Math.min(8/4/24/10)`) ở: tạo thẻ nhiều nhân vật, quét nhân vật, sinh Lorebook hàng loạt, refiner Lorebook, wiki scraper. `RPMLimiter` (chốt-giờ-bắt-đầu) sẵn có ở client.ts giữ không vượt 429.
+- **Rà soát #11 các app khác**: Trích Card đã có (v1.36.2); Tạo Preset là chat tuần tự nên chỉ round-robin key (không có gì để song song); Mod Card là thao tác mod đơn/tuần tự theo thiết kế.
+
 ## v1.39.1 — Dịch Card: gọn giao diện API cấu hình chính (như provider)
 Vì cấu hình chính nay hành xử y như 1 provider (đa key + RPM riêng), gom UI cho gọn:
 - **Gộp "API Key" + "API Key Rotation" → MỘT ô** đa key: mỗi dòng hoặc dấu phẩy 1 key. Key đầu = key chính, còn lại xoay vòng; engine nhân RPM theo tổng số key (như provider). Bỏ khối "API Key Rotation" xổ ra riêng.

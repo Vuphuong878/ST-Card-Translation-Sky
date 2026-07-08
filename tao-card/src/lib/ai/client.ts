@@ -103,6 +103,19 @@ function buildPool(active: ProxyProfile): ProxyProfile[] {
   const pool = [...map.values()];
   return pool.length ? pool : [active];
 }
+/** #11 — Số luồng song song đề xuất = TỔNG ngân sách RPM toàn pool: mỗi provider (active + inPool),
+ *  mỗi API key đóng góp (primaryRpm + secondaryRpm nếu bật). callAI đã tự gate nhịp RPM (RPMLimiter)
+ *  nên đặt cao vẫn không vượt 429. Trần 256 chỉ chặn cấu hình gõ nhầm. Dùng thay các cap Math.min(8/4). */
+export function computePoolConcurrency(active: ProxyProfile): number {
+  let total = 0;
+  for (const p of buildPool(active)) {
+    const kc = Math.max(1, new Set(parseApiKeys(p.apiKey)).size);
+    const per = (p.primaryRpm ?? 5) + (p.enableSecondaryModel ? (p.secondaryRpm ?? 10) : 0);
+    total += Math.max(1, per) * kc;
+  }
+  return Math.max(1, Math.min(total, 256));
+}
+
 /** Chọn provider kế tiếp (round-robin) từ pool cho 1 call. */
 function pickPoolProfile(active: ProxyProfile): ProxyProfile {
   const pool = buildPool(active);
