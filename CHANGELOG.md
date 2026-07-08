@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.39.0 — Dịch Card: Lorebook dịch từng-mục-song-song + Dừng hẳn (#2,#6,#7,#10)
+- **#6/#7 — hết trộn/đè bản dịch**: chế độ Lorebook "Hàng loạt" trước đây gộp nhiều mục vào **1 call AI** rồi gán kết quả **theo chỉ số** — nếu AI trả sai thứ tự/số lượng thì mục này nhận nhầm bản dịch của mục kia ("dịch đè"), và khi 1 mục lỗi thì **retry cả nhóm** (dịch lại mục đã xong). Nay **mỗi mục là 1 request riêng**, đi qua `translateSingleField` (có khoá `inFlightPaths` chống 2 luồng ghi cùng field, chunk + resume, retry riêng từng mục). Không còn prompt gộp → không thể trộn/đè.
+- **Tốc độ** vẫn cao nhờ **đa luồng RPM (#1)** dispatch nhiều mục song song (số luồng = tổng RPM mọi key × provider).
+- **#10** — bỏ ô **"Số mục mỗi đợt"** (và "Số batch gửi song song" ở 1.37.0); số luồng tự tính theo RPM.
+- **#2 — Dừng/Hủy dừng HẲN**: (a) đầu `translateSingleField` chặn set trạng thái "đang dịch" nếu đã bấm Dừng (tránh task nền set lại sau khi đã reset); (b) thêm bộ **quét dọn nhiều lần** trong ~2.6s sau khi Dừng/Hủy để đưa mọi mục "đang dịch" còn sót về "chờ". Đã test: sau khi Hủy, log ngừng hẳn (không dịch nền), không mục nào kẹt "đang dịch".
+- Đã test live với API thật (gemini-3-flash): xác nhận per-entry (không còn "Batch translating N entries"), Hủy dừng sạch.
+
 ## v1.38.0 — Trích Card: đổi vai nhanh + cờ đệ quy mặc định + xuất LB nhân vật
 - **#3 Đổi vai Chính/Phụ**: ở mục 3, **bấm vào badge vai** (★Chính / Phụ / vai?) của nhân vật để đổi qua lại — đang Chính → Phụ, còn lại → Chính. Cập nhật ngay, giữ khi sắp xếp.
 - **#4 Mặc định chống đệ quy**: mọi entry Lorebook xuất ra (LB chuẩn + character_book nhúng) nay mặc định **`excludeRecursion:true`** (Non-recursable) **+ `preventRecursion:true`** (Ngăn đệ quy tiếp theo).

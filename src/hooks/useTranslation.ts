@@ -223,6 +223,9 @@ export function useTranslation() {
 
   /* ─── Translate a single field (inner — wrapped below with an in-flight lock) ─── */
   const _translateSingleFieldInner = async (field: TranslationField, index: number, fields: TranslationField[]) => {
+    // #2: nếu đã bấm Dừng/Hủy thì KHÔNG đánh dấu 'translating' (tránh task nền set lại sau khi
+    // pause đã reset → kẹt 'translating' hoài / "vẫn dịch nền"). Bail ngay để loop trên bắt Cancelled.
+    if (checkAbort()) throw new Error('Cancelled');
     store.setCurrentFieldIndex(index);
     store.updateField(field.path, { status: 'translating' });
     const charCount = field.original.length;
@@ -890,7 +893,10 @@ export function useTranslation() {
     // which prevents the "entry dài quá" 10–20 min stalls / truncation.
     const isMvuCritical = batchFields[0].entryType === 'mvu_logic' || batchFields[0].entryType === 'controller' || batchFields[0].entryType === 'initvar';
     const isLongSingle = batchFields.length === 1 && batchFields[0].original.length > LONG_ENTRY_ISOLATE_CHARS;
-    if (batchFields.length === 1 && (isMvuCritical || isLongSingle)) {
+    // MỌI batch 1-field → đi qua translateSingleField: có guard inFlightPaths (chống 2 luồng ghi đè
+    // cùng field), chunk + resume, retry RIÊNG từng field, và KHÔNG dùng prompt gộp nhiều-entry (vốn
+    // gây AI trộn thứ tự → gán nhầm bản dịch). Đây là nền cho chế độ dịch từng-entry song song.
+    if (batchFields.length === 1) {
       if (isLongSingle && !isMvuCritical) {
         store.addLog('info', `📏 Entry dài (${batchFields[0].original.length.toLocaleString()} ký tự) — dịch riêng & cắt nhỏ (chunk) thay vì gộp lô, để tránh lỗi/timeout: ${batchFields[0].label}`);
       }
@@ -1453,7 +1459,10 @@ export function useTranslation() {
     }
 
     const isBatchLorebook = store.translationConfig.lorebookStrategy === 'batch';
-    const batchSize = store.translationConfig.lorebookBatchSize || 20;
+    // #6/#7: dịch TỪNG ENTRY (mỗi field 1 request) thay vì gộp nhiều entry/1 call — loại bỏ AI trộn
+    // thứ tự (gán nhầm bản dịch) + retry cả nhóm + ghi đè. Tốc độ đến từ đa luồng RPM (#1), không từ
+    // gộp lô. (Ô "Số mục mỗi đợt" bỏ ở #10.)
+    const batchSize = 1;
     const lorebookGroups: FieldGroup[] = ['lorebook', 'lorebook_keys'];
 
     // ═══ Strategy B: Build MVU Dictionary BEFORE starting loop ═══
@@ -2462,6 +2471,20 @@ export function useTranslation() {
     }
   }, [prepareFields, store]);
 
+  // #2: quét lại 'translating' → 'pending' NHIỀU LẦN trong ~2.5s sau khi Dừng/Hủy. Với đa luồng cao,
+  // một số task nền (đang trong backoff/await fetch chưa abort xong) có thể set lại 'translating' NGAY
+  // SAU lần reset đầu; sweeper dọn các straggler đó. Chỉ quét khi loop KHÔNG chạy (chưa bấm Tiếp tục)
+  // để không phá một lần Resume ngay sau đó.
+  const sweepStuckToPending = useCallback(() => {
+    [200, 500, 1000, 1800, 2600].forEach((ms) => {
+      setTimeout(() => {
+        if (runningRef.current) return;   // đã Resume → thôi
+        const stuck = useStore.getState().fields.filter(f => f.status === 'translating');
+        if (stuck.length) for (const f of stuck) store.updateField(f.path, { status: 'pending' });
+      }, ms);
+    });
+  }, [store]);
+
   const pauseTranslation = useCallback(() => {
     // ═══ HARD, RESUMABLE PAUSE ═══
     // The user usually pauses to EDIT an entry. A cooperative pause would let the
@@ -2479,6 +2502,7 @@ export function useTranslation() {
     runningRef.current = false;
     const stuck = useStore.getState().fields.filter(f => f.status === 'translating');
     for (const f of stuck) store.updateField(f.path, { status: 'pending' });
+    sweepStuckToPending();              // dọn straggler do task nền set lại 'translating' sau reset
     store.setPhase('paused');
     store.saveTranslationCache();
     store.addLog('warning', '⏸ Đã tạm dừng. Cứ sửa entry thoải mái — nó sẽ KHÔNG tự chạy; bấm Tiếp tục/Start mới chạy lại.');
@@ -2526,8 +2550,9 @@ export function useTranslation() {
     for (const f of stuckFields) {
       store.updateField(f.path, { status: 'pending' });
     }
+    sweepStuckToPending();              // #2: dọn straggler nền sau khi Hủy
     store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-  }, [store]);
+  }, [store, sweepStuckToPending]);
 
   const cancelFieldTranslation = useCallback((path: string) => {
     const ctrl = fieldAbortMap.current.get(path);
@@ -3751,7 +3776,10 @@ export function useTranslation() {
 
     // ═══ Main Mod Loop — mirrors startTranslation exactly ═══
     const isBatchLorebook = store.translationConfig.lorebookStrategy === 'batch';
-    const batchSize = store.translationConfig.lorebookBatchSize || 20;
+    // #6/#7: dịch TỪNG ENTRY (mỗi field 1 request) thay vì gộp nhiều entry/1 call — loại bỏ AI trộn
+    // thứ tự (gán nhầm bản dịch) + retry cả nhóm + ghi đè. Tốc độ đến từ đa luồng RPM (#1), không từ
+    // gộp lô. (Ô "Số mục mỗi đợt" bỏ ở #10.)
+    const batchSize = 1;
     const lorebookGroups: FieldGroup[] = ['lorebook', 'lorebook_keys'];
 
     let i = 0;

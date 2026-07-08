@@ -696,26 +696,13 @@ export default function TranslateConfig() {
                     value="batch"
                     checked={translationConfig.lorebookStrategy === 'batch'}
                     onChange={() => setTranslationConfig({ lorebookStrategy: 'batch' as LorebookStrategy })}
-                    label={`${t.batchEntries} (${translationConfig.lorebookBatchSize})`}
+                    label={t.batchEntries}
                     desc={t.batchEntriesDesc}
                   />
                 </div>
                 {translationConfig.lorebookStrategy === 'batch' && (
-                  <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div>
-                      <label className="label">{t.entriesPerBatch}</label>
-                      <input
-                        className="input"
-                        type="number"
-                        min={2}
-                        max={50}
-                        value={translationConfig.lorebookBatchSize}
-                        onChange={(e) => setTranslationConfig({ lorebookBatchSize: parseInt(e.target.value) || 5 })}
-                      />
-                    </div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                      Số luồng song song nay TỰ tính theo tổng RPM của mọi key × provider (không cần nhập tay).
-                    </div>
+                  <div style={{ marginTop: '8px', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                    Dịch <b>từng mục song song</b> ở mức tối đa (số luồng = tổng RPM của mọi key × provider). Mỗi mục là 1 request riêng → không bị AI trộn/ghi đè giữa các mục. Không cần chỉnh tay.
                   </div>
                 )}
               </div>

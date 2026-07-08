@@ -2,5 +2,5 @@
 // BUMP `APP_VERSION` on every fix so builds are distinguishable in the UI (shown in the
 // sidebar header). Use the patch number for small fixes; keep `APP_VERSION_NOTE` to a one-line
 // summary of the most recent change (shown on hover).
-export const APP_VERSION = '1.38.0';
-export const APP_VERSION_NOTE = '[Trích Card] 3 tính năng: (1) Ở mục 3 BẤM vào badge vai (Chính/Phụ) để đổi vai nhanh cho từng nhân vật. (2) Lorebook/thẻ xuất ra nay mặc định BẬT Non-recursable + Ngăn đệ quy tiếp theo (excludeRecursion + preventRecursion). (3) Thêm nút "Tải Lorebook nhân vật .json" ở mục 7 — xuất riêng LB chỉ gồm nhân vật (mỗi người 1 entry, kích hoạt theo tên), không cần làm bước Lorebook bối cảnh.';
+export const APP_VERSION = '1.39.0';
+export const APP_VERSION_NOTE = '[Dịch Card] Chế độ Lorebook "Hàng loạt" nay dịch TỪNG MỤC SONG SONG (mỗi mục 1 request) thay vì gộp nhiều mục/1 call — hết lỗi AI trộn thứ tự / dịch đè / retry cả nhóm (#6,#7). Tốc độ đến từ đa luồng RPM (#1). Bỏ ô "Số mục mỗi đợt" (#10). Nút Dừng/Hủy nay chặn task nền set lại trạng thái + quét dọn nhiều lần → dừng hẳn, không dịch nền, không kẹt "đang dịch" (#2).';
