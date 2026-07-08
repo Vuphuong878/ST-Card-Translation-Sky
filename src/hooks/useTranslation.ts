@@ -262,7 +262,7 @@ export function useTranslation() {
 
     if (charCount > CHUNK_THRESHOLD) {
       const estimatedChunks = Math.ceil(charCount / CHUNK_THRESHOLD);
-      store.addLog('active', `Translating: ${field.label} (${charCount.toLocaleString()} chars → ~${estimatedChunks} chunks 🔗sequential)${targetModel !== store.proxy.model ? ` [Model: ${targetModel}]` : ''}`);
+      store.addLog('active', `Đang dịch: ${field.label} (${charCount.toLocaleString()} ký tự → ~${estimatedChunks} phần)${targetModel !== store.proxy.model ? ` [Model: ${targetModel}]` : ''}`);
     } else {
       store.addLog('active', `Translating: ${field.label} (${charCount.toLocaleString()} chars)${targetModel !== store.proxy.model ? ` [Model: ${targetModel}]` : ''}`);
     }
@@ -362,7 +362,7 @@ export function useTranslation() {
 
       if (isEligibleForSurgical) {
         usedSurgical = true;
-        store.addLog('active', `🔪 Initiating Surgical Translation for ${field.label}...`);
+        store.addLog('active', `🔪 Dịch phẫu thuật (chỉ sửa phần cần) cho ${field.label}…`);
         const sResult = await surgicalTranslate(
           field.original,
           effectiveProxy,
@@ -388,7 +388,7 @@ export function useTranslation() {
           store.updateField(field.path, { 
             surgicalResult: { type: 'fallback', info: 'Structural verification failed. Falling back to standard translation.' } 
           });
-          store.addLog('warning', `Surgical verification failed for ${field.label}. Falling back to standard translation.`);
+          store.addLog('warning', `Dịch phẫu thuật cho ${field.label} không đạt — chuyển sang dịch thường.`);
         }
       }
 
@@ -401,7 +401,7 @@ export function useTranslation() {
 
         if (prevChunks) {
           const filledCount = prevChunks.filter(c => c && c.length > 0).length;
-          store.addLog('info', `🔄 Resuming ${field.label}: ${filledCount} chunks cached`);
+          store.addLog('info', `🔄 Tiếp tục ${field.label}: đã có ${filledCount} phần (chunk) trong bộ nhớ`);
         }
 
         translated = await translateText(
@@ -734,7 +734,7 @@ export function useTranslation() {
         if (cjkRegex.test(translatedStripped)) {
           if (freshRetries() < (store.proxy.maxRetries || 3)) {
             store.updateField(field.path, { retries: freshRetries() + 1 });
-            store.addLog('retry', `⚠️ Chinese characters detected in Schema (${field.label}). Auto-retrying...`);
+            store.addLog('retry', `⚠️ Còn chữ Hán trong Schema (${field.label}). Đang thử lại…`);
             await new Promise((r) => setTimeout(r, store.proxy.retryDelay || 1000));
             return 'retry';
           }
@@ -767,7 +767,7 @@ export function useTranslation() {
 
       // Keep chunk progress for export, clear failed index only
       store.updateField(field.path, { status: 'done', translated, failedChunkIndex: undefined });
-      store.addLog('success', `Translated: ${field.label} (${translated.length} chars)`);
+      store.addLog('success', `✅ Đã dịch: ${field.label} (${translated.length} ký tự)`);
       // Store to Translation Memory (non-blocking)
       if (store.translationConfig.enableTranslationMemory) {
         storeTranslation({ ...field, translated, status: 'done' }, store.cardFileName || 'unknown').catch(() => {});
@@ -784,7 +784,7 @@ export function useTranslation() {
             failedChunkIndex: err.failedChunkIndex,
             totalChunks: err.totalChunks,
           });
-          store.addLog('info', `⏸ ${field.label}: saved ${err.completedChunks.length}/${err.totalChunks} chunks for resume`);
+          store.addLog('info', `⏸ ${field.label}: đã lưu ${err.completedChunks.length}/${err.totalChunks} phần để chạy tiếp`);
         } else {
           store.updateField(field.path, { status: 'pending' });
         }
@@ -805,7 +805,7 @@ export function useTranslation() {
 
         if (currentRetries < maxChunkRetries) {
           store.updateField(field.path, { retries: currentRetries + 1 });
-          store.addLog('retry', `⚠️ Chunk translation failed at chunk ${err.failedChunkIndex + 1}/${err.totalChunks}. Auto-retrying with resume (Attempt ${currentRetries + 1}/${maxChunkRetries})...`);
+          store.addLog('retry', `⚠️ Lỗi ở phần ${err.failedChunkIndex + 1}/${err.totalChunks}. Tự chạy tiếp từ chỗ dở (lần ${currentRetries + 1}/${maxChunkRetries})…`);
           await new Promise((r) => setTimeout(r, store.proxy.retryDelay || 1000));
           return 'retry';
         }
@@ -816,7 +816,7 @@ export function useTranslation() {
           error: msg,
           retries: currentRetries + 1,
         });
-        store.addLog('error', `Failed: ${field.label} — chunk ${err.failedChunkIndex + 1}/${err.totalChunks} (${err.completedChunks.length} chunks saved for resume)`);
+        store.addLog('error', `Lỗi: ${field.label} — phần ${err.failedChunkIndex + 1}/${err.totalChunks} (đã lưu ${err.completedChunks.length} phần để chạy tiếp)`);
         store.addToast('error', `${field.label}: chunk ${err.failedChunkIndex + 1}/${err.totalChunks} failed — retry will resume`);
         return 'error';
       }
@@ -842,7 +842,7 @@ export function useTranslation() {
       // Cắt ngắn message trước khi log/lưu (phòng lỗi không phải ApiError vẫn dài).
       const shortMsg = msg.length > 240 ? msg.replace(/\s+/g, ' ').slice(0, 240) + '…' : msg;
       store.updateField(field.path, { status: 'error', error: shortMsg, retries: currentRetries + 1 });
-      store.addLog('error', `Failed: ${field.label} — ${shortMsg}`);
+      store.addLog('error', `Lỗi: ${field.label} — ${shortMsg}`);
       store.addToast('error', `Failed: ${field.label}`);
       return 'error';
     }
@@ -925,7 +925,7 @@ export function useTranslation() {
     const mvuCriticalCount = batchFields.filter(isMvuCriticalField).length;
     const entryTypes = [...new Set(batchFields.map(f => f.entryType).filter(Boolean))];
     const typeLabel = entryTypes.length > 0 ? ` [${entryTypes.join(',')}]` : '';
-    store.addLog('active', `${retryPrefix}Batch translating ${batchFields.length} entries${typeLabel} (${totalChars} chars${mvuCriticalCount > 0 ? `, ${mvuCriticalCount} MVU-critical` : ''}) - Unlimited Context${targetModel !== store.proxy.model ? ` [Model: ${targetModel}]` : ''}`);
+    store.addLog('active', `${retryPrefix}Đang dịch ${batchFields.length} mục${typeLabel} (${totalChars} ký tự${mvuCriticalCount > 0 ? `, ${mvuCriticalCount} mục biến số MVU` : ''})${targetModel !== store.proxy.model ? ` [Model: ${targetModel}]` : ''}`);
 
     try {
       const items = batchFields.map(f => ({ text: f.original, fieldName: f.label }));
@@ -1007,7 +1007,7 @@ export function useTranslation() {
       // Count how many results are empty (cleared by cross-validation or failed parse)
       const emptyResultCount = results.filter(r => !r || !r.trim()).length;
       if (emptyResultCount > 0 && emptyResultCount < batchFields.length) {
-        store.addLog('info', `🔍 Batch cross-validation: ${emptyResultCount}/${batchFields.length} entries will be retranslated individually (suspicious alignment detected)`);
+        store.addLog('info', `🔍 Đối chiếu chéo lô: ${emptyResultCount}/${batchFields.length} mục sẽ dịch lại RIÊNG (nghi AI trả lệch thứ tự)`);
       }
 
       for (let j = 0; j < batchFields.length; j++) {
@@ -1238,7 +1238,7 @@ export function useTranslation() {
 
       // Log validation summary
       if (autoFixCount > 0) {
-        store.addLog('info', `📋 Batch validation: ${doneCount} translated, ${autoFixCount} auto-fixed`);
+        store.addLog('info', `📋 Kiểm tra lô: ${doneCount} mục đã dịch, ${autoFixCount} mục tự sửa`);
       }
 
       // ═══ Fallback/Retry for empty results ═══
@@ -1249,7 +1249,7 @@ export function useTranslation() {
         if (retryCount < (store.proxy.maxRetries || 3)) {
           // Log which specific fields failed
           const failedLabels = emptyFields.map(f => f.label.replace(/^Lorebook: /, '')).slice(0, 5);
-          store.addLog('retry', `⚠️ ${emptyFields.length} items empty in batch: [${failedLabels.join(', ')}${emptyFields.length > 5 ? '...' : ''}]. Retrying (${backoffDelay}ms)...`);
+          store.addLog('retry', `⚠️ ${emptyFields.length} mục bị trống (AI chưa trả kết quả): [${failedLabels.join(', ')}${emptyFields.length > 5 ? '…' : ''}]. Đang thử lại sau ${(backoffDelay/1000).toFixed(1)}s…`);
           await new Promise((r) => setTimeout(r, backoffDelay));
           await translateOneBatch(emptyFields, retryCount + 1);
         } else {
@@ -1260,9 +1260,9 @@ export function useTranslation() {
           const orderedFallback = [...criticalFields, ...normalFields];
 
           if (criticalFields.length > 0) {
-            store.addLog('warning', `${emptyFields.length} empty after retries. Falling back to individual (${criticalFields.length} MVU-critical first)...`);
+            store.addLog('warning', `${emptyFields.length} mục vẫn trống sau khi thử lại — chuyển sang dịch RIÊNG (ưu tiên ${criticalFields.length} mục biến MVU)…`);
           } else {
-            store.addLog('warning', `${emptyFields.length} empty after retries, falling back to individual...`);
+            store.addLog('warning', `${emptyFields.length} mục vẫn trống sau khi thử lại — chuyển sang dịch RIÊNG từng mục…`);
           }
 
           for (let fi = 0; fi < orderedFallback.length; fi++) {
@@ -1306,7 +1306,7 @@ export function useTranslation() {
           }
         }
       } else {
-        store.addLog('success', `${retryPrefix}Batch complete: ${doneCount}/${batchFields.length}${autoFixCount > 0 ? ` (${autoFixCount} auto-fixed)` : ''}`);
+        store.addLog('success', `${retryPrefix}✅ Xong lô: ${doneCount}/${batchFields.length} mục${autoFixCount > 0 ? ` (tự sửa ${autoFixCount})` : ''}`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -1324,7 +1324,7 @@ export function useTranslation() {
       const backoffDelay = Math.min((store.proxy.retryDelay || 1000) * Math.pow(2, retryCount), 15000);
 
       if (retryCount < (store.proxy.maxRetries || 3)) {
-        store.addLog('retry', `⚠️ Batch completely failed, retrying (${backoffDelay}ms)... (${msg})`);
+        store.addLog('retry', `⚠️ Cả lô bị lỗi, đang thử lại sau ${(backoffDelay/1000).toFixed(1)}s… (${msg})`);
         await new Promise((r) => setTimeout(r, backoffDelay));
         await translateOneBatch(batchFields, retryCount + 1);
         return;
@@ -1335,7 +1335,7 @@ export function useTranslation() {
       const normalFields = batchFields.filter(f => !isMvuCriticalField(f));
       const orderedFallback = [...criticalFields, ...normalFields];
 
-      store.addLog('warning', `Batch failed after retries, falling back for ${batchFields.length} entries${criticalFields.length > 0 ? ` (${criticalFields.length} MVU-critical first)` : ''}...`);
+      store.addLog('warning', `Lô bị lỗi sau khi thử lại — chuyển sang dịch RIÊNG ${batchFields.length} mục${criticalFields.length > 0 ? ` (ưu tiên ${criticalFields.length} mục biến số MVU)` : ''}…`);
 
       for (let fi = 0; fi < orderedFallback.length; fi++) {
         const f = orderedFallback[fi];
@@ -1450,7 +1450,7 @@ export function useTranslation() {
 
     sortFieldsForCovariance(fields, Boolean(store.translationConfig.enableMvuSync));
     if (store.translationConfig.enableMvuSync) {
-      store.addLog('info', '📋 Multi-Pass Covariant Sorting applied: Phase 1 (Schema & Initvars) → Phase 2 (Regex & Keys) → Phase 3 (Narrative & Prompts)');
+      store.addLog('info', '📋 Đã sắp xếp đa lượt để đồng bộ thuật ngữ: Lượt 1 (Schema & biến khởi tạo) → Lượt 2 (Regex & từ khoá) → Lượt 3 (Tường thuật & prompt)');
     } else {
       const hasFindRegex = fields.some(f => f.path.includes('findRegex'));
       if (hasFindRegex) {
@@ -1471,7 +1471,7 @@ export function useTranslation() {
     const skipMvuBuild = continueMode && Object.keys(existingMvuDictForCheck).length > 0;
     if (store.translationConfig.enableMvuSync && store.card && !skipMvuBuild) {
       try {
-        store.addLog('info', '🔧 Strategy B: Auto-detecting MVU/Zod variables...');
+        store.addLog('info', '🔧 Chiến lược B (đồng bộ biến MVU): đang dò biến MVU/Zod…');
         const extractedKeys = extractPotentialMvuKeyStrings(store.card);
         
         if (extractedKeys.length > 0) {
@@ -1482,7 +1482,7 @@ export function useTranslation() {
             if (checkAbort()) {
               runningRef.current = false;
               store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-              store.addLog('warning', 'Translation cancelled by user');
+              store.addLog('warning', '⏹ Đã dừng dịch theo yêu cầu.');
               return;
             }
             if (await waitForPause()) {
@@ -1495,14 +1495,14 @@ export function useTranslation() {
             const newKeys = extractedKeys.filter(k => !(k in existingDict));
             
             if (totalMvuPasses > 1) {
-              store.addLog('info', `🔧 Strategy B Pass ${mvuPass + 1}/${totalMvuPasses}: Found ${extractedKeys.length} variables (${newKeys.length} new, ${extractedKeys.length - newKeys.length} already mapped)`);
+              store.addLog('info', `🔧 Chiến lược B — lượt ${mvuPass + 1}/${totalMvuPasses}: thấy ${extractedKeys.length} biến (${newKeys.length} mới, ${extractedKeys.length - newKeys.length} đã có)`);
             } else {
-              store.addLog('info', `Found ${extractedKeys.length} variables (${newKeys.length} new, ${extractedKeys.length - newKeys.length} already mapped)`);
+              store.addLog('info', `Thấy ${extractedKeys.length} biến (${newKeys.length} mới, ${extractedKeys.length - newKeys.length} đã có)`);
             }
 
             if (newKeys.length === 0) {
               if (totalMvuPasses > 1 && mvuPass > 0) {
-                store.addLog('success', `🔧 Strategy B: All variables mapped after ${mvuPass} pass(es) — no new keys to translate`);
+                store.addLog('success', `🔧 Chiến lược B: đã dịch hết biến sau ${mvuPass} lượt — không còn biến mới`);
               }
               break;
             }
@@ -1558,12 +1558,12 @@ export function useTranslation() {
               store.setTranslationConfig({ mvuDictionary: fixedDict });
               store.addLog('success', `✅ Auto-added ${addedCount} variable translations to MVU Dictionary`);
             } else {
-              store.addLog('info', 'All variables are already ASCII or mapped — no AI translation needed');
+              store.addLog('info', 'Mọi biến đã là ASCII hoặc đã dịch — không cần gọi AI');
               break;
             }
           }
         } else {
-          store.addLog('info', 'No MVU/Zod variables detected in this card');
+          store.addLog('info', 'Thẻ này không có biến MVU/Zod');
         }
       } catch (mvuErr) {
         const mvuMsg = mvuErr instanceof Error ? mvuErr.message : String(mvuErr);
@@ -1575,7 +1575,7 @@ export function useTranslation() {
         store.addLog('warning', `⚠️ MVU auto-detect failed (non-critical): ${mvuMsg}`);
       }
     } else if (skipMvuBuild) {
-      store.addLog('info', `🔧 Strategy B: Reusing existing MVU dictionary (${Object.keys(existingMvuDictForCheck).length} entries) — skipping AI re-translation`);
+      store.addLog('info', `🔧 Chiến lược B: dùng lại từ điển biến MVU đã có (${Object.keys(existingMvuDictForCheck).length} biến) — không dịch lại bằng AI`);
     }
 
     // ═══ Strategy B: Auto-resolve conflicts before EJS/translation loop ═══
@@ -1590,7 +1590,7 @@ export function useTranslation() {
             store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
             return;
           }
-          store.addLog('active', `⚠️ Strategy B: Detected ${conflicts.length} translation conflict(s). Calling AI to resolve conflicts before proceeding...`);
+          store.addLog('active', `⚠️ Chiến lược B: có ${conflicts.length} chỗ dịch mâu thuẫn — gọi AI xử lý trước khi tiếp tục…`);
           
           let schemaContext = store.translationConfig.customSchema || '';
           if (!schemaContext.trim()) {
@@ -1624,9 +1624,9 @@ export function useTranslation() {
             }
             store.setMvuKeyMetadata(currentMetadata);
             store.setTranslationConfig({ mvuDictionary: fixedDict });
-            store.addLog('success', `✅ Strategy B: Resolved ${fixedCount} translation conflicts`);
+            store.addLog('success', `✅ Chiến lược B: đã xử lý ${fixedCount} chỗ mâu thuẫn`);
           } else {
-            store.addLog('warning', `⚠️ Strategy B: Could not automatically resolve conflicts`);
+            store.addLog('warning', `⚠️ Chiến lược B: không tự xử lý được mâu thuẫn`);
           }
         }
       } catch (conflictErr) {
@@ -1647,7 +1647,7 @@ export function useTranslation() {
     const skipEjsBuild = continueMode && (Object.keys(existingEjsDictForCheck || {}).length > 0 || Object.keys(existingKwDictForCheck || {}).length > 0);
     if (store.translationConfig.enableEjsSync && store.card && !skipEjsBuild) {
       try {
-        store.addLog('info', '🔮 Strategy C: Scanning EJS entry names & keywords...');
+        store.addLog('info', '🔮 Chiến lược C (đồng bộ EJS): đang quét tên mục & từ khoá EJS…');
         const ejsEntryRefs = extractEjsEntryNames(store.card);
         const ejsKeywords = extractEjsKeywords(store.card);
         const totalEjsPasses = Math.max(1, Math.min(5, store.translationConfig.ejsScanPasses || 1));
@@ -1656,7 +1656,7 @@ export function useTranslation() {
           if (checkAbort()) {
             runningRef.current = false;
             store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            store.addLog('warning', 'Translation cancelled by user');
+            store.addLog('warning', '⏹ Đã dừng dịch theo yêu cầu.');
             return;
           }
           if (await waitForPause()) {
@@ -1672,14 +1672,14 @@ export function useTranslation() {
           const newKeywords = ejsKeywords.map(k => k.keyword).filter(k => !(k in existingKwDict));
 
           if (totalEjsPasses > 1) {
-            store.addLog('info', `🔮 Strategy C Pass ${ejsPass + 1}/${totalEjsPasses}: Found ${ejsEntryRefs.length} entry refs (${newEntryNames.length} new), ${ejsKeywords.length} keywords (${newKeywords.length} new)`);
+            store.addLog('info', `🔮 Chiến lược C — lượt ${ejsPass + 1}/${totalEjsPasses}: thấy ${ejsEntryRefs.length} tham chiếu mục (${newEntryNames.length} mới), ${ejsKeywords.length} từ khoá (${newKeywords.length} mới)`);
           } else {
-            store.addLog('info', `Found ${ejsEntryRefs.length} entry refs (${newEntryNames.length} new), ${ejsKeywords.length} keywords (${newKeywords.length} new)`);
+            store.addLog('info', `Thấy ${ejsEntryRefs.length} tham chiếu mục (${newEntryNames.length} mới), ${ejsKeywords.length} từ khoá (${newKeywords.length} mới)`);
           }
 
           if (newEntryNames.length === 0 && newKeywords.length === 0) {
             if (totalEjsPasses > 1 && ejsPass > 0) {
-              store.addLog('success', `🔮 Strategy C: All EJS items mapped after ${ejsPass} pass(es)`);
+              store.addLog('success', `🔮 Chiến lược C: đã dịch hết mục EJS sau ${ejsPass} lượt`);
             }
             break;
           }
@@ -1722,9 +1722,9 @@ export function useTranslation() {
 
           if (addedEntries > 0 || addedKw > 0) {
             store.setTranslationConfig({ ejsEntryNameDict: mergedEntryDict, ejsKeywordDict: mergedKwDict });
-            store.addLog('success', `✅ Strategy C: Added ${addedEntries} entry name translations + ${addedKw} keyword translations`);
+            store.addLog('success', `✅ Chiến lược C: thêm ${addedEntries} bản dịch tên mục + ${addedKw} bản dịch từ khoá`);
           } else {
-            store.addLog('info', 'All EJS items already mapped or no CJK content to translate');
+            store.addLog('info', 'Mọi mục EJS đã dịch hoặc không có chữ Hán cần dịch');
             break;
           }
         }
@@ -1732,7 +1732,7 @@ export function useTranslation() {
         if (store.translationConfig.ejsDecoratorPreserve) {
           const ejsDetection = detectEjsCard(store.card);
           if (ejsDetection.hasDecorators) {
-            store.addLog('info', '🛡️ Strategy C: Decorator preservation active — @@, [GENERATE:], @INJECT lines will be protected');
+            store.addLog('info', '🛡️ Chiến lược C: bảo vệ dòng đặc biệt (@@, [GENERATE:], @INJECT) khỏi bị dịch');
           }
         }
       } catch (ejsErr) {
@@ -1745,7 +1745,7 @@ export function useTranslation() {
         store.addLog('warning', `⚠️ EJS auto-detect failed (non-critical): ${ejsMsg}`);
       }
     } else if (skipEjsBuild) {
-      store.addLog('info', `🔮 Strategy C: Reusing existing EJS dictionaries (${Object.keys(existingEjsDictForCheck || {}).length} entries + ${Object.keys(existingKwDictForCheck || {}).length} keywords) — skipping AI re-translation`);
+      store.addLog('info', `🔮 Chiến lược C: dùng lại từ điển EJS đã có (${Object.keys(existingEjsDictForCheck || {}).length} mục + ${Object.keys(existingKwDictForCheck || {}).length} từ khoá) — không dịch lại bằng AI`);
     }
 
     let i = 0;
@@ -1761,7 +1761,7 @@ export function useTranslation() {
       if (checkAbort()) {
         runningRef.current = false;
         store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-        store.addLog('warning', 'Translation cancelled by user');
+        store.addLog('warning', '⏹ Đã dừng dịch theo yêu cầu.');
         return;
       }
 
@@ -1913,7 +1913,7 @@ export function useTranslation() {
           if (checkAbort()) {
             runningRef.current = false;
             store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            store.addLog('warning', 'Translation cancelled');
+            store.addLog('warning', '⏹ Đã dừng dịch.');
             return;
           }
 
@@ -1939,7 +1939,7 @@ export function useTranslation() {
                 if (msg === 'Cancelled' || checkAbort()) {
                   runningRef.current = false;
                   store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-                  store.addLog('warning', 'Translation cancelled');
+                  store.addLog('warning', '⏹ Đã dừng dịch.');
                   return;
                 }
               }
@@ -1947,7 +1947,7 @@ export function useTranslation() {
           } catch {
             runningRef.current = false;
             store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            store.addLog('warning', 'Translation cancelled');
+            store.addLog('warning', '⏹ Đã dừng dịch.');
             return;
           }
 
@@ -1978,14 +1978,14 @@ export function useTranslation() {
           i++;
         }
 
-        store.addLog('info', `🔧 Regex: Translating ${regexFields.length} regex field(s) via Regex Manager mechanism...`);
+        store.addLog('info', `🔧 Regex: đang dịch ${regexFields.length} script regex…`);
 
         for (const rf of regexFields) {
           // Check abort
           if (checkAbort()) {
             runningRef.current = false;
             store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            store.addLog('warning', 'Translation cancelled by user');
+            store.addLog('warning', '⏹ Đã dừng dịch theo yêu cầu.');
             return;
           }
 
@@ -2054,7 +2054,7 @@ export function useTranslation() {
 
             if (regexIsEligibleForSurgical) {
               regexUsedSurgical = true;
-              store.addLog('active', `🔪 Initiating Surgical Translation for ${rf.label}...`);
+              store.addLog('active', `🔪 Dịch phẫu thuật (chỉ sửa phần cần) cho ${rf.label}…`);
               const sResult = await surgicalTranslate(
                 rf.original,
                 regexEffectiveProxy,
@@ -2080,7 +2080,7 @@ export function useTranslation() {
                 store.updateField(rf.path, {
                   surgicalResult: { type: 'fallback', info: 'Structural verification failed. Falling back to standard translation.' }
                 });
-                store.addLog('warning', `Surgical verification failed for ${rf.label}. Falling back to standard translation.`);
+                store.addLog('warning', `Dịch phẫu thuật cho ${rf.label} không đạt — chuyển sang dịch thường.`);
               }
             }
 
@@ -2190,7 +2190,7 @@ export function useTranslation() {
             if (msg === 'Cancelled' || msg === 'The operation was aborted' || msg === 'The user aborted a request.' || checkAbort()) {
               runningRef.current = false;
               store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-              store.addLog('warning', 'Translation cancelled');
+              store.addLog('warning', '⏹ Đã dừng dịch.');
               return;
             }
             store.updateField(rf.path, { status: 'error', error: msg });
@@ -2339,7 +2339,7 @@ export function useTranslation() {
         // Cancel was thrown
         runningRef.current = false;
         store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-        store.addLog('warning', 'Translation cancelled');
+        store.addLog('warning', '⏹ Đã dừng dịch.');
         return;
       }
 
@@ -2359,7 +2359,7 @@ export function useTranslation() {
     store.saveTranslationCache();
     const doneCount = store.fields.filter((f) => f.status === 'done').length;
     const failCount = store.fields.filter((f) => f.status === 'error').length;
-    store.addLog('info', `Translation complete: ${doneCount} done, ${failCount} failed`);
+    store.addLog('info', `🎉 Dịch xong: ${doneCount} thành công, ${failCount} lỗi`);
     store.addToast('success', `Translation complete! ${doneCount}/${fields.length} fields translated`);
 
     // ═══ Post-Translation MVU-ZOD Sync Verification Report ═══
@@ -2377,9 +2377,9 @@ export function useTranslation() {
       
       const missingVars = syncReport.unreplaced;
       if (missingVars === 0) {
-        store.addLog('success', `✅ MVU Sync: All ${syncReport.totalVars} variables correctly replaced!`);
+        store.addLog('success', `✅ Đồng bộ MVU: đã thay đúng toàn bộ ${syncReport.totalVars} biến!`);
       } else {
-        store.addLog('warning', `⚠️ MVU Sync: ${missingVars} variables were NOT replaced! Check Verify panel for details.`);
+        store.addLog('warning', `⚠️ Đồng bộ MVU: còn ${missingVars} biến CHƯA được thay! Xem bảng Kiểm tra để biết chi tiết.`);
         for (const detail of syncReport.details) {
            store.addLog('error', detail);
         }
@@ -2403,7 +2403,7 @@ export function useTranslation() {
 
       if (entryNameResult.matchedNames.length > 0 || entryNameResult.missingNames.length > 0) {
         if (entryNameResult.valid) {
-          store.addLog('success', `✅ EJS Sync: All ${entryNameResult.matchedNames.length} entry names correctly synchronized in text!`);
+          store.addLog('success', `✅ Đồng bộ EJS: đã đồng bộ đúng toàn bộ ${entryNameResult.matchedNames.length} tên mục trong văn bản!`);
         } else {
           store.addLog('warning', `⚠️ EJS Sync: ${entryNameResult.missingNames.length} entry name(s) NOT found in translated text — EJS auto-trigger will fail!`);
           for (const m of entryNameResult.missingNames.slice(0, 5)) {
@@ -2439,9 +2439,9 @@ export function useTranslation() {
         // Report entry name sync
         if (ejsSyncResult.totalEntryNames > 0) {
           if (ejsSyncResult.missingEntryNames.length === 0) {
-            store.addLog('success', `✅ Strategy C: All ${ejsSyncResult.matchedEntryNames} getwi() entry names correctly synced!`);
+            store.addLog('success', `✅ Chiến lược C: đã đồng bộ đúng ${ejsSyncResult.matchedEntryNames} tên mục getwi()!`);
           } else {
-            store.addLog('warning', `⚠️ Strategy C: ${ejsSyncResult.missingEntryNames.length} getwi() entry name(s) NOT synced!`);
+            store.addLog('warning', `⚠️ Chiến lược C: còn ${ejsSyncResult.missingEntryNames.length} tên mục getwi() CHƯA đồng bộ!`);
             for (const m of ejsSyncResult.missingEntryNames.slice(0, 5)) {
               store.addLog('error', `  getwi() "${m.name}" → "${m.translatedName}" still using original in: ${m.referencedIn.join(', ')}`);
             }
@@ -2451,9 +2451,9 @@ export function useTranslation() {
         // Report keyword sync
         if (ejsSyncResult.totalKeywords > 0) {
           if (ejsSyncResult.missingKeywords.length === 0) {
-            store.addLog('success', `✅ Strategy C: All ${ejsSyncResult.matchedKeywords} EJS keywords correctly synced!`);
+            store.addLog('success', `✅ Chiến lược C: đã đồng bộ đúng ${ejsSyncResult.matchedKeywords} từ khoá EJS!`);
           } else {
-            store.addLog('warning', `⚠️ Strategy C: ${ejsSyncResult.missingKeywords.length} EJS keyword(s) NOT synced!`);
+            store.addLog('warning', `⚠️ Chiến lược C: còn ${ejsSyncResult.missingKeywords.length} từ khoá EJS CHƯA đồng bộ!`);
             for (const m of ejsSyncResult.missingKeywords.slice(0, 5)) {
               store.addLog('error', `  Keyword "${m.keyword}" → "${m.translatedKeyword}" still original in: ${m.foundIn}`);
             }
@@ -2462,7 +2462,7 @@ export function useTranslation() {
 
         // Report broken decorators
         if (ejsSyncResult.brokenDecorators.length > 0) {
-          store.addLog('warning', `⚠️ Strategy C: ${ejsSyncResult.brokenDecorators.length} decorator(s) modified or missing!`);
+          store.addLog('warning', `⚠️ Chiến lược C: ${ejsSyncResult.brokenDecorators.length} dòng đặc biệt bị đổi/thiếu!`);
           for (const d of ejsSyncResult.brokenDecorators.slice(0, 5)) {
             store.addLog('error', `  Decorator "${d.original}" → ${d.translated} in: ${d.fieldPath}`);
           }
@@ -2513,7 +2513,7 @@ export function useTranslation() {
     if (runningRef.current) {
       // Loop still alive (cooperative pause) — just flip the flag and it continues.
       store.setPhase('translating');
-      store.addLog('info', 'Translation resumed');
+      store.addLog('info', '▶ Tiếp tục dịch.');
     } else {
       // Hard pause (or an error) killed the loop → restart in CONTINUE mode, picking up
       // pending fields. Route to the SAME flow that was running (translate vs mod).
@@ -2748,7 +2748,7 @@ export function useTranslation() {
           failedChunkIndex: err.failedChunkIndex,
           totalChunks: err.totalChunks,
         });
-        store.addLog('error', `Re-translate failed: ${field.label} — chunk ${err.failedChunkIndex + 1}/${err.totalChunks} (${err.completedChunks.length} saved)`);
+        store.addLog('error', `Dịch lại lỗi: ${field.label} — phần ${err.failedChunkIndex + 1}/${err.totalChunks} (đã lưu ${err.completedChunks.length})`);
       } else {
         store.updateField(path, { status: 'error', error: msg });
         store.addLog('error', `Re-translate failed: ${field.label} — ${msg}`);
@@ -2829,7 +2829,7 @@ export function useTranslation() {
     runningRef.current = true;
     store.setPhase('translating');
 
-    store.addLog('info', `♻️ Retrying ${errorFields.length} failed field(s)...`);
+    store.addLog('info', `♻️ Đang dịch lại ${errorFields.length} mục bị lỗi…`);
     let successCount = 0;
     let failCount = 0;
 
@@ -2881,7 +2881,7 @@ export function useTranslation() {
 
           if (prevChunks && attempts === 0) {
             const filledCount = prevChunks.filter(c => c && c.length > 0).length;
-            store.addLog('info', `🔄 Resuming ${field.label}: ${filledCount} chunks cached`);
+            store.addLog('info', `🔄 Tiếp tục ${field.label}: đã có ${filledCount} phần (chunk) trong bộ nhớ`);
           }
 
           const translated = await translateText(
@@ -2985,7 +2985,7 @@ export function useTranslation() {
               failedChunkIndex: err.failedChunkIndex,
               totalChunks: err.totalChunks,
             });
-            store.addLog('error', `✗ Retry failed: ${field.label} — chunk ${err.failedChunkIndex + 1}/${err.totalChunks} (${err.completedChunks.length} saved)`);
+            store.addLog('error', `✗ Thử lại lỗi: ${field.label} — phần ${err.failedChunkIndex + 1}/${err.totalChunks} (đã lưu ${err.completedChunks.length})`);
           } else {
             store.updateField(field.path, { status: 'error', error: msg, retries: field.retries + attempts });
             store.addLog('error', `✗ Retry failed: ${field.label} — ${msg}`);
@@ -3008,7 +3008,7 @@ export function useTranslation() {
       store.setPhase(failCount > 0 ? 'done' : 'done');
     }
     store.saveTranslationCache();
-    store.addLog('info', `Retry complete: ${successCount} fixed, ${failCount} still failing`);
+    store.addLog('info', `Thử lại xong: ${successCount} đã sửa, ${failCount} vẫn lỗi`);
     store.addToast(failCount === 0 ? 'success' : 'error', `Retry: ${successCount}/${errorFields.length} fixed`);
   }, [store]);
 
@@ -3227,7 +3227,7 @@ export function useTranslation() {
             result = patchResult.result;
           } else {
             // All patches failed — fallback to full mode
-            store.addLog('warning', `🩹 All patches failed to match — falling back to full mode for ${field.label}`);
+            store.addLog('warning', `🩹 Bản vá không khớp — dịch lại TOÀN BỘ mục ${field.label}`);
             const fullPromptResult = buildEffectivePrompt({
               translationPrompt: store.translationConfig.translationPrompt,
               enableJailbreak: store.translationConfig.enableJailbreak,
@@ -3477,7 +3477,7 @@ export function useTranslation() {
             store.addLog('info', 'Mod instructions did not change any variable names');
           }
         } else {
-          store.addLog('info', 'No MVU/Zod variables detected in this card');
+          store.addLog('info', 'Thẻ này không có biến MVU/Zod');
         }
       } catch (mvuErr) {
         const mvuMsg = mvuErr instanceof Error ? mvuErr.message : String(mvuErr);
@@ -3651,7 +3651,7 @@ export function useTranslation() {
               result = patchResult.result;
             } else {
               // All patches failed — fallback to full mode
-              store.addLog('warning', `🩹 All patches failed — falling back to full mode for ${field.label}`);
+              store.addLog('warning', `🩹 Bản vá không khớp — dịch lại TOÀN BỘ mục ${field.label}`);
               const fullPromptResult = buildEffectivePrompt({
                 translationPrompt: store.translationConfig.translationPrompt,
                 enableJailbreak: store.translationConfig.enableJailbreak,
@@ -4048,7 +4048,7 @@ export function useTranslation() {
     if (useStore.getState().phase === 'translating') {
       store.setPhase('done');
     }
-    store.addLog('info', `🔧 Mod complete: ${successCount} success, ${failCount} failed${autoFixCount > 0 ? `, ${autoFixCount} auto-fixed` : ''}`);
+    store.addLog('info', `🔧 Mod xong: ${successCount} thành công, ${failCount} lỗi${autoFixCount > 0 ? `, tự sửa ${autoFixCount}` : ''}`);
     store.addToast(
       failCount === 0 ? 'success' : 'error',
       `Mod applied: ${successCount}/${targetFields.length} fields${autoFixCount > 0 ? ` (${autoFixCount} auto-fixed)` : ''}`
@@ -4230,7 +4230,7 @@ export function useTranslation() {
       return newEntries.length;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      store.addLog('error', `[Lorebook Gen] Failed: ${msg}`);
+      store.addLog('error', `[Tạo Lorebook] Lỗi: ${msg}`);
       store.addToast('error', `Lorebook generation failed: ${msg}`);
       store.setPhase('done');
       return 0;

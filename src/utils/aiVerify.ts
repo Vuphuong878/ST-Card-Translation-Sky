@@ -1367,10 +1367,10 @@ function validateFixQuality(
   // 1. Length ratio check: fix shouldn't be drastically different from current
   const lengthRatio = fixedText.length / currentTranslation.length;
   if (lengthRatio < 0.4) {
-    return { valid: false, reason: `Fix too short: ${fixedText.length} vs ${currentTranslation.length} chars (${(lengthRatio * 100).toFixed(0)}%)` };
+    return { valid: false, reason: `Bản AI sửa bị NGẮN bất thường (${fixedText.length} vs ${currentTranslation.length} ký tự), nghi bị cắt cụt nên không áp dụng.` };
   }
   if (lengthRatio > 3.0) {
-    return { valid: false, reason: `Fix too long: ${fixedText.length} vs ${currentTranslation.length} chars (${(lengthRatio * 100).toFixed(0)}%)` };
+    return { valid: false, reason: `Bản AI sửa DÀI bất thường (${fixedText.length} vs ${currentTranslation.length} ký tự), nghi lặp/thừa nên không áp dụng.` };
   }
 
   // 2. Macro preservation: fix must keep all macros from original
@@ -1383,7 +1383,7 @@ function validateFixQuality(
     const stdMacroPattern = /^\{\{(char|user|random|roll|time|date|idle_duration|input|lastMessage|newline|trim|noop)\}\}$/i;
     for (const m of origSet) {
       if (stdMacroPattern.test(m) && !fixSet.has(m)) {
-        return { valid: false, reason: `Fix lost standard macro: ${m}` };
+        return { valid: false, reason: `Bản AI sửa làm MẤT macro quan trọng "${m}" (vd {{user}}/{{char}}), không áp dụng.` };
       }
     }
     // For variable macros, allow MVU dictionary remapping
@@ -1413,7 +1413,7 @@ function validateFixQuality(
     }
     // Total macro count check: fix shouldn't have significantly fewer macros
     if (fixMacros.length < origMacros.length * 0.5) {
-      return { valid: false, reason: `Fix lost too many macros: ${fixMacros.length} vs ${origMacros.length} original` };
+      return { valid: false, reason: `Bản AI sửa mất quá nhiều macro (còn ${fixMacros.length}/${origMacros.length}), không áp dụng.` };
     }
   }
 
@@ -1421,7 +1421,7 @@ function validateFixQuality(
   if (field.label.includes('findRegex')) {
     if (/^\/[\s\S]+\/[a-z]*$/i.test(original)) {
       if (!/^\/[\s\S]+\/[a-z]*$/i.test(fixedText)) {
-        return { valid: false, reason: `Fix failed to restore regex boundary slashes (/.../).` };
+        return { valid: false, reason: `Bản AI sửa làm hỏng cú pháp regex (mất dấu /.../), không áp dụng.` };
       }
     }
   }
@@ -1435,7 +1435,7 @@ function validateFixQuality(
     const fixBalance = fixOpen - fixClose;
     // Allow small deviation (±2) for complex fields
     if (Math.abs(origBalance - fixBalance) > 2) {
-      return { valid: false, reason: `Fix broke ${pair} bracket balance: original ${origBalance}, fix ${fixBalance}` };
+      return { valid: false, reason: `Bản AI sửa làm LỆCH ngoặc ${pair} (gốc ${origBalance}, sửa ${fixBalance}), nghi vỡ code nên không áp dụng.` };
     }
   }
 
@@ -1458,10 +1458,10 @@ function validateFixQuality(
     : 0;
 
   if (scoreAfter > scoreBefore + tolerance) {
-    return { valid: false, reason: `Fix worsened severity score: ${scoreBefore} → ${scoreAfter} (tolerance: ${tolerance}, errors×3 + warnings×1)` };
+    return { valid: false, reason: `Bản AI sửa lại còn NHIỀU LỖI HƠN bản gốc (điểm lỗi ${scoreBefore} → ${scoreAfter}, càng cao càng nhiều lỗi). KHÔNG áp dụng để không làm hỏng thẻ.` };
   }
   if (issuesAfter.length > issuesBefore.length + Math.max(2, Math.ceil(initialIssueCount / 3))) {
-    return { valid: false, reason: `Fix increased total issues: ${issuesBefore.length} → ${issuesAfter.length}` };
+    return { valid: false, reason: `Bản AI sửa làm TĂNG số lỗi (${issuesBefore.length} → ${issuesAfter.length} chỗ), không áp dụng.` };
   }
 
   return { valid: true };

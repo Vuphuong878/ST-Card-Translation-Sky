@@ -363,14 +363,14 @@ export default function VerifyPanel() {
       }
 
       const summary = isVi
-        ? `🤖 AI: ${report.fixes.length} sửa, ${report.totalRejected} từ chối, ${report.roundsCompleted} rounds`
-        : `🤖 AI: ${report.fixes.length} fixed, ${report.totalRejected} rejected, ${report.roundsCompleted} rounds`;
+        ? `🤖 AI tự sửa lỗi: đã áp dụng ${report.fixes.length} bản sửa tốt · giữ nguyên ${report.totalRejected} mục (bản sửa không tốt hơn) · ${report.roundsCompleted} vòng`
+        : `🤖 AI fix: applied ${report.fixes.length} good fixes · kept ${report.totalRejected} original (fix not better) · ${report.roundsCompleted} rounds`;
       addLog(report.fixes.length > 0 ? 'success' : 'warning', summary);
       addToast(report.fixes.length > 0 ? 'success' : 'info', summary);
 
-      // Log rejected reasons
+      // Log các mục GIỮ BẢN GỐC (bản AI sửa không tốt hơn → không áp dụng). Không phải lỗi — là bảo vệ thẻ.
       for (const entry of report.report.filter(r => r.status === 'rejected')) {
-        addLog('info', `❌ Rejected ${entry.label}: ${entry.reason}`);
+        addLog('info', `🛡️ Giữ bản gốc cho "${entry.label}": ${entry.reason}`);
       }
 
       // Re-verify

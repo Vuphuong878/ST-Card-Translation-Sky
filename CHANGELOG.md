@@ -2,6 +2,10 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.40.2 — Dịch Card: log dễ đọc, tường minh (#8b + dò log)
+- **#8b — log bộ "AI tự sửa lỗi"**: khi một bản-sửa của AI bị loại, log cũ ghi `❌ Rejected … Fix worsened severity score: 3 → 522` rất khó hiểu (dễ tưởng tool làm hỏng). Nay ghi rõ tiếng Việt, đúng bản chất **an toàn**: `🛡️ Giữ bản gốc cho "…": bản AI sửa lại còn NHIỀU LỖI HƠN bản gốc (điểm lỗi 3 → 522). KHÔNG áp dụng để không làm hỏng thẻ.` Toàn bộ lý do loại bản sửa (ngắn/dài bất thường, mất macro, lệch ngoặc, hỏng regex…) đều Việt hoá + nói rõ "giữ bản gốc". Dòng tổng kết: "đã áp dụng N bản sửa tốt · giữ nguyên M mục".
+- **Dò log Dịch Card**: Việt hoá + làm rõ ~50 dòng log hay gặp — *Đang dịch / Xong lô / Đã dừng dịch / Tiếp tục / Kiểm tra lô / mục bị trống → thử lại / dịch RIÊNG từng mục*, các *Chiến lược B (đồng bộ biến MVU)* & *C (đồng bộ EJS)*, đối chiếu chéo lô, và log tổng kết "🎉 Dịch xong: X thành công, Y lỗi". (Log dev trong console giữ nguyên.)
+
 ## v1.40.1 — Tạo Card: nút Dừng cho "Tạo thẻ từ truyện" (#9.4)
 - **#9.4 — Dừng hẳn**: thêm `AbortController` + nút **"■ Dừng"** (hiện khi đang quét/tạo). Truyền `signal` xuống `scanCharacters` / `generateCardFromStory` / `generateCardsForMany` → `callAI` huỷ fetch ngay, loop kết thúc, không chạy nền. Trước đây truyền `undefined` nên không dừng được.
 - **#9.3 — giữ input khi đổi tab**: kiểm tra thấy trang này **đã** dùng `usePersistedState` cho toàn bộ truyện/tuỳ chọn/roster/thẻ (localStorage) — đổi tab/F5 không mất. Giữ nguyên.
