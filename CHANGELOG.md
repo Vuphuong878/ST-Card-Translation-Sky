@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.51.1 — Nội bộ: tách monolith (bước 1) — cụm chunking ra riêng
+> Không đổi hành vi app. Bắt đầu "tách dần" các file lõi quá lớn để dễ bảo trì (đã có bộ test làm lưới an toàn).
+- Tách cụm **cắt văn bản dài** — `chunkText` + 8 hàm dò *ranh giới an toàn* (`isSafeBoundary`, `findSafeBoundary`, `isInside{FunctionBody,ScriptOrStyle,StringLiteral,RegexLiteral,HtmlTag,CssAtRule,Url}`, `countUnescapedBackticks`) — từ `apiClient.ts` ra **`src/utils/chunking.ts`** (~465 dòng). `apiClient.ts` **4362 → 3897 dòng**.
+- **An toàn**: cụm này thuần tuý (chỉ xử lý chuỗi, không gọi API/không đụng store) + `chunkText` đã có test riêng. `apiClient` **re-export** `chunkText` nên mọi file khác `import { chunkText } from './apiClient'` **giữ nguyên**, không phải sửa. `npm run build` + **53 test** xanh, tsc sạch.
+- Đây là bước tách đầu; các mảng khác (streaming, pool/rate-limit, prompt-build) có thể tách dần sau theo cùng cách.
+
 ## v1.51.0 — Nhật ký gom theo giai đoạn (Dịch Card)
 > Dễ theo dõi hơn: nhật ký dài giờ chia nhóm gấp/mở được thay vì một dòng chảy phẳng.
 - **Gom log theo giai đoạn**: **🔧 Chuẩn bị** (sắp xếp + Chiến lược B/C) → **🌐 Dịch** (vòng lặp từng trường) → **🔍 Kiểm tra** (hậu kiểm MVU/EJS). Mỗi nhóm có tiêu đề **bấm để thu gọn/mở** + đếm số dòng.
