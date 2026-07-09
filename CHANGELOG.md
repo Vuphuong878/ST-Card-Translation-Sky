@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.53.0 — Nâng cấp RAG: ngữ cảnh rộng/sâu hơn (Dịch Card)
+> Theo yêu cầu: nâng cấp hệ thống RAG. Hệ thống vốn đã mạnh (TF-IDF + tiered retrieval + glossary + translation memory, chạy client-side không tốn API) → đợt này **bồi thêm chiều SÂU** mà không phá nguyên tắc đó.
+- **Kích hoạt entry Lorebook theo KEYWORD (mới).** Khi dịch một field mà nội dung **nhắc tới keyword** của một entry Lorebook **khác** (đã dịch xong) → tự kéo **nội dung entry đó** vào ngữ cảnh (đúng cách SillyTavern trigger lorebook). Nhờ vậy đoạn văn nhắc "李明" sẽ được dịch kèm định nghĩa/tên đã chốt của 李明 → **tên riêng & thuật ngữ nhất quán hơn**, không bịa bản dịch khác.
+- **Nới ngân sách ngữ cảnh** cho field tường thuật + lorebook (thêm vài field liên quan + ký tự mỗi lần dịch) để có chỗ chứa lore liên quan. Code/regex vốn đã có ngân sách lớn nên giữ nguyên.
+- Vẫn **hoàn toàn client-side, không thêm call API**. Kỹ thuật: hàm thuần `findKeywordTriggeredEntries` (khớp keyword gốc → content đã dịch) đưa vào tier "must-include"; **+6 test**. Build + 66 test xanh.
+
 ## v1.52.0 — "Bảo vệ CSS khỏi CJK": sửa "Giữ nguyên" bị dịch + mặc định "Dịch"
 > Theo phản hồi user: chọn *Giữ nguyên* mà CJK trong CSS vẫn bị dịch.
 - **Sửa lỗi "Giữ nguyên" không tuân theo.** Bộ chặn cũ chỉ bắt CJK **ngay sau dấu `(`** và **bắt buộc có phần đuôi** (`func(商 10px)`) → **sót** các biến thể: `drop-shadow(商)`, `blur(商)`, `filter: drop-shadow(10px 商)`… nên chúng lọt ra và **vẫn bị dịch**. Nay chặn CJK ở **bất kỳ đâu trong ngoặc hàm** và giữ **toàn bộ đối số** → khôi phục nguyên văn (kể cả `10px`).

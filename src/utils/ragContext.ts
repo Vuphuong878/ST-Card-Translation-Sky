@@ -332,26 +332,26 @@ function getAdaptiveBudget(
     };
   }
 
-  // Lorebook (non-logic): moderate context
+  // Lorebook (non-logic): moderate context — nới thêm để chứa entry trigger theo keyword.
   if (group === 'lorebook') {
     return {
-      maxChars: userMaxChars || 4000,
-      maxFields: userMaxFields || 7,
+      maxChars: userMaxChars || 5000,
+      maxFields: userMaxFields || 9,
     };
   }
 
   // System/depth prompts: moderate
   if (group === 'system' || group === 'depth_prompt') {
     return {
-      maxChars: userMaxChars || 3500,
-      maxFields: userMaxFields || 6,
+      maxChars: userMaxChars || 4200,
+      maxFields: userMaxFields || 7,
     };
   }
 
-  // Narrative (core, messages, creator): lighter context
+  // Narrative (core, messages, creator): nới nhẹ để có chỗ cho lore liên quan (keyword-trigger).
   return {
-    maxChars: userMaxChars || 3000,
-    maxFields: userMaxFields || 5,
+    maxChars: userMaxChars || 3800,
+    maxFields: userMaxFields || 7,
   };
 }
 
@@ -771,9 +771,49 @@ export function buildUnifiedRAGContextWithDebug(input: UnifiedRAGInput): RAGBuil
 }
 
 /**
+ * Tìm các entry Lorebook (đã dịch) mà KEYWORD của nó XUẤT HIỆN trong `text` — giống cách
+ * SillyTavern kích hoạt lorebook theo từ khoá. Dùng để kéo NỘI DUNG entry liên quan vào context,
+ * giúp dịch bám đúng định nghĩa lore (vd đoạn văn nhắc "李明" → kéo entry định nghĩa 李明 vào).
+ *
+ * Khớp keyword lấy từ field nhóm `lorebook_keys` (bản GỐC — không cần đã dịch); chỉ trả về entry
+ * content ĐÃ dịch xong. Bỏ qua entry `excludeEntryIdx` (thường là entry của chính field hiện tại).
+ */
+export function findKeywordTriggeredEntries(
+  text: string,
+  allFields: TranslationField[],
+  excludeEntryIdx?: string | null,
+): TranslationField[] {
+  if (!text || text.trim().length < 2) return [];
+
+  const entryKeywords = new Map<string, string[]>();       // entryIdx → [keyword gốc]
+  const entryContent = new Map<string, TranslationField>(); // entryIdx → content field (đã dịch)
+  for (const f of allFields) {
+    const idx = f.path.match(/entries\[(\d+)\]/)?.[1];
+    if (!idx) continue;
+    if (f.group === 'lorebook_keys' && f.original?.trim()) {
+      const arr = entryKeywords.get(idx) || [];
+      // 1 field key có thể gộp nhiều keyword ngăn bởi dấu phẩy; keyword ≥2 ký tự để tránh nhiễu.
+      for (const kw of f.original.split(',').map((s) => s.trim()).filter((s) => s.length >= 2)) arr.push(kw);
+      entryKeywords.set(idx, arr);
+    } else if (f.group === 'lorebook' && f.status === 'done' && f.translated?.trim()) {
+      entryContent.set(idx, f);
+    }
+  }
+
+  const out: TranslationField[] = [];
+  for (const [idx, kws] of entryKeywords) {
+    if (idx === excludeEntryIdx) continue;
+    const cf = entryContent.get(idx);
+    if (!cf) continue;
+    if (kws.some((kw) => text.includes(kw))) out.push(cf);
+  }
+  return out;
+}
+
+/**
  * Build cross-field context section using tiered retrieval + TF-IDF.
  *
- * Tier 1 (Must-include):  Core fields + same-entry fields
+ * Tier 1 (Must-include):  Core fields + same-entry fields + lorebook keyword-triggered entries
  * Tier 2 (High-priority): Schema/controller fields when translating code
  * Tier 3 (Similarity):    TF-IDF ranked candidates
  */
@@ -814,6 +854,15 @@ function buildCrossFieldSection(
       if (!tier1.some(t => t.field.path === sef.path)) {
         tier1.push({ field: sef, score: 0.95, tier: 'must-include' });
       }
+    }
+  }
+
+  // ─── Tier 1b: Lorebook entry KÍCH HOẠT theo KEYWORD ───
+  // Nếu text field hiện tại chứa keyword của 1 entry lorebook KHÁC (đã dịch) → kéo nội dung entry
+  // đó vào (giống ST kích hoạt lorebook) → dịch bám đúng định nghĩa lore, tên/thuật ngữ nhất quán.
+  for (const kf of findKeywordTriggeredEntries(currentField.original, allFields, currentEntryIdx)) {
+    if (!tier1.some(t => t.field.path === kf.path)) {
+      tier1.push({ field: kf, score: 0.9, tier: 'must-include' });
     }
   }
 
