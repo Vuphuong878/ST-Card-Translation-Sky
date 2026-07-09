@@ -6,8 +6,8 @@
 // Thuần tuý (không gọi API, không đụng store) → dễ test + dùng lại cho báo cáo dịch.
 // Tái dùng `checkCodeFieldForCjk` (mvuValidator) cho CJK-trong-code, acorn cho parse JS.
 // ═══════════════════════════════════════════════════════════════════════════════
-import { parse as acornParse } from 'acorn';
 import { checkCodeFieldForCjk } from './mvuValidator';
+import { extractScriptBodies, isJsSyntaxOk } from './scriptSafety';
 import type { TranslationField, GlossaryEntry } from '../types/card';
 
 /** Ideograph CJK (Trung/Nhật/Hàn) — dùng để phát hiện chữ chưa dịch còn sót. */
@@ -51,20 +51,6 @@ export interface HealthReport {
  *  tên riêng để nguyên có chủ đích). */
 const RESIDUAL_TEXT_THRESHOLD = 3;
 
-function jsParses(code: string): boolean {
-  try { acornParse(code, { ecmaVersion: 'latest' }); return true; }
-  catch { return false; }
-}
-
-/** Lấy thân mọi <script>…</script> (bỏ khối rỗng). */
-function scriptBodies(html: string): string[] {
-  const out: string[] = [];
-  const re = /<script[^>]*>([\s\S]*?)<\/script>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html)) !== null) if (m[1].trim()) out.push(m[1]);
-  return out;
-}
-
 const CODE_ENTRY_TYPES = new Set(['json_patch', 'initvar', 'controller']);
 
 /** Quét toàn bộ trường → báo cáo sức khoẻ (đếm + danh sách vấn đề đã sắp theo mức độ).
@@ -101,11 +87,11 @@ export function scanFieldsHealth(fields: TranslationField[], glossary?: Glossary
     // ─── <script> vỡ cú pháp DO DỊCH (gốc lành → bản dịch vỡ) ───
     const orig = f.original || '';
     if (trans.includes('<script') && orig.includes('<script')) {
-      const ob = scriptBodies(orig);
-      const tb = scriptBodies(trans);
+      const ob = extractScriptBodies(orig);
+      const tb = extractScriptBodies(trans);
       if (ob.length === tb.length) {
         for (let i = 0; i < tb.length; i++) {
-          if (jsParses(ob[i]) && !jsParses(tb[i])) {
+          if (isJsSyntaxOk(ob[i]) && !isJsSyntaxOk(tb[i])) {
             brokenScripts++;
             issues.push({ severity: 'error', kind: 'broken_script', label: f.label, path: f.path,
               detail: `Script #${i + 1} vỡ cú pháp JS (nút bấm sẽ liệt trong SillyTavern).` });

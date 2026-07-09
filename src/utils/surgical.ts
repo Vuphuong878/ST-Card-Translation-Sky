@@ -2,7 +2,7 @@
 import { extractTranslationFromResponse } from './masterPrompt';
 import type { ProxySettings, GlossaryEntry } from '../types/card';
 import { writeDebugLog } from './debugLogger';
-import { parse as acornParse } from 'acorn';
+import { extractScriptBodies, jsParseError } from './scriptSafety';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Public types
@@ -457,21 +457,11 @@ export function extractCJKTokens(
  * parse lấy VỊ TRÍ lỗi chính xác → revert đúng cái bracket-wrap prose (['câu văn']) gần vị trí lỗi
  * nhất → parse lại; lặp tới khi sạch lỗi (tối đa 25 vòng). Chỉ giữ bản vá khi parse OK hoàn toàn.
  * Parse KHÔNG thực thi code nên an toàn. Bracket-wrap MVU hợp lệ (stat_data['Bản Tôn']) không gây
- * lỗi parse nên không bao giờ bị đụng. Script gốc vốn vỡ sẵn thì bỏ qua (không phải lỗi dịch). */
-function extractScriptBodiesForCheck(html: string): string[] {
-  const out: string[] = [];
-  const re = /<script[^>]*>([\s\S]*?)<\/script>/gi;
-  let m;
-  while ((m = re.exec(html)) !== null) { if (m[1].trim()) out.push(m[1]); }
-  return out;
-}
-function jsParseError(code: string): { pos: number; msg: string } | null {
-  try { acornParse(code, { ecmaVersion: 'latest' }); return null; }
-  catch (e: any) { return { pos: typeof e?.pos === 'number' ? e.pos : -1, msg: String(e?.message || e) }; }
-}
+ * lỗi parse nên không bao giờ bị đụng. Script gốc vốn vỡ sẵn thì bỏ qua (không phải lỗi dịch).
+ * (extractScriptBodies + jsParseError nay dùng chung từ scriptSafety.ts.) */
 export function repairScriptSyntaxCorruption(original: string, translated: string): { text: string; repaired: number } {
-  const origScripts = extractScriptBodiesForCheck(original);
-  const transScripts = extractScriptBodiesForCheck(translated);
+  const origScripts = extractScriptBodies(original);
+  const transScripts = extractScriptBodies(translated);
   if (origScripts.length === 0 || origScripts.length !== transScripts.length) return { text: translated, repaired: 0 };
   let result = translated;
   let repaired = 0;

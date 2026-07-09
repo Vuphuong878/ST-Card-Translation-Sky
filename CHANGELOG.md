@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.48.0 — Lưới an toàn cú pháp <script> dùng chung (Dịch Card + Mod Card)
+> Gom một mối + mở rộng cảnh báo "script vỡ" sang Mod Card.
+- **Dịch Card — gom về 1 util `scriptSafety.ts`.** Logic *trích thân `<script>` + parse acorn* trước đây **lặp** ở `surgical.ts` (để tự vá) và `cardHealth.ts` (để cảnh báo). Nay gộp thành một nguồn (`extractScriptBodies` / `jsParseError` / `isJsSyntaxOk` / `checkHtmlScripts`), hai chỗ dùng chung → bớt lệch/bug. Hành vi giữ nguyên (test surgical trên card lỗi thật vẫn xanh).
+- **Mod Card — thêm cảnh báo script vỡ.** Sau khi mod, nếu một **script JS** (bỏ qua EJS `<% %>`) **gốc chạy được mà bản mod vỡ cú pháp** → hiện hộp cảnh báo đỏ liệt kê tên script để kiểm tay ở Bảng Diff (nạp vào SillyTavern kiểu này dễ *liệt nút*). Chỉ **cảnh báo**, không tự sửa code sáng tạo của AI. Dùng `new Function` để kiểm cú pháp (0 phụ thuộc — Mod Card không có acorn).
+- +4 test cho `scriptSafety` (tổng **53 test** xanh). tsc Dịch Card + Mod Card sạch.
+
 ## v1.47.2 — Nội bộ: nốt test JSON Patch + gitignore fixtures
 - Thêm **6 test** cho `extractJsonPatches` / `hasJsonPatchOps` (trích JSON Patch khoan dung từ entry `[mvu_update]`) — hoàn tất phần "test lõi" còn thiếu (nay **49 test**).
 - Gitignore các file thẻ-test/fixture trong `dev_data/` (card lỗi dùng cho test surgical chạy local, không commit vào repo; file đã tracked trước đó vẫn giữ).

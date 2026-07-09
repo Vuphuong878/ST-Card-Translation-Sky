@@ -11,6 +11,7 @@ import { LLMConfig } from '@/lib/llm';
 import { usePersistedState } from '@/lib/usePersistedState';
 import { CardParser } from '@/lib/parser';
 import { ModOrchestrator, extractSections, applyModification, buildLoreDigest, OrchestratorRule } from '@/lib/orchestrator';
+import { scriptBrokeByMod } from '@/lib/scriptSafety';
 
 interface AnalysisItem {
   section_id: string;
@@ -75,6 +76,8 @@ export default function Home() {
   const [processStatus, setProcessStatus] = useState<string>('');
   // Nút Dừng: hủy MỌI call đang chạy (abort in-flight) + cắt vòng lặp mod giữa chừng.
   const abortRef = useRef<AbortController | null>(null);
+  // Cảnh báo script JS bị vỡ cú pháp sau khi mod (nạp vào ST sẽ liệt nút → cần kiểm tay).
+  const [scriptWarnings, setScriptWarnings] = useState<string[]>([]);
   // Kết quả cũng lưu lại để xem lại sau khi F5.
   const [analysisResult, setAnalysisResult] = usePersistedState<AnalysisItem[] | null>('modcard.analysisResult', null);
   const [moddedCard, setModdedCard] = usePersistedState<CardV3 | null>('modcard.moddedCard', null);
@@ -144,6 +147,7 @@ export default function Home() {
     setModdedCard(null);
     setAuditResult(null);
     setValidationResult(null);
+    setScriptWarnings([]);
 
     // Tạo AbortController mới cho lần chạy này → nút Dừng gọi abort() để cắt in-flight + vòng lặp.
     const ac = new AbortController();
@@ -196,6 +200,7 @@ export default function Home() {
       // Chế độ mở rộng: dựng lore digest 1 lần để mọi section bám lore toàn cảnh.
       const loreDigest = expandMode ? buildLoreDigest(card) : '';
       const modOpts = { expand: expandMode, intensity: expandIntensity, loreDigest };
+      const brokenScripts: string[] = []; // script JS bị vỡ cú pháp sau khi mod (để cảnh báo)
 
       for (const req of sectionsToMod) {
         if (ac.signal.aborted) throw new DOMException('Người dùng đã dừng', 'AbortError');
@@ -205,7 +210,13 @@ export default function Home() {
           const modded = await orchestrator.modSection(currentCard, sectionData, activeRules, currentContext, modOpts);
           currentCard = applyModification(currentCard, sectionData.field_path, modded);
           currentContext += `\n[Đã sửa ${String(req.label)}]:\n${modded}\n`;
-          
+
+          // Lưới an toàn: chỉ CẢNH BÁO cho script JS THUẦN (bỏ EJS `<% %>`) nếu gốc lành mà bản mod vỡ.
+          if (sectionData.section_id.startsWith('script_') && !sectionData.content.includes('<%')
+              && scriptBrokeByMod(sectionData.content, modded)) {
+            brokenScripts.push(String(req.label));
+          }
+
           if (sectionData.section_id.startsWith('entry_')) {
             moddedEntries.push({
               index: parseInt(sectionData.section_id.replace('entry_', '')),
@@ -214,7 +225,8 @@ export default function Home() {
           }
         }
       }
-      
+      if (brokenScripts.length > 0) setScriptWarnings(brokenScripts);
+
       // Step 4: Keyword Sync
       if (moddedEntries.length > 0) {
         setProcessStatus('Giai đoạn 4: Đang đồng bộ hóa từ khóa (Keyword Sync)...');
@@ -440,6 +452,14 @@ export default function Home() {
             {!isProcessing && processStatus && (
               <div className="mt-3 p-2 bg-gray-100 text-gray-700 text-xs rounded border border-gray-200">
                 ℹ️ {processStatus}
+              </div>
+            )}
+            {scriptWarnings.length > 0 && (
+              <div className="mt-3 p-2 bg-red-50 text-red-800 text-xs rounded border border-red-300">
+                ⚠️ <b>{scriptWarnings.length} script có thể VỠ cú pháp</b> sau khi mod (nạp vào SillyTavern dễ liệt nút) — kiểm tra tay ở Bảng Diff:
+                <ul className="list-disc ml-4 mt-1">
+                  {scriptWarnings.map((n, i) => <li key={i}>{n}</li>)}
+                </ul>
               </div>
             )}
           </div>
