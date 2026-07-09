@@ -2,6 +2,14 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.54.2 — SỬA lỗi "Failed to resolve import acorn" sau cập nhật (deps không đồng bộ)
+> Nối tiếp 1.54.1. Sau khi cập nhật, một số máy báo `Failed to resolve import "acorn"` (hoặc module khác) → app không mở.
+- **Nguyên nhân:** `start.bat` và `update.bat` cũ chỉ chạy `npm install` **khi thiếu `node_modules`**. Khi cập nhật kéo về **thư viện MỚI** (vd `acorn` cho lưới an toàn cú pháp), `node_modules` đã tồn tại → **bỏ qua cài** → thiếu thư viện → Vite báo lỗi import.
+- **Sửa:** `start.bat` + `update.bat` nay **LUÔN `npm install`** (Hub + cả 3 tool con) mỗi lần chạy để thư viện luôn khớp với code mới (dùng `--no-audit --no-fund` cho nhanh). `update.bat` cũng chuyển sang `git fetch + git reset --hard origin/main` (đồng bộ cứng, không kẹt package-lock) và cài deps cho cả 4 app.
+- **⚠️ Máy đang lỗi cần chạy TAY 1 lần** (vì bản sửa nằm trong file .bat, phải cập nhật mới có): mở thư mục cài đặt, chạy
+  `git fetch origin main && git reset --hard origin/main && npm install`
+  rồi chạy lại `start.bat`. Từ lần sau, cập nhật + khởi động sẽ tự cài thư viện đúng.
+
 ## v1.54.1 — SỬA nút Cập nhật bị kẹt mãi (lỗi package-lock)
 > Nhiều máy bấm Cập nhật báo lỗi *"Your local changes to package-lock.json would be overwritten by merge"* → **không update được nữa**.
 - **Nguyên nhân:** mỗi lần cập nhật, bước `npm install` **tự sửa `package-lock.json`** (file được git track). Lần sau, `git pull` gặp thay đổi cục bộ đó → **từ chối merge** → cập nhật kẹt vĩnh viễn.

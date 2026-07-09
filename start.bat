@@ -14,8 +14,10 @@ call :launch_tool "mod-card"    "Mod Card 5176"
 
 REM -- Hub / tool Dich (this folder) - opens browser at http://localhost:5173 --
 echo.
-if not exist "node_modules" echo [Hub] Cai dat lan dau, doi mot chut...
-if not exist "node_modules" call npm install
+REM LUON dong bo thu vien: sau khi cap nhat (git pull/reset) co the co dependency MOI (vd acorn).
+REM Chi cai khi thieu node_modules se gay loi "Failed to resolve import ..." sau update.
+echo [Hub] Dong bo thu vien (npm install)...
+call npm install --no-audit --no-fund
 echo [Hub] Khoi dong tren http://localhost:5173 ...
 echo.
 call npm run dev
@@ -29,14 +31,7 @@ REM ── Subroutine: launch_tool  %1=folder  %2=window-title ──
 :launch_tool
 set "TOOL_DIR=%~dp0%~1"
 if not exist "%TOOL_DIR%\package.json" goto :eof
-if not exist "%TOOL_DIR%\node_modules" call :install_tool "%TOOL_DIR%" "%~2"
-echo [%~2] Khoi dong (cua so thu nho)...
-start "%~2 - de yen" /MIN /D "%TOOL_DIR%" cmd /k npm run dev
-goto :eof
-
-:install_tool
-echo [%~2] Cai dat lan dau, doi mot chut...
-pushd "%~1"
-call npm install
-popd
+REM Dong bo thu vien tool con moi lan chay (bat dependency moi sau update) roi moi chay dev.
+echo [%~2] Dong bo thu vien + khoi dong (cua so thu nho)...
+start "%~2 - de yen" /MIN /D "%TOOL_DIR%" cmd /k npm install --no-audit --no-fund ^&^& npm run dev
 goto :eof
