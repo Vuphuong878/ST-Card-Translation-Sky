@@ -138,12 +138,9 @@ export default function App() {
 
         {/* Sidebar sections */}
         <ProxyConfig />
-        <FileUpload />
-        <PresetImportPanel onOpenPromptViewer={() => setShowPresetViewer(true)} />
-        <TranslateConfig />
 
-        {/* So Sánh Card — độc lập, không cần card đang mở */}
-        <div style={{ padding: '0 20px', marginTop: '10px' }}>
+        {/* So Sánh Card — đặt NGAY TRÊN "Character Card", luôn hiện (không cần nạp card) */}
+        <div style={{ padding: '0 20px', marginBottom: '6px' }}>
           <button
             onClick={() => setShowCompare(true)}
             style={{
@@ -158,6 +155,10 @@ export default function App() {
             🔀 So Sánh Card
           </button>
         </div>
+
+        <FileUpload />
+        <PresetImportPanel onOpenPromptViewer={() => setShowPresetViewer(true)} />
+        <TranslateConfig />
 
         {/* Nút mở EJS Creator Modal */}
         {card && (
