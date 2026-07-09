@@ -59,6 +59,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onOpenSettings }) => {
 
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const abortRef = useRef<AbortController | null>(null); // nút Dừng: hủy call AI đang chạy
   const [streamingText, setStreamingText] = useState('');
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string; summary: string } | null>(null);
   
@@ -146,6 +147,8 @@ ${textToSend}`;
     setInput('');
     setIsSending(true);
     setStreamingText('');
+    const ac = new AbortController();
+    abortRef.current = ac;
 
     // 1. Add user message
     addChatMessage({
@@ -161,7 +164,7 @@ ${textToSend}`;
       const referencedContext = buildReferencedContext(refs);
 
       // 3. Call API with full context
-      const reply = await callAI(userText, activeMessages, settings, projectContext, referencedContext);
+      const reply = await callAI(userText, activeMessages, settings, projectContext, referencedContext, ac.signal);
       
       // 3. Extract JSONs from reply
       const extracted = extractJSONsFromText(reply);
@@ -190,14 +193,20 @@ ${textToSend}`;
         addToast(`Đã tìm thấy ${extracted.length} khối JSON trong phản hồi!`, "success");
       }
     } catch (e: unknown) {
-      const errMsg = e instanceof Error ? e.message : 'Không thể liên lạc với mô hình AI.';
-      addChatMessage({
-        role: 'system',
-        content: `❌ Gặp sự cố kết nối: ${errMsg}`
-      });
-      addToast(errMsg, "error");
+      if ((e as Error)?.name === 'AbortError') {
+        setStreamingText('');
+        addChatMessage({ role: 'system', content: '⏹ Đã dừng theo yêu cầu.' });
+      } else {
+        const errMsg = e instanceof Error ? e.message : 'Không thể liên lạc với mô hình AI.';
+        addChatMessage({
+          role: 'system',
+          content: `❌ Gặp sự cố kết nối: ${errMsg}`
+        });
+        addToast(errMsg, "error");
+      }
     } finally {
       setIsSending(false);
+      abortRef.current = null;
     }
   };
 
@@ -457,13 +466,23 @@ ${textToSend}`;
           placeholder="Mô tả cấu hình hoặc yêu cầu chỉnh sửa prompt/regex..."
           className="flex-1 bg-gray-900 border border-theme-border rounded-xl px-4 py-3 text-xs sm:text-sm text-gray-200 focus:outline-none focus:border-purple-400 placeholder-gray-500 resize-none max-h-24 font-sans"
         />
-        <button
-          onClick={() => handleSend()}
-          disabled={isSending || !input.trim()}
-          className="flex items-center justify-center p-3 bg-purple-500 hover:bg-purple-600 active:bg-purple-700 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-xl transition shadow-md shadow-purple-500/10 self-end"
-        >
-          <Send size={16} />
-        </button>
+        {isSending ? (
+          <button
+            onClick={() => abortRef.current?.abort(new DOMException('Người dùng đã dừng', 'AbortError'))}
+            title="Dừng"
+            className="flex items-center justify-center p-3 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-xl transition shadow-md shadow-red-500/10 self-end"
+          >
+            <X size={16} />
+          </button>
+        ) : (
+          <button
+            onClick={() => handleSend()}
+            disabled={!input.trim()}
+            className="flex items-center justify-center p-3 bg-purple-500 hover:bg-purple-600 active:bg-purple-700 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-xl transition shadow-md shadow-purple-500/10 self-end"
+          >
+            <Send size={16} />
+          </button>
+        )}
       </div>
 
     </div>

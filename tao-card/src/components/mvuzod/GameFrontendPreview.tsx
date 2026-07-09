@@ -35,6 +35,7 @@ import { DEFAULT_GAME_UI_CONFIG } from '../../lib/mvuzod/gameUiDefaults';
 import { buildProgrammaticRegex, isProgrammaticComponent, formatBytes } from '../../lib/mvuzod/programmaticRegexBuilder';
 import { generateOrchestrated, type OrchestratedProgress } from '../../lib/mvuzod/orchestratedGenerator';
 import { autoFixGameHtml, type FixResult } from '../../lib/mvuzod/gameHtmlFixer';
+import { checkHtmlScripts } from '../../lib/scriptSafety';
 import { THEME_PRESETS, DEFAULT_THEME_ID } from '../../lib/mvuzod/gameHtmlTemplates';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -109,6 +110,14 @@ export function GameFrontendPreview({ schema }: GameFrontendPreviewProps) {
   const [orchestratedProgress, setOrchestratedProgress] = useState<OrchestratedProgress | null>(null);
   const [fixResult, setFixResult] = useState<FixResult | null>(null);
   const [showDiff, setShowDiff] = useState(false);
+
+  // Cảnh báo: <script> trong game HTML vỡ cú pháp JS (autoFixGameHtml chỉ sửa cấu trúc, không kiểm JS).
+  const scriptWarn = useMemo(() => {
+    if (!previewHtml) return null;
+    const html = previewHtml.replace(/^```html\n/, '').replace(/```$/, '');
+    const r = checkHtmlScripts(html);
+    return r.broken > 0 ? r : null;
+  }, [previewHtml]);
 
 
   // Existing game-related scripts
@@ -827,6 +836,16 @@ Bạn có thể viết tự do — AI sẽ tạo regex scripts theo mô tả.`}
                 <span className="text-[9px] text-muted-foreground">
                   {formatBytes(previewHtml.length)}
                 </span>
+
+                {/* Cảnh báo script vỡ cú pháp JS */}
+                {scriptWarn && (
+                  <span
+                    className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-red-500/20 text-red-400"
+                    title="Script JS trong game HTML bị vỡ cú pháp — nạp vào SillyTavern dễ lỗi. Kiểm tra lại code."
+                  >
+                    ⚠️ {scriptWarn.broken}/{scriptWarn.total} script vỡ JS
+                  </span>
+                )}
 
                 {/* Quality badge */}
                 {fixResult && (

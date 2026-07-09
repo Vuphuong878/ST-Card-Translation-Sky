@@ -14,16 +14,25 @@ function pickKey(raw: string): string {
 }
 
 // fetch có TIMEOUT: quá hạn thì abort để không treo mãi (lỗi timeout → được retry ở callAI).
+// Nếu caller truyền opts.signal (nút Dừng của người dùng) → gộp: người dùng bấm Dừng cũng abort ngay.
 async function fetchWithTimeout(url: string, opts: RequestInit, ms = 180000): Promise<Response> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(new Error(`Timeout: quá ${ms / 1000}s không phản hồi`)), ms);
+  const ext = opts.signal as AbortSignal | undefined;
+  const onExt = () => ctrl.abort(new DOMException('Người dùng đã dừng', 'AbortError'));
+  if (ext) {
+    if (ext.aborted) ctrl.abort(new DOMException('Người dùng đã dừng', 'AbortError'));
+    else ext.addEventListener('abort', onExt, { once: true });
+  }
   try {
     return await fetch(url, { ...opts, signal: ctrl.signal });
   } catch (e) {
+    if (ext?.aborted) throw new DOMException('Người dùng đã dừng', 'AbortError'); // Dừng chủ động → không retry
     if (ctrl.signal.aborted) throw new Error(`Timeout: API quá ${ms / 1000}s không phản hồi, sẽ thử lại`);
     throw e;
   } finally {
     clearTimeout(t);
+    if (ext) ext.removeEventListener('abort', onExt);
   }
 }
 
@@ -162,15 +171,18 @@ export async function callAI(
   history: ChatMessage[],
   settings0: APISettings,
   projectContext: string,
-  referencedContext: string
+  referencedContext: string,
+  signal?: AbortSignal
 ): Promise<string> {
   const tries = 4;
   let lastErr: unknown;
   for (let a = 0; a < tries; a++) {
+    if (signal?.aborted) throw new DOMException('Người dùng đã dừng', 'AbortError');
     try {
-      return await callAIOnce(userMessage, history, settings0, projectContext, referencedContext);
+      return await callAIOnce(userMessage, history, settings0, projectContext, referencedContext, signal);
     } catch (err) {
       lastErr = err;
+      if ((err as Error)?.name === 'AbortError' || signal?.aborted) throw err; // Dừng chủ động → không retry
       const msg = err instanceof Error ? err.message : String(err);
       if (a < tries - 1 && _presetRetryable(msg)) {
         await new Promise(r => setTimeout(r, Math.min(1200 * (a + 1), 8000)));
@@ -186,7 +198,8 @@ async function callAIOnce(
   history: ChatMessage[],
   settings0: APISettings,
   projectContext: string,
-  referencedContext: string
+  referencedContext: string,
+  signal?: AbortSignal
 ): Promise<string> {
   const settings = pickProvider(settings0);
   const isDirect = !settings.useProxy;
@@ -222,6 +235,7 @@ async function callAIOnce(
 
     const response = await fetchWithTimeout(endpoint, {
       method: 'POST',
+      signal,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -289,6 +303,7 @@ async function callAIOnce(
 
     const response = await fetchWithTimeout(endpoint, {
       method: 'POST',
+      signal,
       headers,
       body: JSON.stringify({
         model: settings.selectedModel,

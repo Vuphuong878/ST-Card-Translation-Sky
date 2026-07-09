@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.49.0 — Đồng bộ nốt: Dừng ở Tạo Preset + cảnh báo JS ở Tạo Card
+> Khép lại việc "nút Dừng cắt được việc đang chạy" + "lưới an toàn cú pháp" trên cả 5 app.
+- **Tạo Preset — nút ⏹ Dừng cho trợ lý chat.** Khi AI đang trả lời, nút Gửi chuyển thành **nút Dừng đỏ** — bấm là **hủy call đang chạy ngay** (trước chỉ chờ hết timeout 180s). Bấm Dừng → hiện "⏹ Đã dừng theo yêu cầu", không retry. (Kỹ thuật: luồn `AbortSignal` qua `callAI`/`fetchWithTimeout`.)
+- **Tạo Card — kiểm cú pháp JS của game HTML.** Ngoài `autoFixGameHtml` (sửa cấu trúc thẻ), nay còn **biên dịch thử** từng `<script>` (bằng `new Function`, không chạy): nếu vỡ cú pháp → hiện **badge đỏ "N/M script vỡ JS"** cạnh preview để biết mà sửa trước khi dùng.
+- Sau đợt này, **cả 5 app** đều: (a) nút Dừng cắt được việc đang chạy, (b) có lưới cảnh báo/vá cú pháp script ở nơi thực sự sinh/sửa code.
+
 ## v1.48.0 — Lưới an toàn cú pháp <script> dùng chung (Dịch Card + Mod Card)
 > Gom một mối + mở rộng cảnh báo "script vỡ" sang Mod Card.
 - **Dịch Card — gom về 1 util `scriptSafety.ts`.** Logic *trích thân `<script>` + parse acorn* trước đây **lặp** ở `surgical.ts` (để tự vá) và `cardHealth.ts` (để cảnh báo). Nay gộp thành một nguồn (`extractScriptBodies` / `jsParseError` / `isJsSyntaxOk` / `checkHtmlScripts`), hai chỗ dùng chung → bớt lệch/bug. Hành vi giữ nguyên (test surgical trên card lỗi thật vẫn xanh).
