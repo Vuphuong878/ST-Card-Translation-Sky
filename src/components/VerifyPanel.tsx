@@ -663,7 +663,7 @@ export default function VerifyPanel() {
 
       {/* ═══ Regex Scan Issues List ═══ */}
       {regexIssues.length > 0 && !isRegexFixing && regexFixResults.length === 0 && (
-        <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
           {regexIssues.map(issue => <IssueRow key={issue.id} issue={issue} isVi={isVi}
             expanded={expandedIssues.has(issue.id)} onToggle={() => toggleIssue(issue.id)} />)}
         </div>
@@ -689,7 +689,7 @@ export default function VerifyPanel() {
             )}
           </div>
           {/* Individual fix results */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '400px', overflowY: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             {regexFixResults.map((r, i) => (
               <div key={i} style={{
                 padding: '8px', borderRadius: 'var(--radius-sm)',
@@ -853,7 +853,7 @@ export default function VerifyPanel() {
 
       {/* Field Issues List */}
       {fieldIssues.length > 0 && activeTab === 'field' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '450px', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
           {filteredFieldIssues.map(issue => <IssueRow key={issue.id} issue={issue} isVi={isVi}
             expanded={expandedIssues.has(issue.id)} onToggle={() => toggleIssue(issue.id)}
             onAutoFix={issue.autoFixable ? () => handleAutoFix(issue) : undefined}
@@ -893,7 +893,7 @@ export default function VerifyPanel() {
             {verifyResult.summary}
           </div>
           {verifyResult.issues.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '350px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
               {verifyResult.issues.map(issue => <IssueRow key={issue.id} issue={issue} isVi={isVi}
                 expanded={expandedIssues.has(issue.id)} onToggle={() => toggleIssue(issue.id)} />)}
             </div>
@@ -924,7 +924,7 @@ export default function VerifyPanel() {
               text={crossCheckResult.summary} />
           </div>
           {crossCheckResult.orphanVars.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '200px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
               {crossCheckResult.orphanVars.map((orphan, i) => {
                 const suggestion = crossCheckResult.suggestions.find(s => s.orphan === orphan.varName);
                 return (
@@ -1083,13 +1083,13 @@ function IssueRow({ issue, isVi, expanded, onToggle, onAutoFix, onAIFix, isAIFix
                 <span style={{ fontWeight: 600, color: 'var(--accent-danger)', fontSize: '0.58rem', textTransform: 'uppercase' }}>Original:</span>
                 <CopyButton text={issue.original} />
               </div>
-              <pre style={{ margin: '2px 0 0', padding: '5px 7px', background: 'rgba(0,0,0,0.05)', borderRadius: 'var(--radius-sm)', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.66rem', maxHeight: '80px', overflowY: 'auto' }}>{issue.original}</pre>
+              <pre style={{ margin: '2px 0 0', padding: '5px 7px', background: 'rgba(0,0,0,0.05)', borderRadius: 'var(--radius-sm)', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.66rem', maxHeight: '260px', overflowY: 'auto' }}>{issue.original}</pre>
             </div>
           )}
           {issue.current && issue.current !== '(missing)' && issue.current !== '(missing or renamed)' && (
             <div>
               <span style={{ fontWeight: 600, color: 'var(--accent-warning)', fontSize: '0.58rem', textTransform: 'uppercase' }}>Current:</span>
-              <pre style={{ margin: '2px 0 0', padding: '5px 7px', background: 'rgba(0,0,0,0.05)', borderRadius: 'var(--radius-sm)', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.66rem', maxHeight: '80px', overflowY: 'auto' }}>{issue.current}</pre>
+              <pre style={{ margin: '2px 0 0', padding: '5px 7px', background: 'rgba(0,0,0,0.05)', borderRadius: 'var(--radius-sm)', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.66rem', maxHeight: '260px', overflowY: 'auto' }}>{issue.current}</pre>
             </div>
           )}
           {issue.suggestion && (

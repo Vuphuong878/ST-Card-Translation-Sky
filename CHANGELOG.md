@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.55.2 — Dịch Card: sửa UI panel "Kiểm Tra Lỗi Dịch" khó đọc/khó cuộn
+> User báo: danh sách lỗi ở panel **Kiểm Tra Lỗi Dịch** bị **set cứng chiều dọc**, cụt, không cuộn được / khó đọc nội dung bug.
+- **Nguyên nhân:** mỗi danh sách lỗi bọc trong ô cuộn **cao cố định 300–450px** lồng bên trong trang → tạo **thanh cuộn con tí hon** (chỉ thấy 2–3 dòng), lại chồng với cuộn trang → rối, tưởng bị cụt.
+- **Sửa:** bỏ giới hạn chiều cao — danh sách lỗi nay **chảy tự nhiên theo trang**, chỉ cần **cuộn trang 1 lần là đọc hết**, áp cho cả 5 danh sách (Quét Regex, kết quả sửa Regex, lỗi Field, lỗi Thẻ, biến mồ côi). Dùng bộ lọc mức độ/nhóm để thu gọn khi lỗi nhiều.
+- Ô xem **ORIGINAL / CURRENT** khi bung 1 lỗi tăng từ **80px → 260px** để đọc trọn nội dung đoạn bị lỗi.
+
 ## v1.55.1 — SỬA Mod Card lỗi "JSON parse failed" ở bước Phân tích thẻ
 > User báo Mod Card báo lỗi đỏ *`JSON parse failed: Unexpected token 'U', "[USER_CUSTOM_PROMPT]"... is not valid JSON`* ngay giai đoạn **Phân tích thẻ (Analyze Phase)** → cả pipeline dừng, "vẫn lỗi cũ" dù thử lại.
 - **Nguyên nhân (không phải AI trả sai):** AI **đã xuất JSON đúng** — nằm trong khối ` ```json ` ở cuối, **sau** phần phân tích 5 bước bằng văn xuôi (Chain-of-Thought). Nhưng bộ tách cũ dùng `match(/\[...\]/)` **tham lam**: vơ từ dấu `[` **ĐẦU TIÊN** trong văn xuôi (vd `[USER_CUSTOM_PROMPT]`, `[MODULE 1]`, `[name]`) tới dấu `]` **CUỐI** → dính cả prose lẫn JSON → `JSON.parse` vỡ.
