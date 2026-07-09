@@ -6,6 +6,7 @@ import { syncMvuVariables, postProcessRegexHtml, normalizeSmartQuotesInCode, fix
 import { shouldSkipTranslation, detectLanguage } from '../utils/langDetect';
 import { clearRAGCache } from '../utils/ragContext';
 import { storeTranslation, lookupTranslationMemory } from '../utils/translationMemory';
+import { findReusableTwin } from '../utils/translationReuse';
 import { getMvuCardSummary } from '../utils/mvuDetector';
 import { validateMvuVariables, autoFixMvuVariables, generateSyncReport, buildEntryNameDictionary, buildRegexTriggerDictionary, validateEntryNameSync } from '../utils/mvuValidator';
 import { buildEffectivePrompt } from '../utils/promptBuilder';
@@ -858,6 +859,19 @@ export function useTranslation() {
       store.addLog('warning', `⏭️ Bỏ qua dịch trùng: ${field.label} (đang được dịch ở luồng khác)`);
       return 'skip';
     }
+
+    // ♻️ BỘ NHỚ DỊCH: nếu đã có 1 trường KHÁC (trùng HỆT nội dung gốc + nhóm + loại) dịch xong
+    //    → copy thẳng bản dịch, khỏi tốn 1 call. An toàn tuyệt đối (2 trường giống hệt → cùng bản dịch).
+    //    Tôn trọng tuỳ chọn "Bỏ qua trường đã dịch": tắt tuỳ chọn = dịch mới toàn bộ, không tái dùng.
+    if (store.translationConfig.skipAlreadyTranslated) {
+      const twin = findReusableTwin(useStore.getState().fields, field);
+      if (twin) {
+        store.updateField(field.path, { status: 'done', translated: twin.translated, error: undefined });
+        store.addLog('success', `♻️ Tái dùng bản dịch cho "${field.label}" (trùng nội dung với "${twin.label}") — tiết kiệm 1 lượt gọi AI`);
+        return 'done';
+      }
+    }
+
     inFlightPaths.current.add(field.path);
     try {
       return await _translateSingleFieldInner(field, index, fields);

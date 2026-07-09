@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.47.0 — Đợt 5/6: Bộ nhớ dịch trong-thẻ (dedupe → nhanh hơn)
+> NHANH HƠN cho thẻ có nhiều đoạn lặp: bỏ hẳn lượt gọi AI thừa cho các trường trùng nội dung.
+- **Tái dùng bản dịch cho trường trùng.** Khi một trường chuẩn bị dịch mà **đã có trường khác giống hệt** (cùng nội dung gốc + cùng nhóm + cùng loại) dịch xong → copy thẳng bản dịch, **không gọi AI** (log `♻️ Tái dùng bản dịch…`). Với thẻ nhiều key/câu mẫu lặp, tiết kiệm kha khá lượt gọi + thời gian.
+- **An toàn tuyệt đối:** chỉ copy giữa 2 trường **giống hệt nhau về nội dung & kiểu**, nên bản dịch luôn đúng ngữ cảnh — không thể sinh bản dịch sai.
+- Khác với **"Bộ nhớ dịch xuyên thẻ" (IndexedDB) đã có sẵn**: cái cũ là *gợi ý mềm* (tương đồng) cho trường DÀI giữa các thẻ và không bỏ lượt gọi; cái mới bỏ hẳn lượt gọi cho trường **trùng khít trong CÙNG thẻ** (kể cả trường ngắn mà bộ nhớ cũ bỏ qua). Hai cơ chế bổ trợ nhau, không trùng.
+- Tôn trọng tuỳ chọn *"Bỏ qua trường đã dịch"* (tắt = dịch mới toàn bộ). Kỹ thuật: util thuần `translationReuse.ts` + **5 test** (tổng 43 xanh). tsc sạch.
+
 ## v1.46.0 — Đợt 4/6: Kiểm độ nhất quán thuật ngữ (dựa trên Từ điển sẵn có)
 > Rà soát cho thấy Dịch Card **đã có sẵn**: nút 🤖 tự trích Từ điển thuật ngữ từ thẻ, và cơ chế bơm Từ điển ("MANDATORY TERMINOLOGY") vào MỌI lần dịch. Vì vậy đợt này **không dựng lại** phần đó (tránh trùng) mà tận dụng để soi chất lượng.
 - **"🩺 Sức khoẻ thẻ" kiểm thêm độ nhất quán thuật ngữ.** Nếu một trường đã dịch xong nhưng **vẫn còn nguyên tên gốc** mà Từ điển yêu cầu đổi (vd còn `李明` thay vì `Lý Minh`) → cảnh báo *"trường lệch thuật ngữ"* kèm danh sách cặp `gốc→dịch` chưa áp, và chỉ rõ ở trường nào. Đây là mức cảnh báo (không chặn xuất) vì đôi khi giữ tên gốc là cố ý.
