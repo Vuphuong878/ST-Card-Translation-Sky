@@ -2,6 +2,14 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.54.3 — Nội bộ: bộ kiểm regex 4 tầng cho Game UI (1/3)
+> Bước 1 của việc "đập đi xây lại Game UI" (Tạo Card → MVUZOD) thành dạng **chat với AI**. Bản này chỉ thêm **lõi kiểm tra**, chưa đổi giao diện.
+- **`gameUiValidator.ts`** — chuỗi kiểm deterministic để AI tự sửa regex (đây là "cơ chế regex xịn" client yêu cầu):
+  - **V1 Cú pháp:** `findRegex` biên dịch được, JS trong replaceString parse sạch, field enum đúng luật ST (placement 1..5, không markdownOnly+promptOnly cùng true).
+  - **V2 MATCH THẬT:** `findRegex` **phải khớp** một đoạn văn AI mẫu + **đủ mọi nhóm `$1..$9`** mà replaceString dùng → regex được *chứng minh ăn* trước khi giao (bắt được cả lỗi quên flag `s` cho status block nhiều dòng).
+  - **V4 Khớp schema:** biến MVU trong code phải có thật trong schema (chống bịa biến).
+- **19 test** phủ đủ ca (regex vỡ, quên flag, thiếu nhóm, biến bịa, pass hoàn chỉnh…). tsc tao-card sạch.
+
 ## v1.54.2 — SỬA lỗi "Failed to resolve import acorn" sau cập nhật (deps không đồng bộ)
 > Nối tiếp 1.54.1. Sau khi cập nhật, một số máy báo `Failed to resolve import "acorn"` (hoặc module khác) → app không mở.
 - **Nguyên nhân:** `start.bat` và `update.bat` cũ chỉ chạy `npm install` **khi thiếu `node_modules`**. Khi cập nhật kéo về **thư viện MỚI** (vd `acorn` cho lưới an toàn cú pháp), `node_modules` đã tồn tại → **bỏ qua cài** → thiếu thư viện → Vite báo lỗi import.
