@@ -21,6 +21,7 @@ const EjsCreatorPanel = lazy(() => import('./components/EjsCreatorPanel'));
 const RegexManagerPanel = lazy(() => import('./components/RegexManagerPanel'));
 const AiCompanionPanel = lazy(() => import('./components/AiCompanionPanel'));
 const PresetPromptViewer = lazy(() => import('./components/PresetPromptViewer'));
+const CompareCardsPanel = lazy(() => import('./components/CompareCardsPanel'));
 
 export default function App() {
   const { toasts, removeToast, card, locale, setLocale, jumpToFieldPath } = useStore();
@@ -29,6 +30,7 @@ export default function App() {
   const [showRegexManager, setShowRegexManager] = useState(false);
   const [showAiCompanion, setShowAiCompanion] = useState(false);
   const [showPresetViewer, setShowPresetViewer] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
 
   // Flush translation progress to the project folder when the tab is closed/hidden, so an
   // accidental close within the auto-save window doesn't lose the last few seconds of work.
@@ -139,7 +141,24 @@ export default function App() {
         <FileUpload />
         <PresetImportPanel onOpenPromptViewer={() => setShowPresetViewer(true)} />
         <TranslateConfig />
-        
+
+        {/* So Sánh Card — độc lập, không cần card đang mở */}
+        <div style={{ padding: '0 20px', marginTop: '10px' }}>
+          <button
+            onClick={() => setShowCompare(true)}
+            style={{
+              width: '100%', padding: '10px',
+              background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
+              borderRadius: 'var(--radius-md)', color: '#38bdf8', fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s',
+            }}
+            onMouseOver={e => e.currentTarget.style.borderColor = '#38bdf8'}
+            onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+          >
+            🔀 So Sánh Card
+          </button>
+        </div>
+
         {/* Nút mở EJS Creator Modal */}
         {card && (
           <div style={{ padding: '0 20px', marginTop: '10px', marginBottom: '10px' }}>
@@ -301,6 +320,13 @@ export default function App() {
         {showPresetViewer && (
           <Suspense fallback={<LazyFallback />}>
             <PresetPromptViewer onClose={() => setShowPresetViewer(false)} />
+          </Suspense>
+        )}
+
+        {/* So Sánh Card Modal */}
+        {showCompare && (
+          <Suspense fallback={<LazyFallback />}>
+            <CompareCardsPanel onClose={() => setShowCompare(false)} />
           </Suspense>
         )}
 

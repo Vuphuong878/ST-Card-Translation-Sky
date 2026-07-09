@@ -2,5 +2,5 @@
 // BUMP `APP_VERSION` on every fix so builds are distinguishable in the UI (shown in the
 // sidebar header). Use the patch number for small fixes; keep `APP_VERSION_NOTE` to a one-line
 // summary of the most recent change (shown on hover).
-export const APP_VERSION = '1.55.3';
-export const APP_VERSION_NOTE = 'TĂNG TỐC Dịch Card (đa luồng): bỏ "rào chắn đợt". Trước đây mở N luồng rồi PHẢI CHỜ CẢ ĐỢT xong mới sang đợt kế — 1 entry chậm (entry khổng lồ) làm N-1 luồng còn lại ngồi không. Nay chuyển sang POOL LIÊN TỤC: luồng nào xong là KÉO entry kế NGAY, không đợi ai → thời gian ≈ entry chậm nhất thay vì cộng dồn theo đợt. Áp cho lorebook + Mod; regex trước chạy tuần tự nay cũng song song. RPM vẫn tuyệt đối an toàn (mỗi call vẫn qua bộ gate RPM cũ), nút Dừng/Tạm dừng nhạy hơn. +10 test chứng minh straggler không chặn.';
+export const APP_VERSION = '1.55.4';
+export const APP_VERSION_NOTE = 'MỚI: "So Sánh Card" (nút ở sidebar Dịch Card). Mở 3 phiên bản cùng 1 card cạnh nhau — Card Raw / Card Đã Dịch / Card Final — mỗi entry gióng thẳng hàng theo từng nhóm (Cốt lõi, Lời mở đầu, Lorebook, Từ khoá, Regex, Script MVU…). Sửa trực tiếp từng ô rồi bấm Lưu (ghi thẳng vào card), có Lưu tất cả + Xuất JSON/PNG mỗi cột; ô đã sửa chưa lưu hiện chấm vàng nổi bật. Có lọc "chỉ hiện entry khác nhau" + tìm nhanh. Mục đích: soi lại bản dịch & đối chiếu các version. Hoàn toàn offline, không tốn AI; tách biệt với phiên dịch chính.';

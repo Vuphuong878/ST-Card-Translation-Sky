@@ -2,6 +2,14 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.55.4 — MỚI: "So Sánh Card" — soi 3 phiên bản cùng 1 card cạnh nhau 🔀
+> Thêm chế độ so sánh cùng 1 card ở nhiều phiên bản để **xem mình đã dịch thế nào** và **đối chiếu các bản dịch khác nhau**.
+- **Nút "🔀 So Sánh Card"** ở sidebar Dịch Card (luôn dùng được, không cần card đang mở). Bấm vào mở màn hình so sánh: **3 cột** — **Card Raw** (gốc), **Card Đã Dịch**, **Card Final** — mỗi cột nạp 1 file card riêng (.json / .png, kéo-thả hoặc bấm chọn). Nạp **1–3 cột đều được**.
+- **Gióng thẳng hàng theo từng entry**, gom theo nhóm dễ đọc: Cốt lõi (tên/mô tả/tính cách), Lời mở đầu & hội thoại mẫu, Lorebook (nội dung), Từ khoá Lorebook, System Prompt, Depth Prompt, Script TavernHelper (MVU…), Regex Scripts. Mục nào 1 card không có thì hiện "(không có mục này)".
+- **Sửa trực tiếp + Lưu từng ô:** gõ vào ô entry rồi bấm **Lưu** (hoặc Ctrl+Enter) → ghi thẳng vào card đó (trong bộ nhớ). Ô đã sửa mà **chưa lưu** hiện **chấm vàng nổi bật**. Mỗi cột có **Lưu tất cả** và **Xuất JSON** (kèm **Xuất PNG** nếu nạp từ PNG — giữ ảnh gốc).
+- **Tiện dụng:** ô **tìm nhanh** theo tên/đường dẫn entry; toggle **"Chỉ hiện entry khác nhau"** để soi đúng chỗ dịch lệch; cảnh báo khi đóng mà còn ô chưa lưu; gập/mở từng nhóm.
+- **An toàn:** hoàn toàn **offline, không tốn AI/quota**; **tách biệt** với phiên dịch chính (không đụng card đang dịch). +14 unit test (parse card độc lập + gióng hàng/nhóm/lọc khác nhau). tsc + 89 test + build sạch.
+
 ## v1.55.3 — Dịch Card nhanh hơn: đa luồng bỏ "đợi cả đợt" (pool liên tục) ⚡
 > User góp ý: đa luồng đang tốt, nhưng chia việc theo **đợt** — mở ~155 luồng rồi **chờ CẢ 155 xong** mới sang đợt kế. Có 1 entry khổng lồ chạy rất lâu (ảnh: **7229 giây**) → **154 luồng còn lại ngồi không** đợi 1 thằng. Muốn: luồng nào xong là **nhận entry mới chạy tiếp ngay**, vẫn đúng RPM.
 - **Đổi cơ chế chia việc → "pool liên tục":** thay vì "một đợt N việc → chờ hết đợt → đợt kế", nay mở đúng N luồng và **luồng nào rảnh là KÉO entry kế trong hàng đợi NGAY**, không đợi luồng chậm. ⇒ tổng thời gian ≈ **entry chậm nhất** thay vì **cộng dồn theo đợt**; khi có entry to/chậm, tăng tốc rõ rệt (các luồng không còn thời gian chết).
