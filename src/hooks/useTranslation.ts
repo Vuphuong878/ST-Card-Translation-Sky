@@ -16,6 +16,7 @@ import { injectMvuZodSystem } from '../utils/mvuGenerator';
 import { detectEjsCard, extractEjsEntryNames, extractEjsKeywords, aiTranslateEjsEntries, validateEjsSync, autoFixEjsEntryNames, autoFixEjsKeywords, enforceEjsEntryName, enforceEjsCovariance, enforceEjsKeywordCasing, autoFixEjsKeywordsExtended } from '../utils/ejsSync';
 import { getActivePresetPromptContent } from '../utils/presetParser';
 import { CallMonitor } from '../utils/callMonitor';
+import { runWorkerPool } from '../utils/runWorkerPool';
 import type { FieldGroup, FieldGroupConfig, TranslationField } from '../types/card';
 
 /**
@@ -1924,57 +1925,25 @@ export function useTranslation() {
 
         store.setCurrentFieldIndex(i - 1);
 
-        // Step 3: Dispatch sub-batches with concurrency limit (sliding window)
-        let batchIdx = 0;
-        while (batchIdx < subBatches.length) {
-          if (checkAbort()) {
-            runningRef.current = false;
-            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            store.addLog('warning', '⏹ Đã dừng dịch.');
-            return;
-          }
-
-          // Handle pause inside batch loop
-          if (await waitForPause()) {
-            runningRef.current = false;
-            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            return;
-          }
-
-          // Take up to `concurrency` batches
-          const window = subBatches.slice(batchIdx, batchIdx + concurrency);
-          batchIdx += window.length;
-
-          try {
-            const results = await Promise.allSettled(
-              window.map(batch => translateOneBatch(batch))
-            );
-
-            for (const r of results) {
-              if (r.status === 'rejected') {
-                const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
-                if (msg === 'Cancelled' || checkAbort()) {
-                  runningRef.current = false;
-                  store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-                  store.addLog('warning', '⏹ Đã dừng dịch.');
-                  return;
-                }
-              }
-            }
-          } catch {
-            runningRef.current = false;
-            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            store.addLog('warning', '⏹ Đã dừng dịch.');
-            return;
-          }
-
-          // Delay between batch windows
-          if (batchIdx < subBatches.length && store.proxy.requestDelay > 0) {
-            await new Promise((r) => setTimeout(r, store.proxy.requestDelay));
-          }
-
-          // Auto-save cache after each batch window
-          store.saveTranslationCache();
+        // Step 3: Dispatch sub-batches — POOL WORKER LIÊN TỤC (không rào chắn đợt).
+        // Mỗi worker xong 1 batch là KÉO batch kế NGAY, không đợi cả đợt → không phí thời gian
+        // chờ straggler. RPM vẫn an toàn vì mỗi call qua pickLane. Cache lưu định kỳ thay vì mỗi đợt.
+        let savedLb = 0; const saveEveryLb = Math.max(4, Math.floor(concurrency / 2));
+        const lbPool = await runWorkerPool({
+          total: subBatches.length,
+          concurrency,
+          runOne: (idx) => translateOneBatch(subBatches[idx]),
+          shouldStop: () => !!checkAbort(),
+          waitIfPaused: waitForPause,
+          onSettled: () => { if (++savedLb % saveEveryLb === 0) store.saveTranslationCache(); },
+          betweenMs: store.proxy.requestDelay,
+        });
+        store.saveTranslationCache();
+        if (lbPool.cancelled) {
+          runningRef.current = false;
+          store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
+          store.addLog('warning', '⏹ Đã dừng dịch.');
+          return;
         }
 
         // Delay before next non-lorebook field
@@ -1997,24 +1966,11 @@ export function useTranslation() {
 
         store.addLog('info', `🔧 Regex: đang dịch ${regexFields.length} script regex…`);
 
-        for (const rf of regexFields) {
-          // Check abort
-          if (checkAbort()) {
-            runningRef.current = false;
-            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            store.addLog('warning', '⏹ Đã dừng dịch theo yêu cầu.');
-            return;
-          }
-
-          // Handle pause
-          if (await waitForPause()) {
-            runningRef.current = false;
-            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            return;
-          }
-
+        // Dịch 1 script regex (giữ NGUYÊN logic cũ). Ném 'Cancelled' để pool dừng cả mẻ.
+        // Abort/pause do runWorkerPool lo ở đầu mỗi vòng worker (nhạy hơn per-field cũ).
+        const translateOneRegexField = async (rf: TranslationField): Promise<void> => {
           // Skip already done fields (for continue mode)
-          if (rf.status === 'done') continue;
+          if (rf.status === 'done') return;
 
           store.updateField(rf.path, { status: 'translating', error: undefined });
           store.addLog('active', `Translating: ${rf.label}`);
@@ -2205,22 +2161,31 @@ export function useTranslation() {
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             if (msg === 'Cancelled' || msg === 'The operation was aborted' || msg === 'The user aborted a request.' || checkAbort()) {
-              runningRef.current = false;
-              store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-              store.addLog('warning', '⏹ Đã dừng dịch.');
-              return;
+              throw new Error('Cancelled'); // → runWorkerPool set cancelled + dừng cả mẻ
             }
             store.updateField(rf.path, { status: 'error', error: msg });
             store.addLog('error', `Regex translate failed: ${rf.label} — ${msg}`);
           }
+        };
 
-          // Delay between requests
-          if (store.proxy.requestDelay > 0) {
-            await new Promise((r) => setTimeout(r, store.proxy.requestDelay));
-          }
-
-          // Auto-save cache
-          store.saveTranslationCache();
+        // POOL WORKER LIÊN TỤC cho regex (trước đây chạy TUẦN TỰ từng script → chậm khi nhiều regex).
+        const regexConc = computePoolConcurrency(store.proxy);
+        let savedRx = 0; const saveEveryRx = Math.max(4, Math.floor(regexConc / 2));
+        const rxPool = await runWorkerPool({
+          total: regexFields.length,
+          concurrency: regexConc,
+          runOne: (idx) => translateOneRegexField(regexFields[idx]),
+          shouldStop: () => !!checkAbort(),
+          waitIfPaused: waitForPause,
+          onSettled: () => { if (++savedRx % saveEveryRx === 0) store.saveTranslationCache(); },
+          betweenMs: store.proxy.requestDelay,
+        });
+        store.saveTranslationCache();
+        if (rxPool.cancelled) {
+          runningRef.current = false;
+          store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
+          store.addLog('warning', '⏹ Đã dừng dịch.');
+          return;
         }
 
         // Delay before next non-regex field
@@ -3904,55 +3869,24 @@ export function useTranslation() {
 
         store.setCurrentFieldIndex(i - 1);
 
-        // Step 3: Dispatch sub-batches with concurrency limit
-        let batchIdx = 0;
-        while (batchIdx < subBatches.length) {
-          if (checkAbort()) {
-            runningRef.current = false;
-            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            store.addLog('warning', '🔧 Mod cancelled');
-            return;
-          }
-
-          // Handle pause inside mod batch loop
-          if (await waitForPause()) {
-            runningRef.current = false;
-            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            return;
-          }
-
-          const window = subBatches.slice(batchIdx, batchIdx + concurrency);
-          batchIdx += window.length;
-
-          try {
-            const results = await Promise.allSettled(
-              window.map(batch => modOneBatch(batch))
-            );
-
-            for (const r of results) {
-              if (r.status === 'rejected') {
-                const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
-                if (msg === 'Cancelled' || checkAbort()) {
-                  runningRef.current = false;
-                  store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-                  store.addLog('warning', '🔧 Mod cancelled');
-                  return;
-                }
-              }
-            }
-          } catch {
-            runningRef.current = false;
-            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
-            store.addLog('warning', '🔧 Mod cancelled');
-            return;
-          }
-
-          // Delay between batch windows
-          if (batchIdx < subBatches.length && store.proxy.requestDelay > 0) {
-            await new Promise(r => setTimeout(r, store.proxy.requestDelay));
-          }
-
-          store.saveTranslationCache();
+        // Step 3: Dispatch sub-batches — POOL WORKER LIÊN TỤC (không rào chắn đợt).
+        // Worker xong 1 batch là kéo batch kế ngay, không đợi straggler. RPM vẫn qua pickLane.
+        let savedMod = 0; const saveEveryMod = Math.max(4, Math.floor(concurrency / 2));
+        const modPool = await runWorkerPool({
+          total: subBatches.length,
+          concurrency,
+          runOne: (idx) => modOneBatch(subBatches[idx]),
+          shouldStop: () => !!checkAbort(),
+          waitIfPaused: waitForPause,
+          onSettled: () => { if (++savedMod % saveEveryMod === 0) store.saveTranslationCache(); },
+          betweenMs: store.proxy.requestDelay,
+        });
+        store.saveTranslationCache();
+        if (modPool.cancelled) {
+          runningRef.current = false;
+          store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
+          store.addLog('warning', '🔧 Mod cancelled');
+          return;
         }
 
         // Delay before next non-lorebook field

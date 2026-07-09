@@ -2,6 +2,14 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.55.3 — Dịch Card nhanh hơn: đa luồng bỏ "đợi cả đợt" (pool liên tục) ⚡
+> User góp ý: đa luồng đang tốt, nhưng chia việc theo **đợt** — mở ~155 luồng rồi **chờ CẢ 155 xong** mới sang đợt kế. Có 1 entry khổng lồ chạy rất lâu (ảnh: **7229 giây**) → **154 luồng còn lại ngồi không** đợi 1 thằng. Muốn: luồng nào xong là **nhận entry mới chạy tiếp ngay**, vẫn đúng RPM.
+- **Đổi cơ chế chia việc → "pool liên tục":** thay vì "một đợt N việc → chờ hết đợt → đợt kế", nay mở đúng N luồng và **luồng nào rảnh là KÉO entry kế trong hàng đợi NGAY**, không đợi luồng chậm. ⇒ tổng thời gian ≈ **entry chậm nhất** thay vì **cộng dồn theo đợt**; khi có entry to/chậm, tăng tốc rõ rệt (các luồng không còn thời gian chết).
+- **RPM vẫn TUYỆT ĐỐI an toàn:** cơ chế giới hạn RPM **không đổi** — mỗi lượt gọi vẫn đi qua đúng bộ điều nhịp RPM cũ (theo từng provider+model). Số luồng chạy đồng thời vẫn = ngân sách RPM như trước (không tăng), chỉ **lấp chỗ trống** thay vì để trống.
+- **Áp cho:** dịch **Lorebook**, chế độ **Mod**, và **Regex** (regex trước đây chạy **tuần tự** từng script — nay cũng chạy song song trong pool, vẫn đúng RPM).
+- **Chất lượng giữ nguyên:** đối chiếu chéo lô, kiểm biến MVU, chống dịch trùng 1 mục — không đổi. Nút **Dừng** cắt ngay, **Tạm dừng/Tiếp** đúng (thực ra **nhạy hơn** vì kiểm ở đầu mỗi việc, không phải chờ hết đợt).
+- *Kỹ thuật:* thêm `src/utils/runWorkerPool.ts` (mirror mẫu pool đã chạy tốt sẵn trong `ejsSync`/`aiVerify`) + **10 unit test** chứng minh: mỗi việc chạy đúng 1 lần, không vượt số luồng, **1 việc chậm KHÔNG chặn việc khác**, dừng/hủy đúng. Bỏ 2 chỗ `Promise.allSettled(window)` (rào chắn). tsc + 75 test + build sạch.
+
 ## v1.55.2 — Dịch Card: sửa UI panel "Kiểm Tra Lỗi Dịch" khó đọc/khó cuộn
 > User báo: danh sách lỗi ở panel **Kiểm Tra Lỗi Dịch** bị **set cứng chiều dọc**, cụt, không cuộn được / khó đọc nội dung bug.
 - **Nguyên nhân:** mỗi danh sách lỗi bọc trong ô cuộn **cao cố định 300–450px** lồng bên trong trang → tạo **thanh cuộn con tí hon** (chỉ thấy 2–3 dòng), lại chồng với cuộn trang → rối, tưởng bị cụt.
