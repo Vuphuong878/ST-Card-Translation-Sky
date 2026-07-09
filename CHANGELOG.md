@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.46.0 — Đợt 4/6: Kiểm độ nhất quán thuật ngữ (dựa trên Từ điển sẵn có)
+> Rà soát cho thấy Dịch Card **đã có sẵn**: nút 🤖 tự trích Từ điển thuật ngữ từ thẻ, và cơ chế bơm Từ điển ("MANDATORY TERMINOLOGY") vào MỌI lần dịch. Vì vậy đợt này **không dựng lại** phần đó (tránh trùng) mà tận dụng để soi chất lượng.
+- **"🩺 Sức khoẻ thẻ" kiểm thêm độ nhất quán thuật ngữ.** Nếu một trường đã dịch xong nhưng **vẫn còn nguyên tên gốc** mà Từ điển yêu cầu đổi (vd còn `李明` thay vì `Lý Minh`) → cảnh báo *"trường lệch thuật ngữ"* kèm danh sách cặp `gốc→dịch` chưa áp, và chỉ rõ ở trường nào. Đây là mức cảnh báo (không chặn xuất) vì đôi khi giữ tên gốc là cố ý.
+- **Báo cáo dịch (.md)** thêm dòng "Thuật ngữ chưa áp bản dịch: N".
+- Vì Từ điển vốn được bơm vào **từng phần** khi cắt entry lớn dịch song song, nên tên/thuật ngữ giữa các phần vốn đã nhất quán — kiểm tra mới này chỉ để bắt trường hợp sót.
+- Kỹ thuật: mở rộng `cardHealth.ts` (nhận thêm `glossary`), **+4 test** (tổng 38 test xanh). tsc sạch.
+
 ## v1.45.0 — Đợt 3/6: "Sức khoẻ thẻ" + báo cáo dịch (Dịch Card)
 > Giúp DỄ THEO DÕI hơn: phát hiện lỗi nội dung *trước khi* nạp thẻ vào SillyTavern, thay vì phát hiện muộn khi nút bấm đã liệt.
 - **🩺 Sức khoẻ thẻ (ở khung Xuất).** Khi có bản dịch, tự quét NỘI DUNG (không chỉ trạng thái trường) và báo ngay:

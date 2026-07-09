@@ -24,8 +24,8 @@ export default function ExportPanel() {
   const doneCount = fields.filter((f) => f.status === 'done').length;
   const hasLorebookKeys = fields.some(f => f.group === 'lorebook_keys');
 
-  // 🩺 Sức khoẻ thẻ — quét nội dung bản dịch (script vỡ / chữ Hán sót) chứ không chỉ trạng thái trường.
-  const health = useMemo(() => scanFieldsHealth(fields), [fields]);
+  // 🩺 Sức khoẻ thẻ — quét nội dung bản dịch (script vỡ / chữ Hán sót / thuật ngữ chưa áp) chứ không chỉ trạng thái trường.
+  const health = useMemo(() => scanFieldsHealth(fields, translationConfig.glossary), [fields, translationConfig.glossary]);
   const [showIssues, setShowIssues] = useState(false);
 
   const handleExportReport = () => {
@@ -361,6 +361,7 @@ export default function ExportPanel() {
             {health.counts.brokenScripts > 0 && <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>💥 {health.counts.brokenScripts} script vỡ</span>}
             {health.counts.residualCjkCode > 0 && <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>🈲 {health.counts.residualCjkCode} chữ Hán trong code</span>}
             {health.counts.residualCjkText > 0 && <span>🔤 {health.counts.residualCjkText} trường còn chữ Hán</span>}
+            {health.counts.glossaryUnapplied > 0 && <span>📖 {health.counts.glossaryUnapplied} trường lệch thuật ngữ</span>}
           </div>
         )}
 

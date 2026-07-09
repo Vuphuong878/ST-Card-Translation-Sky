@@ -8,7 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 import { parse as acornParse } from 'acorn';
 import { checkCodeFieldForCjk } from './mvuValidator';
-import type { TranslationField } from '../types/card';
+import type { TranslationField, GlossaryEntry } from '../types/card';
 
 /** Ideograph CJK (Trung/Nhật/Hàn) — dùng để phát hiện chữ chưa dịch còn sót. */
 const CJK_IDEOGRAPH = /[一-鿿㐀-䶿぀-ヿ가-힯]/g;
@@ -19,7 +19,8 @@ export type HealthKind =
   | 'field_pending'      // trường chưa dịch xong
   | 'broken_script'      // <script> gốc lành mà bản dịch vỡ cú pháp → nút bấm liệt
   | 'residual_cjk_code'  // chữ Hán còn trong field code (json_patch/initvar/controller)
-  | 'residual_cjk_text'; // chữ Hán còn sót trong văn bản đã "done" (có thể là tên riêng cố ý)
+  | 'residual_cjk_text'  // chữ Hán còn sót trong văn bản đã "done" (có thể là tên riêng cố ý)
+  | 'glossary_unapplied';// thuật ngữ trong Từ điển vẫn còn NGUYÊN GỐC trong bản dịch (dịch chưa nhất quán)
 
 export interface HealthIssue {
   severity: HealthSeverity;
@@ -39,6 +40,7 @@ export interface HealthReport {
     brokenScripts: number;
     residualCjkCode: number;
     residualCjkText: number;
+    glossaryUnapplied: number;
   };
   issues: HealthIssue[];
   /** true = không còn vấn đề mức 'error' → an toàn để xuất. */
@@ -65,11 +67,19 @@ function scriptBodies(html: string): string[] {
 
 const CODE_ENTRY_TYPES = new Set(['json_patch', 'initvar', 'controller']);
 
-/** Quét toàn bộ trường → báo cáo sức khoẻ (đếm + danh sách vấn đề đã sắp theo mức độ). */
-export function scanFieldsHealth(fields: TranslationField[]): HealthReport {
+/** Quét toàn bộ trường → báo cáo sức khoẻ (đếm + danh sách vấn đề đã sắp theo mức độ).
+ *  `glossary` (tuỳ chọn) = Từ điển thuật ngữ đang dùng → kiểm bản dịch có ÁP đúng chưa
+ *  (tên riêng/thuật ngữ còn nguyên gốc = dịch thiếu nhất quán). Tái dùng chính glossary mà
+ *  engine đã bơm vào mỗi call — không dựng từ điển mới. */
+export function scanFieldsHealth(fields: TranslationField[], glossary?: GlossaryEntry[]): HealthReport {
   const issues: HealthIssue[] = [];
-  let brokenScripts = 0, residualCjkCode = 0, residualCjkText = 0;
+  let brokenScripts = 0, residualCjkCode = 0, residualCjkText = 0, glossaryUnapplied = 0;
   let done = 0, error = 0, pending = 0, skipped = 0;
+
+  // Chỉ giữ mục từ điển hợp lệ (source≠target, đủ dài để không báo nhầm 1 ký tự).
+  const activeGlossary = (glossary || []).filter(
+    (g) => g.source?.trim() && g.target?.trim() && g.source.trim() !== g.target.trim() && g.source.trim().length >= 2
+  );
 
   for (const f of fields) {
     if (f.status === 'done') done++;
@@ -121,6 +131,17 @@ export function scanFieldsHealth(fields: TranslationField[]): HealthReport {
           detail: `Còn ${matches.length} ký tự Hán chưa dịch (kiểm tra xem có phải tên riêng giữ nguyên không).` });
       }
     }
+
+    // ─── Thuật ngữ trong Từ điển VẪN CÒN NGUYÊN GỐC trong bản dịch (dịch chưa nhất quán) ───
+    if (activeGlossary.length && f.status === 'done' && trans) {
+      const missed = activeGlossary.filter((g) => trans.includes(g.source.trim()));
+      if (missed.length > 0) {
+        glossaryUnapplied++;
+        const list = missed.slice(0, 6).map((g) => `"${g.source.trim()}"→"${g.target.trim()}"`).join(', ');
+        issues.push({ severity: 'warning', kind: 'glossary_unapplied', label: f.label, path: f.path,
+          detail: `Thuật ngữ chưa được áp bản dịch: ${list}${missed.length > 6 ? '…' : ''}` });
+      }
+    }
   }
 
   // Sắp xếp: error → warning → info (để danh sách hiển thị cái quan trọng trước).
@@ -128,7 +149,7 @@ export function scanFieldsHealth(fields: TranslationField[]): HealthReport {
   issues.sort((a, b) => rank[a.severity] - rank[b.severity]);
 
   return {
-    counts: { total: fields.length, done, error, pending, skipped, brokenScripts, residualCjkCode, residualCjkText },
+    counts: { total: fields.length, done, error, pending, skipped, brokenScripts, residualCjkCode, residualCjkText, glossaryUnapplied },
     issues,
     ok: !issues.some((i) => i.severity === 'error'),
   };
@@ -138,9 +159,10 @@ export function scanFieldsHealth(fields: TranslationField[]): HealthReport {
 export function buildTranslationReport(
   fields: TranslationField[],
   cardName: string,
-  report?: HealthReport
+  report?: HealthReport,
+  glossary?: GlossaryEntry[]
 ): string {
-  const h = report ?? scanFieldsHealth(fields);
+  const h = report ?? scanFieldsHealth(fields, glossary);
   const c = h.counts;
   const now = new Date().toLocaleString('vi-VN');
   const lines: string[] = [];
@@ -155,6 +177,7 @@ export function buildTranslationReport(
   lines.push(`- Script vỡ cú pháp: **${c.brokenScripts}**`);
   lines.push(`- Chữ Hán còn trong field code: **${c.residualCjkCode}**`);
   lines.push(`- Trường còn chữ Hán (văn bản): **${c.residualCjkText}**`);
+  lines.push(`- Thuật ngữ chưa áp bản dịch: **${c.glossaryUnapplied}**`);
   lines.push(`- Trạng thái: ${h.ok ? '✅ **An toàn để xuất**' : '⚠️ **Còn vấn đề nặng — nên sửa trước khi xuất**'}`);
 
   const bySev = (s: HealthSeverity) => h.issues.filter((i) => i.severity === s);

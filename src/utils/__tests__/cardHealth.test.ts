@@ -71,6 +71,44 @@ describe('scanFieldsHealth', () => {
   });
 });
 
+describe('scanFieldsHealth — kiểm áp Từ điển thuật ngữ', () => {
+  const glossary = [
+    { source: '李明', target: 'Lý Minh' },
+    { source: '王芳', target: 'Vương Phương' },
+  ];
+
+  it('bản dịch CÒN nguyên tên gốc trong Từ điển → warning glossary_unapplied', () => {
+    const r = scanFieldsHealth(
+      [mk({ translated: 'Nhân vật chính là 李明 và Vương Phương.', status: 'done' })],
+      glossary,
+    );
+    expect(r.counts.glossaryUnapplied).toBe(1);
+    expect(r.issues.some((i) => i.kind === 'glossary_unapplied')).toBe(true);
+    expect(r.ok).toBe(true); // warning, không chặn xuất
+  });
+
+  it('bản dịch đã áp đúng mọi thuật ngữ → không cảnh báo', () => {
+    const r = scanFieldsHealth(
+      [mk({ translated: 'Nhân vật chính là Lý Minh và Vương Phương.', status: 'done' })],
+      glossary,
+    );
+    expect(r.counts.glossaryUnapplied).toBe(0);
+  });
+
+  it('không truyền Từ điển → bỏ qua kiểm áp thuật ngữ', () => {
+    const r = scanFieldsHealth([mk({ translated: '李明', status: 'done' })]);
+    expect(r.counts.glossaryUnapplied).toBe(0);
+  });
+
+  it('bỏ qua mục từ điển source===target hoặc quá ngắn', () => {
+    const r = scanFieldsHealth(
+      [mk({ translated: 'X 李明', status: 'done' })],
+      [{ source: '李', target: '李' }, { source: 'A', target: 'B' }],
+    );
+    expect(r.counts.glossaryUnapplied).toBe(0);
+  });
+});
+
 describe('buildTranslationReport', () => {
   it('gồm tổng quan + phần lỗi khi có script vỡ', () => {
     const fields = [
