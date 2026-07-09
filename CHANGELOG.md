@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.50.0 — Bảng "Sức khoẻ thẻ" bấm-để-nhảy-tới-trường (Dịch Card)
+> Dễ theo dõi hơn: từ danh sách vấn đề, một cú bấm là tới đúng chỗ cần sửa — không phải tự dò.
+- **Bấm 1 dòng vấn đề** trong "🩺 Sức khoẻ thẻ" → **nhảy thẳng tới trường** đó:
+  - **Trường thường**: tự chuyển đúng **tab**, xoá ô Tìm, **cuộn** danh sách (kể cả list ảo hoá) tới đúng dòng và **tô sáng ~2.6s**; hoạt động ở cả chế độ Table lẫn Diff.
+  - **Trường REGEX**: mở **panel Quản lý Regex** và **chọn đúng script** chứa trường đó (regex nằm ở view riêng, không chung bảng field — nay vẫn tới được).
+- Kỹ thuật: thêm tín hiệu tạm `jumpToFieldPath` trong store; ExportPanel phát, FieldEditor (trường thường) + RegexManagerPanel (regex) tiêu thụ; cuộn bằng `virtualizer.scrollToIndex`. Build + 53 test xanh.
+
 ## v1.49.0 — Đồng bộ nốt: Dừng ở Tạo Preset + cảnh báo JS ở Tạo Card
 > Khép lại việc "nút Dừng cắt được việc đang chạy" + "lưới an toàn cú pháp" trên cả 5 app.
 - **Tạo Preset — nút ⏹ Dừng cho trợ lý chat.** Khi AI đang trả lời, nút Gửi chuyển thành **nút Dừng đỏ** — bấm là **hủy call đang chạy ngay** (trước chỉ chờ hết timeout 180s). Bấm Dừng → hiện "⏹ Đã dừng theo yêu cầu", không retry. (Kỹ thuật: luồn `AbortSignal` qua `callAI`/`fetchWithTimeout`.)

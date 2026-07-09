@@ -23,7 +23,7 @@ const AiCompanionPanel = lazy(() => import('./components/AiCompanionPanel'));
 const PresetPromptViewer = lazy(() => import('./components/PresetPromptViewer'));
 
 export default function App() {
-  const { toasts, removeToast, card, locale, setLocale } = useStore();
+  const { toasts, removeToast, card, locale, setLocale, jumpToFieldPath } = useStore();
   const t = useT();
   const [showEjsCreator, setShowEjsCreator] = useState(false);
   const [showRegexManager, setShowRegexManager] = useState(false);
@@ -41,6 +41,13 @@ export default function App() {
       document.removeEventListener('visibilitychange', onHide);
     };
   }, []);
+
+  // "Nhảy tới trường" trỏ vào trường REGEX → mở panel Regex (panel tự chọn đúng script + xoá tín hiệu).
+  useEffect(() => {
+    if (jumpToFieldPath && jumpToFieldPath.includes('regex_scripts[')) {
+      setShowRegexManager(true);
+    }
+  }, [jumpToFieldPath]);
 
   if (showRegexManager) {
     return (

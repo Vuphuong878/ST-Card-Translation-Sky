@@ -168,6 +168,11 @@ interface AppState {
   mvuConversionProgress: string;
   setMvuConversionProgress: (p: string) => void;
 
+  // "Nhảy tới trường" — tín hiệu tạm (path field cần cuộn tới) do bảng Sức khoẻ thẻ phát ra;
+  // FieldEditor (trường thường) / RegexManagerPanel (trường regex) tiêu thụ rồi tự xoá về null.
+  jumpToFieldPath: string | null;
+  setJumpToFieldPath: (p: string | null) => void;
+
   // MVU Key Metadata & Dictionary History
   mvuKeyMetadata: Record<string, MvuKeyMetadata>;
   setMvuKeyMetadata: (m: Record<string, MvuKeyMetadata>) => void;
@@ -893,6 +898,9 @@ export const useStore = create<AppState>((set) => ({
 
   mvuConversionProgress: '',
   setMvuConversionProgress: (p) => set({ mvuConversionProgress: p }),
+
+  jumpToFieldPath: null,
+  setJumpToFieldPath: (p) => set({ jumpToFieldPath: p }),
 
   // MVU Key Metadata & Dictionary History
   mvuKeyMetadata: {},

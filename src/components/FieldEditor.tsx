@@ -978,6 +978,8 @@ function VirtualTableView({
   phase,
   t,
   modEnabled,
+  scrollToPath,
+  highlightPath,
 }: {
   fields: any[];
   updateField: (path: string, update: any) => void;
@@ -986,6 +988,8 @@ function VirtualTableView({
   phase: string;
   t: Record<string, string>;
   modEnabled: boolean;
+  scrollToPath?: string | null;
+  highlightPath?: string | null;
 }) {
   const { setFields, fields: allFields, addToast, locale } = useStore();
   const parentRef = useRef<HTMLDivElement>(null);
@@ -1076,6 +1080,13 @@ function VirtualTableView({
     overscan: 8,
   });
 
+  // "Nhảy tới trường": cuộn danh sách ảo hoá tới đúng trường được yêu cầu (canh giữa).
+  useEffect(() => {
+    if (!scrollToPath) return;
+    const idx = fields.findIndex((f) => f.path === scrollToPath);
+    if (idx >= 0) virtualizer.scrollToIndex(idx, { align: 'center' });
+  }, [scrollToPath, fields, virtualizer]);
+
   const [ragDebugField, setRagDebugField] = useState<TranslationField | null>(null);
 
   return (
@@ -1124,6 +1135,7 @@ function VirtualTableView({
       >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const field = fields[virtualRow.index];
+          const isJumpHighlight = !!highlightPath && field.path === highlightPath;
           return (
             <div
               key={field.path}
@@ -1136,6 +1148,11 @@ function VirtualTableView({
                 width: '100%',
                 transform: `translateY(${virtualRow.start}px)`,
                 willChange: 'transform',
+                outline: isJumpHighlight ? '2px solid var(--accent-primary)' : undefined,
+                outlineOffset: isJumpHighlight ? '-2px' : undefined,
+                borderRadius: isJumpHighlight ? 'var(--radius-sm)' : undefined,
+                background: isJumpHighlight ? 'rgba(124,106,240,0.10)' : undefined,
+                transition: 'background 0.3s ease',
               }}
             >
               <VirtualFieldTableRow
@@ -1347,6 +1364,8 @@ function VirtualDiffView({
   phase,
   t,
   modEnabled,
+  scrollToPath,
+  highlightPath,
 }: {
   fields: any[];
   updateField: (path: string, update: any) => void;
@@ -1355,6 +1374,8 @@ function VirtualDiffView({
   phase: string;
   t: Record<string, string>;
   modEnabled: boolean;
+  scrollToPath?: string | null;
+  highlightPath?: string | null;
 }) {
   const { setFields, fields: allFields, addToast, locale } = useStore();
   const parentRef = useRef<HTMLDivElement>(null);
@@ -1455,6 +1476,13 @@ function VirtualDiffView({
     overscan: 5,
   });
 
+  // "Nhảy tới trường": cuộn tới đúng thẻ trong chế độ Diff.
+  useEffect(() => {
+    if (!scrollToPath) return;
+    const idx = fields.findIndex((f) => f.path === scrollToPath);
+    if (idx >= 0) virtualizer.scrollToIndex(idx, { align: 'center' });
+  }, [scrollToPath, fields, virtualizer]);
+
   return (
     <div
       ref={parentRef}
@@ -1492,6 +1520,7 @@ function VirtualDiffView({
       >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const field = fields[virtualRow.index];
+          const isJumpHighlight = !!highlightPath && field.path === highlightPath;
           return (
             <div
               key={field.path}
@@ -1505,6 +1534,10 @@ function VirtualDiffView({
                 transform: `translateY(${virtualRow.start}px)`,
                 paddingBottom: '8px',
                 willChange: 'transform',
+                outline: isJumpHighlight ? '2px solid var(--accent-primary)' : undefined,
+                outlineOffset: isJumpHighlight ? '-2px' : undefined,
+                borderRadius: isJumpHighlight ? 'var(--radius-sm)' : undefined,
+                background: isJumpHighlight ? 'rgba(124,106,240,0.10)' : undefined,
               }}
             >
               <VirtualFieldCardRow
@@ -1529,7 +1562,7 @@ function VirtualDiffView({
 }
 
 export default function FieldEditor() {
-  const { fields, updateField, phase, translationConfig } = useStore();
+  const { fields, updateField, phase, translationConfig, jumpToFieldPath, setJumpToFieldPath } = useStore();
   const { retranslateField, applyModToField } = useTranslation();
   const t = useT();
   const modEnabled = Boolean(translationConfig.enableModMode && translationConfig.modInstructions?.trim());
@@ -1537,6 +1570,30 @@ export default function FieldEditor() {
   const [activeTab, setActiveTab] = useState<FieldGroup | 'all'>('all');
   const [viewMode, setViewMode] = useState<'table' | 'diff'>('table');
   const [searchQuery, setSearchQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [jumpPath, setJumpPath] = useState<string | null>(null);
+
+  // "Nhảy tới trường" từ bảng Sức khoẻ thẻ — chỉ xử lý trường THƯỜNG (không phải regex; regex do
+  // RegexManagerPanel lo). Đặt đúng tab + xoá ô Tìm để trường hiện, cuộn bảng vào tầm nhìn, rồi
+  // báo child cuộn tới + highlight.
+  useEffect(() => {
+    if (!jumpToFieldPath) return;
+    if (jumpToFieldPath.includes('regex_scripts[')) return; // trường regex → panel khác xử lý
+    const target = fields.find((f) => f.path === jumpToFieldPath);
+    if (!target) { setJumpToFieldPath(null); return; }
+    setActiveTab(target.group as FieldGroup);
+    setSearchQuery('');
+    setJumpPath(jumpToFieldPath);
+    setJumpToFieldPath(null);
+    requestAnimationFrame(() => containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }, [jumpToFieldPath, fields, setJumpToFieldPath]);
+
+  // Tự tắt highlight sau ~2.6s.
+  useEffect(() => {
+    if (!jumpPath) return;
+    const id = setTimeout(() => setJumpPath(null), 2600);
+    return () => clearTimeout(id);
+  }, [jumpPath]);
 
   const filteredFields = useMemo(() => {
     let result = activeTab === 'all' 
@@ -1569,7 +1626,7 @@ export default function FieldEditor() {
   if (fields.length === 0) return null;
 
   return (
-    <div className="card fade-in" style={{ overflow: 'hidden' }}>
+    <div ref={containerRef} className="card fade-in" style={{ overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '16px 20px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
@@ -1709,6 +1766,8 @@ export default function FieldEditor() {
           phase={phase}
           t={t}
           modEnabled={modEnabled}
+          scrollToPath={jumpPath}
+          highlightPath={jumpPath}
         />
       )}
 
@@ -1722,6 +1781,8 @@ export default function FieldEditor() {
           phase={phase}
           t={t}
           modEnabled={modEnabled}
+          scrollToPath={jumpPath}
+          highlightPath={jumpPath}
         />
       )}
     </div>

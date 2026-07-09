@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
 import { useT } from '../i18n/useLocale';
@@ -160,7 +160,7 @@ interface RegexFieldRow {
    ════════════════════════════════════════════════════════════════════ */
 export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: () => void; isFullscreen?: boolean }) {
   const t = useT();
-  const { card, updateCard, addToast, fields, updateField, phase, deleteCurrentCardCache, translationConfig, addLog, proxy } = useStore();
+  const { card, updateCard, addToast, fields, updateField, phase, deleteCurrentCardCache, translationConfig, addLog, proxy, jumpToFieldPath, setJumpToFieldPath } = useStore();
   const { retranslateField, cancelTranslation, cancelFieldTranslation, cancelAllFieldTranslations } = useTranslation();
 
   // ─── Regex scripts from card ───
@@ -172,6 +172,17 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
   // ─── State ───
   const [selectedScriptIdx, setSelectedScriptIdx] = useState<number>(0);
   const [showAiChat, setShowAiChat] = useState(false);
+
+  // "Nhảy tới trường" từ bảng Sức khoẻ thẻ, trỏ vào 1 trường regex → chọn đúng script chứa nó.
+  useEffect(() => {
+    if (!jumpToFieldPath || !jumpToFieldPath.includes('regex_scripts[')) return;
+    const m = jumpToFieldPath.match(/regex_scripts\[(\d+)\]/);
+    if (m) {
+      const idx = parseInt(m[1], 10);
+      if (idx >= 0 && idx < scripts.length) setSelectedScriptIdx(idx);
+    }
+    setJumpToFieldPath(null); // tiêu thụ tín hiệu
+  }, [jumpToFieldPath, scripts.length, setJumpToFieldPath]);
 
   // ─── AI Regex Fix State ───
   const [isRegexScanning, setIsRegexScanning] = useState(false);

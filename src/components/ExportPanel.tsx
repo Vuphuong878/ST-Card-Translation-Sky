@@ -16,7 +16,7 @@ const KEY_MODE_OPTIONS: { value: ExportKeyMode; labelEn: string; labelVi: string
 ];
 
 export default function ExportPanel() {
-  const { card, fields, cardFileName, originalImage, _pngArrayBuffer, translationConfig, setTranslationConfig, phase, saveTranslationCache, locale, contentType, originalWorldbook } = useStore();
+  const { card, fields, cardFileName, originalImage, _pngArrayBuffer, translationConfig, setTranslationConfig, phase, saveTranslationCache, locale, contentType, originalWorldbook, setJumpToFieldPath } = useStore();
   const { getExportCard } = useTranslation();
   const t = useT();
   const isWorldbook = contentType === 'worldbook';
@@ -377,9 +377,16 @@ export default function ExportPanel() {
             {showIssues && (
               <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '220px', overflow: 'auto' }}>
                 {health.issues.slice(0, 60).map((iss, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                  <div
+                    key={idx}
+                    onClick={() => setJumpToFieldPath(iss.path)}
+                    title={locale === 'vi' ? 'Bấm để nhảy tới trường này ở bảng Field bên dưới' : 'Click to jump to this field below'}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '0.7rem', color: 'var(--text-secondary)', cursor: 'pointer', padding: '2px 4px', borderRadius: 'var(--radius-sm)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(124,106,240,0.08)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
                     <IssueIcon severity={iss.severity} />
-                    <span><b>{iss.label}</b> — {iss.detail} <span style={{ color: 'var(--text-muted)', fontSize: '0.64rem' }}>{iss.path}</span></span>
+                    <span><b>{iss.label}</b> — {iss.detail} <span style={{ color: 'var(--text-muted)', fontSize: '0.64rem' }}>{iss.path}</span> <span style={{ color: 'var(--accent-primary)', fontSize: '0.64rem' }}>↪ tới</span></span>
                   </div>
                 ))}
                 {health.issues.length > 60 && (
