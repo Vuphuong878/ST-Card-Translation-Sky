@@ -90,3 +90,52 @@ export function valuesDiffer(values: (string | undefined)[]): boolean {
   const first = present[0];
   return present.some((v) => v !== first);
 }
+
+/**
+ * Chuẩn hoá TỐI THIỂU trước khi so "tác giả có đổi entry không": chỉ gộp CRLF→LF.
+ * CỐ Ý bảo thủ — KHÔNG trim/nuốt khoảng trắng: thà báo "đổi" nhầm (dịch lại, chỉ tốn thời gian)
+ * còn hơn báo "không đổi" nhầm (tái dùng bản dịch cũ cho nội dung đã thay → SAI bản dịch).
+ */
+function normLineEndings(s: string): string {
+  return s.replace(/\r\n/g, '\n');
+}
+
+export interface MergePlan {
+  /** path → bản dịch cũ (từ Card Đã Dịch) để tái dùng vì entry KHÔNG đổi. */
+  reused: Map<string, string>;
+  /** path mới/đổi → cần dịch (giữ nguyên ngữ ở Final). */
+  changed: Set<string>;
+  counts: { reused: number; changed: number; total: number };
+}
+
+/**
+ * "Gộp thông minh": so Card Raw (gốc CŨ) vs Card Final (gốc MỚI) theo TỪNG entry.
+ *  - KHÔNG đổi + có bản dịch cũ (Card Đã Dịch) → TÁI DÙNG bản dịch đó.
+ *  - Mới / đổi / không có bản dịch cũ → CẦN DỊCH (giữ nguyên ngữ).
+ * Duyệt theo tập path của Card Final (đó là card đích sẽ xuất ra).
+ * @param rawByPath   Card Raw   (gốc cũ)
+ * @param dichByPath  Card Đã Dịch (bản dịch cũ, khớp Raw theo path)
+ * @param finalByPath Card Final (gốc mới)
+ */
+export function planMerge(
+  rawByPath: Map<string, string>,
+  dichByPath: Map<string, string>,
+  finalByPath: Map<string, string>,
+): MergePlan {
+  const reused = new Map<string, string>();
+  const changed = new Set<string>();
+
+  for (const [path, finalVal] of finalByPath) {
+    const rawVal = rawByPath.get(path);
+    const dichVal = dichByPath.get(path);
+    const unchanged = rawVal !== undefined && normLineEndings(rawVal) === normLineEndings(finalVal);
+
+    if (unchanged && dichVal !== undefined && dichVal.trim() !== '') {
+      reused.set(path, dichVal);
+    } else {
+      changed.add(path);
+    }
+  }
+
+  return { reused, changed, counts: { reused: reused.size, changed: changed.size, total: finalByPath.size } };
+}

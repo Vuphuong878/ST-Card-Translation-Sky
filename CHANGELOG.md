@@ -2,6 +2,15 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.55.6 — So Sánh Card: "Gộp thông minh" — tái dùng bản dịch cũ khi card update ⚡
+> Tình huống: card **đã dịch xong**, rồi **tác giả update bản gốc** (thêm/sửa vài chỗ). Trước đây phải **dịch lại cả card**. Nay chỉ dịch đúng **phần mới**.
+- **Nút "🔀 Gộp thông minh"** (hiện khi đủ 3 card: Raw / Đã Dịch / Final). Bấm → tool **so từng entry** giữa **Card Raw (gốc cũ)** và **Card Final (gốc mới)**:
+  - Entry **KHÔNG đổi** → **tái dùng bản dịch cũ** (lấy từ Card Đã Dịch). Giữ nguyên **regex/code** đang chạy tốt → **không dịch lại → không đẻ lỗi**.
+  - Entry **mới / bị tác giả sửa** → **chừa nguyên ngữ** để dịch.
+- **Xem trước ngay tại cột Card Final:** ô **♻ tái dùng** (xanh, hiện bản dịch cũ) / ô **✏️ cần dịch** (vàng, hiện nguyên ngữ mới), kèm bộ đếm **"Tái dùng X · Cần dịch Y / tổng"**.
+- **"➡️ Đưa sang Dịch Card":** bê thẳng Card Final sang màn dịch chính — **X mục tái dùng đánh dấu ĐÃ DỊCH (khoá, bỏ qua)** + **Y mục mới CHỜ DỊCH**. Bấm **Dịch** → engine đa luồng **chỉ chạy Y mục mới** → xong nhanh, rồi Xuất card như thường. (Hoặc **"⬇️ Xuất Final"** để tải thẳng file đã gộp.)
+- **An toàn:** so sánh **bảo thủ** — chỉ bỏ qua khác biệt xuống dòng CRLF/LF; mọi thay đổi nội dung thật đều tính là "cần dịch" (thà dịch lại còn hơn tái dùng nhầm bản dịch cho nội dung đã đổi). Hoàn toàn **không tốn AI** (chỉ so chuỗi). +8 unit test cho logic gộp. tsc + 97 test + build sạch.
+
 ## v1.55.4 — MỚI: "So Sánh Card" — soi 3 phiên bản cùng 1 card cạnh nhau 🔀
 > Thêm chế độ so sánh cùng 1 card ở nhiều phiên bản để **xem mình đã dịch thế nào** và **đối chiếu các bản dịch khác nhau**.
 - **Nút "🔀 So Sánh Card"** ở sidebar Dịch Card (luôn dùng được, không cần card đang mở). Bấm vào mở màn hình so sánh: **3 cột** — **Card Raw** (gốc), **Card Đã Dịch**, **Card Final** — mỗi cột nạp 1 file card riêng (.json / .png, kéo-thả hoặc bấm chọn). Nạp **1–3 cột đều được**.

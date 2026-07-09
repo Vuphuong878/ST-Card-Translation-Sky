@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store';
 import { parseCardFile, type ParsedCard } from '../utils/parseCardFile';
-import { buildCompareGroups, valuesDiffer } from '../utils/compareCards';
+import { buildCompareGroups, valuesDiffer, planMerge, type MergePlan } from '../utils/compareCards';
 import { extractTranslatableFields, setNestedValue, DEFAULT_FIELD_GROUPS } from '../utils/cardFields';
 import { embedCharaToPNG } from '../utils/pngHandler';
 import type { CharacterCard, FieldGroup, TranslationField } from '../types/card';
@@ -57,6 +57,7 @@ export function CompareCardsPanel({ onClose }: Props) {
   const [collapsed, setCollapsed] = useState<Set<FieldGroup>>(new Set());
   const [diffOnly, setDiffOnly] = useState(false);
   const [query, setQuery] = useState('');
+  const [merge, setMerge] = useState<MergePlan | null>(null); // kết quả "Gộp thông minh" (xem trước)
 
   const patchSlot = useCallback((id: SlotId, patch: Partial<Slot>) => {
     setSlots((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
@@ -64,6 +65,7 @@ export function CompareCardsPanel({ onClose }: Props) {
 
   // ─── Import 1 card vào 1 slot ───
   const importFile = useCallback(async (id: SlotId, file: File) => {
+    setMerge(null); // đổi card → xoá kết quả gộp cũ (đã lỗi thời)
     try {
       const parsed = await parseCardFile(file);
       const fields = extractTranslatableFields(parsed.card, ALL_GROUP_IDS);
@@ -79,6 +81,7 @@ export function CompareCardsPanel({ onClose }: Props) {
     const dirty = Object.keys(slots[id].edits).length;
     if (dirty > 0 && !window.confirm(`Còn ${dirty} ô chưa lưu ở cột này. Gỡ card vẫn tiếp tục?`)) return;
     patchSlot(id, { ...emptySlot() });
+    setMerge(null);
   }, [slots, patchSlot]);
 
   // ─── Sửa 1 ô ───
@@ -146,6 +149,46 @@ export function CompareCardsPanel({ onClose }: Props) {
     }
   }, [slots, flushEdits, saveAll, addToast]);
 
+  // ─── Gộp thông minh (tái dùng bản dịch cũ cho entry không đổi) ───
+  const allThree = SLOT_ORDER.every((s) => slots[s.id].parsed);
+
+  const runMerge = useCallback(() => {
+    if (!allThree) return;
+    const plan = planMerge(slots.raw.valueByPath, slots.translated.valueByPath, slots.final.valueByPath);
+    setMerge(plan);
+    setDiffOnly(false);
+    addToast('success', `Gộp: tái dùng ${plan.counts.reused} · cần dịch ${plan.counts.changed}.`);
+  }, [allThree, slots, addToast]);
+
+  // Đưa Card Final sang Dịch Card: reused = "đã dịch" (khoá), phần mới = "chờ dịch".
+  const sendToTranslate = useCallback(() => {
+    const finalSlot = slots.final;
+    if (!finalSlot.parsed || !merge) return;
+    if (!window.confirm(
+      `Đưa Card Final sang Dịch Card?\n\n• ${merge.counts.reused} mục TÁI DÙNG bản dịch cũ → đánh dấu ĐÃ DỊCH (bỏ qua khi dịch).\n• ${merge.counts.changed} mục mới/đổi → CHỜ DỊCH.\n\nThao tác này thay card đang mở ở màn Dịch Card.`,
+    )) return;
+    const st = useStore.getState();
+    st.setCard(finalSlot.parsed.card, finalSlot.parsed.fileName, finalSlot.parsed.dataUrl, 'card', null);
+    const enabled = st.translationConfig.fieldGroups.filter((g) => g.enabled).map((g) => g.id);
+    const fields = extractTranslatableFields(finalSlot.parsed.card, enabled);
+    const mergedFields = fields.map((f) => merge.reused.has(f.path)
+      ? { ...f, translated: merge.reused.get(f.path)!, status: 'done' as const, error: undefined }
+      : f);
+    st.setFields(mergedFields);
+    addToast('success', `Đã đưa sang Dịch Card — chỉ còn ${merge.counts.changed} mục cần dịch. Bấm "Dịch" để chạy.`);
+    onClose();
+  }, [slots, merge, addToast, onClose]);
+
+  // Xuất Card Final đã gộp (đắp bản dịch cũ vào entry không đổi, phần mới giữ nguyên ngữ).
+  const exportFinalMerged = useCallback(() => {
+    const finalSlot = slots.final;
+    if (!finalSlot.parsed || !merge) return;
+    for (const [p, v] of merge.reused) setNestedValue(finalSlot.parsed.card as unknown as Record<string, unknown>, p, v);
+    const blob = new Blob([JSON.stringify(finalSlot.parsed.card, null, 2)], { type: 'application/json' });
+    triggerDownload(URL.createObjectURL(blob), `${stem(finalSlot.parsed.fileName)}_final.json`, true);
+    addToast('success', `Đã xuất Final: ${merge.counts.reused} mục dịch sẵn, ${merge.counts.changed} mục còn nguyên ngữ.`);
+  }, [slots, merge, addToast]);
+
   // ─── Dữ liệu hiển thị ───
   const loadedSlots = SLOT_ORDER.filter((s) => slots[s.id].parsed);
   const groups = useMemo(
@@ -212,6 +255,47 @@ export function CompareCardsPanel({ onClose }: Props) {
         </div>
       </div>
 
+      {/* Merge bar — Gộp thông minh */}
+      {loadedSlots.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 18px', borderBottom: '1px solid var(--border-default)', background: 'rgba(56,189,248,0.06)', flexWrap: 'wrap' }}>
+          {!merge ? (
+            <>
+              <button onClick={runMerge} disabled={!allThree}
+                title={allThree ? 'So Card Raw (gốc cũ) vs Card Final (gốc mới): entry KHÔNG đổi → tái dùng bản dịch cũ; entry mới/đổi → để dịch.' : 'Cần nạp đủ 3 card: Raw + Đã Dịch + Final'}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: 'var(--radius-sm)', border: 'none', background: allThree ? '#38bdf8' : 'var(--bg-elevated)', color: allThree ? '#04263a' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.78rem', cursor: allThree ? 'pointer' : 'default' }}>
+                🔀 Gộp thông minh{allThree ? '' : ' (cần đủ 3 card)'}
+              </button>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                Tái dùng bản dịch cũ cho entry không đổi, chỉ chừa phần tác giả vừa update để dịch → nhanh & đỡ vỡ regex.
+              </span>
+            </>
+          ) : (
+            <>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700 }}>
+                <span style={{ color: '#22c55e' }}>♻ Tái dùng {merge.counts.reused}</span>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>·</span>
+                <span style={{ color: 'var(--accent-warning)' }}>✏️ Cần dịch {merge.counts.changed}</span>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>/ {merge.counts.total} mục · (xem trước ở cột Card Final)</span>
+              </span>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button onClick={sendToTranslate}
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--accent-primary)', color: '#fff', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+                  ➡️ Đưa sang Dịch Card (dịch {merge.counts.changed} mục mới)
+                </button>
+                <button onClick={exportFinalMerged}
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '0.75rem', cursor: 'pointer' }}>
+                  ⬇️ Xuất Final
+                </button>
+                <button onClick={() => setMerge(null)}
+                  style={{ padding: '7px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer' }}>
+                  Huỷ gộp
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Column headers (sticky) */}
       <div style={{ display: 'grid', gridTemplateColumns: gridCols, borderBottom: '1px solid var(--border-default)', background: 'var(--bg-secondary)' }}>
         <div style={{ padding: '10px 12px', fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, alignSelf: 'center' }}>ENTRY</div>
@@ -250,16 +334,25 @@ export function CompareCardsPanel({ onClose }: Props) {
                       <div style={{ fontWeight: 600 }}>{e.label}</div>
                       <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', marginTop: '2px' }}>{e.path}</div>
                     </div>
-                    {SLOT_ORDER.map((s) => (
-                      <CompareCell key={s.id}
-                        loaded={!!slots[s.id].parsed}
-                        present={slots[s.id].valueByPath.has(e.path) || (e.path in slots[s.id].edits)}
-                        value={effective(s.id, e.path) ?? ''}
-                        dirty={isDirty(s.id, e.path)}
-                        onChange={(v) => editCell(s.id, e.path, v)}
-                        onSave={() => saveCell(s.id, e.path)}
-                      />
-                    ))}
+                    {SLOT_ORDER.map((s) => {
+                      const isFinal = s.id === 'final';
+                      const tag: 'reused' | 'changed' | undefined = merge && isFinal
+                        ? (merge.reused.has(e.path) ? 'reused' : merge.changed.has(e.path) ? 'changed' : undefined)
+                        : undefined;
+                      const shownValue = tag === 'reused' ? (merge!.reused.get(e.path) ?? '') : (effective(s.id, e.path) ?? '');
+                      return (
+                        <CompareCell key={s.id}
+                          loaded={!!slots[s.id].parsed}
+                          present={slots[s.id].valueByPath.has(e.path) || (e.path in slots[s.id].edits)}
+                          value={shownValue}
+                          dirty={!merge && isDirty(s.id, e.path)}
+                          readOnly={!!merge}
+                          mergeTag={tag}
+                          onChange={(v) => editCell(s.id, e.path, v)}
+                          onSave={() => saveCell(s.id, e.path)}
+                        />
+                      );
+                    })}
                   </div>
                 ))}
               </div>
@@ -333,28 +426,42 @@ function SlotHeader({ slotDef, slot, onImport, onRemove, onSaveAll, onExportJson
 }
 
 // ─── One editable cell ───
-function CompareCell({ loaded, present, value, dirty, onChange, onSave }: {
+function CompareCell({ loaded, present, value, dirty, readOnly, mergeTag, onChange, onSave }: {
   loaded: boolean; present: boolean; value: string; dirty: boolean;
+  readOnly?: boolean; mergeTag?: 'reused' | 'changed';
   onChange: (v: string) => void; onSave: () => void;
 }) {
   if (!loaded) {
     return <div style={{ padding: '8px 12px', fontSize: '0.66rem', color: 'var(--text-muted)', fontStyle: 'italic', borderLeft: '1px solid var(--border-subtle)' }}>(chưa nạp card)</div>;
   }
   if (!present) {
-    return <div style={{ padding: '8px 12px', fontSize: '0.66rem', color: 'var(--text-muted)', fontStyle: 'italic', borderLeft: '1px solid var(--border-subtle)' }}>(không có mục này)</div>;
+    return <div style={{ padding: '8px 12px', fontSize: '0.66rem', color: 'var(--text-muted)', fontStyle: 'italic', borderLeft: '1px solid var(--border-subtle)', background: mergeTag === 'changed' ? 'rgba(240,196,106,0.05)' : 'transparent' }}>(không có mục này)</div>;
   }
+  const bg = mergeTag === 'reused' ? 'rgba(34,197,94,0.07)'
+    : mergeTag === 'changed' ? 'rgba(240,196,106,0.08)'
+    : dirty ? 'rgba(240,196,106,0.06)' : 'transparent';
+  const borderColor = mergeTag === 'reused' ? 'rgba(34,197,94,0.5)'
+    : mergeTag === 'changed' ? 'var(--accent-warning)'
+    : dirty ? 'var(--accent-warning)' : 'var(--border-subtle)';
   return (
-    <div style={{ padding: '6px 8px', borderLeft: '1px solid var(--border-subtle)', position: 'relative', background: dirty ? 'rgba(240,196,106,0.06)' : 'transparent' }}>
+    <div style={{ padding: '6px 8px', borderLeft: '1px solid var(--border-subtle)', position: 'relative', background: bg }}>
+      {mergeTag && (
+        <div style={{ fontSize: '0.6rem', fontWeight: 700, marginBottom: '3px', color: mergeTag === 'reused' ? '#16a34a' : 'var(--accent-warning)' }}>
+          {mergeTag === 'reused' ? '♻ tái dùng bản dịch cũ' : '✏️ mới/đổi — cần dịch'}
+        </div>
+      )}
       <textarea
         value={value}
+        readOnly={readOnly}
         onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); onSave(); } }}
+        onKeyDown={(e) => { if (!readOnly && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); onSave(); } }}
         spellCheck={false}
         style={{
           width: '100%', minHeight: '58px', maxHeight: '320px', resize: 'vertical',
           padding: '6px 8px', fontSize: '0.7rem', lineHeight: 1.45, fontFamily: 'var(--font-mono, monospace)',
-          borderRadius: 'var(--radius-sm)', border: `1px solid ${dirty ? 'var(--accent-warning)' : 'var(--border-subtle)'}`,
-          background: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none',
+          borderRadius: 'var(--radius-sm)', border: `1px solid ${borderColor}`,
+          background: readOnly ? 'var(--bg-secondary)' : 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none',
+          cursor: readOnly ? 'default' : 'text',
         }}
       />
       {dirty && (
