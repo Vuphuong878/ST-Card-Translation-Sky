@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.52.0 — "Bảo vệ CSS khỏi CJK": sửa "Giữ nguyên" bị dịch + mặc định "Dịch"
+> Theo phản hồi user: chọn *Giữ nguyên* mà CJK trong CSS vẫn bị dịch.
+- **Sửa lỗi "Giữ nguyên" không tuân theo.** Bộ chặn cũ chỉ bắt CJK **ngay sau dấu `(`** và **bắt buộc có phần đuôi** (`func(商 10px)`) → **sót** các biến thể: `drop-shadow(商)`, `blur(商)`, `filter: drop-shadow(10px 商)`… nên chúng lọt ra và **vẫn bị dịch**. Nay chặn CJK ở **bất kỳ đâu trong ngoặc hàm** và giữ **toàn bộ đối số** → khôi phục nguyên văn (kể cả `10px`).
+- **Đổi mặc định sang "Dịch (Translate)".** Người dùng mới sẽ mặc định *cho phép dịch* CJK trong CSS; **cấu hình đã lưu của người cũ giữ nguyên** (không tự đổi).
+- Thêm **7 test** round-trip cho mask/unmask (preserve ẩn đúng + khôi phục y hệt; translate không đụng gì). 60 test xanh, tsc sạch.
+
 ## v1.51.1 — Nội bộ: tách monolith (bước 1) — cụm chunking ra riêng
 > Không đổi hành vi app. Bắt đầu "tách dần" các file lõi quá lớn để dễ bảo trì (đã có bộ test làm lưới an toàn).
 - Tách cụm **cắt văn bản dài** — `chunkText` + 8 hàm dò *ranh giới an toàn* (`isSafeBoundary`, `findSafeBoundary`, `isInside{FunctionBody,ScriptOrStyle,StringLiteral,RegexLiteral,HtmlTag,CssAtRule,Url}`, `countUnescapedBackticks`) — từ `apiClient.ts` ra **`src/utils/chunking.ts`** (~465 dòng). `apiClient.ts` **4362 → 3897 dòng**.

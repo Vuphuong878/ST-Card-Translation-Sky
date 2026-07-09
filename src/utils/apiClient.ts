@@ -2595,7 +2595,7 @@ interface CssCjkMaskMap {
   [placeholder: string]: string;
 }
 
-function maskCssCjkValues(text: string, mode: 'preserve' | 'translate' = 'preserve'): { maskedText: string; map: CssCjkMaskMap; mode: 'preserve' | 'translate' } {
+export function maskCssCjkValues(text: string, mode: 'preserve' | 'translate' = 'preserve'): { maskedText: string; map: CssCjkMaskMap; mode: 'preserve' | 'translate' } {
   const map: CssCjkMaskMap = {};
   let maskedText = text;
   let counter = 0;
@@ -2607,13 +2607,13 @@ function maskCssCjkValues(text: string, mode: 'preserve' | 'translate' = 'preser
   // Pattern: find CSS property declarations containing CJK characters
   // Matches content between { } in CSS-like contexts
   // We specifically target CSS function calls that contain CJK: drop-shadow(商 ...), filter(...), etc.
-  const cssFuncWithCjk = /([a-zA-Z-]+\s*\(\s*)([\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af]+)(\s+[^)]*\))/g;
+  const cssFuncWithCjk = /([a-zA-Z][\w-]*\s*\()([^()]*[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af][^()]*)(\))/g;
   
-  maskedText = maskedText.replace(cssFuncWithCjk, (_match, prefix, cjk, suffix) => {
-    // Both modes: mask CJK so AI doesn't translate it
-    // Difference is in unmask: preserve → restore, translate → remove (strip)
+  maskedText = maskedText.replace(cssFuncWithCjk, (_match, prefix, args, suffix) => {
+    // preserve: ẩn cả đối số đi để AI không đụng CJK; unmask khôi phục nguyên văn (kể cả 10px).
+    // (Bản cũ chỉ bắt CJK ngay sau "(" + phải có khoảng trắng → sót drop-shadow(商)/blur(商)…)
     const placeholder = `__CSS_CJK_${counter++}__`;
-    map[placeholder] = cjk;
+    map[placeholder] = args;
     return `${prefix}${placeholder}${suffix}`;
   });
 
@@ -2629,7 +2629,7 @@ function maskCssCjkValues(text: string, mode: 'preserve' | 'translate' = 'preser
   return { maskedText, map, mode };
 }
 
-function unmaskCssCjkValues(text: string, map: CssCjkMaskMap, mode: 'preserve' | 'translate' = 'preserve'): string {
+export function unmaskCssCjkValues(text: string, map: CssCjkMaskMap, mode: 'preserve' | 'translate' = 'preserve'): string {
   let unmasked = text;
   for (const [placeholder, value] of Object.entries(map)) {
     // preserve: restore original CJK char | translate: remove it (replace with empty)

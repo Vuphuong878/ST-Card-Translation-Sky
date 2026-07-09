@@ -540,7 +540,7 @@ export const useStore = create<AppState>((set) => ({
     ejsScanPasses: LS.get('st-translator-ejs-scan-passes', 1),
     mvuTranslationPrompt: LS.get('st-translator-mvu-translation-prompt', ''),
     ejsTranslationPrompt: LS.get('st-translator-ejs-translation-prompt', ''),
-    cssCjkHandling: LS.get('st-translator-css-cjk-handling', 'preserve') as 'preserve' | 'translate',
+    cssCjkHandling: LS.get('st-translator-css-cjk-handling', 'translate') as 'preserve' | 'translate',
   },
   setTranslationConfig: (partial) =>
     set((s) => {
@@ -758,7 +758,7 @@ export const useStore = create<AppState>((set) => ({
       ejsScanPasses: 1,
       mvuTranslationPrompt: '',
       ejsTranslationPrompt: '',
-      cssCjkHandling: 'preserve' as const,
+      cssCjkHandling: 'translate' as const,
     };
 
     LS.set('st-translator-source-lang', defaultTranslationConfig.sourceLanguage);
