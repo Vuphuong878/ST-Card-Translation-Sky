@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.55.1 — SỬA Mod Card lỗi "JSON parse failed" ở bước Phân tích thẻ
+> User báo Mod Card báo lỗi đỏ *`JSON parse failed: Unexpected token 'U', "[USER_CUSTOM_PROMPT]"... is not valid JSON`* ngay giai đoạn **Phân tích thẻ (Analyze Phase)** → cả pipeline dừng, "vẫn lỗi cũ" dù thử lại.
+- **Nguyên nhân (không phải AI trả sai):** AI **đã xuất JSON đúng** — nằm trong khối ` ```json ` ở cuối, **sau** phần phân tích 5 bước bằng văn xuôi (Chain-of-Thought). Nhưng bộ tách cũ dùng `match(/\[...\]/)` **tham lam**: vơ từ dấu `[` **ĐẦU TIÊN** trong văn xuôi (vd `[USER_CUSTOM_PROMPT]`, `[MODULE 1]`, `[name]`) tới dấu `]` **CUỐI** → dính cả prose lẫn JSON → `JSON.parse` vỡ.
+- **Sửa:** thay bằng **bộ tách JSON bền vững**: (1) ưu tiên khối ` ```json ` (lấy khối cuối); (2) nếu không có, **quét cân bằng ngoặc CÓ HIỂU CHUỖI** — bỏ qua `[` `]` nằm trong `"..."` (vd `"[Đoạn 3]"` trong nội dung), thử parse, lấy khối hợp lệ đầu tiên (ngoặc trong văn xuôi tự parse-fail nên bị bỏ qua). Đã **kiểm trên đúng phản hồi bị lỗi của user** → ra mảng 2 mục đúng.
+- **Áp cho toàn bộ 5 chỗ đọc JSON của Mod Card** (Analyze, Đồng bộ Keyword, Kiểm tính nhất quán, Validate ×2) — cùng một loại bệnh, sửa dứt điểm cả cụm.
+- *Lưu ý riêng:* lỗi **524 (Gemini API)** khi bấm "Đào sâu 1 phần" trên entry khổng lồ là **vấn đề KHÁC** (proxy hết giờ vì 1 call quá dài) — sẽ xử lý riêng; tạm thời cứ dùng **"Chế độ Mở rộng"** cho cả section (đã tự chia phần từ 1.54.0) hoặc chọn 1 khối nhỏ để đào sâu.
+
 ## v1.55.0 — Game UI "đập đi xây lại": CHAT với AI để tạo giao diện game 🎮
 > Theo yêu cầu client (Guillichan): *"Vào Tạo Card → MVUZOD → Game UI. Đập đi xây lại hết. Biến nó thành dạng chat với AI. Suy nghĩ cơ chế nào để nó làm một regex thật sự xịn."* — Đây là bản hoàn chỉnh (kết hợp lõi kiểm ở 1.54.3).
 - **Giao diện mới hoàn toàn — hội thoại 2 cột:** Bên trái là **khung chat**; bạn cứ nói ý muốn ("làm status bar hiện máu dạng thanh đỏ + ô vàng", "thêm khung nhân vật"…), AI viết code và **chỉnh dần qua trò chuyện** — **không phải bấm Tạo lại từ đầu** như bản cũ (đỡ tốn lượt gọi, kết quả không nhảy lung tung). Bên phải là **Preview trực tiếp** + tab **Regex** (xem script + trạng thái kiểm) + tab **Sample** (đoạn văn mẫu, sửa tay được).

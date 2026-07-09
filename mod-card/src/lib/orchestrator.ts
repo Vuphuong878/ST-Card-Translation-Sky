@@ -69,6 +69,60 @@ function extractTag(text: string, name: string): string {
   return open ? open[1].replace(/^\n+/g, '').trim() : '';
 }
 
+/**
+ * Rút khối JSON (mảng `[]` hoặc object `{}`) từ output AI một cách BỀN VỮNG.
+ * Bệnh cũ: `response.match(/\[[\s\S]*\]/)` tham lam bắt từ dấu `[` ĐẦU TIÊN (thường nằm trong
+ * văn xuôi Chain-of-Thought, vd `[USER_CUSTOM_PROMPT]`, `[MODULE 1]`) tới `]` CUỐI → dính cả
+ * prose lẫn JSON → JSON.parse vỡ dù AI thật ra đã xuất JSON đúng (trong khối ```json ở cuối).
+ * Cách mới: (1) ưu tiên khối ```json fenced (lấy khối cuối); (2) quét mọi dấu mở, cân bằng ngoặc
+ * CÓ HIỂU CHUỖI (bỏ qua ngoặc nằm trong "..." như "[Đoạn 3]"), parse — trả về khối HỢP LỆ đầu tiên.
+ */
+function findBalanced(text: string, start: number, open: string, close: string): string | null {
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === open) depth++;
+    else if (ch === close) { depth--; if (depth === 0) return text.slice(start, i + 1); }
+  }
+  return null;
+}
+
+function extractJson<T>(text: string, open: '[' | '{', close: ']' | '}'): T | null {
+  const tryParse = (s: string): T | null => {
+    try { return JSON.parse(s) as T; } catch { return null; }
+  };
+  // 1) khối ```json / ``` fenced — duyệt từ CUỐI (JSON thường xuất sau phần phân tích)
+  const fences = [...text.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map((m) => m[1].trim()).reverse();
+  for (const f of fences) {
+    const direct = tryParse(f);
+    if (direct != null) return direct;
+    const s = f.indexOf(open);
+    if (s >= 0) { const slice = findBalanced(f, s, open, close); if (slice) { const v = tryParse(slice); if (v != null) return v; } }
+  }
+  // 2) quét toàn bộ text: khối cân bằng đầu tiên parse được (ngoặc prose parse fail → tự bỏ qua)
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== open) continue;
+    const slice = findBalanced(text, i, open, close);
+    if (!slice) continue;
+    const v = tryParse(slice);
+    if (v != null) return v;
+  }
+  return null;
+}
+
+/* Bộ parse khoan dung — caller tự khẳng định shape (giữ nguyên hành vi cũ: JSON.parse trả any). */
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+const extractJsonArray = <T = any>(text: string): T[] | null => extractJson<T[]>(text, '[', ']');
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+const extractJsonObject = <T = any>(text: string): T | null => extractJson<T>(text, '{', '}');
+
 /** Parse khoan dung khối <remap> XML từ AI → danh sách đổi biến. */
 function parseRemapXml(text: string): VariableRemap[] {
   const block = /<remap>([\s\S]*?)<\/remap>/i.exec(text)?.[1] ?? text;
@@ -301,20 +355,15 @@ export class ModOrchestrator {
       .replace('{CARD_JSON}', JSON.stringify(sanitized, null, 2));
 
     const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
-    
-    // Extract JSON array from markdown if present
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      console.error("LLM raw response:", response);
-      throw new Error(`Could not parse JSON array from LLM response. Raw response: ${response.substring(0, 300)}...`);
+
+    // Rút JSON bền vững: AI xuất phân tích 5 bước (văn xuôi) RỒI mới tới JSON array trong ```json.
+    // Bắt đúng khối JSON, không dính ngoặc trong prose (vd [USER_CUSTOM_PROMPT], [MODULE 1]).
+    const parsed = extractJsonArray(response);
+    if (!parsed) {
+      console.error('LLM raw response (analyze):', response);
+      throw new Error(`Không tìm thấy JSON hợp lệ trong phản hồi Analyze. Trích đầu phản hồi: ${response.substring(0, 300)}...`);
     }
-    try {
-      return JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      const err = e as Error;
-      console.error("LLM JSON parse error:", err, "JSON string:", jsonMatch[0]);
-      throw new Error(`JSON parse failed: ${err.message}. Content: ${jsonMatch[0].substring(0, 300)}...`);
-    }
+    return parsed;
   }
 
   async modSection(card: CardV3, section: CardSection, rules: OrchestratorRule[], context: string, opts?: ModOptions) {
@@ -460,12 +509,12 @@ export class ModOrchestrator {
 
     const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
     
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
+    const parsed = extractJsonArray(response);
+    if (!parsed) {
       console.warn("Could not parse JSON array for keyword sync");
       return [];
     }
-    return JSON.parse(jsonMatch[0]);
+    return parsed;
   }
 
   async auditConsistency(card: CardV3, rules: OrchestratorRule[]) {
@@ -479,12 +528,12 @@ export class ModOrchestrator {
 
     const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
     
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    const parsed = extractJsonObject(response);
+    if (!parsed) {
       console.warn("Could not parse JSON object for consistency audit");
       return null;
     }
-    return JSON.parse(jsonMatch[0]);
+    return parsed;
   }
 
   async validateCard(originalCard: CardV3, modifiedCard: CardV3, rules: OrchestratorRule[]) {
@@ -513,12 +562,11 @@ export class ModOrchestrator {
 
       const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
       
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
+      const parsed = extractJsonObject<{ validation_status?: string; passed_checks?: unknown[]; issues?: { severity?: string; check?: string; description?: string; fix?: string }[] }>(response);
+      if (!parsed) {
         console.warn("Could not parse JSON object for MVU-Zod validation");
         return null;
       }
-      const parsed = JSON.parse(jsonMatch[0]);
       return {
         status: parsed.validation_status || 'PASS',
         stats: {
@@ -548,11 +596,11 @@ export class ModOrchestrator {
 
     const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
     
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    const parsed = extractJsonObject(response);
+    if (!parsed) {
       console.warn("Could not parse JSON object for validation");
       return null;
     }
-    return JSON.parse(jsonMatch[0]);
+    return parsed;
   }
 }
