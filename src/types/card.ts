@@ -324,8 +324,6 @@ export interface TranslationConfig {
   translationPrompt: string;
   mode: TranslationMode;
   lorebookStrategy: LorebookStrategy;
-  lorebookBatchSize: number;
-  concurrentBatches: number;
   skipAlreadyTranslated: boolean;
   fieldGroups: FieldGroupConfig[];
   customSchema?: string;

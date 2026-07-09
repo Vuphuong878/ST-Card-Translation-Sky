@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.47.1 — Đợt 6/6 (nội bộ): Dọn cấu hình chết + chốt kế hoạch
+> Đợt cuối, không đổi hành vi app.
+- **Dọn 2 field cấu hình thừa** khỏi `type`/`store`/`i18n`: *"Số batch gửi song song"* (`concurrentBatches`) và *"Số mục mỗi đợt — lorebook"* (`lorebookBatchSize`). Chúng đã bị bỏ khỏi UI + engine từ trước (đa luồng theo RPM tự quyết số luồng), chỉ còn sót trong kiểu dữ liệu + localStorage → nay xoá cho gọn. `tsc` xác nhận không còn nơi nào dùng.
+- **Hoãn** việc tách nhỏ các file lõi quá lớn (`apiClient.ts`/`useTranslation.ts` ~4k dòng): đây là refactor rủi ro cao, nên làm trong một phiên riêng có kiểm thử đầy đủ (giờ đã có bộ test lõi từ Đợt 1 làm lưới an toàn) thay vì gộp vội vào cuối.
+- **Chốt kế hoạch 6 đợt rà soát & nâng cấp**: test lõi → nút Dừng cắt in-flight → sức khoẻ thẻ + báo cáo → kiểm nhất quán thuật ngữ → bộ nhớ dịch dedupe → dọn dẹp.
+
 ## v1.47.0 — Đợt 5/6: Bộ nhớ dịch trong-thẻ (dedupe → nhanh hơn)
 > NHANH HƠN cho thẻ có nhiều đoạn lặp: bỏ hẳn lượt gọi AI thừa cho các trường trùng nội dung.
 - **Tái dùng bản dịch cho trường trùng.** Khi một trường chuẩn bị dịch mà **đã có trường khác giống hệt** (cùng nội dung gốc + cùng nhóm + cùng loại) dịch xong → copy thẳng bản dịch, **không gọi AI** (log `♻️ Tái dùng bản dịch…`). Với thẻ nhiều key/câu mẫu lặp, tiết kiệm kha khá lượt gọi + thời gian.

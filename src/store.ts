@@ -488,8 +488,6 @@ export const useStore = create<AppState>((set) => ({
     translationPrompt: LS.get('st-translator-custom-prompt', ''),
     mode: LS.get('st-translator-translation-mode', 'field') as any,
     lorebookStrategy: LS.get('st-translator-lorebook-strategy', 'single') as any,
-    lorebookBatchSize: LS.get('st-translator-lorebook-batch-size', 5),
-    concurrentBatches: LS.get('st-translator-concurrent-batches', 1),
     skipAlreadyTranslated: LS.get('st-translator-skip-already-translated', true),
     fieldGroups: (() => {
       const saved = LS.get<Record<string, boolean>>('st-translator-field-groups-enabled', {});
@@ -640,12 +638,6 @@ export const useStore = create<AppState>((set) => ({
       if ('lorebookStrategy' in partial) {
         LS.set('st-translator-lorebook-strategy', next.lorebookStrategy);
       }
-      if ('lorebookBatchSize' in partial) {
-        LS.set('st-translator-lorebook-batch-size', next.lorebookBatchSize);
-      }
-      if ('concurrentBatches' in partial) {
-        LS.set('st-translator-concurrent-batches', next.concurrentBatches);
-      }
       if ('skipAlreadyTranslated' in partial) {
         LS.set('st-translator-skip-already-translated', next.skipAlreadyTranslated);
       }
@@ -720,8 +712,6 @@ export const useStore = create<AppState>((set) => ({
       translationPrompt: '',
       mode: 'field' as const,
       lorebookStrategy: 'single' as const,
-      lorebookBatchSize: 5,
-      concurrentBatches: 1,
       skipAlreadyTranslated: true,
       fieldGroups: defaultFields,
       customSchema: '',
@@ -767,8 +757,6 @@ export const useStore = create<AppState>((set) => ({
     LS.set('st-translator-custom-prompt', defaultTranslationConfig.translationPrompt);
     LS.set('st-translator-translation-mode', defaultTranslationConfig.mode);
     LS.set('st-translator-lorebook-strategy', defaultTranslationConfig.lorebookStrategy);
-    LS.set('st-translator-lorebook-batch-size', defaultTranslationConfig.lorebookBatchSize);
-    LS.set('st-translator-concurrent-batches', defaultTranslationConfig.concurrentBatches);
     LS.set('st-translator-skip-already-translated', defaultTranslationConfig.skipAlreadyTranslated);
     
     const enabledMap = defaultFields.reduce((acc, g) => {
