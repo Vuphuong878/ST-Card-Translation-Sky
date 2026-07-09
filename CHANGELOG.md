@@ -2,6 +2,15 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.55.0 — Game UI "đập đi xây lại": CHAT với AI để tạo giao diện game 🎮
+> Theo yêu cầu client (Guillichan): *"Vào Tạo Card → MVUZOD → Game UI. Đập đi xây lại hết. Biến nó thành dạng chat với AI. Suy nghĩ cơ chế nào để nó làm một regex thật sự xịn."* — Đây là bản hoàn chỉnh (kết hợp lõi kiểm ở 1.54.3).
+- **Giao diện mới hoàn toàn — hội thoại 2 cột:** Bên trái là **khung chat**; bạn cứ nói ý muốn ("làm status bar hiện máu dạng thanh đỏ + ô vàng", "thêm khung nhân vật"…), AI viết code và **chỉnh dần qua trò chuyện** — **không phải bấm Tạo lại từ đầu** như bản cũ (đỡ tốn lượt gọi, kết quả không nhảy lung tung). Bên phải là **Preview trực tiếp** + tab **Regex** (xem script + trạng thái kiểm) + tab **Sample** (đoạn văn mẫu, sửa tay được).
+- **Cơ chế "regex xịn thật sự" (điểm cốt lõi client hỏi):** mỗi lần AI viết/sửa, hệ thống **tự chạy regex lên một đoạn văn AI mẫu để CHỨNG MINH nó match** — kiểm 3 tầng tự động: (1) cú pháp regex + JS hợp lệ; (2) **MATCH THẬT** + đủ mọi nhóm `$1..$9` code dùng (bắt cả lỗi kinh điển "quên bật chế độ nhiều dòng"); (3) biến trong code **phải có thật trong schema** (chống AI bịa biến). Lỗi ở tầng nào → **AI tự sửa, tối đa 3 vòng**, rồi mới giao. Không còn cảnh "regex nhìn đẹp mà dán vào không chạy".
+- **Nút "⚡ Tạo nhanh (không AI)":** dựng ngay một bộ giao diện nền từ template — **tức thì, $0, không tốn API** — để bạn có cái sẵn rồi nhờ AI chỉnh cho đẹp/đúng ý.
+- **Tiện dụng:** nút **Dừng** cắt ngang giữa chừng (không vỡ phiên, nhắn tiếp được); **đổi tab rồi quay lại vẫn giữ nguyên** cuộc trò chuyện + kết quả; nút **Apply vào thẻ** chỉ bật khi regex đã **qua kiểm** (khỏi lỡ tay dán đồ hỏng); **Phiên mới** để làm lại từ đầu.
+- **Tối ưu cho Gemini** (model chính của bạn): tận dụng context lớn (nhét đủ schema + toàn bộ code hiện tại mỗi lượt, không cắt xén) và cho phép **output dài 60k+** — chính là lý do bản cũ hay bị **cắt cụt** giữa chừng.
+- *Kỹ thuật:* 5 file mới (`gameUiValidator`, `gameUiXml`, `gameStudioStore`, `gameUiStudioPrompt`, `gameUiAgent`, `GameUiStudio`), output AI theo **XML** (không JSON — bền hơn với HTML lớn), mọi call nhận **AbortSignal**. **44 test** xanh, tsc + build sạch. (Bản cũ `GameFrontendPreview` tạm giữ trong repo, sẽ gỡ ở bản dọn sau khi bạn xác nhận chạy ổn.)
+
 ## v1.54.3 — Nội bộ: bộ kiểm regex 4 tầng cho Game UI (1/3)
 > Bước 1 của việc "đập đi xây lại Game UI" (Tạo Card → MVUZOD) thành dạng **chat với AI**. Bản này chỉ thêm **lõi kiểm tra**, chưa đổi giao diện.
 - **`gameUiValidator.ts`** — chuỗi kiểm deterministic để AI tự sửa regex (đây là "cơ chế regex xịn" client yêu cầu):

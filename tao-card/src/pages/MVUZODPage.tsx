@@ -23,7 +23,7 @@ import { InitVarEditor } from '../components/mvuzod/InitVarEditor';
 import { VariableListGenerator } from '../components/mvuzod/VariableListGenerator';
 import { UpdateRulesEditor } from '../components/mvuzod/UpdateRulesEditor';
 import { ScriptOutput } from '../components/mvuzod/ScriptOutput';
-import { GameFrontendPreview } from '../components/mvuzod/GameFrontendPreview';
+import { GameUiStudio } from '../components/mvuzod/GameUiStudio';
 import { VariablePlayground } from '../components/mvuzod/VariablePlayground';
 import type { MVUZODSchema, MVUZODStudioTab } from '../types/mvuzod.types';
 
@@ -149,9 +149,9 @@ export function MVUZODPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin" style={{ display: tab === 'game' ? undefined : 'none' }}>
-        <div className="max-w-5xl mx-auto px-6 py-5">
-          <GameFrontendPreview schema={existingSchema} />
+      <div className="flex-1 overflow-hidden" style={{ display: tab === 'game' ? undefined : 'none' }}>
+        <div className="max-w-6xl mx-auto px-6 py-5 h-full">
+          <GameUiStudio schema={existingSchema} />
         </div>
       </div>
 
