@@ -199,11 +199,19 @@ export default function Home() {
       const moddedEntries: { index: number; content: string }[] = [];
       // Chế độ mở rộng: dựng lore digest 1 lần để mọi section bám lore toàn cảnh.
       const loreDigest = expandMode ? buildLoreDigest(card) : '';
-      const modOpts = { expand: expandMode, intensity: expandIntensity, loreDigest };
+      // Entry LỚN sẽ được chia phần trong orchestrator → báo tiến độ "phần i/N" để không tưởng bị treo.
+      let curLabel = '';
+      const modOpts = {
+        expand: expandMode, intensity: expandIntensity, loreDigest,
+        onChunkProgress: (done: number, total: number) => {
+          if (total > 1) setProcessStatus(`Giai đoạn 3: ${expandMode ? 'MỞ RỘNG' : 'mod'} "${curLabel}" — phần ${done}/${total} (entry lớn, chia nhỏ cho khỏi lỗi)...`);
+        },
+      };
       const brokenScripts: string[] = []; // script JS bị vỡ cú pháp sau khi mod (để cảnh báo)
 
       for (const req of sectionsToMod) {
         if (ac.signal.aborted) throw new DOMException('Người dùng đã dừng', 'AbortError');
+        curLabel = String(req.label);
         setProcessStatus(`Giai đoạn 3: Đang ${expandMode ? 'MỞ RỘNG' : 'mod'} section ${String(req.label)}...`);
         const sectionData = allSections.find(s => s.section_id === req.section_id);
         if (sectionData) {

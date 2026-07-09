@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.54.0 — Mod Card: sửa lỗi entry quá lớn "chả làm được gì"
+> Theo phản hồi user: mod/mở rộng một entry rất dài (vd "quy tắc tiên tử sa đọa 2" ~115.000 ký tự) thì báo lỗi, không ra kết quả.
+- **Nguyên nhân:** Mod Card gửi **cả entry trong 1 lần gọi AI**. Với entry cả trăm nghìn ký tự — nhất là chế độ **Mở rộng** (output còn dài hơn input) — kết quả bị **cắt cụt** quá giới hạn output của model → nội dung vỡ / rỗng → "chả làm được gì".
+- **Sửa:** entry **narrative** quá lớn (> ~8.000 ký tự) nay tự **CHIA PHẦN** (cắt ở ranh giới đoạn → dòng, **không mất nội dung** — đã kiểm trên đúng file của user), **mod/mở rộng TỪNG PHẦN** (đưa đuôi phần trước làm ngữ cảnh để giữ mạch) rồi **ghép lại**. Mỗi phần gọn nên không còn bị cắt cụt.
+- **UI:** hiển thị tiến độ **"phần i/N"** cho entry lớn (biết là đang chạy, không phải treo). Nút **⏹ Dừng** vẫn cắt được giữa chừng.
+- **Code/EJS KHÔNG bị chia** (chia dễ vỡ cấu trúc) — giữ gọi 1 lần như cũ. Kiểm trên file thật: entry 115k → 17 phần (≤7.952 ký tự/phần), 23k → 4 phần, không mất chữ. tsc mod-card sạch.
+
 ## v1.53.0 — Nâng cấp RAG: ngữ cảnh rộng/sâu hơn (Dịch Card)
 > Theo yêu cầu: nâng cấp hệ thống RAG. Hệ thống vốn đã mạnh (TF-IDF + tiered retrieval + glossary + translation memory, chạy client-side không tốn API) → đợt này **bồi thêm chiều SÂU** mà không phá nguyên tắc đó.
 - **Kích hoạt entry Lorebook theo KEYWORD (mới).** Khi dịch một field mà nội dung **nhắc tới keyword** của một entry Lorebook **khác** (đã dịch xong) → tự kéo **nội dung entry đó** vào ngữ cảnh (đúng cách SillyTavern trigger lorebook). Nhờ vậy đoạn văn nhắc "李明" sẽ được dịch kèm định nghĩa/tên đã chốt của 李明 → **tên riêng & thuật ngữ nhất quán hơn**, không bịa bản dịch khác.

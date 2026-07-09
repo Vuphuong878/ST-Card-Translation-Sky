@@ -4,7 +4,13 @@ import { LLMConfig } from './llm';
 import { SYSTEM_PROMPT, ANALYZE_CARD_PROMPT, MOD_SECTION_PROMPT, MOD_SCRIPT_PROMPT, KEYWORD_SYNC_PROMPT, CONSISTENCY_AUDIT_PROMPT, VALIDATE_CARD_PROMPT, MVUZOD_NARRATIVE_MOD_PROMPT, MVUZOD_VALIDATE_PROMPT, MVUZOD_VAR_REMAP_PROMPT, EXPAND_SECTION_PROMPT, EXPAND_SUBSECTION_PROMPT } from './prompts';
 
 /** Tuỳ chọn chế độ mở rộng khi mod 1 section. */
-export interface ModOptions { expand?: boolean; intensity?: string; loreDigest?: string; }
+export interface ModOptions {
+  expand?: boolean;
+  intensity?: string;
+  loreDigest?: string;
+  /** Báo tiến độ khi entry lớn bị chia phần (done/total) — để UI hiển thị "phần i/N". */
+  onChunkProgress?: (done: number, total: number) => void;
+}
 
 /** Digest toàn cảnh card + lorebook (để AI mở rộng bám lore, không mâu thuẫn). */
 export function buildLoreDigest(card: CardV3): string {
@@ -22,6 +28,37 @@ export function buildLoreDigest(card: CardV3): string {
   const loreLines = entries.slice(0, 30).map(e => `• ${e.comment || 'entry'}: ${strip(e.content).slice(0, 160)}`);
   if (loreLines.length) parts.push(`LOREBOOK (${loreLines.length} mục tham chiếu):\n${loreLines.join('\n')}`);
   return parts.join('\n\n').slice(0, 5000);
+}
+
+/**
+ * Chia nội dung NARRATIVE dài thành nhiều phần ≤ maxChars, cắt ở ranh giới ĐOẠN → DÒNG (không
+ * cắt giữa từ nếu tránh được). Dùng khi entry quá lớn (cả trăm nghìn ký tự) để mod/mở rộng TỪNG
+ * PHẦN rồi ghép — tránh lỗi output bị cắt cụt khi gọi AI 1 lần với nội dung khổng lồ.
+ */
+export function chunkContent(text: string, maxChars = 8000): string[] {
+  if (!text || text.length <= maxChars) return [text || ''];
+  const parts: string[] = [];
+  let cur = '';
+  const flush = () => { if (cur) { parts.push(cur); cur = ''; } };
+  for (const para of text.split(/\n\n+/)) {
+    if (cur && cur.length + para.length + 2 > maxChars) flush();
+    if (para.length > maxChars) {
+      flush();
+      let line = '';
+      for (const ln of para.split('\n')) {
+        if (line && line.length + ln.length + 1 > maxChars) { parts.push(line); line = ''; }
+        if (ln.length > maxChars) {
+          if (line) { parts.push(line); line = ''; }
+          for (let i = 0; i < ln.length; i += maxChars) parts.push(ln.slice(i, i + maxChars));
+        } else line = line ? line + '\n' + ln : ln;
+      }
+      if (line) cur = line;
+    } else {
+      cur = cur ? cur + '\n\n' + para : para;
+    }
+  }
+  flush();
+  return parts;
 }
 
 /** Lấy nội dung 1 tag XML (khoan dung: chấp nhận thiếu tag đóng). */
@@ -285,64 +322,97 @@ export class ModOrchestrator {
     const isCode = section.is_code;
     const isSystemMvuEntry = section.label.includes('[mvu_update]') || section.label.includes('[initvar]') || section.section_id === 'system_prompt';
 
+    // ═══ CHỐNG LỖI ENTRY QUÁ LỚN ═══
+    // Entry narrative cả trăm nghìn ký tự (vd "quy tắc" dài) gửi 1 call → output bị CẮT CỤT →
+    // kết quả vỡ / "chả làm được gì". Nay: nếu > ngưỡng thì CHIA PHẦN, mod/mở rộng TỪNG PHẦN
+    // (đưa đuôi phần trước làm context giữ mạch) rồi GHÉP. Code KHÔNG chia (dễ vỡ cấu trúc).
+    const CHUNK_THRESHOLD = 8000;
+    const runNarrative = async (
+      buildPrompt: (part: string, prevCtx: string) => string,
+      extract: (resp: string) => string,
+    ): Promise<string> => {
+      const content = section.content || '';
+      if (content.length <= CHUNK_THRESHOLD) {
+        const resp = await fetchLLM(SYSTEM_PROMPT, buildPrompt(content, context || 'Chưa có context'), this.cfg(), this.signal);
+        return extract(resp) || content;
+      }
+      const parts = chunkContent(content, CHUNK_THRESHOLD);
+      const out: string[] = [];
+      let prevTail = context || '';
+      for (let pi = 0; pi < parts.length; pi++) {
+        if (this.signal?.aborted) throw new DOMException('Người dùng đã dừng', 'AbortError');
+        opts?.onChunkProgress?.(pi + 1, parts.length);
+        const part = parts[pi];
+        const resp = await fetchLLM(SYSTEM_PROMPT, buildPrompt(part, prevTail || 'Chưa có context'), this.cfg(), this.signal);
+        const r = extract(resp) || part;
+        out.push(r);
+        prevTail = r.slice(-1000); // đuôi phần vừa xong → context cho phần kế (giữ mạch)
+      }
+      return out.join('\n\n');
+    };
+
     // ═══ Chế độ MỞ RỘNG: đào sâu narrative (không dùng cho code / entry hệ thống MVU) ═══
     if (opts?.expand && !isCode && !isSystemMvuEntry) {
-      const userPrompt = EXPAND_SECTION_PROMPT
-        .replace('{INTENSITY}', opts.intensity || 'vừa')
-        .replace('{MOD_RULES}', formatRules(rules))
-        .replace('{LORE_DIGEST}', opts.loreDigest || '(không có)')
-        .replace('{SECTION_LABEL}', section.label)
-        .replace('{CONTENT_TYPE}', section.content_type || 'text_narrative')
-        .replace('{ORIGINAL_CONTENT}', section.content)
-        .replace('{PREVIOUSLY_MODIFIED_CONTEXT}', context || 'Chưa có context');
-      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
-      return extractTag(response, 'expanded') || response.trim() || section.content;
+      return runNarrative(
+        (part, prevCtx) => EXPAND_SECTION_PROMPT
+          .replace('{INTENSITY}', opts.intensity || 'vừa')
+          .replace('{MOD_RULES}', formatRules(rules))
+          .replace('{LORE_DIGEST}', opts.loreDigest || '(không có)')
+          .replace('{SECTION_LABEL}', section.label)
+          .replace('{CONTENT_TYPE}', section.content_type || 'text_narrative')
+          .replace('{ORIGINAL_CONTENT}', part)
+          .replace('{PREVIOUSLY_MODIFIED_CONTEXT}', prevCtx),
+        (resp) => extractTag(resp, 'expanded') || resp.trim(),
+      );
     }
 
     if (isMvuZod && !isCode && !isSystemMvuEntry) {
-      const entryIndex = section.section_id.startsWith('entry_') 
-        ? section.section_id.replace('entry_', '') 
+      const entryIndex = section.section_id.startsWith('entry_')
+        ? section.section_id.replace('entry_', '')
         : 'N/A';
-        
-      const userPrompt = MVUZOD_NARRATIVE_MOD_PROMPT
-        .replace('{ENTRY_INDEX}', entryIndex)
-        .replace('{ENTRY_COMMENT}', section.label)
-        .replace('{POSITION}', section.entry_position || 'N/A')
-        .replace('{ENTRY_KEYS}', '')
-        .replace('{MOD_RULES}', formatRules(rules))
-        .replace('{ORIGINAL_CONTENT}', section.content);
-
-      const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
-      // Output XML: lấy <modified> (fallback raw). Không parse JSON để tránh vỡ với nội dung lớn.
-      return extractTag(response, 'modified') || response.trim() || section.content;
+      return runNarrative(
+        (part) => MVUZOD_NARRATIVE_MOD_PROMPT
+          .replace('{ENTRY_INDEX}', entryIndex)
+          .replace('{ENTRY_COMMENT}', section.label)
+          .replace('{POSITION}', section.entry_position || 'N/A')
+          .replace('{ENTRY_KEYS}', '')
+          .replace('{MOD_RULES}', formatRules(rules))
+          .replace('{ORIGINAL_CONTENT}', part),
+        (resp) => extractTag(resp, 'modified') || resp.trim(),
+      );
     }
 
-    const promptTemplate = isCode ? MOD_SCRIPT_PROMPT : MOD_SECTION_PROMPT;
-    
-    let userPrompt = promptTemplate
+    // ─── Narrative thường (không phải code): cũng chia phần nếu lớn ───
+    if (!isCode) {
+      return runNarrative(
+        (part, prevCtx) => MOD_SECTION_PROMPT
+          .replace('{SECTION_ID}', section.section_id)
+          .replace('{SECTION_LABEL}', section.label)
+          .replace('{FIELD_PATH}', section.field_path)
+          .replace('{MOD_RULES_APPLIED}', formatRules(rules))
+          .replace('{ORIGINAL_CONTENT}', part)
+          .replace('{ORIGINAL_SCRIPT}', part)
+          .replace('{MIRROR_PATHS}', section.mirror_paths.join(', '))
+          .replace('{CONTENT_TYPE}', section.content_type || 'text_narrative')
+          .replace('{XML_TAGS}', 'auto-detect')
+          .replace('{CARD_LANGUAGE}', 'Vietnamese')
+          .replace('{IMPORTANCE_SCORE}', '90')
+          .replace('{PREVIOUSLY_MODIFIED_CONTEXT}', prevCtx),
+        (resp) => resp.trim(), // MOD_SECTION_PROMPT trả về RAW nội dung (không tag)
+      );
+    }
+
+    // ─── Code: giữ single-call (KHÔNG chia — chia dễ vỡ cấu trúc code) ───
+    const userPrompt = MOD_SCRIPT_PROMPT
       .replace('{SECTION_ID}', section.section_id)
       .replace('{SECTION_LABEL}', section.label)
       .replace('{FIELD_PATH}', section.field_path)
       .replace('{MOD_RULES_APPLIED}', formatRules(rules))
       .replace('{ORIGINAL_CONTENT}', section.content)
       .replace('{ORIGINAL_SCRIPT}', section.content);
-
-    if (!isCode) {
-      userPrompt = userPrompt
-        .replace('{MIRROR_PATHS}', section.mirror_paths.join(', '))
-        .replace('{CONTENT_TYPE}', section.content_type || 'text_narrative')
-        .replace('{XML_TAGS}', 'auto-detect')
-        .replace('{CARD_LANGUAGE}', 'Vietnamese')
-        .replace('{IMPORTANCE_SCORE}', '90')
-        .replace('{PREVIOUSLY_MODIFIED_CONTEXT}', context || 'Chưa có context');
-    }
-
     const response = await fetchLLM(SYSTEM_PROMPT, userPrompt, this.cfg(), this.signal);
-    if (isCode) {
-      // Output XML: lấy <modified_script> (fallback raw) — chắc hơn JSON cho script dài.
-      return extractTag(response, 'modified_script') || response.trim() || section.content;
-    }
-    return response;
+    // Output XML: lấy <modified_script> (fallback raw) — chắc hơn JSON cho script dài.
+    return extractTag(response, 'modified_script') || response.trim() || section.content;
   }
 
   /**
