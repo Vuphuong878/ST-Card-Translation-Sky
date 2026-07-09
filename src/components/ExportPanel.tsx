@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
 import { useT } from '../i18n/useLocale';
-import { Download, AlertTriangle, Image as ImageIcon, KeyRound, Code } from 'lucide-react';
+import { Download, AlertTriangle, Image as ImageIcon, KeyRound, Code, Activity, FileText, XCircle, Info } from 'lucide-react';
 import { embedCharaToPNG } from '../utils/pngHandler';
 import { cardToWorldbook } from '../utils/worldbookParser';
 import { setNestedValue } from '../utils/cardFields';
+import { scanFieldsHealth, buildTranslationReport, type HealthSeverity } from '../utils/cardHealth';
 import type { ExportKeyMode } from '../types/card';
 
 const KEY_MODE_OPTIONS: { value: ExportKeyMode; labelEn: string; labelVi: string; desc: string }[] = [
@@ -21,10 +22,23 @@ export default function ExportPanel() {
   const isWorldbook = contentType === 'worldbook';
 
   const doneCount = fields.filter((f) => f.status === 'done').length;
-  const errorCount = fields.filter((f) => f.status === 'error').length;
-  const pendingCount = fields.filter((f) => f.status === 'pending').length;
-  const hasIssues = errorCount > 0 || pendingCount > 0;
   const hasLorebookKeys = fields.some(f => f.group === 'lorebook_keys');
+
+  // 🩺 Sức khoẻ thẻ — quét nội dung bản dịch (script vỡ / chữ Hán sót) chứ không chỉ trạng thái trường.
+  const health = useMemo(() => scanFieldsHealth(fields), [fields]);
+  const [showIssues, setShowIssues] = useState(false);
+
+  const handleExportReport = () => {
+    const md = buildTranslationReport(fields, cardFileName || 'card', health);
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const baseName = (cardFileName || 'card').replace(/\.(json|png)$/i, '');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${baseName}_bao-cao-dich.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleExport = () => {
     // Auto-save translation cache before export
@@ -317,27 +331,64 @@ export default function ExportPanel() {
         </span>
       </div>
 
-      {hasIssues && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '8px',
-            padding: '10px 12px',
-            background: 'rgba(240, 196, 106, 0.08)',
-            border: '1px solid rgba(240, 196, 106, 0.2)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: '12px',
-            fontSize: '0.8rem',
-            color: 'var(--accent-warning)',
-          }}
-        >
-          <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
-          <div>
-            {t.exportWarning}
-          </div>
+      {/* 🩺 Sức khoẻ thẻ — kiểm nội dung TRƯỚC khi xuất (script vỡ / chữ Hán sót / trường lỗi) */}
+      <div
+        style={{
+          padding: '10px 12px',
+          background: health.ok ? 'rgba(80, 200, 120, 0.06)' : 'rgba(240, 100, 100, 0.07)',
+          border: `1px solid ${health.ok ? 'rgba(80,200,120,0.25)' : 'rgba(240,100,100,0.3)'}`,
+          borderRadius: 'var(--radius-md)',
+          marginBottom: '12px',
+          fontSize: '0.8rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: health.issues.length ? '8px' : 0 }}>
+          <Activity size={15} style={{ flexShrink: 0, color: health.ok ? 'var(--accent-success)' : 'var(--accent-danger)' }} />
+          <span style={{ fontWeight: 600, color: health.ok ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
+            {health.ok
+              ? (locale === 'vi' ? 'Sức khoẻ thẻ: an toàn để xuất' : 'Card health: safe to export')
+              : (locale === 'vi'
+                  ? `Sức khoẻ thẻ: còn ${health.issues.filter(i => i.severity === 'error').length} vấn đề nặng nên sửa trước khi xuất`
+                  : `Card health: ${health.issues.filter(i => i.severity === 'error').length} serious issue(s) to fix before export`)}
+          </span>
         </div>
-      )}
+
+        {/* Chỉ số nhanh */}
+        {(health.counts.error > 0 || health.counts.brokenScripts > 0 || health.counts.residualCjkCode > 0 || health.counts.residualCjkText > 0 || health.counts.pending > 0) && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+            {health.counts.error > 0 && <span>❌ {health.counts.error} trường lỗi</span>}
+            {health.counts.pending > 0 && <span>⏳ {health.counts.pending} chưa xong</span>}
+            {health.counts.brokenScripts > 0 && <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>💥 {health.counts.brokenScripts} script vỡ</span>}
+            {health.counts.residualCjkCode > 0 && <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>🈲 {health.counts.residualCjkCode} chữ Hán trong code</span>}
+            {health.counts.residualCjkText > 0 && <span>🔤 {health.counts.residualCjkText} trường còn chữ Hán</span>}
+          </div>
+        )}
+
+        {/* Danh sách chi tiết (thu gọn) */}
+        {health.issues.length > 0 && (
+          <>
+            <button
+              onClick={() => setShowIssues(v => !v)}
+              style={{ marginTop: '8px', background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+            >
+              {showIssues ? '▾ Ẩn chi tiết' : `▸ Xem chi tiết (${health.issues.length})`}
+            </button>
+            {showIssues && (
+              <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '220px', overflow: 'auto' }}>
+                {health.issues.slice(0, 60).map((iss, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                    <IssueIcon severity={iss.severity} />
+                    <span><b>{iss.label}</b> — {iss.detail} <span style={{ color: 'var(--text-muted)', fontSize: '0.64rem' }}>{iss.path}</span></span>
+                  </div>
+                ))}
+                {health.issues.length > 60 && (
+                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>… và {health.issues.length - 60} vấn đề nữa (xem đầy đủ trong báo cáo).</span>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Lorebook Key Mode Selector */}
       {hasLorebookKeys && (
@@ -417,6 +468,18 @@ export default function ExportPanel() {
             {t.downloadPng || 'Download PNG'}
           </button>
         )}
+
+        {/* 📄 Báo cáo dịch — tổng quan + danh sách vấn đề (Markdown tải về) */}
+        <button
+          className="btn btn-secondary"
+          onClick={handleExportReport}
+          disabled={fields.length === 0}
+          style={{ width: '100%', background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
+          title={locale === 'vi' ? 'Tải file .md tổng hợp: đã dịch/lỗi/bỏ qua + script vỡ + chữ Hán sót' : 'Download a .md summary report'}
+        >
+          <FileText size={15} />
+          {locale === 'vi' ? 'Xuất báo cáo dịch (.md)' : 'Export translation report (.md)'}
+        </button>
       </div>
 
       {/* Script Export Section */}
@@ -634,4 +697,11 @@ export default function ExportPanel() {
       )}
     </div>
   );
+}
+
+/** Icon nhỏ theo mức độ vấn đề trong danh sách sức khoẻ thẻ. */
+function IssueIcon({ severity }: { severity: HealthSeverity }) {
+  if (severity === 'error') return <XCircle size={12} style={{ flexShrink: 0, marginTop: 1, color: 'var(--accent-danger)' }} />;
+  if (severity === 'warning') return <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 1, color: 'var(--accent-warning)' }} />;
+  return <Info size={12} style={{ flexShrink: 0, marginTop: 1, color: 'var(--text-muted)' }} />;
 }

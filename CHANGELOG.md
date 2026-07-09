@@ -2,6 +2,16 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.45.0 — Đợt 3/6: "Sức khoẻ thẻ" + báo cáo dịch (Dịch Card)
+> Giúp DỄ THEO DÕI hơn: phát hiện lỗi nội dung *trước khi* nạp thẻ vào SillyTavern, thay vì phát hiện muộn khi nút bấm đã liệt.
+- **🩺 Sức khoẻ thẻ (ở khung Xuất).** Khi có bản dịch, tự quét NỘI DUNG (không chỉ trạng thái trường) và báo ngay:
+  - **Script vỡ cú pháp**: `<script>` gốc chạy được mà bản dịch parse hỏng (acorn) → cảnh báo đỏ (đây chính là loại lỗi làm "nút bấm liệt").
+  - **Chữ Hán còn trong field code** (`json_patch`/`initvar`/`controller`) → lỗi nặng.
+  - **Trường lỗi / chưa xong** và **trường còn sót chữ Hán** (mức ghi chú, phòng khi là tên riêng giữ cố ý).
+  - Xanh = *an toàn để xuất*; đỏ = *còn N vấn đề nặng nên sửa trước* + nút "Xem chi tiết" liệt kê từng chỗ (tên trường + mô tả + đường dẫn).
+- **📄 Xuất báo cáo dịch (.md).** Một nút tải file Markdown tổng hợp: số trường đã dịch/lỗi/bỏ qua + toàn bộ danh sách vấn đề — tiện lưu lại hoặc gửi cho người khác.
+- Kỹ thuật: thêm util thuần `cardHealth.ts` (tái dùng acorn + `checkCodeFieldForCjk`), **8 test** khoá lại logic quét. Log hiện đã có bộ lọc theo loại (✓/✗/!/↻…) nên **chưa** gom thêm theo giai đoạn để tránh trùng.
+
 ## v1.44.0 — Đợt 2/6: Nút Dừng cắt luôn call AI đang chạy (Mod Card + Tạo Card)
 > Đợt này rà soát khả năng "dừng" trên cả 5 app và vá các chỗ nút Dừng chưa thật sự cắt được call AI đang chạy (giống bug đã sửa cho Dịch Card trước đây).
 - **Mod Card — thêm nút ⏹ Dừng.** Trước: bấm "Chạy Mod" là chạy hết mọi bước (phân tích → mod từng section → đồng bộ → kiểm định), **không có cách nào dừng**. Nay: khi đang chạy, nút chuyển thành **⏹ Dừng** — bấm là hủy call đang chạy ngay lập tức và cắt vòng lặp; các bước đã xong vẫn giữ nguyên, báo "Đã dừng theo yêu cầu" (không phải lỗi). (Kỹ thuật: luồng `AbortController` → `signal` xuyên `fetchLLM`/orchestrator.)
