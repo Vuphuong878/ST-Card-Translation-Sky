@@ -171,7 +171,8 @@ const appUpdaterPlugin = () => ({
       }
 
       if (req.method === 'POST' && req.url === '/api/app/upgrade') {
-        exec('git pull origin main', (err, stdout, stderr) => {
+        // fetch + reset --hard: đồng bộ cứng về GitHub, không kẹt vì package-lock bị npm install sửa.
+        exec('git fetch origin main && git reset --hard origin/main', (err, stdout, stderr) => {
           res.setHeader('Content-Type', 'application/json');
           if (err) {
             res.statusCode = 500;

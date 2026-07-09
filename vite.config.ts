@@ -221,9 +221,12 @@ export default defineConfig({
             res.setHeader('Cache-Control', 'no-cache');
             
             res.write('Đang tải bản mới nhất từ GitHub...\n');
-            // Dùng "git pull origin main" (thay vì "git pull" trơn) để không phụ thuộc upstream
-            // đã set hay chưa — nhánh mặc định của repo là main.
-            const child = exec('git pull origin main && npm install');
+            // ĐỒNG BỘ CỨNG về bản trên GitHub: fetch + reset --hard (thay cho "git pull" trơn).
+            // Lý do: mỗi lần cập nhật, "npm install" tự sửa package-lock.json (file được TRACK) →
+            // lần pull sau, merge TỪ CHỐI ghi đè ("local changes would be overwritten") → update KẸT
+            // mãi. reset --hard bỏ các thay đổi cục bộ đó (chỉ file đã track; dữ liệu user KHÔNG track
+            // — thẻ, cache, progress — vẫn được giữ) nên cập nhật LUÔN chạy được.
+            const child = exec('git fetch origin main && git reset --hard origin/main && npm install');
             
             child.stdout?.on('data', (data) => {
               res.write(data);
@@ -235,7 +238,7 @@ export default defineConfig({
               if (code === 0) {
                 res.write(`\nCập nhật hoàn tất thành công. Vui lòng tải lại trang hoặc khởi động lại app nếu cần.\n`);
               } else {
-                res.write(`\nCập nhật thất bại (mã lỗi ${code}). Có thể bạn đang có thay đổi chưa commit gây xung đột.\n`);
+                res.write(`\nCập nhật thất bại (mã lỗi ${code}). Kiểm tra mạng/GitHub. Nếu vẫn lỗi: mở thư mục cài đặt, chạy "git fetch origin main && git reset --hard origin/main" một lần rồi khởi động lại.\n`);
               }
               res.end();
             });

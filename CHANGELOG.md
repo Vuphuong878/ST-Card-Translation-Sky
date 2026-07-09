@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.54.1 — SỬA nút Cập nhật bị kẹt mãi (lỗi package-lock)
+> Nhiều máy bấm Cập nhật báo lỗi *"Your local changes to package-lock.json would be overwritten by merge"* → **không update được nữa**.
+- **Nguyên nhân:** mỗi lần cập nhật, bước `npm install` **tự sửa `package-lock.json`** (file được git track). Lần sau, `git pull` gặp thay đổi cục bộ đó → **từ chối merge** → cập nhật kẹt vĩnh viễn.
+- **Sửa:** đổi lệnh cập nhật từ `git pull origin main` → **`git fetch origin main && git reset --hard origin/main`** (cả Hub lẫn Tạo Card). Đồng bộ **CỨNG** về đúng bản trên GitHub → **luôn chạy được**, không kẹt vì package-lock. Dữ liệu user **không-track** (thẻ đang dịch, cache, progress, file trong `dev_data`…) **vẫn được giữ nguyên**.
+- **⚠️ Máy đang kẹt cần làm TAY 1 LẦN** (vì bản sửa này nằm trong file cấu hình, phải cập nhật được mới có): mở thư mục cài đặt, chạy `git fetch origin main && git reset --hard origin/main` rồi **tắt hẳn + chạy lại `start.bat`**. Sau lần đó, nút **Cập nhật** trong app sẽ tự chạy được mãi.
+
 ## v1.54.0 — Mod Card: sửa lỗi entry quá lớn "chả làm được gì"
 > Theo phản hồi user: mod/mở rộng một entry rất dài (vd "quy tắc tiên tử sa đọa 2" ~115.000 ký tự) thì báo lỗi, không ra kết quả.
 - **Nguyên nhân:** Mod Card gửi **cả entry trong 1 lần gọi AI**. Với entry cả trăm nghìn ký tự — nhất là chế độ **Mở rộng** (output còn dài hơn input) — kết quả bị **cắt cụt** quá giới hạn output của model → nội dung vỡ / rỗng → "chả làm được gì".
