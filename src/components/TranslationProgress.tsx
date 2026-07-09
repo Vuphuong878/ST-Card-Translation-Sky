@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
 import { useT } from '../i18n/useLocale';
-import type { LogFilter } from '../types/card';
+import type { LogFilter, LogEntry, LogPhase } from '../types/card';
 import ActiveCallsPanel from './ActiveCallsPanel';
 import {
   Play,
@@ -113,13 +113,62 @@ function LogFilterBar() {
   );
 }
 
+const PHASE_META: Record<LogPhase, { label: string }> = {
+  prepare: { label: '🔧 Chuẩn bị' },
+  translate: { label: '🌐 Dịch' },
+  verify: { label: '🔍 Kiểm tra' },
+  other: { label: '· Nhật ký' },
+};
+
+function LevelTag({ level }: { level: LogEntry['level'] }) {
+  return (
+    <span style={{ flexShrink: 0 }}>
+      {level === 'success' && '[✓]'}
+      {level === 'error' && '[✗]'}
+      {level === 'warning' && '[!]'}
+      {level === 'active' && '[~]'}
+      {level === 'info' && '[i]'}
+      {level === 'retry' && '[↻]'}
+    </span>
+  );
+}
+
+function LogRow({ log }: { log: LogEntry }) {
+  return (
+    <div className={`log-entry log-${log.level}`}>
+      <LevelTag level={log.level} />
+      <span>{log.message}</span>
+    </div>
+  );
+}
+
 function LogPanel({ logEndRef }: { logEndRef: React.RefObject<HTMLDivElement | null> }) {
   const { logs, logFilter } = useStore();
+  const [collapsed, setCollapsed] = useState<Set<LogPhase>>(() => new Set());
   if (logs.length === 0) return null;
 
   const filteredLogs = logs.filter((log) => logFilter === 'all' || log.level === logFilter);
   const visibleLogs = filteredLogs.slice(-300);
   const isTruncated = filteredLogs.length > 300;
+
+  // Gom các dòng LIỀN NHAU cùng giai đoạn thành 1 nhóm gấp/mở được.
+  const groups: { phase: LogPhase; logs: LogEntry[] }[] = [];
+  for (const log of visibleLogs) {
+    const phase: LogPhase = log.phase || 'other';
+    const last = groups[groups.length - 1];
+    if (last && last.phase === phase) last.logs.push(log);
+    else groups.push({ phase, logs: [log] });
+  }
+  // Chỉ hiện tiêu đề nhóm khi thực sự có nhiều giai đoạn (ca đơn giản → phẳng như cũ).
+  const distinctPhases = new Set(groups.map((g) => g.phase));
+  const showGroups = distinctPhases.size > 1;
+
+  const toggle = (p: LogPhase) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(p)) next.delete(p); else next.add(p);
+      return next;
+    });
 
   return (
     <div>
@@ -139,19 +188,35 @@ function LogPanel({ logEndRef }: { logEndRef: React.RefObject<HTMLDivElement | n
             Showing last 300 logs (total: {filteredLogs.length})
           </div>
         )}
-        {visibleLogs.map((log) => (
-          <div key={log.id} className={`log-entry log-${log.level}`}>
-            <span style={{ flexShrink: 0 }}>
-              {log.level === 'success' && '[✓]'}
-              {log.level === 'error' && '[✗]'}
-              {log.level === 'warning' && '[!]'}
-              {log.level === 'active' && '[~]'}
-              {log.level === 'info' && '[i]'}
-              {log.level === 'retry' && '[↻]'}
-            </span>
-            <span>{log.message}</span>
-          </div>
-        ))}
+
+        {showGroups
+          ? groups.map((g, gi) => {
+              const isCol = collapsed.has(g.phase);
+              return (
+                <div key={gi}>
+                  <div
+                    onClick={() => toggle(g.phase)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '3px 6px', margin: '2px 0',
+                      fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
+                      color: 'var(--text-secondary)',
+                      background: 'rgba(124,106,240,0.06)',
+                      borderRadius: 'var(--radius-sm)',
+                      position: 'sticky', top: 0,
+                    }}
+                    title={isCol ? 'Mở nhóm' : 'Thu gọn nhóm'}
+                  >
+                    <span style={{ width: 10 }}>{isCol ? '▸' : '▾'}</span>
+                    <span>{PHASE_META[g.phase].label}</span>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({g.logs.length})</span>
+                  </div>
+                  {!isCol && g.logs.map((log) => <LogRow key={log.id} log={log} />)}
+                </div>
+              );
+            })
+          : visibleLogs.map((log) => <LogRow key={log.id} log={log} />)}
+
         <div ref={logEndRef} />
       </div>
     </div>

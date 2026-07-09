@@ -9,6 +9,7 @@ import type {
   TranslationField,
   LogEntry,
   LogFilter,
+  LogPhase,
   FieldGroup,
   FieldGroupConfig,
   ExportKeyMode,
@@ -144,6 +145,9 @@ interface AppState {
   logFilter: LogFilter;
   setLogFilter: (f: LogFilter) => void;
   addLog: (level: LogEntry['level'], message: string) => void;
+  /** Giai đoạn hiện tại — addLog đóng dấu vào mỗi dòng để gom nhóm gấp/mở được. */
+  logPhase: LogPhase;
+  setLogPhase: (p: LogPhase) => void;
   clearLogs: () => void;
 
   // Toasts
@@ -864,9 +868,11 @@ export const useStore = create<AppState>((set) => ({
       // mảng + panel filter cả mảng → O(n²), gây giật dần về cuối. Panel chỉ hiển thị 300 dòng
       // cuối nên giữ 800 là thừa cho mọi bộ lọc.
       const MAX_LOGS = 800;
-      const next = [...s.logs, { id: crypto.randomUUID(), timestamp: Date.now(), level, message }];
+      const next = [...s.logs, { id: crypto.randomUUID(), timestamp: Date.now(), level, message, phase: s.logPhase }];
       return { logs: next.length > MAX_LOGS ? next.slice(next.length - MAX_LOGS) : next };
     }),
+  logPhase: 'other',
+  setLogPhase: (p) => set({ logPhase: p }),
   clearLogs: () => set({ logs: [] }),
 
   // ─── Toasts ───

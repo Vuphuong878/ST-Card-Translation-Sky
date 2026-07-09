@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.51.0 — Nhật ký gom theo giai đoạn (Dịch Card)
+> Dễ theo dõi hơn: nhật ký dài giờ chia nhóm gấp/mở được thay vì một dòng chảy phẳng.
+- **Gom log theo giai đoạn**: **🔧 Chuẩn bị** (sắp xếp + Chiến lược B/C) → **🌐 Dịch** (vòng lặp từng trường) → **🔍 Kiểm tra** (hậu kiểm MVU/EJS). Mỗi nhóm có tiêu đề **bấm để thu gọn/mở** + đếm số dòng.
+- **Không phá gì cũ**: bộ lọc theo loại (✓/✗/!/↻…) vẫn chạy như trước; ca chỉ có 1 giai đoạn thì hiển thị **phẳng như cũ** (không thêm tiêu đề thừa).
+- Kỹ thuật: thêm `LogPhase` + `addLog` tự đóng dấu giai đoạn theo `logPhase` hiện tại; chỉ đặt **3 mốc** `setLogPhase` ở ranh giới giai đoạn trong `useTranslation` (không đụng ~50 chỗ ghi log). 53 test xanh, tsc sạch.
+
 ## v1.50.0 — Bảng "Sức khoẻ thẻ" bấm-để-nhảy-tới-trường (Dịch Card)
 > Dễ theo dõi hơn: từ danh sách vấn đề, một cú bấm là tới đúng chỗ cần sửa — không phải tự dò.
 - **Bấm 1 dòng vấn đề** trong "🩺 Sức khoẻ thẻ" → **nhảy thẳng tới trường** đó:

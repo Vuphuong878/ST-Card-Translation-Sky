@@ -369,9 +369,14 @@ export interface TranslationConfig {
 export type LogLevel = 'success' | 'error' | 'warning' | 'info' | 'active' | 'retry';
 export type LogFilter = 'all' | LogLevel;
 
+/** Giai đoạn của tiến trình — để gom log thành nhóm gấp/mở được (Chuẩn bị → Dịch → Kiểm tra). */
+export type LogPhase = 'prepare' | 'translate' | 'verify' | 'other';
+
 export interface LogEntry {
   id: string;
   timestamp: number;
   level: LogLevel;
   message: string;
+  /** Giai đoạn khi dòng log được ghi (addLog tự đóng dấu theo logPhase hiện tại). */
+  phase?: LogPhase;
 }

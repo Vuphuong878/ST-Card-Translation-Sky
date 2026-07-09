@@ -1463,6 +1463,7 @@ export function useTranslation() {
 
 
 
+    store.setLogPhase('prepare'); // gom log giai đoạn Chuẩn bị (sắp xếp + Chiến lược B/C)
     sortFieldsForCovariance(fields, Boolean(store.translationConfig.enableMvuSync));
     if (store.translationConfig.enableMvuSync) {
       store.addLog('info', '📋 Đã sắp xếp đa lượt để đồng bộ thuật ngữ: Lượt 1 (Schema & biến khởi tạo) → Lượt 2 (Regex & từ khoá) → Lượt 3 (Tường thuật & prompt)');
@@ -1763,6 +1764,7 @@ export function useTranslation() {
       store.addLog('info', `🔮 Chiến lược C: dùng lại từ điển EJS đã có (${Object.keys(existingEjsDictForCheck || {}).length} mục + ${Object.keys(existingKwDictForCheck || {}).length} từ khoá) — không dịch lại bằng AI`);
     }
 
+    store.setLogPhase('translate'); // gom log giai đoạn Dịch (vòng lặp từng trường)
     let i = 0;
 
     while (i < fields.length) {
@@ -2376,6 +2378,8 @@ export function useTranslation() {
     const failCount = store.fields.filter((f) => f.status === 'error').length;
     store.addLog('info', `🎉 Dịch xong: ${doneCount} thành công, ${failCount} lỗi`);
     store.addToast('success', `Translation complete! ${doneCount}/${fields.length} fields translated`);
+
+    store.setLogPhase('verify'); // gom log giai đoạn Kiểm tra (hậu kiểm MVU/EJS)
 
     // ═══ Post-Translation MVU-ZOD Sync Verification Report ═══
     if (store.translationConfig.enableMvuSync && Object.keys(store.translationConfig.mvuDictionary).length > 0) {
