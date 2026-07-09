@@ -28,3 +28,10 @@ card-progress/
 # Local dev scratch: EJS dumps, message drafts, diffs — never part of the app
 _dev-scratch/
 translation_debug.log
+
+# dev_data: thẻ test + fixture card-lỗi (dùng cho test surgical local) + scratch tạm.
+# Dùng cục bộ, KHÔNG commit vào repo. File đã tracked trước đó (JB.txt, novalcard-vi.html,
+# *.json) vẫn giữ nguyên — gitignore không gỡ file đã tracked.
+dev_data/*.html
+dev_data/*.js
+dev_data/message.txt

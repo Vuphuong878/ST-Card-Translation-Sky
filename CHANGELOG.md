@@ -2,6 +2,10 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.47.2 — Nội bộ: nốt test JSON Patch + gitignore fixtures
+- Thêm **6 test** cho `extractJsonPatches` / `hasJsonPatchOps` (trích JSON Patch khoan dung từ entry `[mvu_update]`) — hoàn tất phần "test lõi" còn thiếu (nay **49 test**).
+- Gitignore các file thẻ-test/fixture trong `dev_data/` (card lỗi dùng cho test surgical chạy local, không commit vào repo; file đã tracked trước đó vẫn giữ).
+
 ## v1.47.1 — Đợt 6/6 (nội bộ): Dọn cấu hình chết + chốt kế hoạch
 > Đợt cuối, không đổi hành vi app.
 - **Dọn 2 field cấu hình thừa** khỏi `type`/`store`/`i18n`: *"Số batch gửi song song"* (`concurrentBatches`) và *"Số mục mỗi đợt — lorebook"* (`lorebookBatchSize`). Chúng đã bị bỏ khỏi UI + engine từ trước (đa luồng theo RPM tự quyết số luồng), chỉ còn sót trong kiểu dữ liệu + localStorage → nay xoá cho gọn. `tsc` xác nhận không còn nơi nào dùng.
