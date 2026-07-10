@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { X, Search, Check, ToggleLeft, ToggleRight, Save, Edit3 } from 'lucide-react';
 import { useStore } from '../store';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import type { PresetPromptEntry } from '../types/card';
 import { getAllPrompts } from '../utils/presetParser';
 import { savePresetToLibrary } from '../utils/presetLibrary';
@@ -18,6 +19,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export default function PresetPromptViewer({ onClose }: Props) {
   const t = useT();
+  const ui = useUi();
   const { activePreset, setActivePreset, addToast } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -150,9 +152,9 @@ export default function PresetPromptViewer({ onClose }: Props) {
                 .replace('{enabled}', String(enabledCount))
                 .replace('{total}', String(allPrompts.length))}
               <span style={{ color: '#22c55e', marginLeft: '8px', fontSize: '0.6rem' }}>
-                ● Bật = tự động áp dụng khi dịch
+                {ui.ppvEnabledHint}
               </span>
-              {dirty && <span style={{ color: 'var(--accent-warning)', marginLeft: '8px', fontWeight: 600 }}>● Chưa lưu</span>}
+              {dirty && <span style={{ color: 'var(--accent-warning)', marginLeft: '8px', fontWeight: 600 }}>{ui.ppvDirty}</span>}
             </div>
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -173,7 +175,7 @@ export default function PresetPromptViewer({ onClose }: Props) {
                   gap: '4px',
                 }}
               >
-                <Save size={13} /> {t.presetSaveChanges || 'Lưu'}
+                <Save size={13} /> {t.presetSaveChanges || ui.ppvSaveFallback}
               </button>
             )}
             <button
@@ -311,6 +313,7 @@ function PromptCard({
   onEditNameChange: (v: string) => void;
   t: ReturnType<typeof useT>;
 }) {
+  const ui = useUi();
   const roleColor = ROLE_COLORS[prompt.role] || '#888';
   const previewText = (prompt.content || '').slice(0, 120).replace(/\n/g, ' ');
   const isEnabled = prompt.enabled !== false;
@@ -360,7 +363,7 @@ function PromptCard({
             display: 'flex',
             alignItems: 'center',
           }}
-          title={isEnabled ? 'Tắt prompt (sẽ không áp dụng khi dịch)' : 'Bật prompt (sẽ áp dụng khi dịch)'}
+          title={isEnabled ? ui.ppvTogglePromptOff : ui.ppvTogglePromptOn}
         >
           {isEnabled ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
         </button>
@@ -429,7 +432,7 @@ function PromptCard({
             color: 'var(--text-muted)',
             flexShrink: 0,
           }}
-          title="Chỉnh sửa"
+          title={ui.ppvEdit}
         >
           <Edit3 size={12} />
         </button>
@@ -468,7 +471,7 @@ function PromptCard({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div>
                 <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '2px', display: 'block' }}>
-                  Tên prompt
+                  {ui.ppvPromptName}
                 </label>
                 <input
                   value={editName}
@@ -487,7 +490,7 @@ function PromptCard({
               </div>
               <div>
                 <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '2px', display: 'block' }}>
-                  Nội dung ({(editContent || '').length} ký tự)
+                  {fmt(ui.ppvContent, { count: (editContent || '').length })}
                 </label>
                 <textarea
                   value={editContent}
@@ -521,7 +524,7 @@ function PromptCard({
                     cursor: 'pointer',
                   }}
                 >
-                  Hủy
+                  {ui.ppvCancel}
                 </button>
                 <button
                   onClick={onSaveEdit}
@@ -539,7 +542,7 @@ function PromptCard({
                     gap: '4px',
                   }}
                 >
-                  <Save size={12} /> Áp dụng
+                  <Save size={12} /> {ui.ppvApply}
                 </button>
               </div>
             </div>

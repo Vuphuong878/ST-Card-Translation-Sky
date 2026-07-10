@@ -3,11 +3,14 @@ import { useStore } from '../store';
 import { CallMonitor } from '../utils/callMonitor';
 import { getRateLimitUsage, getUniqueKeyCount } from '../utils/apiClient';
 import { Cpu, KeyRound, Activity, Gauge } from 'lucide-react';
+import { useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 
 /** Live panel: which model is translating which entry, how many threads are
  *  running concurrently, and the combined RPM capacity across all API keys. */
 export default function ActiveCallsPanel() {
   const { proxy, phase, fields, providers } = useStore();
+  const ui = useUi();
 
   const activeCalls = useSyncExternalStore(CallMonitor.subscribe, CallMonitor.getSnapshot);
 
@@ -59,7 +62,7 @@ export default function ActiveCallsPanel() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: accent }}>
           <Activity size={14} className={activeCalls.length > 0 ? 'spin' : ''} />
-          Luồng đang chạy: {activeCalls.length}
+          {fmt(ui.acRunning, { count: activeCalls.length })}
           {total > 0 && (
             <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--accent-primary)', background: 'rgba(124,106,240,0.14)', padding: '1px 7px', borderRadius: '10px' }}>
               {overallPct}% ({accounted}/{total})
@@ -71,9 +74,9 @@ export default function ActiveCallsPanel() {
             <KeyRound size={11} /> {keyCount} API key{keyCount > 1 ? 's' : ''}
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Activity size={11} /> Cao điểm: {CallMonitor.getPeakConcurrency()} luồng
+            <Activity size={11} /> {fmt(ui.acPeak, { count: CallMonitor.getPeakConcurrency() })}
           </span>
-          <span>✓ {CallMonitor.getCompleted()} call xong</span>
+          <span>{fmt(ui.acCompleted, { count: CallMonitor.getCompleted() })}</span>
         </div>
       </div>
 
@@ -88,7 +91,7 @@ export default function ActiveCallsPanel() {
                   <Cpu size={11} style={{ flexShrink: 0, color: lane.isSecondary ? '#fbbf24' : accent }} />
                   {showProviderName && <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '0 4px', borderRadius: '3px', flexShrink: 0 }}>{lane.providerName}</span>}
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lane.model}</span>
-                  {lane.isSecondary && <span style={{ fontSize: '0.55rem', color: '#fbbf24', flexShrink: 0 }}>(phụ)</span>}
+                  {lane.isSecondary && <span style={{ fontSize: '0.55rem', color: '#fbbf24', flexShrink: 0 }}>{ui.acSecondary}</span>}
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', flexShrink: 0 }}>
                   <Gauge size={10} /> {lane.used}/{lane.limit} RPM

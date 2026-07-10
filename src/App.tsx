@@ -6,7 +6,7 @@ import TranslateConfig from './components/TranslateConfig';
 import CardPreview from './components/CardPreview';
 import TranslationProgress from './components/TranslationProgress';
 import { useStore, flushProgressBeacon } from './store';
-import { useT } from './i18n/useLocale';
+import { useT, useUi } from './i18n/useLocale';
 import { Languages, X, Globe } from 'lucide-react';
 import PresetImportPanel from './components/PresetImportPanel';
 import { APP_VERSION, APP_VERSION_NOTE } from './version';
@@ -25,6 +25,7 @@ const CompareCardsPanel = lazy(() => import('./components/CompareCardsPanel'));
 export default function App() {
   const { toasts, removeToast, card, jumpToFieldPath } = useStore();
   const t = useT();
+  const ui = useUi();
   const [showEjsCreator, setShowEjsCreator] = useState(false);
   const [showRegexManager, setShowRegexManager] = useState(false);
   const [showAiCompanion, setShowAiCompanion] = useState(false);
@@ -150,7 +151,7 @@ export default function App() {
             onMouseOver={e => e.currentTarget.style.borderColor = '#38bdf8'}
             onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
           >
-            🔀 So Sánh Card
+            {ui.appCompareCards}
           </button>
         </div>
 
@@ -204,7 +205,7 @@ export default function App() {
               onMouseOver={e => e.currentTarget.style.borderColor = '#f97316'}
               onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
             >
-              ⚡ Regex Manager
+              {ui.appRegexManager}
             </button>
             <button
               onClick={() => setShowAiCompanion(true)}
@@ -227,7 +228,7 @@ export default function App() {
               onMouseOver={e => e.currentTarget.style.borderColor = '#a855f7'}
               onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
             >
-              🔮 Trợ Lý AI
+              {ui.appAiCompanion}
             </button>
           </div>
         )}

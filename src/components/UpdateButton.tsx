@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Download, X, History } from 'lucide-react';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
 
 export default function UpdateButton() {
   const t = useT();
+  const ui = useUi();
   const [isOpen, setIsOpen] = useState(false);
   const [log, setLog] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -34,19 +35,19 @@ export default function UpdateButton() {
         setLog((prev) => prev + text);
       }
     } catch (err: any) {
-      setLog((prev) => prev + `\nLỗi: ${err.message}`);
+      setLog((prev) => prev + `\n${ui.ubErrPrefix}: ${err.message}`);
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const handleUpdate = () => runCommand('/api/update', 'Cập nhật ứng dụng');
+  const handleUpdate = () => runCommand('/api/update', ui.ubUpdateTitle);
   const handleDowngrade = () => {
     const confirmDowngrade = window.confirm(
-      'CẢNH BÁO NGUY HIỂM:\n\nHành động này sẽ HẠ CẤP phiên bản ứng dụng xuống 1 commit (git reset --hard HEAD~1) và XÓA SẠCH toàn bộ thay đổi chưa commit của bạn.\n\nBạn có chắc chắn muốn tiếp tục không?'
+      ui.ubDowngradeConfirm
     );
     if (confirmDowngrade) {
-      runCommand('/api/downgrade', 'Hạ cấp phiên bản');
+      runCommand('/api/downgrade', ui.ubDowngradeTitle);
     }
   };
 
@@ -56,7 +57,7 @@ export default function UpdateButton() {
         {/* Downgrade button */}
         <button
           onClick={handleDowngrade}
-          title="Hạ cấp phiên bản (Trở lại 1 commit)"
+          title={ui.ubDowngradeBtnTitle}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -79,7 +80,7 @@ export default function UpdateButton() {
         {/* Update button */}
         <button
           onClick={handleUpdate}
-          title="Cập nhật ứng dụng (Bản mới nhất)"
+          title={ui.ubUpdateBtnTitle}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -168,7 +169,7 @@ export default function UpdateButton() {
                   margin: 0,
                 }}
               >
-                {log || 'Đang chuẩn bị thực hiện...'}
+                {log || ui.ubPreparing}
               </pre>
             </div>
 
@@ -193,7 +194,7 @@ export default function UpdateButton() {
                     fontWeight: 500,
                   }}
                 >
-                  Tải lại trang
+                  {ui.ubReload}
                 </button>
               )}
             </div>

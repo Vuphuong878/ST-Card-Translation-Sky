@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { Pencil, Check, X } from 'lucide-react';
+import { useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 
 /** Inline editor to rename the card while working (incl. during translation).
  *  Clearly separates the SillyTavern character name (card.data.name / card.name)
  *  from the export file name (cardFileName) so the two are never mixed up. */
 export default function CardRenamePanel() {
   const { card, cardFileName, renameCard, addToast } = useStore();
+  const ui = useUi();
   const [open, setOpen] = useState(false);
 
   const currentCharName = (card?.data?.name || card?.name || '') as string;
@@ -33,7 +36,7 @@ export default function CardRenamePanel() {
       charName: cleanChar || undefined,
       fileName: cleanFile ? cleanFile + ext : undefined,
     });
-    addToast('success', 'Đã đổi tên card');
+    addToast('success', ui.crToastRenamed);
     setOpen(false);
   };
 
@@ -42,10 +45,10 @@ export default function CardRenamePanel() {
       <button
         onClick={openEditor}
         className="btn btn-ghost btn-xs"
-        title="Đổi tên card (tên nhân vật / tên file)"
+        title={ui.crButtonTitle}
         style={{ padding: '3px 8px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-secondary)' }}
       >
-        <Pencil size={11} /> Đổi tên
+        <Pencil size={11} /> {ui.crButton}
       </button>
     );
   }
@@ -65,24 +68,24 @@ export default function CardRenamePanel() {
     >
       <label style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
         <span style={{ fontSize: '0.62rem', color: 'var(--accent-secondary)', fontWeight: 600 }}>
-          Tên nhân vật (hiển thị trong SillyTavern)
+          {ui.crCharName}
         </span>
         <input
           className="input"
           value={charName}
           onChange={(e) => setCharName(e.target.value)}
-          placeholder="VD: Tô Huyền"
+          placeholder={ui.crCharNamePh}
           style={{ fontSize: '0.78rem' }}
           onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
         />
         <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)' }}>
-          Cập nhật cả <code>data.name</code> và <code>name</code>. Field tên cũng được đánh dấu xong để không bị ghi đè khi xuất.
+          {ui.crCharNameHint1} <code>data.name</code> {ui.crCharNameHint2} <code>name</code>{ui.crCharNameHint3}
         </span>
       </label>
 
       <label style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
         <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-          Tên file khi xuất {ext && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(đuôi {ext})</span>}
+          {ui.crFileName} {ext && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{fmt(ui.crFileNameExt, { ext })}</span>}
         </span>
         <input
           className="input"
@@ -93,16 +96,16 @@ export default function CardRenamePanel() {
           onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
         />
         <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)' }}>
-          Chỉ đổi tên file tải về — KHÔNG ảnh hưởng tên nhân vật bên trong.
+          {ui.crFileNameHint}
         </span>
       </label>
 
       <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
         <button onClick={() => setOpen(false)} className="btn btn-ghost btn-xs" style={{ padding: '4px 10px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <X size={12} /> Huỷ
+          <X size={12} /> {ui.crCancel}
         </button>
         <button onClick={save} className="btn btn-primary btn-xs" style={{ padding: '4px 12px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Check size={12} /> Lưu
+          <Check size={12} /> {ui.crSave}
         </button>
       </div>
     </div>

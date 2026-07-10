@@ -93,4 +93,10 @@ export function getUi(): UiKeys {
   return _ui;
 }
 
+/** Thay {key} trong chuỗi bằng giá trị. VD: fmt(ui.acRunning, { count: 3 }). */
+export function fmt(tpl: string, vars: Record<string, string | number>): string {
+  // split/join thay cho replaceAll: tsconfig gốc target < ES2021.
+  return Object.entries(vars).reduce((s, [k, v]) => s.split(`{${k}}`).join(String(v)), tpl);
+}
+
 export type { TranslationKeys, UiKeys };

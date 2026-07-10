@@ -4,6 +4,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { Code2, Play, Loader2, Trash2, CheckCircle2, Copy, Check, X, Globe } from 'lucide-react';
 import { publishToGithub } from '../utils/githubApi';
 import { safeSetItem } from '../utils/safeStorage';
+import { useUi } from '../i18n/useLocale';
 
 const renderSafeHtml = (htmlContent: string) => {
   return `
@@ -23,6 +24,7 @@ const renderSafeHtml = (htmlContent: string) => {
 
 export default function ExternalLinkTab() {
   const { fields, setFields, updateField, phase, addToast } = useStore();
+  const ui = useUi();
   const { retranslateField, cancelFieldTranslation } = useTranslation();
   
   const [input, setInput] = useState(() => localStorage.getItem('custom-external-input') || '');
@@ -56,7 +58,7 @@ export default function ExternalLinkTab() {
     if (field) {
       updateField(fieldPath, { original: input, translated: '', status: 'pending', error: undefined, retries: 0 });
     } else {
-      setFields([...fields, { path: fieldPath, label: 'Dịch link ngoài', group: 'regex', entryType: 'replaceString', original: input, translated: '', status: 'pending', retries: 0 }]);
+      setFields([...fields, { path: fieldPath, label: ui.eltFieldLabel, group: 'regex', entryType: 'replaceString', original: input, translated: '', status: 'pending', retries: 0 }]);
     }
     setTimeout(async () => {
       try { await retranslateField(fieldPath); } catch (err) {}
@@ -65,7 +67,7 @@ export default function ExternalLinkTab() {
 
   const handlePublish = async () => {
     if (!ghToken || !ghRepo || !ghPath || !output) {
-      addToast('error', 'Vui lòng điền đủ GitHub Token, Repo và Tên File');
+      addToast('error', ui.eltToastMissing);
       return;
     }
     setIsPublishing(true);
@@ -74,14 +76,14 @@ export default function ExternalLinkTab() {
     try {
       const result = await publishToGithub({ token: ghToken, repo: ghRepo, branch: ghBranch }, ghPath, output, ghMessage);
       if (result.success) {
-        addToast('success', 'Đã xuất bản lên GitHub thành công!');
+        addToast('success', ui.eltToastPublished);
         setPublishUrl(result.contentUrl || '');
         setCdnUrl(`https://cdn.jsdelivr.net/gh/${ghRepo}@${ghBranch}/${ghPath}`);
       } else {
-        addToast('error', 'Lỗi đẩy lên GitHub: ' + result.message);
+        addToast('error', ui.eltToastPushErr + result.message);
       }
     } catch (err: any) {
-      addToast('error', 'Lỗi mạng: ' + err.message);
+      addToast('error', ui.eltToastNetErr + err.message);
     } finally {
       setIsPublishing(false);
     }
@@ -107,27 +109,27 @@ export default function ExternalLinkTab() {
             <Code2 size={14} color="white" />
           </div>
           <div>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, color: 'var(--accent-primary)' }}>Dịch Link Ngoài (Custom Code)</h3>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Dán code HTML/JS bên ngoài vào đây. Cơ chế dịch như Regex, sau đó có thể đăng thẳng lên GitHub.</div>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, color: 'var(--accent-primary)' }}>{ui.eltTitle}</h3>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{ui.eltSubtitle}</div>
           </div>
         </div>
       </div>
 
       <div style={{ padding: '16px 20px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div style={{ position: 'relative' }}>
-          <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Nội dung gốc (Dán code vào đây)</label>
+          <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>{ui.eltSourceLabel}</label>
           <textarea value={input} onChange={e => setInput(e.target.value)} disabled={isTranslating} rows={10} style={{ width: '100%', resize: 'vertical', fontFamily: 'monospace', fontSize: '0.78rem', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none' }} />
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button className="btn btn-primary" onClick={isTranslating ? () => cancelFieldTranslation(fieldPath) : handleTranslate} disabled={!input.trim() && !isTranslating}>
-            {isTranslating ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Hủy dịch</> : <><Play size={14} /> Dịch</>}
+            {isTranslating ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> {ui.eltCancelTranslate}</> : <><Play size={14} /> {ui.eltTranslate}</>}
           </button>
-          {input && !isTranslating && <button className="btn btn-ghost" onClick={() => setInput('')}><Trash2 size={12} /> Xóa</button>}
+          {input && !isTranslating && <button className="btn btn-ghost" onClick={() => setInput('')}><Trash2 size={12} /> {ui.eltClear}</button>}
         </div>
-        {hasError && <div style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(255,82,82,0.08)', border: '1px solid rgba(255,82,82,0.2)', color: 'var(--accent-danger)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}><X size={14} /> Lỗi: {field?.error}</div>}
+        {hasError && <div style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(255,82,82,0.08)', border: '1px solid rgba(255,82,82,0.2)', color: 'var(--accent-danger)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}><X size={14} /> {ui.eltErrPrefix} {field?.error}</div>}
         {output && (
           <div style={{ position: 'relative', marginTop: '8px' }}>
-            <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent-success)', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}><Check size={12} /> Kết quả đã dịch</label>
+            <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent-success)', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}><Check size={12} /> {ui.eltResultLabel}</label>
             <textarea value={output} onChange={(e) => { if (field) updateField(fieldPath, { translated: e.target.value }); }} disabled={isTranslating} rows={12} style={{ width: '100%', resize: 'vertical', fontFamily: 'monospace', fontSize: '0.78rem', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-success)', background: 'rgba(76,175,80,0.03)', color: 'var(--text-primary)', outline: 'none' }} />
           </div>
         )}
@@ -137,19 +139,19 @@ export default function ExternalLinkTab() {
         <div style={{ padding: '16px 20px', background: 'rgba(36, 41, 46, 0.3)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Globe size={16} />
-            <h4 style={{ margin: 0, fontSize: '0.85rem' }}>Đăng lên GitHub & Tạo Link Nhúng</h4>
+            <h4 style={{ margin: 0, fontSize: '0.85rem' }}>{ui.eltPublishTitle}</h4>
           </div>
           
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '16px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px', borderLeft: '3px solid var(--accent-primary)', lineHeight: 1.6 }}>
-            <strong style={{ color: 'var(--text-secondary)' }}>Hướng dẫn lấy thông số:</strong><br/>
-            • <strong>GitHub PAT:</strong> Lấy tại <a href="https://github.com/settings/tokens/new" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>Settings &gt; Developer settings &gt; Personal access tokens</a>. (Tạo Token mới và <strong>chọn quyền <code>repo</code></strong>).<br/>
-            • <strong>Repository:</strong> Tên tài khoản và tên kho lưu trữ. VD: link là <code>github.com/nguyenvana/my-cards</code> thì điền <code>nguyenvana/my-cards</code>.<br/>
-            • <strong>Branch:</strong> Tên nhánh, thường là <code>main</code> hoặc <code>master</code>.
+            <strong style={{ color: 'var(--text-secondary)' }}>{ui.eltGuideTitle}</strong><br/>
+            • <strong>{ui.eltGuidePat1}</strong> {ui.eltGuidePat2} <a href="https://github.com/settings/tokens/new" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>{ui.eltGuidePatLink}</a>{ui.eltGuidePat3} <strong>{ui.eltGuidePat4}<code>repo</code></strong>{ui.eltGuidePat5}<br/>
+            • <strong>{ui.eltGuideRepo1}</strong> {ui.eltGuideRepo2} <code>github.com/nguyenvana/my-cards</code> {ui.eltGuideRepo3} <code>nguyenvana/my-cards</code>{ui.eltGuidePeriod}<br/>
+            • <strong>{ui.eltGuideBranch1}</strong> {ui.eltGuideBranch2} <code>main</code> {ui.eltGuideBranchOr} <code>master</code>{ui.eltGuidePeriod}
           </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
             <div>
-              <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>GitHub PAT (Quyền repo)</label>
+              <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{ui.eltPatLabel}</label>
               <input type="password" value={ghToken} onChange={e => setGhToken(e.target.value)} placeholder="ghp_..." style={{ width: '100%', padding: '6px 8px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-default)', background: 'var(--bg-primary)' }} />
             </div>
             <div>
@@ -161,31 +163,31 @@ export default function ExternalLinkTab() {
               <input value={ghBranch} onChange={e => setGhBranch(e.target.value)} placeholder="main" style={{ width: '100%', padding: '6px 8px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-default)', background: 'var(--bg-primary)' }} />
             </div>
             <div>
-              <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Tên File (VD: scripts/ui.js)</label>
+              <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{ui.eltFileLabel}</label>
               <input value={ghPath} onChange={e => setGhPath(e.target.value)} placeholder="scripts/custom.js" style={{ width: '100%', padding: '6px 8px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-default)', background: 'var(--bg-primary)' }} />
             </div>
           </div>
 
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Nội dung Commit</label>
+            <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{ui.eltCommitLabel}</label>
             <input value={ghMessage} onChange={e => setGhMessage(e.target.value)} style={{ width: '100%', padding: '6px 8px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-default)', background: 'var(--bg-primary)' }} />
           </div>
 
           <button onClick={handlePublish} disabled={isPublishing} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
-            {isPublishing ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Globe size={14} />} Đăng File
+            {isPublishing ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Globe size={14} />} {ui.eltPublishBtn}
           </button>
 
           {cdnUrl && (
             <div style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--accent-success)' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--accent-success)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={14} /> Link CDN đã sẵn sàng!</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--accent-success)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={14} /> {ui.eltCdnReady}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Thẻ Javascript:</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{ui.eltJsTag}</div>
                   <CopyBtn text={`<script src="${cdnUrl}"></script>`} label="Copy Script" />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Thẻ CSS:</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{ui.eltCssTag}</div>
                   <CopyBtn text={`<link rel="stylesheet" href="${cdnUrl}">`} label="Copy CSS" />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
@@ -202,15 +204,15 @@ export default function ExternalLinkTab() {
       {/* HTML Preview */}
       {(input || output) && (
         <div style={{ padding: '16px 20px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>Xem trước giao diện HTML (Gốc & Dịch)</div>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>{ui.eltPreviewTitle}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Original Preview:</div>
-              <iframe title="Original Preview" srcDoc={renderSafeHtml((input || '').replace(/\$[0-9&]+/g, 'Nội dung mẫu'))} sandbox="allow-scripts" style={{ width: '100%', height: '300px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: '#0f0f12' }} />
+              <iframe title="Original Preview" srcDoc={renderSafeHtml((input || '').replace(/\$[0-9&]+/g, ui.eltSampleContent))} sandbox="allow-scripts" style={{ width: '100%', height: '300px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: '#0f0f12' }} />
             </div>
             <div>
               <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Translated Preview:</div>
-              <iframe title="Translated Preview" srcDoc={renderSafeHtml((output || input || '').replace(/\$[0-9&]+/g, 'Nội dung mẫu'))} sandbox="allow-scripts" style={{ width: '100%', height: '300px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: '#0f0f12' }} />
+              <iframe title="Translated Preview" srcDoc={renderSafeHtml((output || input || '').replace(/\$[0-9&]+/g, ui.eltSampleContent))} sandbox="allow-scripts" style={{ width: '100%', height: '300px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', background: '#0f0f12' }} />
             </div>
           </div>
         </div>

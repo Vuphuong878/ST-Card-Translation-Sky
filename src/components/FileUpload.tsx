@@ -2,7 +2,8 @@ import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useCardParser } from '../hooks/useCardParser';
 import { useStore } from '../store';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import { getCardSummary } from '../utils/cardFields';
 import { getWorldbookSummary } from '../utils/worldbookParser';
 import CardRenamePanel from './CardRenamePanel';
@@ -42,6 +43,7 @@ export default function FileUpload() {
   const { parseCardFile, updateCardFromOriginal, clearCard, isParsing, parseProgress } = useCardParser();
   const { card, cardFileName, contentType, originalWorldbook, loadTranslationCache, addLog } = useStore();
   const t = useT();
+  const ui = useUi();
 
   const [urlInput, setUrlInput] = useState('');
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
@@ -51,7 +53,7 @@ export default function FileUpload() {
     setIsFetchingUrl(true);
     try {
       const { url: fetchUrl, rewritten } = normalizeCardUrl(urlInput);
-      if (rewritten) addLog('info', '🔧 Đã chuẩn hoá link Discord về ảnh gốc (cdn, bỏ webp/resize) để giữ dữ liệu thẻ');
+      if (rewritten) addLog('info', ui.fuDiscordNormalised);
       const response = await fetch(fetchUrl);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
@@ -81,7 +83,7 @@ export default function FileUpload() {
       
       setUrlInput('');
     } catch (err: any) {
-      addLog('error', `❌ Lỗi tải link: ${err.message || String(err)} (có thể do CORS)`);
+      addLog('error', fmt(ui.fuUrlError, { msg: err.message || String(err) }));
     } finally {
       setIsFetchingUrl(false);
     }
@@ -221,7 +223,7 @@ export default function FileUpload() {
                   type="text" 
                   className="input" 
                   style={{ paddingLeft: '32px' }}
-                  placeholder="Nhập link card (JSON/PNG)..." 
+                  placeholder={ui.fuUrlPlaceholder}
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleUrlLoad(); }}
@@ -233,7 +235,7 @@ export default function FileUpload() {
                 onClick={handleUrlLoad}
                 disabled={!urlInput.trim() || isParsing || isFetchingUrl}
               >
-                {isFetchingUrl ? <Loader size={14} className="spin" /> : 'Tải'}
+                {isFetchingUrl ? <Loader size={14} className="spin" /> : ui.fuLoad}
               </button>
             </div>
           </>
@@ -332,7 +334,7 @@ export default function FileUpload() {
               <div {...getUpdateProps()} style={{ cursor: 'pointer' }}>
                 <input {...getUpdateInputProps()} />
                 <button className="btn btn-primary btn-sm" style={{ width: '100%', fontSize: '0.75rem' }} title="Update from a newer original card, keeping existing translations">
-                  <Upload size={12} /> Cập nhật bản gốc
+                  <Upload size={12} /> {ui.fuUpdateOriginal}
                 </button>
               </div>
             </div>
