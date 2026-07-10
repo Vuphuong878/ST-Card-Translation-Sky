@@ -819,8 +819,8 @@ const ui: UiKeys = {
   tcPresetLabel: '快速预设：',
   tcPresetLight: '⚡ 轻量翻译',
   tcPresetFull: '📖 完整翻译',
-  tcPresetLightHint: '翻关键词 + regex + 开场白/greetings + MVU 变量名。大段 lorebook 正文保留原文 —— AI 照样读懂，仍用你的语言回复。重卡快很多。',
-  tcPresetLightDone: '已应用「轻量翻译」预设：开启 keys + regex + 开场白 + MVU 同步，关闭大段正文。',
+  tcPresetLightHint: '翻关键词 + regex + 开场白/greetings + 卡片名 + lorebook 条目名/comment + MVU 变量名。大段正文（description、lorebook 正文）保留原文 —— AI 照样读懂，仍用你的语言回复。重卡快很多。',
+  tcPresetLightDone: '已应用「轻量翻译」预设：开启 keys + regex + 开场白 + 卡片名/lorebook 名 + MVU 同步，关闭大段正文。',
   tcPresetFullDone: '已应用「完整翻译」预设：所有分组开启。',
 };
 

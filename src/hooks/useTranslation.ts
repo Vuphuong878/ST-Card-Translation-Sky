@@ -191,6 +191,18 @@ export function useTranslation() {
       }
     }
 
+    // Preset "Dịch nhẹ": trong core/lorebook chỉ dịch field TÊN (kết thúc .name) + comment
+    // lorebook; content TO (description/personality/scenario + thân entry) → ignore.
+    // Làm ở đây (khi Start, field luôn đã trích đủ) nên không phụ thuộc timing của nút.
+    if (store.translationConfig.lightSkipContent) {
+      const isNameOrComment = (p: string) => /(^|\.)name$/.test(p) || /\.comment$/.test(p);
+      for (const f of mergedFields) {
+        if ((f.group === 'core' || f.group === 'lorebook') && !isNameOrComment(f.path) && f.status !== 'done') {
+          f.status = 'ignored';
+        }
+      }
+    }
+
     // Skip detection: mark fields already in target language or wrong source language
     // Only apply to fields that aren't already done/skipped
     if (store.translationConfig.skipAlreadyTranslated) {

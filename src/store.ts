@@ -499,6 +499,7 @@ export const useStore = create<AppState>((set) => ({
     mode: LS.get('st-translator-translation-mode', 'field') as any,
     lorebookStrategy: LS.get('st-translator-lorebook-strategy', 'single') as any,
     skipAlreadyTranslated: LS.get('st-translator-skip-already-translated', true),
+    lightSkipContent: LS.get('st-translator-light-skip-content', false),
     fieldGroups: (() => {
       const saved = LS.get<Record<string, boolean>>('st-translator-field-groups-enabled', {});
       return DEFAULT_FIELD_GROUPS.map(g => ({
@@ -650,6 +651,7 @@ export const useStore = create<AppState>((set) => ({
       }
       if ('skipAlreadyTranslated' in partial) {
         LS.set('st-translator-skip-already-translated', next.skipAlreadyTranslated);
+        LS.set('st-translator-light-skip-content', next.lightSkipContent);
       }
       if ('mvuScanPasses' in partial) {
         LS.set('st-translator-mvu-scan-passes', next.mvuScanPasses);
@@ -723,6 +725,7 @@ export const useStore = create<AppState>((set) => ({
       mode: 'field' as const,
       lorebookStrategy: 'single' as const,
       skipAlreadyTranslated: true,
+      lightSkipContent: false,
       fieldGroups: defaultFields,
       customSchema: '',
       exportKeyMode: 'merge' as const,
@@ -768,6 +771,7 @@ export const useStore = create<AppState>((set) => ({
     LS.set('st-translator-translation-mode', defaultTranslationConfig.mode);
     LS.set('st-translator-lorebook-strategy', defaultTranslationConfig.lorebookStrategy);
     LS.set('st-translator-skip-already-translated', defaultTranslationConfig.skipAlreadyTranslated);
+    LS.set('st-translator-light-skip-content', defaultTranslationConfig.lightSkipContent);
     
     const enabledMap = defaultFields.reduce((acc, g) => {
       acc[g.id] = g.enabled;

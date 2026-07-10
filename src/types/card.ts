@@ -325,6 +325,13 @@ export interface TranslationConfig {
   mode: TranslationMode;
   lorebookStrategy: LorebookStrategy;
   skipAlreadyTranslated: boolean;
+  /**
+   * Preset "Dịch nhẹ": bật nhóm core/lorebook để LẤY tên card + tên/comment lorebook,
+   * nhưng bỏ qua content TO (description/personality/scenario + thân entry) ngay khi
+   * prepareFields trích field. Làm ở đây (không phải lúc bấm nút) để không phụ thuộc
+   * việc field đã parse xong hay chưa.
+   */
+  lightSkipContent: boolean;
   fieldGroups: FieldGroupConfig[];
   customSchema?: string;
   exportKeyMode: ExportKeyMode; // How to handle lorebook keys on export

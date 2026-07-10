@@ -34,7 +34,7 @@ const getFieldBaseKey = (path: string) => {
 };
 
 export default function TranslateConfig() {
-  const { translationConfig, setTranslationConfig, toggleFieldGroup, card, proxy, addToast, fields, deleteCurrentCardCache, deleteAllCaches, scannedModels, resetTranslationConfig } = useStore();
+  const { translationConfig, setTranslationConfig, toggleFieldGroup, card, proxy, addToast, fields, setFields, deleteCurrentCardCache, deleteAllCaches, scannedModels, resetTranslationConfig } = useStore();
   const ui = useUi();
 
   const allAvailableFields = useMemo(() => {
@@ -506,17 +506,31 @@ export default function TranslateConfig() {
                   className="btn btn-sm"
                   title={ui.tcPresetLightHint}
                   onClick={() => {
-                    // Bật keys + regex + messages (opening/first_mes — thứ người chơi thấy
-                    // đầu tiên); tắt content lorebook to. Chiến lược B (đồng bộ tên biến MVU)
-                    // luôn chạy toàn thẻ khi export nên content tiếng gốc vẫn khớp schema đã dịch.
-                    const lightOn = new Set(['lorebook_keys', 'regex', 'messages']);
+                    // Bật keys + regex + messages (opening/first_mes) + core + lorebook để LẤY
+                    // tên card + tên/comment lorebook. Cờ lightSkipContent để prepareFields (lúc
+                    // Start) bỏ content TO trong core/lorebook — declarative, không lệ thuộc timing
+                    // của nút. Chiến lược B đồng bộ tên biến MVU toàn thẻ nên content gốc vẫn khớp.
+                    const lightOn = new Set(['lorebook_keys', 'regex', 'messages', 'core', 'lorebook']);
                     setTranslationConfig({
                       fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({
                         ...g, enabled: lightOn.has(g.id),
                       })),
                       enableMvuSync: true,
                       exportKeyMode: 'merge',
+                      lightSkipContent: true,
                     });
+                    // Nếu field đã trích sẵn, ignore luôn content to cho UI phản ánh ngay
+                    // (prepareFields vẫn là nguồn chân lý lúc Start).
+                    const isNameOrComment = (p: string) => /(^|\.)name$/.test(p) || /\.comment$/.test(p);
+                    if (fields.length > 0) {
+                      setFields(fields.map(f => {
+                        if (f.group !== 'core' && f.group !== 'lorebook') return f;
+                        if (isNameOrComment(f.path)) {
+                          return f.status === 'ignored' ? { ...f, status: 'pending' as const } : f;
+                        }
+                        return f.status === 'done' ? f : { ...f, status: 'ignored' as const };
+                      }));
+                    }
                     addToast('success', ui.tcPresetLightDone);
                   }}
                 >
@@ -528,7 +542,10 @@ export default function TranslateConfig() {
                   onClick={() => {
                     setTranslationConfig({
                       fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({ ...g, enabled: true })),
+                      lightSkipContent: false,
                     });
+                    // Gỡ ignore mà "Dịch nhẹ" đã đặt cho content, để dịch lại đầy đủ.
+                    setFields(fields.map(f => f.status === 'ignored' ? { ...f, status: 'pending' as const } : f));
                     addToast('success', ui.tcPresetFullDone);
                   }}
                 >
