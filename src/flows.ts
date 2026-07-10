@@ -3,12 +3,16 @@
 // so a running translation keeps going when you switch away). Other tools are embedded as
 // iframes (kind: 'iframe') that also stay mounted when hidden, so their state/progress is
 // preserved across switches. Add more flows here later (e.g. a card-mod tool) — one entry each.
+import type { UiKeys } from './i18n/ui/en';
+
 export type FlowKind = 'native' | 'iframe';
 
 export interface FlowDef {
   id: string;
-  /** Short label under the rail icon */
+  /** Short label under the rail icon (tiếng Việt — dùng làm fallback) */
   label: string;
+  /** Key trong bộ `ui` để dịch nhãn theo ngôn ngữ giao diện */
+  labelKey: keyof UiKeys;
   /** Emoji shown as the rail icon (keeps the rail dependency-free) */
   emoji: string;
   kind: FlowKind;
@@ -22,6 +26,7 @@ export const FLOWS: FlowDef[] = [
   {
     id: 'translate',
     label: 'Dịch Card',
+    labelKey: 'railTranslate',
     emoji: '🌐',
     kind: 'native',
     color: 'var(--accent-primary)',
@@ -29,6 +34,7 @@ export const FLOWS: FlowDef[] = [
   {
     id: 'card-creator',
     label: 'Tạo Card',
+    labelKey: 'railCardCreator',
     emoji: '🃏',
     kind: 'iframe',
     // Card-creator (tao-card) runs on its own fixed vite port. Override with VITE_CARD_TOOL_URL.
@@ -38,6 +44,7 @@ export const FLOWS: FlowDef[] = [
   {
     id: 'preset',
     label: 'Tạo Preset',
+    labelKey: 'railPreset',
     emoji: '🎛️',
     kind: 'iframe',
     // preset-tool (Vite) on fixed port 5175.
@@ -47,6 +54,7 @@ export const FLOWS: FlowDef[] = [
   {
     id: 'mod-card',
     label: 'Mod Card',
+    labelKey: 'railModCard',
     emoji: '🛠️',
     kind: 'iframe',
     // mod-card (Next.js) on fixed port 5176.
@@ -56,6 +64,7 @@ export const FLOWS: FlowDef[] = [
   {
     id: 'novalcard',
     label: 'Trích Card',
+    labelKey: 'railExtract',
     emoji: '🔍',
     kind: 'iframe',
     // NovalCard — công cụ trích xuất thẻ (1 file HTML tĩnh tự chứa). Không cần dev-server

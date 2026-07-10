@@ -2,6 +2,15 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.56.0 — Nút đổi ngôn ngữ VI / EN / 中文 (Đợt 1: hạ tầng) 🌐
+> Thêm nút chuyển ngôn ngữ giao diện ở **góc trên bên phải** header. Bấm là **lưu + tải lại trang**, và chỉ nạp **đúng 1 bộ chuỗi** của ngôn ngữ đó → **app không nặng thêm**.
+- **⚠️ Chọn "VI" = giao diện GIỮ NGUYÊN 100% như trước.** Các nhãn tiếng Anh quen thuộc ("API Configuration", "Expert Mode"…) **không bị đổi**, đúng như đã hứa — user cũ không phải làm quen lại. (Kỹ thuật: có test tự động khoá điều này lại, ai sửa nhầm là hỏng test ngay.)
+- **中文**: đã dịch xong **~293 nhãn chính** + toàn bộ vỏ Hub (thanh 5 công cụ, thanh công cụ, màn chờ server).
+- **Đây mới là ĐỢT 1 (hạ tầng).** App có ~3.500 chuỗi nên phải dịch dần cho chắc, không làm ẩu một lần. Vì vậy **chọn EN / 中文 lúc này vẫn sẽ thấy tiếng Việt ở một số chỗ** — sẽ hết dần qua các đợt sau: **Mod Card → Tạo Preset → Dịch Card → Tạo Card → Trích Card**.
+- Ngôn ngữ được truyền xuống các tool con qua `?lang=` (sẵn sàng cho các đợt sau). Nút EN/VI cũ ở thanh bên đã được thay bằng nút mới trên header.
+- *Ghi chú nhỏ:* nếu trước đây bạn từng tự bấm sang "VI" ở thanh bên (ít người dùng), giao diện nay sẽ về đúng bộ mặt mặc định quen thuộc.
+- *Kỹ thuật:* tách `i18n/locales/{en,vi,zh}` + `i18n/ui/{vi,en,zh}` thành chunk riêng (Vite code-split, chỉ tải chunk đang dùng); key được **kiểm bằng TypeScript** (thiếu key = lỗi biên dịch) + **11 test** (khoá hợp đồng "VI = hôm nay", key parity, giữ nguyên placeholder `{count}`, và chạy thật đường boot). Không đụng prompt AI. tsc + 108 test + build sạch.
+
 ## v1.55.6 — So Sánh Card: "Gộp thông minh" — tái dùng bản dịch cũ khi card update ⚡
 > Tình huống: card **đã dịch xong**, rồi **tác giả update bản gốc** (thêm/sửa vài chỗ). Trước đây phải **dịch lại cả card**. Nay chỉ dịch đúng **phần mới**.
 - **Nút "🔀 Gộp thông minh"** (hiện khi đủ 3 card: Raw / Đã Dịch / Final). Bấm → tool **so từng entry** giữa **Card Raw (gốc cũ)** và **Card Final (gốc mới)**:

@@ -4,9 +4,17 @@ import { FLOWS, type FlowDef } from './flows';
 import { RotateCw, ExternalLink } from 'lucide-react';
 import HubUpdateButton from './components/HubUpdateButton';
 import { APP_VERSION } from './version';
+import { useUi } from './i18n/useLocale';
+import { getUiLang, setUiLang, UI_LANGS } from './i18n';
 
 const RAIL_WIDTH = 78;
 const LS_KEY = 'hub-active-flow';
+
+/** Gắn ?lang= vào URL tool con để iframe mở đúng ngôn ngữ đang chọn. */
+const withLang = (u: string): string => {
+  if (!u) return u;
+  return `${u}${u.includes('?') ? '&' : '?'}lang=${getUiLang()}`;
+};
 
 /**
  * Top-level Hub shell. A slim left rail switches between "flows" (tools).
@@ -88,8 +96,51 @@ export default function AppHub() {
   );
 }
 
+/** Nút đổi ngôn ngữ giao diện (VI / EN / 中文). Bấm → lưu + reload trang. */
+function LangSwitcher() {
+  const ui = useUi();
+  const current = getUiLang();
+  return (
+    <div
+      title={ui.langLabel}
+      style={{
+        display: 'flex', alignItems: 'center', flexShrink: 0,
+        background: 'var(--bg-primary, #0f0f14)',
+        borderRadius: 8,
+        border: '1px solid var(--border-subtle, #2a2a3e)',
+        overflow: 'hidden',
+      }}
+    >
+      {UI_LANGS.map((l) => {
+        const on = l.id === current;
+        return (
+          <button
+            key={l.id}
+            onClick={() => { if (!on) setUiLang(l.id); }}
+            title={l.title}
+            style={{
+              padding: '5px 10px',
+              fontSize: '0.7rem',
+              fontWeight: on ? 700 : 500,
+              background: on ? 'var(--accent-primary, #7c6af0)' : 'transparent',
+              color: on ? '#fff' : 'var(--text-muted, #b6b2c9)',
+              border: 'none',
+              cursor: on ? 'default' : 'pointer',
+              transition: 'all 0.15s',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {l.short}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Header thương hiệu chung — nằm trên shell Hub nên hiển thị nhất quán trên cả 5 app. */
 function GlobalHeader({ activeFlow }: { activeFlow?: FlowDef }) {
+  const ui = useUi();
   return (
     <header
       style={{
@@ -127,30 +178,36 @@ function GlobalHeader({ activeFlow }: { activeFlow?: FlowDef }) {
         </div>
         <span style={{ fontSize: '0.64rem', fontWeight: 500, letterSpacing: 0.2, whiteSpace: 'nowrap',
           color: 'var(--text-muted, #8b88a0)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ opacity: 0.7 }}>✦ Kết hợp của</span>
+          <span style={{ opacity: 0.7 }}>{ui.hubMadeBy}</span>
           <span style={{ fontWeight: 700, background: 'linear-gradient(90deg, #a99cff, #4ecdc4)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             Guillichan&nbsp;×&nbsp;Sky
           </span>
         </span>
       </div>
-      {activeFlow && (
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7,
-          fontSize: '0.86rem', color: activeFlow.color || 'var(--text-secondary, #d6d3e4)', fontWeight: 600 }}>
-          <span style={{ fontSize: '1.2rem' }}>{activeFlow.emoji}</span>
-          <span>{activeFlow.label}</span>
-        </div>
-      )}
+
+      {/* Bên phải header: tool đang mở + nút đổi ngôn ngữ */}
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
+        {activeFlow && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7,
+            fontSize: '0.86rem', color: activeFlow.color || 'var(--text-secondary, #d6d3e4)', fontWeight: 600 }}>
+            <span style={{ fontSize: '1.2rem' }}>{activeFlow.emoji}</span>
+            <span>{ui[activeFlow.labelKey]}</span>
+          </div>
+        )}
+        <LangSwitcher />
+      </div>
     </header>
   );
 }
 
 function RailButton({ flow, active, onClick }: { flow: FlowDef; active: boolean; onClick: () => void }) {
   const color = flow.color || 'var(--accent-primary)';
+  const ui = useUi();
   return (
     <button
       onClick={onClick}
-      title={flow.label}
+      title={ui[flow.labelKey]}
       style={{
         width: RAIL_WIDTH - 14,
         padding: '8px 2px',
@@ -169,7 +226,7 @@ function RailButton({ flow, active, onClick }: { flow: FlowDef; active: boolean;
       onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
     >
       <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{flow.emoji}</span>
-      <span style={{ fontSize: '0.68rem', fontWeight: 700, textAlign: 'center', lineHeight: 1.15 }}>{flow.label}</span>
+      <span style={{ fontSize: '0.68rem', fontWeight: 700, textAlign: 'center', lineHeight: 1.15 }}>{ui[flow.labelKey]}</span>
     </button>
   );
 }
@@ -178,7 +235,9 @@ function IframeFlow({ flow, active }: { flow: FlowDef; active: boolean }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [nonce, setNonce] = useState(0);
   const [ready, setReady] = useState(false);
+  const ui = useUi();
   const url = flow.url || '';
+  const label = ui[flow.labelKey];
 
   // The tool's dev server may still be booting when the Hub opens (start.bat launches both
   // at once). Poll the URL until it's reachable, THEN mount the iframe — so the user never
@@ -230,15 +289,15 @@ function IframeFlow({ flow, active }: { flow: FlowDef; active: boolean }) {
         }}
       >
         <span style={{ fontWeight: 700, fontSize: '0.95rem', color: flow.color || 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: '1.15rem' }}>{flow.emoji}</span> {flow.label}
+          <span style={{ fontSize: '1.15rem' }}>{flow.emoji}</span> {label}
         </span>
-        <span style={{ opacity: 0.85 }}>{ready ? 'Nếu trống → bấm Tải lại.' : 'Đang chờ server khởi động…'}</span>
+        <span style={{ opacity: 0.85 }}>{ready ? ui.toolbarHintReady : ui.toolbarHintWaiting}</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-          <button onClick={reload} title="Tải lại" style={toolbarBtn}>
-            <RotateCw size={16} /> Tải lại
+          <button onClick={reload} title={ui.toolbarReload} style={toolbarBtn}>
+            <RotateCw size={16} /> {ui.toolbarReload}
           </button>
-          <a href={url} target="_blank" rel="noreferrer" title="Mở tab mới" style={{ ...toolbarBtn, textDecoration: 'none' }}>
-            <ExternalLink size={16} /> Tab mới
+          <a href={withLang(url)} target="_blank" rel="noreferrer" title={ui.toolbarOpenNewTab} style={{ ...toolbarBtn, textDecoration: 'none' }}>
+            <ExternalLink size={16} /> {ui.toolbarNewTab}
           </a>
         </div>
       </div>
@@ -246,8 +305,8 @@ function IframeFlow({ flow, active }: { flow: FlowDef; active: boolean }) {
         <iframe
           key={nonce}
           ref={ref}
-          src={url}
-          title={flow.label}
+          src={withLang(url)}
+          title={label}
           style={{ flex: 1, width: '100%', border: 0, background: 'var(--bg-primary, #0f0f14)' }}
         />
       ) : (
@@ -256,8 +315,8 @@ function IframeFlow({ flow, active }: { flow: FlowDef; active: boolean }) {
           gap: 12, color: 'var(--text-muted, #b6b2c9)', fontSize: '0.95rem',
         }}>
           <RotateCw size={24} className="spin" style={{ color: flow.color || 'var(--accent-primary)' }} />
-          <div>Đang chờ server <b>{flow.label}</b> khởi động ({url.replace('http://', '')})…</div>
-          <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>Lần đầu chạy start.bat có thể mất ~30s để cài đặt.</div>
+          <div>{ui.hubWaitPrefix} <b>{label}</b> {ui.hubWaitSuffix} ({url.replace('http://', '')})…</div>
+          <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>{ui.hubFirstRunHint}</div>
         </div>
       )}
     </div>

@@ -7,7 +7,6 @@ import CardPreview from './components/CardPreview';
 import TranslationProgress from './components/TranslationProgress';
 import { useStore, flushProgressBeacon } from './store';
 import { useT } from './i18n/useLocale';
-import type { Locale } from './i18n/translations';
 import { Languages, X, Globe } from 'lucide-react';
 import PresetImportPanel from './components/PresetImportPanel';
 import { APP_VERSION, APP_VERSION_NOTE } from './version';
@@ -24,7 +23,7 @@ const PresetPromptViewer = lazy(() => import('./components/PresetPromptViewer'))
 const CompareCardsPanel = lazy(() => import('./components/CompareCardsPanel'));
 
 export default function App() {
-  const { toasts, removeToast, card, locale, setLocale, jumpToFieldPath } = useStore();
+  const { toasts, removeToast, card, jumpToFieldPath } = useStore();
   const t = useT();
   const [showEjsCreator, setShowEjsCreator] = useState(false);
   const [showRegexManager, setShowRegexManager] = useState(false);
@@ -131,7 +130,6 @@ export default function App() {
           </div>
           {/* Locale switcher */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <LocaleSwitcher locale={locale} setLocale={setLocale} />
             <UpdateButton />
           </div>
         </div>
@@ -429,49 +427,3 @@ function LazyFallback() {
   );
 }
 
-function LocaleSwitcher({ locale, setLocale }: { locale: Locale; setLocale: (l: Locale) => void }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        background: 'var(--bg-primary)',
-        borderRadius: 'var(--radius-sm)',
-        border: '1px solid var(--border-subtle)',
-        overflow: 'hidden',
-        flexShrink: 0,
-      }}
-    >
-      <button
-        onClick={() => setLocale('en')}
-        style={{
-          padding: '4px 8px',
-          fontSize: '0.65rem',
-          fontWeight: locale === 'en' ? 700 : 400,
-          background: locale === 'en' ? 'var(--accent-primary)' : 'transparent',
-          color: locale === 'en' ? 'white' : 'var(--text-muted)',
-          border: 'none',
-          cursor: 'pointer',
-          transition: 'all 0.15s',
-        }}
-      >
-        EN
-      </button>
-      <button
-        onClick={() => setLocale('vi')}
-        style={{
-          padding: '4px 8px',
-          fontSize: '0.65rem',
-          fontWeight: locale === 'vi' ? 700 : 400,
-          background: locale === 'vi' ? 'var(--accent-primary)' : 'transparent',
-          color: locale === 'vi' ? 'white' : 'var(--text-muted)',
-          border: 'none',
-          cursor: 'pointer',
-          transition: 'all 0.15s',
-        }}
-      >
-        VI
-      </button>
-    </div>
-  );
-}

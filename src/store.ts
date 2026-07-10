@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Locale } from './i18n/translations';
+import { getUiLang, resolveLocale } from './i18n';
 import type {
   CharacterCard,
   ProxySettings,
@@ -156,8 +157,8 @@ interface AppState {
   removeToast: (id: string) => void;
 
   // UI
+  /** Chỉ đọc — suy ra từ uiLang lúc khởi động. Đổi ngôn ngữ = setUiLang() (reload trang). */
   locale: Locale;
-  setLocale: (l: Locale) => void;
   activeTab: string;
   setActiveTab: (t: string) => void;
   sidebarCollapsed: boolean;
@@ -887,11 +888,9 @@ export const useStore = create<AppState>((set) => ({
   removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
   // ─── UI ───
-  locale: (LS.get('st-translator-locale', 'en') as Locale) || 'en',
-  setLocale: (l) => {
-    LS.set('st-translator-locale', l);
-    set({ locale: l });
-  },
+  // Suy ra từ ngôn ngữ giao diện. 'vi' → 'en' là CỐ Ý (xem resolveLocale trong i18n/index.ts):
+  // giữ nguyên bộ mặt app mà user cũ đã quen. Không có setter — đổi ngôn ngữ sẽ reload trang.
+  locale: resolveLocale(getUiLang()),
   activeTab: 'core',
   setActiveTab: (t) => set({ activeTab: t }),
   sidebarCollapsed: false,
