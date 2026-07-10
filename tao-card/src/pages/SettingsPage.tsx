@@ -60,13 +60,13 @@ export function SettingsPage() {
   // ─── Profile Management ─────────────────────────────────────────────
 
   const handleAddProfile = useCallback(() => {
-    const id = addProfile('Profile mới', 'openai');
+    const id = addProfile(ui.spNewProfile, 'openai');
     setActiveProfile(id);
   }, [addProfile, setActiveProfile]);
 
   const handleDeleteProfile = useCallback(() => {
     if (!activeProfileId) return;
-    if (!confirm(`Xóa profile "${activeProfile?.label}"?`)) return;
+    if (!confirm(fmt(ui.spConfirmDeleteProfile, { name: activeProfile?.label ?? '' }))) return;
     deleteProfile(activeProfileId);
   }, [activeProfileId, activeProfile?.label, deleteProfile]);
 
@@ -137,7 +137,7 @@ ${activeProfile.masterInstruction || ''}`;
 
       updateField('aiPipelineMemory', result.text);
     } catch (e) {
-      useToastStore.getState().error(`Lỗi khi gọi AI: ${e instanceof Error ? e.message : String(e)}`);
+      useToastStore.getState().error(fmt(ui.spAiErr, { msg: e instanceof Error ? e.message : String(e) }));
     } finally {
       setReadingGuide(false);
     }
@@ -164,7 +164,7 @@ ${activeProfile.masterInstruction || ''}`;
     const currentSteps = activeProfile.steps || [];
     const newStep: WorldbuildingStep = {
       id: `step_${Math.random().toString(36).substring(2, 9)}`,
-      name: `Bước mới ${currentSteps.length + 1}`,
+      name: fmt(ui.spNewStep, { n: currentSteps.length + 1 }),
       prompt: '',
       enabled: true,
       singleton: false
@@ -188,7 +188,7 @@ ${activeProfile.masterInstruction || ''}`;
 
   const handleRestoreDefaultSteps = useCallback(() => {
     if (!activeProfile) return;
-    if (confirm('Khôi phục quy trình trích xuất về 5 bước mặc định? Thao tác này sẽ ghi đè các chỉnh sửa hiện tại.')) {
+    if (confirm(ui.spConfirmRestoreSteps)) {
       restoreDefaultSteps(activeProfile.id);
     }
   }, [activeProfile, restoreDefaultSteps]);
@@ -207,9 +207,9 @@ ${activeProfile.masterInstruction || ''}`;
           <Settings className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold">Cài đặt kết nối AI</h1>
+          <h1 className="text-lg font-semibold">{ui.spTitle}</h1>
           <p className="text-sm text-muted-foreground">
-            Cấu hình proxy URL, API key, và tham số sinh AI.
+            {ui.spSubtitle}
           </p>
         </div>
       </div>
@@ -217,17 +217,17 @@ ${activeProfile.masterInstruction || ''}`;
       {/* ═══════════════════ PROFILE SELECTOR ═══════════════════ */}
       <section className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-foreground">Profile kết nối</h2>
+          <h2 className="text-sm font-medium text-foreground">{ui.spProfiles}</h2>
           <div className="flex gap-1.5">
-            <button onClick={handleAddProfile} title="Thêm profile"
+            <button onClick={handleAddProfile} title={ui.spAddProfile}
               className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
               <Plus className="w-4 h-4" />
             </button>
-            <button onClick={handleDuplicateProfile} disabled={!activeProfileId} title="Sao chép"
+            <button onClick={handleDuplicateProfile} disabled={!activeProfileId} title={ui.spDuplicate}
               className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30">
               <Copy className="w-4 h-4" />
             </button>
-            <button onClick={handleDeleteProfile} disabled={!activeProfileId || profiles.length <= 1} title="Xóa"
+            <button onClick={handleDeleteProfile} disabled={!activeProfileId || profiles.length <= 1} title={ui.spDelete}
               className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive disabled:opacity-30">
               <Trash2 className="w-4 h-4" />
             </button>
@@ -237,10 +237,10 @@ ${activeProfile.masterInstruction || ''}`;
         {/* Profile tabs */}
         {profiles.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-sm text-muted-foreground mb-3">Chưa có profile nào.</p>
+            <p className="text-sm text-muted-foreground mb-3">{ui.spNoProfile}</p>
             <button onClick={handleAddProfile}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-              <Plus className="w-4 h-4" /> Tạo profile đầu tiên
+              <Plus className="w-4 h-4" /> {ui.spCreateFirst}
             </button>
           </div>
         ) : (
@@ -264,15 +264,15 @@ ${activeProfile.masterInstruction || ''}`;
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Profile Name */}
                   <div>
-                    <label className="settings-label">Tên Profile</label>
+                    <label className="settings-label">{ui.spProfileName}</label>
                     <input type="text" value={activeProfile.label}
                       onChange={e => updateField('label', e.target.value)}
-                      className="settings-input" placeholder="Tên hiển thị" />
+                      className="settings-input" placeholder={ui.spProfileNamePh} />
                   </div>
 
                   {/* Provider Type */}
                   <div>
-                    <label className="settings-label">Loại Provider</label>
+                    <label className="settings-label">{ui.spProviderType}</label>
                     <select value={activeProfile.providerType}
                       onChange={e => updateField('providerType', e.target.value)}
                       className="settings-input">
@@ -291,7 +291,7 @@ ${activeProfile.masterInstruction || ''}`;
                         ? 'border-primary text-primary'
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}>
-                    Kết nối & Model
+                    {ui.spTabConnection}
                   </button>
                   <button onClick={() => setActiveSubTab('guide')}
                     className={`px-4 py-2 text-xs font-semibold transition-all border-b-2 -mb-[1px] ${
@@ -299,7 +299,7 @@ ${activeProfile.masterInstruction || ''}`;
                         ? 'border-primary text-primary'
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}>
-                    Hướng Dẫn Tổng (Guide)
+                    {ui.spTabGuide}
                   </button>
                   <button onClick={() => setActiveSubTab('pipeline')}
                     className={`px-4 py-2 text-xs font-semibold transition-all border-b-2 -mb-[1px] ${
@@ -307,7 +307,7 @@ ${activeProfile.masterInstruction || ''}`;
                         ? 'border-primary text-primary'
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}>
-                    Quy Trình Trích Xuất (Pipeline Steps)
+                    {ui.spTabPipeline}
                   </button>
                 </div>
 
@@ -338,7 +338,7 @@ ${activeProfile.masterInstruction || ''}`;
                           spellCheck={false}
                           className="settings-input pr-10 resize-y font-mono"
                           style={{ WebkitTextSecurity: showApiKey ? 'none' : 'disc' } as React.CSSProperties}
-                          placeholder={'sk-key1\nsk-key2  (mỗi key 1 dòng → chạy song song nhiều luồng)'} />
+                          placeholder={ui.spApiKeyPh} />
                         <button onClick={() => setShowApiKey(!showApiKey)}
                           className="absolute right-2 top-2 p-1 rounded text-muted-foreground hover:text-foreground transition-colors">
                           {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -349,9 +349,9 @@ ${activeProfile.masterInstruction || ''}`;
                         return (
                           <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1 flex-wrap">
                             <AlertTriangle className="w-3 h-3" />
-                            Chỉ lưu trên máy bạn (localStorage).
-                            {n > 1 && <span className="text-primary font-medium">· {n} key → chạy {n} luồng song song (RPM ×{n}).</span>}
-                            {n <= 1 && <span>· Dán nhiều key (mỗi dòng 1 key) để chạy nhanh hơn.</span>}
+                            {ui.spKeyLocal}
+                            {n > 1 && <span className="text-primary font-medium">{fmt(ui.spKeyMulti, { n })}</span>}
+                            {n <= 1 && <span>{ui.spKeyHint}</span>}
                           </p>
                         );
                       })()}
@@ -362,14 +362,14 @@ ${activeProfile.masterInstruction || ''}`;
                       <input type="checkbox" checked={keepKeyOnlyInSession}
                         onChange={e => useSettingsStore.setState({ keepKeyOnlyInSession: e.target.checked })}
                         className="settings-checkbox" />
-                      Chỉ giữ API Key trong phiên làm việc
+                      {ui.spSessionOnlyKey}
                     </label>
 
                     {/* ─── Đa Model & Concurrency (Mix Mode / RPM) ─── */}
                     <div className="bg-muted/30 p-4 rounded-xl border border-border space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold text-primary flex items-center gap-1.5">
-                          ⚡ Cấu hình Đa Model & Song công
+                          {ui.spMultiModelTitle}
                         </span>
                       </div>
 
@@ -378,27 +378,27 @@ ${activeProfile.masterInstruction || ''}`;
                         <input type="checkbox" checked={activeProfile.inPool || false}
                           onChange={e => updateField('inPool', e.target.checked)}
                           className="settings-checkbox" />
-                        🔀 Gộp vào POOL đa-provider (chạy song song)
+                        {ui.spInPool}
                       </label>
                       <p className="text-xs text-muted-foreground -mt-2 pl-6 leading-snug">
-                        Bật ở ≥2 profile → engine rải call round-robin, nhiều provider chạy cùng lúc (mỗi cái giữ đa-key + RPM riêng) → nhanh hơn. Để giữ chất lượng, dùng model tốt tương đương ở mọi profile.
+                        {ui.spInPoolDesc}
                       </p>
 
                       <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                         <input type="checkbox" checked={activeProfile.enableSecondaryModel || false}
                           onChange={e => updateField('enableSecondaryModel', e.target.checked)}
                           className="settings-checkbox" />
-                        Kích hoạt Model Phụ (Flash) cho tác vụ ngắn
+                        {ui.spEnableSecondary}
                       </label>
 
                       {activeProfile.enableSecondaryModel && (
                         <div className="space-y-4 pl-4 border-l-2 border-border/50">
                           <div>
-                            <label className="settings-label">Model Phụ (Flash)</label>
+                            <label className="settings-label">{ui.spSecondaryModel}</label>
                             <select value={activeProfile.secondaryModel || ''}
                               onChange={e => updateField('secondaryModel', e.target.value)}
                               className="settings-input">
-                              <option value="">-- Chọn model phụ --</option>
+                              <option value="">{ui.spPickSecondary}</option>
                               {activeProfile.cachedModels.map(m => (
                                 <option key={m.id} value={m.id}>{m.id}</option>
                               ))}
@@ -407,13 +407,13 @@ ${activeProfile.masterInstruction || ''}`;
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="settings-label">RPM Model Chính (Pro)</label>
+                              <label className="settings-label">{ui.spPrimaryRpm}</label>
                               <input type="number" value={activeProfile.primaryRpm ?? 5}
                                 onChange={e => updateField('primaryRpm', parseInt(e.target.value) || 5)}
                                 className="settings-input" min={1} />
                             </div>
                             <div>
-                              <label className="settings-label">RPM Model Phụ (Flash)</label>
+                              <label className="settings-label">{ui.spSecondaryRpm}</label>
                               <input type="number" value={activeProfile.secondaryRpm ?? 10}
                                 onChange={e => updateField('secondaryRpm', parseInt(e.target.value) || 10)}
                                 className="settings-input" min={1} />
@@ -424,21 +424,21 @@ ${activeProfile.masterInstruction || ''}`;
                             <input type="checkbox" checked={activeProfile.mixMode !== false}
                               onChange={e => updateField('mixMode', e.target.checked)}
                               className="settings-checkbox" />
-                            Chế độ Mix (Chạy song song Pro + Flash)
+                            {ui.spMixMode}
                           </label>
 
                           <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                             <input type="checkbox" checked={activeProfile.superMix || false}
                               onChange={e => updateField('superMix', e.target.checked)}
                               className="settings-checkbox" />
-                            Super Mix (Quét 5 nhóm trong 1 request)
+                            {ui.spSuperMix}
                           </label>
 
                           <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                             <input type="checkbox" checked={activeProfile.enableCompletenessProtocol || false}
                               onChange={e => updateField('enableCompletenessProtocol', e.target.checked)}
                               className="settings-checkbox" />
-                            Giao thức hoàn thiện tối đa (Zero Omission)
+                            {ui.spZeroOmission}
                           </label>
                         </div>
                       )}
@@ -448,7 +448,7 @@ ${activeProfile.masterInstruction || ''}`;
                     <div className="rounded-lg border border-border overflow-hidden">
                       <button onClick={() => setShowHeaders(!showHeaders)}
                         className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-                        Header tuỳ chỉnh ({activeProfile.customHeaders.length})
+                        {fmt(ui.spCustomHeaders, { count: activeProfile.customHeaders.length })}
                         {showHeaders ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </button>
                       {showHeaders && (
@@ -481,7 +481,7 @@ ${activeProfile.masterInstruction || ''}`;
                             updateField('customHeaders', [...activeProfile.customHeaders, { key: '', value: '' }]);
                           }}
                             className="text-xs text-primary hover:text-primary/80 transition-colors">
-                            + Thêm header
+                            {ui.spAddHeader}
                           </button>
                         </div>
                       )}
@@ -494,13 +494,13 @@ ${activeProfile.masterInstruction || ''}`;
                         <div className="relative flex-1">
                           <input type="text" value={activeProfile.selectedModel}
                             onChange={e => updateField('selectedModel', e.target.value)}
-                            className="settings-input" placeholder="Nhập hoặc chọn model" />
+                            className="settings-input" placeholder={ui.spModelPh} />
                         </div>
                         <button onClick={handleScanModels} disabled={scanning || !activeProfile.baseUrl || !activeProfile.apiKey}
                           className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 border border-border text-sm font-medium transition-colors disabled:opacity-40"
-                          title="Quét danh sách model">
+                          title={ui.spScanModelsTitle}>
                           {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                          Quét
+                          {ui.spScan}
                         </button>
                       </div>
 
@@ -515,11 +515,11 @@ ${activeProfile.masterInstruction || ''}`;
                         <div className="rounded-lg border border-border bg-background overflow-hidden">
                           <div className="px-3 py-2 border-b border-border">
                             <input type="text" value={modelSearch} onChange={e => setModelSearch(e.target.value)}
-                              placeholder="Tìm model..." className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
+                              placeholder={ui.spModelSearchPh} className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
                           </div>
                           <div className="max-h-48 overflow-y-auto">
                             {filteredModels.length === 0 ? (
-                              <p className="p-3 text-xs text-muted-foreground text-center">Không tìm thấy model.</p>
+                              <p className="p-3 text-xs text-muted-foreground text-center">{ui.spNoModelFound}</p>
                             ) : (
                               filteredModels.map((m: ModelInfo) => (
                                 <button key={m.id} onClick={() => { updateField('selectedModel', m.id); setModelSearch(''); }}
@@ -534,7 +534,7 @@ ${activeProfile.masterInstruction || ''}`;
                           </div>
                           {activeProfile.cachedModelsAt && (
                             <p className="px-3 py-1.5 text-[10px] text-muted-foreground border-t border-border">
-                              Quét lúc {new Date(activeProfile.cachedModelsAt).toLocaleTimeString()} · {activeProfile.cachedModels.length} models
+                              {fmt(ui.spScannedAt, { time: new Date(activeProfile.cachedModelsAt).toLocaleTimeString(), count: activeProfile.cachedModels.length })}
                             </p>
                           )}
                         </div>
@@ -546,7 +546,7 @@ ${activeProfile.masterInstruction || ''}`;
                       <input type="checkbox" checked={generationParams.useJsonResponseFormat}
                         onChange={e => updateParam('useJsonResponseFormat', e.target.checked)}
                         className="settings-checkbox" />
-                      Dùng JSON Response Format
+                      {ui.spUseJsonFormat}
                     </label>
 
                     {/* ─── Connection Test ─── */}
@@ -555,14 +555,14 @@ ${activeProfile.masterInstruction || ''}`;
                         disabled={testing || !activeProfile.baseUrl || !activeProfile.apiKey || !activeProfile.selectedModel}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-40">
                         {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                        Kiểm tra kết nối
+                        {ui.spTestConnection}
                       </button>
                       {testResult && (
                         <div className={`text-xs flex items-center gap-1.5 ${testResult.ok ? 'text-emerald-400' : 'text-destructive'}`}>
                           {testResult.ok ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
                           <span>
                             {testResult.ok
-                              ? `OK · ${testResult.latencyMs}ms · Tool-calling: ${testResult.supportsToolCalling ? 'Có' : 'Không'}`
+                              ? fmt(ui.spTestOk, { ms: testResult.latencyMs ?? 0, tool: testResult.supportsToolCalling ? ui.spYes : ui.spNo })
                               : testResult.error?.slice(0, 100)}
                           </span>
                         </div>
@@ -575,29 +575,29 @@ ${activeProfile.masterInstruction || ''}`;
                 {activeSubTab === 'guide' && (
                   <div className="space-y-5 pt-2">
                     <div className="flex items-center justify-between">
-                      <label className="settings-label mb-0 font-semibold text-primary">Hướng Dẫn Tổng (Master Instruction)</label>
+                      <label className="settings-label mb-0 font-semibold text-primary">{ui.spMasterInstruction}</label>
                       <button
                         onClick={() => {
-                          if (confirm('Khôi phục Hướng dẫn tổng về mặc định?')) {
+                          if (confirm(ui.spConfirmRestoreGuide)) {
                             updateField('masterInstruction', DEFAULT_MASTER_INSTRUCTION);
                           }
                         }}
                         className="text-xs text-primary hover:underline font-medium"
                       >
-                        Nạp lại mặc định
+                        {ui.spReloadDefault}
                       </button>
                     </div>
                     <textarea
                       value={activeProfile.masterInstruction || ''}
                       onChange={e => updateField('masterInstruction', e.target.value)}
                       className="settings-input font-mono text-xs h-64 resize-y leading-relaxed bg-background"
-                      placeholder="Nhập luật tổng cương chung dài, được chèn ở đầu mỗi bước của AI..."
+                      placeholder={ui.spMasterInstructionPh}
                     />
 
                     <div className="bg-muted/30 p-4 rounded-xl border border-border space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold text-primary flex items-center gap-1.5">
-                          🧠 Bộ Nhớ AI (aiPipelineMemory)
+                          {ui.spAiMemory}
                         </span>
                         <div className="flex gap-2">
                           <button
@@ -608,12 +608,12 @@ ${activeProfile.masterInstruction || ''}`;
                             {readingGuide ? (
                               <>
                                 <Loader2 className="w-3 h-3 animate-spin" />
-                                Đang xử lý...
+                                {ui.spProcessing}
                               </>
                             ) : (
                               <>
                                 <Zap className="w-3 h-3" />
-                                Gửi cho AI đọc hiểu
+                                {ui.spSendToAi}
                               </>
                             )}
                           </button>
@@ -622,7 +622,7 @@ ${activeProfile.masterInstruction || ''}`;
                               onClick={() => updateField('aiPipelineMemory', '')}
                               className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-xs font-medium border border-border text-muted-foreground hover:text-foreground transition-colors"
                             >
-                              Xóa bộ nhớ
+                              {ui.spClearMemory}
                             </button>
                           )}
                         </div>
@@ -634,7 +634,7 @@ ${activeProfile.masterInstruction || ''}`;
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          AI chưa được đọc tài liệu. Nhấp "Gửi cho AI đọc hiểu" để AI phân tích và tóm tắt hướng dẫn tổng.
+                          {ui.spNoMemory}
                         </p>
                       )}
                     </div>
@@ -646,16 +646,16 @@ ${activeProfile.masterInstruction || ''}`;
                   <div className="space-y-5 pt-2">
                     <div className="flex items-center justify-between border-b border-border pb-3">
                       <div>
-                        <h3 className="text-sm font-semibold text-foreground">Quy trình các bước trích xuất</h3>
+                        <h3 className="text-sm font-semibold text-foreground">{ui.spPipelineTitle}</h3>
                         <p className="text-xs text-muted-foreground">
-                          Thiết lập thứ tự và chỉ dẫn chi tiết cho từng bước dệt bối cảnh.
+                          {ui.spPipelineDesc}
                         </p>
                       </div>
                       <button
                         onClick={handleRestoreDefaultSteps}
                         className="text-xs text-primary hover:underline font-medium"
                       >
-                        Khôi phục 5 bước gốc
+                        {ui.spRestoreSteps}
                       </button>
                     </div>
 
@@ -665,9 +665,9 @@ ${activeProfile.masterInstruction || ''}`;
                         onChange={e => updateField('semanticDedup', e.target.checked)}
                         className="settings-checkbox" />
                       <div>
-                        <span className="font-semibold text-foreground">Bật cơ chế dọn trùng lặp ngữ nghĩa</span>
+                        <span className="font-semibold text-foreground">{ui.spSemanticDedup}</span>
                         <p className="text-xs text-muted-foreground">
-                          Sử dụng AI quét và gộp các thực thể trùng ngữ nghĩa sau khi hoàn tất trích xuất.
+                          {ui.spSemanticDedupDesc}
                         </p>
                       </div>
                     </label>
@@ -688,7 +688,7 @@ ${activeProfile.masterInstruction || ''}`;
                                   value={step.name || ''}
                                   onChange={e => handleUpdateStep(idx, { name: e.target.value })}
                                   className="settings-input font-medium py-1 text-sm flex-1 bg-background"
-                                  placeholder="Tên bước"
+                                  placeholder={ui.spStepNamePh}
                                 />
                               </div>
                             </div>
@@ -698,7 +698,7 @@ ${activeProfile.masterInstruction || ''}`;
                                 onClick={() => moveStep(idx, 'up')}
                                 disabled={idx === 0}
                                 className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
-                                title="Di chuyển lên"
+                                title={ui.spMoveUp}
                               >
                                 <ChevronDown className="w-4 h-4 rotate-180" />
                               </button>
@@ -707,7 +707,7 @@ ${activeProfile.masterInstruction || ''}`;
                                 onClick={() => moveStep(idx, 'down')}
                                 disabled={idx === (activeProfile.steps?.length || 0) - 1}
                                 className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
-                                title="Di chuyển xuống"
+                                title={ui.spMoveDown}
                               >
                                 <ChevronDown className="w-4 h-4" />
                               </button>
@@ -715,7 +715,7 @@ ${activeProfile.masterInstruction || ''}`;
                               <button
                                 onClick={() => handleDeleteStep(idx)}
                                 className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                                title="Xóa bước"
+                                title={ui.spDeleteStep}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -731,7 +731,7 @@ ${activeProfile.masterInstruction || ''}`;
                                 onChange={e => handleUpdateStep(idx, { enabled: e.target.checked })}
                                 className="settings-checkbox"
                               />
-                              Kích hoạt bước này
+                              {ui.spStepEnabled}
                             </label>
                             <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
                               <input
@@ -740,20 +740,20 @@ ${activeProfile.masterInstruction || ''}`;
                                 onChange={e => handleUpdateStep(idx, { singleton: e.target.checked })}
                                 className="settings-checkbox"
                               />
-                              Chỉ chạy 1 lần trên toàn tài liệu (Singleton)
+                              {ui.spStepSingleton}
                             </label>
                           </div>
 
                           {/* Prompt instruction */}
                           <div>
                             <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1 block">
-                              Prompt Chỉ Dẫn Của AI
+                              {ui.spStepPrompt}
                             </label>
                             <textarea
                               value={step.prompt || ''}
                               onChange={e => handleUpdateStep(idx, { prompt: e.target.value })}
                               className="settings-input font-mono text-xs h-36 resize-y bg-background"
-                              placeholder="Nhập prompt chỉ dẫn cụ thể cho bước này..."
+                              placeholder={ui.spStepPromptPh}
                             />
                           </div>
                         </div>
@@ -761,7 +761,7 @@ ${activeProfile.masterInstruction || ''}`;
 
                       {(!activeProfile.steps || activeProfile.steps.length === 0) && (
                         <p className="text-sm text-muted-foreground text-center py-4">
-                          Chưa có bước nào trong quy trình. Nhấp "Khôi phục 5 bước gốc" để nạp mặc định.
+                          {ui.spNoSteps}
                         </p>
                       )}
 
@@ -770,7 +770,7 @@ ${activeProfile.masterInstruction || ''}`;
                         className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-border rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                       >
                         <Plus className="w-4 h-4" />
-                        Thêm bước trích xuất mới
+                        {ui.spAddStep}
                       </button>
                     </div>
                   </div>
@@ -784,7 +784,7 @@ ${activeProfile.masterInstruction || ''}`;
       {/* ═══════════════════ GENERATION PARAMS ═══════════════════ */}
       <section className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-muted/30">
-          <h2 className="text-sm font-medium text-foreground">Tham số sinh AI</h2>
+          <h2 className="text-sm font-medium text-foreground">{ui.spGenParams}</h2>
         </div>
         <div className="p-5 space-y-5">
           {/* Core params grid */}
@@ -797,7 +797,7 @@ ${activeProfile.masterInstruction || ''}`;
               onChange={v => updateParam('max_tokens', v)} min={1} max={128000} />
             <ParamNumber label="Context Size" value={generationParams.context_size}
               onChange={v => updateParam('context_size', v)} min={1000} max={2000000} />
-            <ParamNumber label="Min Tokens (Độ dài tối thiểu)" value={generationParams.minTokens ?? 2000}
+            <ParamNumber label={ui.spMinTokens} value={generationParams.minTokens ?? 2000}
               onChange={v => updateParam('minTokens', v)} min={500} max={20000} />
           </div>
 
@@ -818,7 +818,7 @@ ${activeProfile.masterInstruction || ''}`;
           <div className="rounded-lg border border-border overflow-hidden">
             <button onClick={() => setShowAdvancedParams(!showAdvancedParams)}
               className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-              Tham số nâng cao
+              {ui.spAdvancedParams}
               {showAdvancedParams ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
             {showAdvancedParams && (
@@ -841,7 +841,7 @@ ${activeProfile.masterInstruction || ''}`;
                   <label className="settings-label">Stop Sequences</label>
                   <input type="text" value={generationParams.stop.join(', ')}
                     onChange={e => updateParam('stop', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                    className="settings-input text-xs" placeholder="Phân cách bằng dấu phẩy" />
+                    className="settings-input text-xs" placeholder={ui.spStopPh} />
                 </div>
               </div>
             )}
@@ -897,11 +897,12 @@ function ParamNumber({ label, value, onChange, min, max }: {
 import { useSyncStore } from '../store/syncStore';
 import { useCardStore } from '../store/cardStore';
 import type { SyncMode } from '../lib/sync/syncTypes';
+import { t as ui, fmt } from '../i18n';
 
 const MODE_TABS: { id: SyncMode; label: string; icon: string; desc: string }[] = [
-  { id: 'rest', label: 'REST API', icon: '🌐', desc: 'Kết nối trực tiếp ST API — không cần extension' },
-  { id: 'websocket', label: 'WebSocket', icon: '⚡', desc: 'Real-time sync qua extension WS' },
-  { id: 'plugin', label: 'Server Plugin', icon: '🔌', desc: 'Custom plugin endpoint' },
+  { id: 'rest', label: 'REST API', icon: '🌐', desc: ui.syRestDesc },
+  { id: 'websocket', label: 'WebSocket', icon: '⚡', desc: ui.syWsDesc },
+  { id: 'plugin', label: 'Server Plugin', icon: '🔌', desc: ui.syPluginDesc },
 ];
 
 function TavernHelperSettings() {
@@ -916,10 +917,10 @@ function TavernHelperSettings() {
     error: 'bg-red-400',
   };
   const statusLabel: Record<string, string> = {
-    disconnected: 'Chưa kết nối',
-    connecting: 'Đang kết nối...',
-    connected: '✅ Đã kết nối',
-    error: '❌ Lỗi kết nối',
+    disconnected: ui.syDisconnected,
+    connecting: ui.syConnecting,
+    connected: ui.syConnected,
+    error: ui.syError,
   };
 
   const handleSync = async () => {
@@ -930,7 +931,7 @@ function TavernHelperSettings() {
   return (
     <div className="space-y-5 p-4">
       <p className="text-xs text-muted-foreground">
-        Đồng bộ card với SillyTavern. Chọn phương thức kết nối phù hợp.
+        {ui.syIntro}
       </p>
 
       {/* ─── Mode Tabs ─── */}
@@ -969,7 +970,7 @@ function TavernHelperSettings() {
               placeholder="http://localhost:8000"
             />
             <p className="text-[9px] text-muted-foreground mt-1">
-              URL gốc SillyTavern. Không cần extension — dùng API có sẵn.
+              {ui.syBaseUrlHint}
             </p>
           </div>
         )}
@@ -1013,7 +1014,7 @@ function TavernHelperSettings() {
               placeholder="http://localhost:8000/api/plugins/card-sync"
             />
             <p className="text-[9px] text-muted-foreground mt-1">
-              Cần cài plugin card-sync vào SillyTavern/plugins/
+              {ui.syPluginHint}
             </p>
           </div>
         )}
@@ -1030,11 +1031,11 @@ function TavernHelperSettings() {
           }`}
         >
           {sync.status === 'connecting' ? (
-            <><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Đang kết nối...</>
+            <><Loader2 className="w-3 h-3 animate-spin inline mr-1" />{ui.syConnectingBtn}</>
           ) : sync.status === 'connected' ? (
-            '⛔ Ngắt kết nối'
+            ui.syDisconnect
           ) : (
-            '🔗 Kết nối'
+            ui.syConnect
           )}
         </button>
 
@@ -1044,7 +1045,7 @@ function TavernHelperSettings() {
           className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 transition-all disabled:opacity-40"
         >
           {sync.isSyncing ? (
-            <><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Đang sync...</>
+            <><Loader2 className="w-3 h-3 animate-spin inline mr-1" />{ui.sySyncing}</>
           ) : (
             '📤 Sync Now'
           )}
@@ -1065,8 +1066,8 @@ function TavernHelperSettings() {
       {/* ─── Auto-sync toggle ─── */}
       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/50">
         <div>
-          <div className="text-xs font-medium">Auto-sync khi lưu</div>
-          <div className="text-[10px] text-muted-foreground">Tự động push card khi save</div>
+          <div className="text-xs font-medium">{ui.syAutoSync}</div>
+          <div className="text-[10px] text-muted-foreground">{ui.syAutoSyncDesc}</div>
         </div>
         <button
           onClick={() => sync.updateSettings({ autoSync: !sync.settings.autoSync })}
@@ -1091,7 +1092,7 @@ function TavernHelperSettings() {
           placeholder="https://cdn.jsdelivr.net/..."
         />
         <p className="text-[9px] text-muted-foreground mt-1">
-          URL của MVU bundle script. Sử dụng khi inject Tavern Helper scripts.
+          {ui.syMvuUrlHint}
         </p>
       </div>
 
@@ -1108,7 +1109,7 @@ function TavernHelperSettings() {
         {showLog && (
           <div className="mt-2 max-h-40 overflow-y-auto scrollbar-thin rounded-lg bg-black/50 border border-border/30 p-2 space-y-0.5">
             {sync.log.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground/50 text-center py-2">Chưa có log</p>
+              <p className="text-[10px] text-muted-foreground/50 text-center py-2">{ui.syNoLog}</p>
             ) : (
               <>
                 {sync.log.map((event, i) => (
@@ -1129,7 +1130,7 @@ function TavernHelperSettings() {
                   onClick={() => sync.clearLog()}
                   className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground mt-1"
                 >
-                  Xóa log
+                  {ui.syClearLog}
                 </button>
               </>
             )}
