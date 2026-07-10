@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../storeContext';
 import { scanProxyModels } from '../utils/ai';
 import { X, Eye, EyeOff, ShieldCheck, Cpu, Sliders, Info, Search } from 'lucide-react';
+import { t, fmt } from '../i18n';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -29,12 +30,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           ...prev,
           customModels: Array.from(new Set([...prev.customModels, ...models]))
         }));
-        addToast(`Đã quét thành công ${models.length} mô hình!`, "success");
+        addToast(fmt(t.smToastScanOk, { count: models.length }), "success");
       } else {
-        addToast("Không lấy được model list — nhập tay.", "warning");
+        addToast(t.smToastScanFail, "warning");
       }
     } catch (e: unknown) {
-      const errMsg = e instanceof Error ? e.message : "Không lấy được model list — nhập tay.";
+      const errMsg = e instanceof Error ? e.message : t.smToastScanFail;
       addToast(errMsg, "error");
     } finally {
       setIsScanning(false);
@@ -48,7 +49,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       customModels: Array.from(new Set([...prev.customModels, manualModelInput.trim()])),
       selectedModel: manualModelInput.trim()
     }));
-    addToast(`Đã thêm mô hình: ${manualModelInput}`, "success");
+    addToast(fmt(t.smToastAddModel, { name: manualModelInput }), "success");
     setManualModelInput('');
   };
 
@@ -60,7 +61,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         <div className="flex justify-between items-center px-6 py-4 border-b border-theme-border bg-gray-900/40">
           <div className="flex items-center gap-2">
             <Sliders className="text-purple-400" size={18} />
-            <h2 className="font-bold text-gray-200 text-sm sm:text-base">Cấu hình Cài đặt ST Studio</h2>
+            <h2 className="font-bold text-gray-200 text-sm sm:text-base">{t.smTitle}</h2>
           </div>
           <button 
             onClick={onClose}
@@ -81,7 +82,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             }`}
           >
             <ShieldCheck size={14} />
-            Kết nối API
+            {t.smApiTab}
           </button>
           <button
             onClick={() => setActiveTab('behavior')}
@@ -92,7 +93,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             }`}
           >
             <Cpu size={14} />
-            Hành vi AI
+            {t.smBehaviourTab}
           </button>
         </div>
 
@@ -105,7 +106,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               
               {/* API Toggle */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-gray-400">Phương thức kết nối</label>
+                <label className="block text-xs font-semibold text-gray-400">{t.smConnMethod}</label>
                 <div className="grid grid-cols-2 gap-2 bg-gray-900 p-1 rounded-xl border border-theme-border">
                   <button
                     onClick={() => setSettings(prev => ({ ...prev, useProxy: false }))}
@@ -115,7 +116,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         : 'text-gray-400 hover:text-gray-200'
                     }`}
                   >
-                    Natively (Gemini Trực Tiếp)
+                    {t.smNative}
                   </button>
                   <button
                     onClick={() => setSettings(prev => ({ ...prev, useProxy: true }))}
@@ -125,7 +126,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         : 'text-gray-400 hover:text-gray-200'
                     }`}
                   >
-                    Dùng Proxy Trung Gian
+                    {t.smProxy}
                   </button>
                 </div>
               </div>
@@ -141,7 +142,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       type={showApiKey ? "text" : "password"}
                       value={settings.apiKey}
                       onChange={(e) => setSettings(prev => ({ ...prev, apiKey: e.target.value }))}
-                      placeholder="Nhập API Key của Google Gemini..."
+                      placeholder={t.smGeminiKeyPh}
                       className="w-full bg-gray-900 border border-theme-border rounded-xl px-3 py-2.5 pr-10 text-xs font-mono text-gray-200 focus:outline-none focus:border-purple-400"
                     />
                     <button
@@ -153,7 +154,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   </div>
                   <p className="text-[10px] text-gray-500 flex items-start gap-1">
                     <Info size={12} className="text-purple-400 flex-shrink-0 mt-0.5" />
-                    Nhận API Key miễn phí tại Google AI Studio. Dữ liệu được lưu trữ an toàn trong LocalStorage của bạn.
+                    {t.smGeminiKeyHint}
                   </p>
                 </div>
               ) : (
@@ -166,7 +167,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       type="text"
                       value={settings.proxyUrl}
                       onChange={(e) => setSettings(prev => ({ ...prev, proxyUrl: e.target.value }))}
-                      placeholder="Ví dụ: https://proxy.com/v1"
+                      placeholder={t.smProxyUrlPh}
                       className="w-full bg-gray-900 border border-theme-border rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-purple-400"
                     />
                   </div>
@@ -178,7 +179,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         type={showProxyKey ? "text" : "password"}
                         value={settings.proxyKey}
                         onChange={(e) => setSettings(prev => ({ ...prev, proxyKey: e.target.value }))}
-                        placeholder="Nhập Token hoặc Password ủy quyền..."
+                        placeholder={t.smProxyTokenPh}
                         className="w-full bg-gray-900 border border-theme-border rounded-xl px-3 py-2.5 pr-10 text-xs font-mono text-gray-200 focus:outline-none focus:border-purple-400"
                       />
                       <button
@@ -197,14 +198,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     className="w-full bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-purple-300 font-semibold text-xs py-2 rounded-xl border border-theme-border transition flex items-center justify-center gap-1.5"
                   >
                     <Search size={14} />
-                    {isScanning ? 'Đang quét...' : '🔍 Quét Danh Sách Mô Hình từ Proxy'}
+                    {isScanning ? t.smScanning : t.smScanBtn}
                   </button>
                 </div>
               )}
 
               {/* Models selection radio lists */}
               <div className="space-y-3 bg-gray-900/40 p-4 rounded-xl border border-theme-border">
-                <label className="block text-xs font-semibold text-gray-400">Chọn mô hình hoạt động (Model selection)</label>
+                <label className="block text-xs font-semibold text-gray-400">{t.smModelSelect}</label>
                 
                 <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
                   {settings.customModels.map(model => (
@@ -235,14 +236,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     type="text"
                     value={manualModelInput}
                     onChange={(e) => setManualModelInput(e.target.value)}
-                    placeholder="Nhập thủ công model..."
+                    placeholder={t.smManualModelPh}
                     className="flex-1 bg-gray-900 border border-theme-border rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-400"
                   />
                   <button
                     onClick={handleAddManualModel}
                     className="bg-purple-500 hover:bg-purple-600 text-white font-semibold text-xs px-3 py-1.5 rounded-lg transition"
                   >
-                    Thêm model
+                    {t.smAddModel}
                   </button>
                 </div>
               </div>
@@ -250,12 +251,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               {/* Provider phụ (xoay vòng qua nhiều account) */}
               <div className="pt-4 border-t border-gray-700">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-gray-300">🔀 Provider phụ (xoay vòng)</label>
+                  <label className="text-xs font-bold text-gray-300">{t.smExtraProviders}</label>
                   <button
                     onClick={() => setSettings(p => ({ ...p, extraProviders: [...(p.extraProviders || []), { enabled: true, useProxy: p.useProxy, apiKey: '', proxyUrl: p.proxyUrl, proxyKey: '', selectedModel: '' }] }))}
-                    className="text-xs text-purple-400 font-bold hover:text-purple-300">+ Thêm</button>
+                    className="text-xs text-purple-400 font-bold hover:text-purple-300">{t.smAdd}</button>
                 </div>
-                <p className="text-[11px] text-gray-500 mb-2 leading-snug">Rải call round-robin cùng provider chính → dàn rate-limit qua nhiều account. (Chat tuần tự nên không tăng tốc song song.)</p>
+                <p className="text-[11px] text-gray-500 mb-2 leading-snug">{t.smExtraProvidersHint}</p>
                 {(settings.extraProviders || []).map((e, i) => {
                   const upd = (patch: Partial<typeof e>) => setSettings(p => ({ ...p, extraProviders: (p.extraProviders || []).map((x, idx) => idx === i ? { ...x, ...patch } : x) }));
                   const del = () => setSettings(p => ({ ...p, extraProviders: (p.extraProviders || []).filter((_, idx) => idx !== i) }));
@@ -266,7 +267,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         <input type="checkbox" checked={e.enabled} onChange={ev => upd({ enabled: ev.target.checked })} />
                         <span className="font-bold text-gray-300">Provider #{i + 2}</span>
                         <label className="flex items-center gap-1 ml-2 text-gray-400 cursor-pointer"><input type="checkbox" checked={e.useProxy} onChange={ev => upd({ useProxy: ev.target.checked })} /> Proxy</label>
-                        <button onClick={del} className="ml-auto text-red-400 font-bold hover:text-red-300">Xoá</button>
+                        <button onClick={del} className="ml-auto text-red-400 font-bold hover:text-red-300">{t.smRemove}</button>
                       </div>
                       {e.useProxy ? (
                         <>
@@ -291,7 +292,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               {/* Temperature slider for chat session */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-semibold text-gray-400">
-                  <label htmlFor="settings-temp">Nhiệt độ (Temperature của Trình Thiết Kế)</label>
+                  <label htmlFor="settings-temp">{t.smDesignerTemp}</label>
                   <span className="text-purple-400 font-mono font-bold">{settings.temperature}</span>
                 </div>
                 <input
@@ -304,12 +305,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   onChange={(e) => setSettings(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
                   className="w-full accent-purple-400 bg-gray-800 h-1.5 rounded-lg appearance-none cursor-pointer"
                 />
-                <p className="text-[10px] text-gray-500">Áp dụng cho chính mô hình ST Studio đang trò chuyện với bạn.</p>
+                <p className="text-[10px] text-gray-500">{t.smDesignerTempHint}</p>
               </div>
 
               {/* Max tokens */}
               <div className="space-y-2">
-                <label htmlFor="settings-max-tokens" className="block text-xs font-semibold text-gray-400">Mức giới hạn Tokens xuất ra (Max Tokens)</label>
+                <label htmlFor="settings-max-tokens" className="block text-xs font-semibold text-gray-400">{t.smMaxTokens}</label>
                 <select
                   id="settings-max-tokens"
                   value={settings.maxTokens}
@@ -319,19 +320,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <option value="1024">1024 Tokens</option>
                   <option value="2048">2048 Tokens</option>
                   <option value="4096">4096 Tokens</option>
-                  <option value="8192">8192 Tokens (Tiêu chuẩn)</option>
+                  <option value="8192">{t.smTokens8k}</option>
                   <option value="16384">16384 Tokens (16k)</option>
                   <option value="32768">32768 Tokens (32k)</option>
-                  <option value="65536">65536 Tokens (65k - Tối đa cho Gemini)</option>
+                  <option value="65536">{t.smTokens64k}</option>
                 </select>
               </div>
 
               {/* Keep context */}
               <div className="flex items-center justify-between p-3.5 bg-gray-900/50 rounded-xl border border-theme-border">
                 <div className="space-y-0.5 pr-4">
-                  <label htmlFor="settings-keep-context" className="text-xs font-semibold text-gray-200">Bảo toàn Ngữ cảnh Hội thoại</label>
+                  <label htmlFor="settings-keep-context" className="text-xs font-semibold text-gray-200">{t.smKeepContext}</label>
                   <p className="text-[10px] text-gray-500">
-                    Khi bật, toàn bộ lịch sử trò chuyện sẽ được gửi đi để AI nắm bắt cấu trúc preset cũ. Khi tắt, chỉ tin nhắn cuối cùng được gửi (tiết kiệm token).
+                    {t.smKeepContextHint}
                   </p>
                 </div>
                 <input
@@ -345,13 +346,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
               {/* System prompt custom addition */}
               <div className="space-y-2">
-                <label htmlFor="settings-sysprompt-add" className="block text-xs font-semibold text-gray-400">Chỉ thị hệ thống bổ sung (System Prompt addition)</label>
+                <label htmlFor="settings-sysprompt-add" className="block text-xs font-semibold text-gray-400">{t.smSysPromptAdd}</label>
                 <textarea
                   id="settings-sysprompt-add"
                   rows={4}
                   value={settings.systemPromptAddition}
                   onChange={(e) => setSettings(prev => ({ ...prev, systemPromptAddition: e.target.value }))}
-                  placeholder="Thêm hướng dẫn riêng để ép AI viết theo phong cách cá nhân của bạn..."
+                  placeholder={t.smSysPromptAddPh}
                   className="w-full bg-gray-900 border border-theme-border rounded-xl p-3 text-xs text-gray-200 font-mono focus:outline-none focus:border-purple-400 resize-y"
                 />
               </div>
@@ -367,7 +368,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             onClick={onClose}
             className="bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md shadow-purple-500/10"
           >
-            Hoàn tất cấu hình
+            {t.smDone}
           </button>
         </div>
 

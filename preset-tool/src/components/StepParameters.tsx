@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../storeContext';
 import { SillyTavernPreset } from '../types';
+import { t } from '../i18n';
 
 export const StepParameters: React.FC = () => {
   const { activeProject, updatePresetParams } = useApp();
@@ -18,13 +19,13 @@ export const StepParameters: React.FC = () => {
         {/* Basic Sampling Parameters */}
         <div className="bg-theme-panel border border-theme-border rounded-xl p-5 space-y-5">
           <h3 className="text-sm font-semibold text-purple-400 uppercase tracking-wider border-b border-theme-border pb-2">
-            ⚙️ Tham số lấy mẫu (Sampling)
+            {t.spSampling}
           </h3>
           
           {/* Temperature */}
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-semibold text-gray-400">
-              <label htmlFor="param-temp">Nhiệt độ (Temperature)</label>
+              <label htmlFor="param-temp">{t.spTemp}</label>
               <span className="text-purple-400 font-mono font-bold">{preset.temperature}</span>
             </div>
             <input
@@ -37,13 +38,13 @@ export const StepParameters: React.FC = () => {
               onChange={(e) => handleChange('temperature', parseFloat(e.target.value))}
               className="w-full accent-purple-400 bg-gray-800 h-1.5 rounded-lg appearance-none cursor-pointer"
             />
-            <p className="text-[10px] text-gray-500">Nhiệt độ cao hơn làm tăng tính sáng tạo và ngẫu nhiên của câu chữ.</p>
+            <p className="text-[10px] text-gray-500">{t.spTempHint}</p>
           </div>
 
           {/* Repetition Penalty */}
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-semibold text-gray-400">
-              <label htmlFor="param-rep-penalty">Phạt lặp từ (Repetition Penalty)</label>
+              <label htmlFor="param-rep-penalty">{t.spRepPenalty}</label>
               <span className="text-purple-400 font-mono font-bold">{preset.repetition_penalty}</span>
             </div>
             <input
@@ -56,7 +57,7 @@ export const StepParameters: React.FC = () => {
               onChange={(e) => handleChange('repetition_penalty', parseFloat(e.target.value))}
               className="w-full accent-purple-400 bg-gray-800 h-1.5 rounded-lg appearance-none cursor-pointer"
             />
-            <p className="text-[10px] text-gray-500">Giảm thiểu việc lặp lại các từ hoặc cụm từ đã sử dụng trước đó.</p>
+            <p className="text-[10px] text-gray-500">{t.spRepPenaltyHint}</p>
           </div>
 
           {/* Top P & Top K */}
@@ -118,11 +119,11 @@ export const StepParameters: React.FC = () => {
         {/* Context & Limits */}
         <div className="bg-theme-panel border border-theme-border rounded-xl p-5 space-y-5">
           <h3 className="text-sm font-semibold text-purple-400 uppercase tracking-wider border-b border-theme-border pb-2">
-            📏 Context & Giới hạn Tokens
+            {t.spContextTokens}
           </h3>
           
           <div className="space-y-2">
-            <label htmlFor="param-max-context" className="block text-xs font-semibold text-gray-400">Mức Context tối đa (Max Context Size)</label>
+            <label htmlFor="param-max-context" className="block text-xs font-semibold text-gray-400">{t.spMaxContext}</label>
             <input
               id="param-max-context"
               type="number"
@@ -130,11 +131,11 @@ export const StepParameters: React.FC = () => {
               onChange={(e) => handleChange('openai_max_context', parseInt(e.target.value) || 32000)}
               className="w-full bg-gray-900 border border-theme-border rounded-lg px-3 py-2 text-sm text-purple-400 font-mono font-bold focus:outline-none focus:border-purple-400"
             />
-            <p className="text-[10px] text-gray-500">Giới hạn ngữ cảnh (Gemini 1.5/2.0/2.5 Pro hỗ trợ cực khủng đến 1M - 2M tokens).</p>
+            <p className="text-[10px] text-gray-500">{t.spMaxContextHint}</p>
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="param-max-tokens" className="block text-xs font-semibold text-gray-400">Tokens trả lời tối đa (Response Limit)</label>
+            <label htmlFor="param-max-tokens" className="block text-xs font-semibold text-gray-400">{t.spMaxTokens}</label>
             <input
               id="param-max-tokens"
               type="number"
@@ -142,13 +143,13 @@ export const StepParameters: React.FC = () => {
               onChange={(e) => handleChange('openai_max_tokens', parseInt(e.target.value) || 65536)}
               className="w-full bg-gray-900 border border-theme-border rounded-lg px-3 py-2 text-sm text-purple-400 font-mono font-bold focus:outline-none focus:border-purple-400"
             />
-            <p className="text-[10px] text-gray-500">Khống chế độ dài của một lượt reply từ AI.</p>
+            <p className="text-[10px] text-gray-500">{t.spMaxTokensHint}</p>
           </div>
 
           <div className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg border border-theme-border/50">
             <div className="space-y-0.5">
-              <label htmlFor="param-unlock-context" className="text-xs font-semibold text-gray-300">Mở khóa Context tối đa</label>
-              <p className="text-[10px] text-gray-500">Vượt qua giới hạn cứng mặc định.</p>
+              <label htmlFor="param-unlock-context" className="text-xs font-semibold text-gray-300">{t.spUnlockContext}</label>
+              <p className="text-[10px] text-gray-500">{t.spUnlockContextHint}</p>
             </div>
             <input
               id="param-unlock-context"
@@ -161,8 +162,8 @@ export const StepParameters: React.FC = () => {
 
           <div className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg border border-theme-border/50">
             <div className="space-y-0.5">
-              <label htmlFor="param-stream" className="text-xs font-semibold text-gray-300">Stream dữ liệu từ API</label>
-              <p className="text-[10px] text-gray-500">Đổ chữ trực tiếp theo thời gian thực.</p>
+              <label htmlFor="param-stream" className="text-xs font-semibold text-gray-300">{t.spStream}</label>
+              <p className="text-[10px] text-gray-500">{t.spStreamHint}</p>
             </div>
             <input
               id="param-stream"
@@ -178,43 +179,43 @@ export const StepParameters: React.FC = () => {
       {/* Prompts Nudges & Formatting Blocks */}
       <div className="bg-theme-panel border border-theme-border rounded-xl p-5 space-y-6">
         <h3 className="text-sm font-semibold text-purple-400 uppercase tracking-wider border-b border-theme-border pb-2">
-          📝 Khối văn bản bổ trợ & Nhắc nhở (System Nudges)
+          {t.spNudges}
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Impersonation Prompt */}
           <div className="space-y-2">
-            <label htmlFor="param-impersonation" className="block text-xs font-semibold text-gray-400">Chỉ thị Giả danh (Impersonation Prompt)</label>
+            <label htmlFor="param-impersonation" className="block text-xs font-semibold text-gray-400">{t.spImpersonation}</label>
             <textarea
               id="param-impersonation"
               rows={4}
               value={preset.impersonation_prompt}
               onChange={(e) => handleChange('impersonation_prompt', e.target.value)}
               className="w-full bg-gray-900 border border-theme-border rounded-lg p-3 text-xs text-gray-200 font-mono focus:outline-none focus:border-purple-400 resize-y"
-              placeholder="Prompt chỉ thị cách giả danh người chơi..."
+              placeholder={t.spImpersonationPh}
             />
-            <p className="text-[10px] text-gray-500">Áp dụng khi AI nói/hành động thay cho người chơi (Impersonate).</p>
+            <p className="text-[10px] text-gray-500">{t.spImpersonationHint}</p>
           </div>
 
           {/* Continue Nudge Prompt */}
           <div className="space-y-2">
-            <label htmlFor="param-continue-nudge" className="block text-xs font-semibold text-gray-400">Chỉ thị Tiếp tục (Continue Nudge Prompt)</label>
+            <label htmlFor="param-continue-nudge" className="block text-xs font-semibold text-gray-400">{t.spContinueNudge}</label>
             <textarea
               id="param-continue-nudge"
               rows={4}
               value={preset.continue_nudge_prompt}
               onChange={(e) => handleChange('continue_nudge_prompt', e.target.value)}
               className="w-full bg-gray-900 border border-theme-border rounded-lg p-3 text-xs text-gray-200 font-mono focus:outline-none focus:border-purple-400 resize-y"
-              placeholder="Prompt nhắc nhở tiếp tục..."
+              placeholder={t.spContinueNudgePh}
             />
-            <p className="text-[10px] text-gray-500">Bắt buộc AI tiếp tục viết từ câu thoại dang dở mà không phá cấu trúc kịch.</p>
+            <p className="text-[10px] text-gray-500">{t.spContinueNudgeHint}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Scenario Format */}
           <div className="space-y-2">
-            <label htmlFor="param-scenario-fmt" className="block text-xs font-semibold text-gray-400">Định dạng bối cảnh (Scenario Format)</label>
+            <label htmlFor="param-scenario-fmt" className="block text-xs font-semibold text-gray-400">{t.spScenarioFmt}</label>
             <input
               id="param-scenario-fmt"
               type="text"
@@ -226,7 +227,7 @@ export const StepParameters: React.FC = () => {
 
           {/* Personality Format */}
           <div className="space-y-2">
-            <label htmlFor="param-personality-fmt" className="block text-xs font-semibold text-gray-400">Định dạng tính cách (Personality Format)</label>
+            <label htmlFor="param-personality-fmt" className="block text-xs font-semibold text-gray-400">{t.spPersonalityFmt}</label>
             <input
               id="param-personality-fmt"
               type="text"
@@ -238,7 +239,7 @@ export const StepParameters: React.FC = () => {
 
           {/* World Info Format */}
           <div className="space-y-2">
-            <label htmlFor="param-wi-fmt" className="block text-xs font-semibold text-gray-400">Định dạng World Info (WI Format)</label>
+            <label htmlFor="param-wi-fmt" className="block text-xs font-semibold text-gray-400">{t.spWiFmt}</label>
             <input
               id="param-wi-fmt"
               type="text"

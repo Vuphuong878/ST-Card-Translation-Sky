@@ -6,8 +6,8 @@ import { StepParameters } from './components/StepParameters';
 import { StepPrompts } from './components/StepPrompts';
 import { StepRegex } from './components/StepRegex';
 import { StepExport } from './components/StepExport';
-import { 
-  Settings as SettingsIcon, 
+import {
+  Settings as SettingsIcon,
   Sparkles, 
   FolderPlus, 
   Trash2, 
@@ -18,6 +18,7 @@ import {
   X,
   Upload
 } from 'lucide-react';
+import { t, fmt } from './i18n';
 
 function App() {
   const {
@@ -58,7 +59,7 @@ function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.name.endsWith('.json')) {
-      addToast("Chỉ hỗ trợ file .json!", "error");
+      addToast(t.toastOnlyJson, "error");
       e.target.value = '';
       return;
     }
@@ -69,7 +70,7 @@ function App() {
         const parsed = JSON.parse(content);
         importProjectFromFile(parsed, file.name);
       } catch {
-        addToast(`File "${file.name}" không phải JSON hợp lệ!`, "error");
+        addToast(fmt(t.toastBadJson, { name: file.name }), "error");
       }
     };
     reader.readAsText(file);
@@ -146,7 +147,7 @@ function App() {
             className="flex items-center gap-1 bg-gray-900 border border-theme-border hover:border-gray-700 text-gray-300 font-semibold text-xs px-3 py-2 rounded-lg transition"
           >
             <SettingsIcon size={14} className="text-gray-400 animate-spin-slow" />
-            <span className="hidden sm:inline">⚙ Cài đặt</span>
+            <span className="hidden sm:inline">{t.settings}</span>
           </button>
         </div>
       </header>
@@ -165,13 +166,13 @@ function App() {
                 type="text"
                 value={newProjName}
                 onChange={(e) => setNewProjName(e.target.value)}
-                placeholder="Tên dự án mới..."
+                placeholder={t.newProjectPh}
                 className="flex-1 bg-gray-900 border border-theme-border rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-400"
               />
               <button
                 type="submit"
                 className="p-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition"
-                title="Tạo dự án mới"
+                title={t.newProjectTitle}
               >
                 <FolderPlus size={14} />
               </button>
@@ -179,7 +180,7 @@ function App() {
                 type="button"
                 onClick={() => importFileRef.current?.click()}
                 className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition"
-                title="Nhập dự án từ file JSON"
+                title={t.importProjectTitle}
               >
                 <Upload size={14} />
               </button>
@@ -196,7 +197,7 @@ function App() {
           {/* Projects lists */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-wider px-2 pb-1">
-              Dự Án Đang Lưu ({projects.length})
+              {fmt(t.savedProjects, { count: projects.length })}
             </span>
 
             <div className="space-y-1">
@@ -248,14 +249,14 @@ function App() {
                       <button
                         onClick={() => handleStartRename(proj.id, proj.name)}
                         className="p-1 text-gray-500 hover:text-gray-300"
-                        title="Đổi tên"
+                        title={t.rename}
                       >
                         <FileText size={11} />
                       </button>
                       <button
                         onClick={() => deleteProject(proj.id)}
                         className="p-1 text-gray-500 hover:text-red-400"
-                        title="Xóa dự án"
+                        title={t.deleteProject}
                       >
                         <Trash2 size={11} />
                       </button>
@@ -269,10 +270,10 @@ function App() {
           {/* Quick specs helper */}
           <div className="p-4 border-t border-theme-border/60 text-[10px] text-gray-500 space-y-1.5 bg-gray-950/20">
             <span className="font-bold flex items-center gap-1 text-gray-400">
-              <BookOpen size={12} /> Hướng Dẫn Tóm Tắt
+              <BookOpen size={12} /> {t.quickGuide}
             </span>
             <p className="leading-relaxed">
-              Nhấp đúp chuột lên tên dự án để đổi tên. Chat với AI để sinh hoặc cập nhật Preset/Regex tự động.
+              {t.quickGuideBody}
             </p>
           </div>
         </aside>
@@ -292,7 +293,7 @@ function App() {
                     : 'border-transparent hover:text-gray-200'
                 }`}
               >
-                1. Tham số
+                {t.step1}
               </button>
               <button
                 onClick={() => setActiveStep('prompts')}
@@ -302,7 +303,7 @@ function App() {
                     : 'border-transparent hover:text-gray-200'
                 }`}
               >
-                2. Khối Prompts
+                {t.step2}
               </button>
               <button
                 onClick={() => setActiveStep('regex')}
@@ -312,7 +313,7 @@ function App() {
                     : 'border-transparent hover:text-gray-200'
                 }`}
               >
-                3. Regex Scripts
+                {t.step3}
               </button>
               <button
                 onClick={() => setActiveStep('export')}
@@ -322,7 +323,7 @@ function App() {
                     : 'border-transparent hover:text-gray-200'
                 }`}
               >
-                4. Xuất bản JSON
+                {t.step4}
               </button>
             </div>
 
