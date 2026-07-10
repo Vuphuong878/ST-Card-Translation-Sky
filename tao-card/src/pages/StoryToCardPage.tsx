@@ -10,6 +10,7 @@ import {
   type ScannedCharacter, type GeneratedStoryCard, type StoryCardOptions, type StoryCardTemplate,
   type BatchCardResult, type WorldEntry,
 } from '../lib/ai/storyToCard';
+import { t as ui, fmt } from '../i18n';
 
 /**
  * "Tạo thẻ từ truyện" — pipeline mô-đun học từ 小玉写卡器.
@@ -53,12 +54,12 @@ export function StoryToCardPage() {
   const stopWork = () => { abortRef.current?.abort(); };
 
   const clearWork = () => {
-    if (!confirm('Xoá toàn bộ truyện, roster và thẻ đã tạo trong trang này?')) return;
+    if (!confirm(ui.s2cConfirmClear)) return;
     setStory(''); setRoster([]); setChecked([]); setManualName(''); setCard(null); setBatch([]);
   };
 
   const requireApi = () => {
-    if (!profile?.apiKey) { toast.error('Chưa cấu hình API. Vào Cài đặt.'); return false; }
+    if (!profile?.apiKey) { toast.error(ui.s2cNoApi); return false; }
     return true;
   };
 
@@ -67,7 +68,7 @@ export function StoryToCardPage() {
 
   const runScan = async () => {
     if (!requireApi()) return;
-    if (!story.trim()) { toast.error('Dán nội dung truyện trước.'); return; }
+    if (!story.trim()) { toast.error(ui.s2cNeedStory); return; }
     setScanning(true); setRoster([]); setCard(null); setBatch([]); setChecked([]); setScanProg({ d: 0, t: 1 });
     abortRef.current = new AbortController();
     try {
@@ -76,17 +77,17 @@ export function StoryToCardPage() {
         signal: abortRef.current.signal,
         onProgress: (d, t) => setScanProg({ d, t }),
       });
-      if (chars.length === 0) toast.error('Không quét được nhân vật. Thử lại hoặc nhập tên thủ công.');
+      if (chars.length === 0) toast.error(ui.s2cNoChar);
       setRoster(chars);
       if (chars[0]) setChecked([chars[0].name]);
-    } catch (e) { if (isAbortErr(e)) toast.error('Đã dừng quét.'); else toast.error(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { if (isAbortErr(e)) toast.error(ui.s2cScanStopped); else toast.error(e instanceof Error ? e.message : String(e)); }
     finally { setScanning(false); setScanProg(null); }
   };
 
   // Gộp các mục đang tick thành 1 nhân vật (union bí danh) — cho khi quét tách nhầm 1 người ra nhiều mục.
   const mergeChecked = () => {
     const names = [...checked];
-    if (names.length < 2) { toast.error('Tick ít nhất 2 mục để gộp.'); return; }
+    if (names.length < 2) { toast.error(ui.s2cNeed2ToMerge); return; }
     const picks = roster.filter((c) => checked.includes(c.name));
     const primary = picks[0];
     const mergedAliases = Array.from(new Set(picks.flatMap((c) => [c.name, ...c.aliases]).filter((a) => a !== primary.name)));
@@ -94,7 +95,7 @@ export function StoryToCardPage() {
     const merged: ScannedCharacter = { name: primary.name, aliases: mergedAliases, brief: mergedBrief };
     setRoster((r) => [merged, ...r.filter((c) => !checked.includes(c.name))]);
     setChecked([primary.name]);
-    toast.success(`Đã gộp ${names.length} mục vào "${primary.name}".`);
+    toast.success(fmt(ui.s2cMerged, { count: names.length, name: primary.name }));
   };
 
   const targets = (): string[] => {
@@ -106,8 +107,8 @@ export function StoryToCardPage() {
   const runGenerate = async () => {
     if (!requireApi()) return;
     const names = targets();
-    if (names.length === 0) { toast.error('Tick nhân vật hoặc nhập tên thủ công.'); return; }
-    if (!story.trim()) { toast.error('Cần có nội dung truyện.'); return; }
+    if (names.length === 0) { toast.error(ui.s2cPickChar); return; }
+    if (!story.trim()) { toast.error(ui.s2cNeedStory2); return; }
     setGenerating(true); setCard(null); setBatch([]);
     abortRef.current = new AbortController();
     const signal = abortRef.current.signal;
@@ -121,9 +122,9 @@ export function StoryToCardPage() {
           (d, t, name) => setBatchProg({ d, t, name }));
         setBatch(res);
         const ok = res.filter((r) => r.card).length;
-        toast.success(`Tạo xong ${ok}/${names.length} thẻ.`);
+        toast.success(fmt(ui.s2cGenerated, { ok, total: names.length }));
       }
-    } catch (e) { if (isAbortErr(e)) toast.error('Đã dừng tạo thẻ.'); else toast.error(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { if (isAbortErr(e)) toast.error(ui.s2cGenStopped); else toast.error(e instanceof Error ? e.message : String(e)); }
     finally { setGenerating(false); setBatchProg(null); }
   };
 
@@ -139,7 +140,7 @@ export function StoryToCardPage() {
       };
       addEntry(entry);
     });
-    toast.success(`Đã thêm ${entries.length} entry vào Lorebook.`);
+    toast.success(fmt(ui.s2cEntriesAdded, { count: entries.length }));
   };
 
   const applyToCard = (c: GeneratedStoryCard) => {
@@ -150,7 +151,7 @@ export function StoryToCardPage() {
       if (c.firstMes) card.data.first_mes = c.firstMes;
     });
     if (c.worldEntries.length) applyEntries(c.worldEntries);
-    toast.success('Đã áp dụng vào thẻ hiện tại. Xem tab Card Editor.');
+    toast.success(ui.s2cApplied);
   };
 
   const multi = checked.length + (manualName.trim() ? 1 : 0) > 1;
@@ -159,13 +160,13 @@ export function StoryToCardPage() {
     <div className="p-5 max-w-3xl mx-auto space-y-5">
       <div className="flex items-center gap-2 flex-wrap">
         <Wand2 className="w-5 h-5 text-primary shrink-0" />
-        <h1 className="text-lg font-bold shrink-0">Tạo thẻ từ truyện</h1>
-        <span className="text-xs text-muted-foreground truncate min-w-0 hidden sm:inline">Quét nhân vật (chunk) → sinh thẻ theo mô-đun</span>
+        <h1 className="text-lg font-bold shrink-0">{ui.s2cTitle}</h1>
+        <span className="text-xs text-muted-foreground truncate min-w-0 hidden sm:inline">{ui.s2cSubtitle}</span>
         <span className="ml-auto text-[11px] text-muted-foreground flex items-center gap-2 shrink-0">
-          <span title="Truyện, roster và thẻ được tự lưu — F5 không mất">💾 tự lưu</span>
+          <span title={ui.s2cAutosaveTitle}>{ui.s2cAutosave}</span>
           {(story || roster.length > 0 || card || batch.length > 0) && (
-            <button onClick={clearWork} className="inline-flex items-center gap-1 hover:text-red-400" title="Xoá việc trong trang này">
-              <Trash2 className="w-3.5 h-3.5" /> Xoá
+            <button onClick={clearWork} className="inline-flex items-center gap-1 hover:text-red-400" title={ui.s2cClearTitle}>
+              <Trash2 className="w-3.5 h-3.5" /> {ui.s2cClear}
             </button>
           )}
         </span>
@@ -173,70 +174,70 @@ export function StoryToCardPage() {
 
       {/* 01 — Truyện + tùy chọn */}
       <section className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
-        <div className="text-sm font-semibold flex items-center gap-2"><ScanLine className="w-4 h-4" /> 01 · Dán truyện</div>
+        <div className="text-sm font-semibold flex items-center gap-2"><ScanLine className="w-4 h-4" /> {ui.s2cStep1}</div>
         <textarea value={story} onChange={(e) => setStory(e.target.value)} rows={8}
-          className="settings-input text-sm resize-y w-full" placeholder="Dán chương truyện / tiểu thuyết. Truyện dài sẽ được chia đoạn để quét, không lo vượt context." />
-        <div className="text-xs text-muted-foreground">{story.length.toLocaleString()} ký tự{chunkSize > 0 && story.length > chunkSize ? ` · ~${Math.min(Math.ceil(story.length / chunkSize), maxChunks)} đoạn quét` : ''}</div>
+          className="settings-input text-sm resize-y w-full" placeholder={ui.s2cStoryPh} />
+        <div className="text-xs text-muted-foreground">{fmt(ui.s2cChars, { n: story.length.toLocaleString() })}{chunkSize > 0 && story.length > chunkSize ? fmt(ui.s2cChunks, { n: Math.min(Math.ceil(story.length / chunkSize), maxChunks) }) : ''}</div>
 
         {/* Tuỳ chọn thẻ */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <label className="text-xs">Mức chi tiết
+          <label className="text-xs">{ui.s2cDetail}
             <select value={opts.detail} onChange={(e) => set({ detail: e.target.value as StoryCardOptions['detail'] })} className="settings-input text-xs mt-1 w-full">
-              <option value="ngắn gọn">Ngắn gọn</option>
-              <option value="vừa phải">Vừa phải</option>
-              <option value="chi tiết">Chi tiết</option>
+              <option value="ngắn gọn">{ui.s2cDetailShort}</option>
+              <option value="vừa phải">{ui.s2cDetailMedium}</option>
+              <option value="chi tiết">{ui.s2cDetailFull}</option>
             </select>
           </label>
-          <label className="text-xs">Mẫu thiết kế
+          <label className="text-xs">{ui.s2cTemplate}
             <select value={opts.template} onChange={(e) => set({ template: e.target.value as StoryCardTemplate })} className="settings-input text-xs mt-1 w-full">
-              <option value="chuẩn">Chuẩn</option>
-              <option value="nhập vai đậm">Nhập vai đậm</option>
-              <option value="súc tích">Súc tích</option>
-              <option value="tối giản">Tối giản</option>
+              <option value="chuẩn">{ui.s2cTplStandard}</option>
+              <option value="nhập vai đậm">{ui.s2cTplRoleplay}</option>
+              <option value="súc tích">{ui.s2cTplConcise}</option>
+              <option value="tối giản">{ui.s2cTplMinimal}</option>
             </select>
           </label>
-          <label className="text-xs">Nhân vật thành {'{{user}}'}
-            <input value={opts.userReplaceName ?? ''} onChange={(e) => set({ userReplaceName: e.target.value })} className="settings-input text-xs mt-1 w-full" placeholder="tên (tùy chọn)" />
+          <label className="text-xs">{ui.s2cUserChar}{'{{user}}'}
+            <input value={opts.userReplaceName ?? ''} onChange={(e) => set({ userReplaceName: e.target.value })} className="settings-input text-xs mt-1 w-full" placeholder={ui.s2cUserCharPh} />
           </label>
-          <label className="text-xs">Quan hệ với {'{{user}}'}
-            <input value={opts.relationship ?? ''} onChange={(e) => set({ relationship: e.target.value })} className="settings-input text-xs mt-1 w-full" placeholder="vd: chủ - tớ" />
+          <label className="text-xs">{ui.s2cRelationship}{'{{user}}'}
+            <input value={opts.relationship ?? ''} onChange={(e) => set({ relationship: e.target.value })} className="settings-input text-xs mt-1 w-full" placeholder={ui.s2cRelationshipPh} />
           </label>
         </div>
 
         {/* #3 — Thiết lập bổ sung cho {{user}}, chỉ hiện khi có thay {{user}} */}
         {opts.userReplaceName?.trim() && (
-          <label className="text-xs block">Thiết lập bổ sung cho {'{{user}}'} (trải nghiệm chung, xưng hô, ràng buộc…)
+          <label className="text-xs block">{ui.s2cUserExtra}{'{{user}}'}{ui.s2cUserExtra2}
             <textarea value={opts.userSetup ?? ''} onChange={(e) => set({ userSetup: e.target.value })} rows={2}
-              className="settings-input text-xs mt-1 w-full resize-y" placeholder="vd: {{user}} là người kế thừa gia tộc, luôn được nhân vật gọi bằng 'thiếu gia'…" />
+              className="settings-input text-xs mt-1 w-full resize-y" placeholder={ui.s2cUserExtraPh} />
           </label>
         )}
 
         {/* Toggles */}
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
           <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!opts.nsfw} onChange={(e) => set({ nsfw: e.target.checked })} /> NSFW</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={opts.splitByStage !== false} onChange={(e) => set({ splitByStage: e.target.checked })} /> Chia theo giai đoạn</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!opts.omitEmptyFields} onChange={(e) => set({ omitEmptyFields: e.target.checked })} /> Lược bỏ trường không có trong truyện</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!opts.autoContinue} onChange={(e) => set({ autoContinue: e.target.checked })} /> Tự viết tiếp khi bị cắt</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!opts.withWorldEntries} onChange={(e) => set({ withWorldEntries: e.target.checked })} /> Kèm world/lore entries</label>
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={opts.splitByStage !== false} onChange={(e) => set({ splitByStage: e.target.checked })} /> {ui.s2cSplitByStage}</label>
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!opts.omitEmptyFields} onChange={(e) => set({ omitEmptyFields: e.target.checked })} /> {ui.s2cOmitEmpty}</label>
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!opts.autoContinue} onChange={(e) => set({ autoContinue: e.target.checked })} /> {ui.s2cAutoContinue}</label>
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!opts.withWorldEntries} onChange={(e) => set({ withWorldEntries: e.target.checked })} /> {ui.s2cWithWorld}</label>
         </div>
 
         {/* Nâng cao: chunk + scan */}
         <button onClick={() => setShowAdvanced((v) => !v)} className="text-xs inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
-          <Settings2 className="w-3.5 h-3.5" /> {showAdvanced ? 'Ẩn' : 'Hiện'} tuỳ chọn nâng cao
+          <Settings2 className="w-3.5 h-3.5" /> {showAdvanced ? ui.s2cHide : ui.s2cShow}{ui.s2cAdvancedOpts}
         </button>
         {showAdvanced && (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">
-            <label className="text-xs">Kích thước đoạn quét (ký tự, 0 = toàn văn)
+            <label className="text-xs">{ui.s2cChunkSize}
               <input type="number" min={0} step={5000} value={chunkSize} onChange={(e) => setChunkSize(Math.max(0, +e.target.value || 0))} className="settings-input text-xs mt-1 w-full" />
             </label>
-            <label className="text-xs">Giới hạn số đoạn quét
+            <label className="text-xs">{ui.s2cMaxChunks}
               <input type="number" min={1} max={50} value={maxChunks} onChange={(e) => setMaxChunks(Math.max(1, +e.target.value || 1))} className="settings-input text-xs mt-1 w-full" />
             </label>
             <label className="text-xs flex items-end gap-2 pb-1">
-              <input type="checkbox" checked={includeIdentity} onChange={(e) => setIncludeIdentity(e.target.checked)} /> Kèm mô tả danh tính khi quét
+              <input type="checkbox" checked={includeIdentity} onChange={(e) => setIncludeIdentity(e.target.checked)} /> {ui.s2cIncludeIdentity}
             </label>
-            <label className="text-xs md:col-span-3 block">Thiết lập bổ sung chung cho thẻ
-              <input value={opts.extraNotes ?? ''} onChange={(e) => set({ extraNotes: e.target.value })} className="settings-input text-xs mt-1 w-full" placeholder="yêu cầu riêng cho mọi thẻ tạo ra…" />
+            <label className="text-xs md:col-span-3 block">{ui.s2cExtraNotes}
+              <input value={opts.extraNotes ?? ''} onChange={(e) => set({ extraNotes: e.target.value })} className="settings-input text-xs mt-1 w-full" placeholder={ui.s2cExtraNotesPh} />
             </label>
           </div>
         )}
@@ -245,12 +246,12 @@ export function StoryToCardPage() {
           <button onClick={runScan} disabled={scanning}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-white"
             style={{ background: scanning ? '#3a3352' : '#7c6af0', border: 'none', cursor: scanning ? 'default' : 'pointer' }}>
-            {scanning ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang quét{scanProg && scanProg.t > 1 ? ` ${scanProg.d}/${scanProg.t} đoạn` : ''}...</> : <><ScanLine className="w-4 h-4" /> Quét nhân vật</>}
+            {scanning ? <><Loader2 className="w-4 h-4 animate-spin" /> {ui.s2cScanning}{scanProg && scanProg.t > 1 ? fmt(ui.s2cScanningChunks, { d: scanProg.d, t: scanProg.t }) : ''}...</> : <><ScanLine className="w-4 h-4" /> {ui.s2cScanChars}</>}
           </button>
           {scanning && (
             <button onClick={stopWork}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-white"
-              style={{ background: '#ef4444', border: 'none', cursor: 'pointer' }}>■ Dừng</button>
+              style={{ background: '#ef4444', border: 'none', cursor: 'pointer' }}>{ui.s2cStop}</button>
           )}
         </div>
       </section>
@@ -259,12 +260,12 @@ export function StoryToCardPage() {
       {(roster.length > 0 || manualName) && (
         <section className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
           <div className="text-sm font-semibold flex items-center justify-between">
-            <span className="flex items-center gap-2"><Users className="w-4 h-4" /> 02 · Chọn nhân vật {checked.length > 0 && <span className="text-xs text-primary">({checked.length} đã chọn)</span>}</span>
+            <span className="flex items-center gap-2"><Users className="w-4 h-4" /> {ui.s2cStep2} {checked.length > 0 && <span className="text-xs text-primary">{fmt(ui.s2cSelectedCount, { count: checked.length })}</span>}</span>
             {roster.length > 0 && (
               <div className="flex items-center gap-3 text-xs font-normal">
-                <button onClick={() => setChecked(roster.map((c) => c.name))} className="text-muted-foreground hover:text-foreground">Chọn hết</button>
-                <button onClick={() => setChecked([])} className="text-muted-foreground hover:text-foreground">Bỏ chọn</button>
-                {checked.length >= 2 && <button onClick={mergeChecked} className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300"><Merge className="w-3.5 h-3.5" /> Gộp mục đã chọn</button>}
+                <button onClick={() => setChecked(roster.map((c) => c.name))} className="text-muted-foreground hover:text-foreground">{ui.s2cSelectAll}</button>
+                <button onClick={() => setChecked([])} className="text-muted-foreground hover:text-foreground">{ui.s2cDeselect}</button>
+                {checked.length >= 2 && <button onClick={mergeChecked} className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300"><Merge className="w-3.5 h-3.5" /> {ui.s2cMergeSelected}</button>}
               </div>
             )}
           </div>
@@ -285,19 +286,19 @@ export function StoryToCardPage() {
             })}
           </div>
           <input value={manualName} onChange={(e) => setManualName(e.target.value)} className="settings-input text-sm w-full"
-            placeholder="…hoặc nhập tên thủ công (thêm vào danh sách tạo)" />
+            placeholder={ui.s2cManualNamePh} />
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={runGenerate} disabled={generating}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-white"
               style={{ background: generating ? '#3a3352' : '#a855f7', border: 'none', cursor: generating ? 'default' : 'pointer' }}>
               {generating
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> {batchProg ? `Đang tạo ${batchProg.d}/${batchProg.t}${batchProg.name ? ` · ${batchProg.name}` : ''}` : 'Đang tạo thẻ...'}</>
-                : <><Sparkles className="w-4 h-4" /> {multi ? `Tạo ${checked.length + (manualName.trim() ? 1 : 0)} thẻ (song song)` : 'Tạo thẻ nhân vật'}</>}
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> {batchProg ? fmt(ui.s2cGenerating, { d: batchProg.d, t: batchProg.t }) + (batchProg.name ? ` · ${batchProg.name}` : '') : ui.s2cGeneratingCard}</>
+                : <><Sparkles className="w-4 h-4" /> {multi ? fmt(ui.s2cGenMany, { count: checked.length + (manualName.trim() ? 1 : 0) }) : ui.s2cGenOne}</>}
             </button>
             {generating && (
               <button onClick={stopWork}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-white"
-                style={{ background: '#ef4444', border: 'none', cursor: 'pointer' }}>■ Dừng</button>
+                style={{ background: '#ef4444', border: 'none', cursor: 'pointer' }}>{ui.s2cStop}</button>
             )}
           </div>
         </section>
@@ -326,8 +327,8 @@ function CardResult({ card, onApply, onApplyEntries }: {
 }) {
   return (
     <section className="rounded-xl border border-primary/40 bg-muted/20 p-4 space-y-3">
-      <div className="text-sm font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Thẻ: {card.name}</div>
-      {([['Mô tả (basic + persona)', card.description], ['Bối cảnh', card.scenario], ['Lời chào', card.firstMes]] as const)
+      <div className="text-sm font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> {ui.s2cCardLabel}{card.name}</div>
+      {([[ui.s2cFieldDesc, card.description], [ui.s2cFieldScenario, card.scenario], [ui.s2cFieldGreeting, card.firstMes]] as const)
         .filter(([, v]) => v)
         .map(([label, v]) => (
           <div key={label} className="rounded-lg border border-border/60 p-2.5">
@@ -347,11 +348,11 @@ function CardResult({ card, onApply, onApplyEntries }: {
       )}
       <div className="flex gap-2">
         <button onClick={onApply} className="px-4 py-2 rounded-md font-semibold text-white" style={{ background: '#22c55e', border: 'none', cursor: 'pointer' }}>
-          Áp dụng vào thẻ hiện tại
+          {ui.s2cApplyToCard}
         </button>
         {card.worldEntries.length > 0 && (
           <button onClick={() => onApplyEntries(card.worldEntries)} className="px-4 py-2 rounded-md font-semibold" style={{ background: 'transparent', color: '#fbbf24', border: '1px solid #fbbf24', cursor: 'pointer' }}>
-            Chỉ thêm entries vào Lorebook
+            {ui.s2cOnlyEntries}
           </button>
         )}
       </div>
