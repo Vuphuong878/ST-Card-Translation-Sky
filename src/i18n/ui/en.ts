@@ -15,6 +15,7 @@ const ui = {
   railCardCreator: 'Create Card',
   railPreset: 'Create Preset',
   railModCard: 'Mod Card',
+  railCrawler: 'Web Crawler',
   railExtract: 'Extract Card',
 
   // Toolbar của iframe tool

@@ -13,6 +13,7 @@ const ui: UiKeys = {
   railCardCreator: '创建卡',
   railPreset: '创建预设',
   railModCard: '改卡',
+  railCrawler: '网页爬虫',
   railExtract: '提取卡',
 
   // Toolbar
