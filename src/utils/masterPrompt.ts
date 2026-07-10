@@ -342,6 +342,19 @@ RULE L4 — Lorebook comment Field:
   It MUST be translated to the target language. Do NOT skip it even if it looks short or code-like.
   Examples: "角色初始化" → "Khởi tạo nhân vật", "战斗系统规则" → "Quy tắc hệ thống chiến đấu".
 
+  ⚠️ EXCEPTION — MVU FUNCTIONAL PREFIX (MUST PRESERVE EXACTLY):
+  If a comment/name STARTS WITH a bracketed MVU tag, that tag is a FUNCTIONAL routing/init marker
+  that the MVU framework matches literally. Keep the ENTIRE bracket + its inner tag byte-for-byte
+  and translate ONLY the label text that follows it.
+    - "[mvu_update]变量更新规则"  → "[mvu_update]Quy tắc cập nhật biến"   (NOT "[Cập nhật mvu]...")
+    - "[mvu_update]变量输出格式"  → "[mvu_update]Định dạng đầu ra biến"
+    - "[initvar]变量初始化勿开"   → "[initvar]Khởi tạo biến đừng bật"
+    - "[mvu_plot]剧情"           → "[mvu_plot]Cốt truyện"
+  The tags "[mvu_update]", "[initvar]", "[mvu_plot]" (and any "[mvu_*]") control which AI receives
+  the entry and whether MVU reads it. Dropping, translating, or altering the bracket tag BREAKS the
+  card: the entry loses its routing or its initial values are never applied. This overrides the
+  "translate everything" instruction ABOVE — only for the leading bracket tag, not the label after it.
+
 RULE L5 — Entry Name ↔ Text Synchronization (EJS Auto-Trigger):
   SillyTavern auto-loads lorebook entries when their EXACT NAME appears in the rendered text
   (including output from EJS templates). Each card designer implements this differently,
