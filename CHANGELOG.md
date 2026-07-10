@@ -2,6 +2,16 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.56.3 — Tạo Preset đã dịch xong EN + 中文 (Đợt 3) 🎛️
+> Tiếp nối v1.56.2. **Tạo Preset** giờ đổi ngôn ngữ theo nút VI/EN/中文 trên header của Hub.
+- **Toàn bộ giao diện Tạo Preset** đã có tiếng Anh & tiếng Trung: 4 bước (Tham số, Khối Prompts, Regex Scripts, Xuất bản JSON), bảng **Cài đặt** (API + Hành vi AI), và khung chat **ST Studio**.
+- **Bản Tiếng Việt giữ nguyên 100%** — đã mở trình duyệt đối chiếu cả 4 bước, không lệch một chữ.
+- **⚠️ Nội dung preset MẶC ĐỊNH không bị dịch.** Các khối như `impersonation_prompt`, `continue_nudge_prompt`, `"🎭 Đạo Diễn Hệ Thống"`… **đi thẳng vào file preset bạn xuất ra**, nên dù chọn EN hay 中文, file xuất ra vẫn y hệt bản gốc tiếng Việt. Đây là cố ý.
+- *An toàn:* **không đụng prompt AI**. Chừa nguyên các đoạn văn bản gửi cho AI trong khung chat: mẫu **"📋 Mẫu lịch trình"**, khối `[FILE PRESET MẪU ĐÍNH KÈM…]`, và 2 câu gợi ý khi bấm "Tạo Preset"/"Tạo Regex". Cũng chừa `contextBuilder` (dựng ngữ cảnh cho AI) và chuỗi `"Người dùng đã dừng"` (bị so bằng logic ở chỗ khác).
+- Tên trường của SillyTavern (`MarkdownOnly`, `PromptOnly`, `RunOnEdit`, `findRegex`, `replaceString`, `Before`/`After`) giữ nguyên ở mọi ngôn ngữ — dịch ra là không tra cứu được nữa.
+- *Kỹ thuật:* thêm `preset-tool/src/i18n/{en,vi,zh}` — `en` là **nguồn của kiểu**, thiếu key ở `vi`/`zh` là **lỗi biên dịch**. App thuần client nên ngôn ngữ chốt 1 lần lúc nạp (`?lang=` do Hub truyền → `localStorage` → mặc định `vi`), không có nguy cơ lệch hydration. tsc + build sạch; 108 test ở app gốc vẫn xanh.
+- **Tiếp theo:** Dịch Card → Tạo Card → Trích Card.
+
 ## v1.56.2 — Mod Card đã dịch xong EN + 中文 (Đợt 2) 🛠️
 > Tiếp nối v1.56.0. **Mod Card** giờ đổi ngôn ngữ theo nút VI/EN/中文 trên header của Hub.
 - **Toàn bộ giao diện Mod Card** đã có tiếng Anh & tiếng Trung: màn chính, bảng Diff, tab Cài đặt, và 5 panel con (tải thẻ, Mod Rules, đổi biến MVU-Zod, Đào sâu 1 phần, Provider bổ sung).

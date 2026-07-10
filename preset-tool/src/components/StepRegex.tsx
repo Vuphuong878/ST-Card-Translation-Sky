@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useApp } from '../storeContext';
 import { RegexScript } from '../types';
 import { Plus, Trash2, Edit3, Save, Eye, EyeOff, FileUp, Code, Upload, X } from 'lucide-react';
+import { t, fmt } from '../i18n';
 
 export const StepRegex: React.FC = () => {
   const { 
@@ -43,26 +44,26 @@ export const StepRegex: React.FC = () => {
   const handleSaveEdit = () => {
     if (editingId) {
       if (!editForm.scriptName?.trim()) {
-        addToast("Tên script không được trống!", "warning");
+        addToast(t.rxToastNameEmpty, "warning");
         return;
       }
       if (!editForm.findRegex?.trim()) {
-        addToast("Pattern Regex tìm kiếm không được trống!", "warning");
+        addToast(t.rxToastPatternEmpty, "warning");
         return;
       }
       updateRegexScript(editingId, editForm);
       setEditingId(null);
-      addToast("Đã lưu Regex Script thành công.", "success");
+      addToast(t.rxToastSaved, "success");
     }
   };
 
   const handleAddRegex = () => {
     if (!newForm.scriptName.trim()) {
-      addToast("Tên script không được trống!", "warning");
+      addToast(t.rxToastNameEmpty, "warning");
       return;
     }
     if (!newForm.findRegex.trim()) {
-      addToast("Pattern Regex tìm kiếm không được trống!", "warning");
+      addToast(t.rxToastPatternEmpty, "warning");
       return;
     }
     addRegexScript(newForm);
@@ -130,11 +131,11 @@ export const StepRegex: React.FC = () => {
           }
         });
         if (count > 0) {
-          addToast(`Đã nhập ${count} Regex Scripts thành công!`, 'success');
+          addToast(fmt(t.rxToastImported, { count }), 'success');
           setImportJSON('');
           setShowImport(false);
         } else {
-          addToast('Không tìm thấy Regex Script hợp lệ trong mảng.', 'error');
+          addToast(t.rxToastNoneInArray, 'error');
         }
         return;
       }
@@ -162,15 +163,15 @@ export const StepRegex: React.FC = () => {
         return;
       }
 
-      addToast('JSON không phải Regex Script hợp lệ (thiếu findRegex hoặc scriptName).', 'error');
+      addToast(t.rxToastNotRegex, 'error');
     } catch {
-      addToast('JSON không hợp lệ! Kiểm tra lại cú pháp.', 'error');
+      addToast(t.rxToastBadJson, 'error');
     }
   }, [addRegexScript, addToast]);
 
   const handleFileImport = useCallback((file: File) => {
     if (!file.name.endsWith('.json')) {
-      addToast('Chỉ hỗ trợ file .json!', 'error');
+      addToast(t.toastOnlyJson, 'error');
       return;
     }
     const reader = new FileReader();
@@ -218,9 +219,9 @@ export const StepRegex: React.FC = () => {
       {/* Step Header */}
       <div className="flex flex-wrap justify-between items-center gap-3 bg-theme-panel border border-theme-border rounded-xl p-4">
         <div>
-          <h3 className="text-sm font-semibold text-cyan-400">🔍 Quản lý danh sách các Regex Scripts</h3>
+          <h3 className="text-sm font-semibold text-cyan-400">{t.rxHeader}</h3>
           <p className="text-xs text-gray-400 mt-1">
-            Dự án hiện tại chứa <span className="text-cyan-400 font-bold">{regexes.length}</span> kịch bản Regex. Bạn có thể bật/tắt hoặc yêu cầu AI thiết kế thêm các bộ lọc làm đẹp UI.
+            {t.rxSubtitleA}<span className="text-cyan-400 font-bold">{regexes.length}</span>{t.rxSubtitleB}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -233,14 +234,14 @@ export const StepRegex: React.FC = () => {
             }`}
           >
             <Upload size={14} />
-            Nhập JSON
+            {t.rxImportJson}
           </button>
           <button
             onClick={() => setIsAdding(!isAdding)}
             className="flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-600 active:bg-cyan-700 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition shadow-md shadow-cyan-500/10"
           >
             <Plus size={14} />
-            Tạo Regex mới
+            {t.rxAddNew}
           </button>
         </div>
       </div>
@@ -251,7 +252,7 @@ export const StepRegex: React.FC = () => {
           <div className="flex items-center justify-between px-5 py-3 border-b border-theme-border bg-gray-900/40">
             <div className="flex items-center gap-2">
               <Code size={14} className="text-emerald-400" />
-              <span className="text-xs font-bold text-gray-200 uppercase tracking-wider">Nhập Regex Script từ JSON</span>
+              <span className="text-xs font-bold text-gray-200 uppercase tracking-wider">{t.rxImportTitle}</span>
             </div>
             <button onClick={() => { setShowImport(false); setImportJSON(''); }} className="p-1.5 text-gray-500 hover:text-gray-300 hover:bg-gray-800 rounded-lg transition">
               <X size={14} />
@@ -274,18 +275,18 @@ export const StepRegex: React.FC = () => {
               <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileSelect} className="hidden" />
               <FileUp size={22} className={`inline-block mb-2 transition-colors ${isDragOver ? 'text-emerald-300' : 'text-gray-500 group-hover:text-emerald-400'}`} />
               <p className={`text-xs font-bold ${isDragOver ? 'text-emerald-300' : 'text-gray-400'}`}>
-                {isDragOver ? 'Thả file JSON vào đây!' : 'Kéo thả file .json hoặc nhấp để chọn'}
+                {isDragOver ? t.rxDropActive : t.rxDropIdle}
               </p>
             </div>
 
             {/* JSON paste textarea */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-gray-400">Hoặc dán JSON trực tiếp:</label>
+              <label className="block text-xs font-semibold text-gray-400">{t.rxPasteLabel}</label>
               <textarea
                 rows={8}
                 value={importJSON}
                 onChange={(e) => setImportJSON(e.target.value)}
-                placeholder={'Dán JSON regex script vào đây...\n\nVí dụ:\n{\n  "scriptName": "Tên Script",\n  "findRegex": "/pattern/flags",\n  "replaceString": "thay thế",\n  ...\n}'}
+                placeholder={t.rxPastePh}
                 className="w-full bg-gray-950 border border-theme-border rounded-lg p-3 text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-400 resize-y leading-relaxed"
               />
             </div>
@@ -295,15 +296,15 @@ export const StepRegex: React.FC = () => {
                 onClick={() => { setShowImport(false); setImportJSON(''); }}
                 className="text-xs font-semibold text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg transition"
               >
-                Hủy
+                {t.rxCancel}
               </button>
               <button
-                onClick={() => { if (importJSON.trim()) parseAndImportRegex(importJSON); else addToast('Chưa nhập JSON!', 'warning'); }}
+                onClick={() => { if (importJSON.trim()) parseAndImportRegex(importJSON); else addToast(t.rxToastNoJson, 'warning'); }}
                 disabled={!importJSON.trim()}
                 className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow-lg shadow-emerald-500/10"
               >
                 <Upload size={13} />
-                Nhập vào Dự Án
+                {t.rxImportBtn}
               </button>
             </div>
           </div>
@@ -313,28 +314,28 @@ export const StepRegex: React.FC = () => {
       {/* Add New Regex Form */}
       {isAdding && (
         <div className="bg-theme-panel border border-cyan-500/30 rounded-xl p-5 space-y-4 animate-fade-in">
-          <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider">🌟 Tạo Regex Script Mới</h4>
+          <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider">{t.rxNewTitle}</h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label htmlFor="add-r-name" className="block text-xs font-semibold text-gray-400">Tên Script</label>
+              <label htmlFor="add-r-name" className="block text-xs font-semibold text-gray-400">{t.rxName}</label>
               <input
                 id="add-r-name"
                 type="text"
                 value={newForm.scriptName}
                 onChange={(e) => setNewForm(prev => ({ ...prev, scriptName: e.target.value }))}
-                placeholder="Ví dụ: Làm đẹp Collapsible Lịch trình, Lọc thẻ Thought..."
+                placeholder={t.rxNamePh}
                 className="w-full bg-gray-900 border border-theme-border rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-cyan-400"
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="add-r-pattern" className="block text-xs font-semibold text-gray-400">Pattern Tìm Kiếm (findRegex)</label>
+              <label htmlFor="add-r-pattern" className="block text-xs font-semibold text-gray-400">{t.rxPattern}</label>
               <textarea
                 id="add-r-pattern"
                 rows={2}
                 value={newForm.findRegex}
                 onChange={(e) => setNewForm(prev => ({ ...prev, findRegex: e.target.value }))}
-                placeholder="Ví dụ: /<calendar_widget>([\s\S]*?)<\/calendar_widget>/"
+                placeholder={t.rxPatternPh}
                 className="w-full bg-gray-900 border border-theme-border rounded-lg px-3 py-2 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-400 resize-y"
               />
             </div>
@@ -343,7 +344,7 @@ export const StepRegex: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-900/40 p-3 rounded-lg border border-theme-border/50">
             {/* Placement checkbox */}
             <div className="space-y-2">
-              <span className="block text-[10px] font-bold text-gray-500 uppercase">Đối tượng áp dụng</span>
+              <span className="block text-[10px] font-bold text-gray-500 uppercase">{t.rxPlacement}</span>
               <div className="flex gap-3">
                 <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
                   <input
@@ -352,7 +353,7 @@ export const StepRegex: React.FC = () => {
                     onChange={() => togglePlacement(1, true)}
                     className="rounded text-cyan-400 bg-gray-900 border-theme-border w-3.5 h-3.5"
                   />
-                  User input (1)
+                  {t.rxUserInput1}
                 </label>
                 <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
                   <input
@@ -361,7 +362,7 @@ export const StepRegex: React.FC = () => {
                     onChange={() => togglePlacement(2, true)}
                     className="rounded text-cyan-400 bg-gray-900 border-theme-border w-3.5 h-3.5"
                   />
-                  AI Output (2)
+                  {t.rxAiOutput2}
                 </label>
               </div>
             </div>
@@ -377,7 +378,7 @@ export const StepRegex: React.FC = () => {
               />
               <div className="space-y-0.5">
                 <label htmlFor="add-r-md" className="text-xs text-gray-300 font-semibold cursor-pointer">MarkdownOnly</label>
-                <span className="block text-[9px] text-gray-500">Cho phép render HTML</span>
+                <span className="block text-[9px] text-gray-500">{t.rxMdOnlyHint}</span>
               </div>
             </div>
 
@@ -392,7 +393,7 @@ export const StepRegex: React.FC = () => {
               />
               <div className="space-y-0.5">
                 <label htmlFor="add-r-prompt" className="text-xs text-gray-300 font-semibold cursor-pointer">PromptOnly</label>
-                <span className="block text-[9px] text-gray-500">Chỉ lọc text gửi đi</span>
+                <span className="block text-[9px] text-gray-500">{t.rxPromptOnlyHint}</span>
               </div>
             </div>
 
@@ -407,19 +408,19 @@ export const StepRegex: React.FC = () => {
               />
               <div className="space-y-0.5">
                 <label htmlFor="add-r-edit" className="text-xs text-gray-300 font-semibold cursor-pointer">RunOnEdit</label>
-                <span className="block text-[9px] text-gray-500">Chạy khi sửa tin RP</span>
+                <span className="block text-[9px] text-gray-500">{t.rxRunOnEditHint}</span>
               </div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="add-r-replace" className="block text-xs font-semibold text-gray-400">Chuỗi Thay Thế (replaceString / Hỗ trợ HTML & inline CSS)</label>
+            <label htmlFor="add-r-replace" className="block text-xs font-semibold text-gray-400">{t.rxReplace}</label>
             <textarea
               id="add-r-replace"
               rows={5}
               value={newForm.replaceString}
               onChange={(e) => setNewForm(prev => ({ ...prev, replaceString: e.target.value }))}
-              placeholder="Chuỗi thay thế hoặc đoạn code HTML inline để làm đẹp giao diện, sử dụng $1, $2 để hứng capture groups..."
+              placeholder={t.rxReplacePh}
               className="w-full bg-gray-900 border border-theme-border rounded-lg p-3 text-xs text-gray-200 font-mono focus:outline-none focus:border-cyan-400 resize-y"
             />
           </div>
@@ -429,13 +430,13 @@ export const StepRegex: React.FC = () => {
               onClick={() => setIsAdding(false)}
               className="text-xs font-semibold text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg transition"
             >
-              Hủy bỏ
+              {t.rxCancelAdd}
             </button>
             <button
               onClick={handleAddRegex}
               className="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold text-xs px-4 py-2 rounded-lg transition"
             >
-              Hoàn tất thêm
+              {t.rxFinishAdd}
             </button>
           </div>
         </div>
@@ -445,12 +446,12 @@ export const StepRegex: React.FC = () => {
       <div className="space-y-4">
         {regexes.length === 0 ? (
           <div className="bg-theme-panel border border-theme-border/50 rounded-xl p-8 text-center text-gray-500">
-            <p className="text-xs italic">Chưa có Regex Script nào được tạo cho dự án này.</p>
+            <p className="text-xs italic">{t.rxEmpty}</p>
             <button
               onClick={() => setIsAdding(true)}
               className="text-xs font-bold text-cyan-400 hover:underline mt-2 inline-block"
             >
-              + Bấm vào đây để tạo Regex đầu tiên
+              {t.rxEmptyCta}
             </button>
           </div>
         ) : (
@@ -484,12 +485,12 @@ export const StepRegex: React.FC = () => {
                         <span className="font-bold text-gray-200 text-xs sm:text-sm">{r.scriptName}</span>
                         {!isToggledOn && (
                           <span className="bg-gray-800 text-gray-500 border border-theme-border font-mono text-[9px] px-1.5 py-0.5 rounded font-bold">
-                            Đã tắt
+                            {t.rxDisabled}
                           </span>
                         )}
                         {r.markdownOnly && (
                           <span className="bg-cyan-950/60 text-cyan-300 border border-cyan-800/40 font-mono text-[9px] px-1.5 py-0.5 rounded font-bold">
-                            HTML Render UI
+                            {t.rxHtmlRender}
                           </span>
                         )}
                       </div>
@@ -498,7 +499,7 @@ export const StepRegex: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-x-2 text-[10px] text-gray-500 mt-1 font-mono">
                       <span>ID: {r.id}</span>
                       <span>•</span>
-                      <span className="text-cyan-400">Pattern: {isEditing ? '(xem bên dưới)' : (
+                      <span className="text-cyan-400">Pattern: {isEditing ? t.rxSeeBelow : (
                         <span className="break-all">{r.findRegex}</span>
                       )}</span>
                     </div>
@@ -514,7 +515,7 @@ export const StepRegex: React.FC = () => {
                           ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20' 
                           : 'bg-gray-900 border-theme-border text-gray-500 hover:text-gray-300'
                       }`}
-                      title={isToggledOn ? "Tắt Regex script" : "Bật Regex script"}
+                      title={isToggledOn ? t.rxToggleOff : t.rxToggleOn}
                     >
                       {isToggledOn ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
@@ -526,13 +527,13 @@ export const StepRegex: React.FC = () => {
                         className="flex items-center gap-1 bg-green-500/20 border border-green-500/40 text-green-400 hover:bg-green-500/30 font-semibold text-xs px-2.5 py-1.5 rounded-lg transition"
                       >
                         <Save size={12} />
-                        Lưu
+                        {t.rxSave}
                       </button>
                     ) : (
                       <button
                         onClick={() => handleStartEdit(r)}
                         className="p-1.5 rounded-lg border border-theme-border text-gray-400 hover:text-cyan-400 hover:border-cyan-500/20 transition"
-                        title="Sửa Regex"
+                        title={t.rxEditTitle}
                       >
                         <Edit3 size={14} />
                       </button>
@@ -541,12 +542,12 @@ export const StepRegex: React.FC = () => {
                     {/* Delete button */}
                     <button
                       onClick={() => {
-                        if (confirm(`Bạn muốn xóa Regex Script "${r.scriptName}" chứ?`)) {
+                        if (confirm(fmt(t.rxConfirmDelete, { name: r.scriptName }))) {
                           deleteRegexScript(r.id);
                         }
                       }}
                       className="p-1.5 rounded-lg border border-theme-border text-gray-500 hover:text-red-400 hover:border-red-500/20 transition"
-                      title="Xóa Regex script"
+                      title={t.rxDeleteTitle}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -565,7 +566,7 @@ export const StepRegex: React.FC = () => {
                             onChange={() => togglePlacement(1)}
                             className="rounded text-cyan-400 bg-gray-900 border-theme-border w-3.5 h-3.5"
                           />
-                          User Input (1)
+                          {t.rxUserInputCap}
                         </label>
                         <label className="flex items-center gap-1.5 text-gray-300 cursor-pointer">
                           <input
@@ -574,7 +575,7 @@ export const StepRegex: React.FC = () => {
                             onChange={() => togglePlacement(2)}
                             className="rounded text-cyan-400 bg-gray-900 border-theme-border w-3.5 h-3.5"
                           />
-                          AI Output (2)
+                          {t.rxAiOutput2}
                         </label>
                         <label className="flex items-center gap-1.5 text-gray-300 cursor-pointer">
                           <input
@@ -597,7 +598,7 @@ export const StepRegex: React.FC = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Pattern Tìm Kiếm (findRegex):</label>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t.rxEditPatternLabel}</label>
                         <textarea
                           rows={3}
                           value={editForm.findRegex || ''}
@@ -607,7 +608,7 @@ export const StepRegex: React.FC = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Chuỗi Thay Thế (replaceString):</label>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t.rxEditReplaceLabel}</label>
                         <textarea
                           rows={8}
                           value={editForm.replaceString || ''}
@@ -618,9 +619,9 @@ export const StepRegex: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Chuỗi thay thế (replaceString):</span>
+                      <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t.rxViewReplaceLabel}</span>
                       <div className="text-xs text-gray-300 font-mono whitespace-pre-wrap line-clamp-5 bg-gray-900/20 border border-theme-border/30 rounded-lg p-3 overflow-y-auto max-h-40">
-                        {r.replaceString || <span className="italic text-gray-600">Thay thế thành chuỗi rỗng...</span>}
+                        {r.replaceString || <span className="italic text-gray-600">{t.rxEmptyReplace}</span>}
                       </div>
                     </div>
                   )}

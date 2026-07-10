@@ -127,7 +127,7 @@ function App() {
                   : 'hover:text-gray-200'
               }`}
             >
-              Preset Mode
+              {t.presetMode}
             </button>
             <button
               onClick={() => setAppMode('regex')}
@@ -137,7 +137,7 @@ function App() {
                   : 'hover:text-gray-200'
               }`}
             >
-              Regex Mode
+              {t.regexMode}
             </button>
           </div>
 

@@ -35,3 +35,7 @@ translation_debug.log
 dev_data/*.html
 dev_data/*.js
 dev_data/message.txt
+dev_data/*.json
+dev_data/message*.txt
+tsconfig.tsbuildinfo
+*.tsbuildinfo

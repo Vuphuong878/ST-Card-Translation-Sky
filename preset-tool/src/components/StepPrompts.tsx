@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../storeContext';
 import { PromptBlock } from '../types';
 import { Plus, Trash2, Edit3, Save, Eye, EyeOff, ArrowUp, ArrowDown } from 'lucide-react';
+import { t, fmt } from '../i18n';
 
 export const StepPrompts: React.FC = () => {
   const { 
@@ -41,18 +42,18 @@ export const StepPrompts: React.FC = () => {
   const handleSaveEdit = () => {
     if (editingId) {
       if (!editForm.name?.trim()) {
-        addToast("Tên prompt không được để trống!", "warning");
+        addToast(t.pbToastNameEmpty, "warning");
         return;
       }
       updatePromptBlock(editingId, editForm);
       setEditingId(null);
-      addToast("Đã lưu prompt block thành công.", "success");
+      addToast(t.pbToastSaved, "success");
     }
   };
 
   const handleAddPrompt = () => {
     if (!newForm.name.trim()) {
-      addToast("Tên prompt không được để trống!", "warning");
+      addToast(t.pbToastNameEmpty, "warning");
       return;
     }
     addPromptBlock(newForm);
@@ -87,9 +88,9 @@ export const StepPrompts: React.FC = () => {
       {/* Step Header */}
       <div className="flex justify-between items-center bg-theme-panel border border-theme-border rounded-xl p-4">
         <div>
-          <h3 className="text-sm font-semibold text-purple-400">📝 Quản lý danh sách các Prompt Blocks</h3>
+          <h3 className="text-sm font-semibold text-purple-400">{t.pbHeader}</h3>
           <p className="text-xs text-gray-400 mt-1">
-            Preset của bạn hiện chứa <span className="text-purple-400 font-bold">{prompts.length}</span> khối lệnh. AI có thể chèn các chỉ thị này ở các vị trí, độ sâu khác nhau trong context.
+            {t.pbSubtitleA}<span className="text-purple-400 font-bold">{prompts.length}</span>{t.pbSubtitleB}
           </p>
         </div>
         <button
@@ -97,42 +98,42 @@ export const StepPrompts: React.FC = () => {
           className="flex items-center gap-1.5 bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition"
         >
           <Plus size={14} />
-          Thêm Block mới
+          {t.pbAddBlock}
         </button>
       </div>
 
       {/* Add New Prompt Form */}
       {isAdding && (
         <div className="bg-theme-panel border border-purple-500/30 rounded-xl p-5 space-y-4 animate-fade-in">
-          <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider">🌟 Tạo Prompt Block Mới</h4>
+          <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider">{t.pbNewTitle}</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label htmlFor="add-p-name" className="block text-xs font-semibold text-gray-400">Tên Prompt</label>
+              <label htmlFor="add-p-name" className="block text-xs font-semibold text-gray-400">{t.pbName}</label>
               <input
                 id="add-p-name"
                 type="text"
                 value={newForm.name}
                 onChange={(e) => setNewForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Ví dụ: 📜 Luật Hội Thoại, 🚫 Chống Metagame..."
+                placeholder={t.pbNamePh}
                 className="w-full bg-gray-900 border border-theme-border rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-purple-400"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-2">
-                <label htmlFor="add-p-role" className="block text-xs font-semibold text-gray-400">Vai trò (Role)</label>
+                <label htmlFor="add-p-role" className="block text-xs font-semibold text-gray-400">{t.pbRole}</label>
                 <select
                   id="add-p-role"
                   value={newForm.role}
                   onChange={(e) => setNewForm(prev => ({ ...prev, role: e.target.value as PromptBlock['role'] }))}
                   className="w-full bg-gray-900 border border-theme-border rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-purple-400"
                 >
-                  <option value="system">System (Hệ thống)</option>
-                  <option value="user">User (Người chơi)</option>
-                  <option value="assistant">Assistant (AI)</option>
+                  <option value="system">{t.pbRoleSystem}</option>
+                  <option value="user">{t.pbRoleUser}</option>
+                  <option value="assistant">{t.pbRoleAssistant}</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <label htmlFor="add-p-order" className="block text-xs font-semibold text-gray-400">Thứ tự tiêm (Order)</label>
+                <label htmlFor="add-p-order" className="block text-xs font-semibold text-gray-400">{t.pbOrder}</label>
                 <input
                   id="add-p-order"
                   type="number"
@@ -146,19 +147,19 @@ export const StepPrompts: React.FC = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="space-y-2">
-              <label htmlFor="add-p-pos" className="block text-xs font-semibold text-gray-400">Vị trí tiêm (Pos)</label>
+              <label htmlFor="add-p-pos" className="block text-xs font-semibold text-gray-400">{t.pbPos}</label>
               <select
                 id="add-p-pos"
                 value={newForm.injection_position}
                 onChange={(e) => setNewForm(prev => ({ ...prev, injection_position: parseInt(e.target.value) || 0 }))}
                 className="w-full bg-gray-900 border border-theme-border rounded-lg px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-400"
               >
-                <option value="0">Trước (Before)</option>
-                <option value="1">Sau (After)</option>
+                <option value="0">{t.pbPosBefore}</option>
+                <option value="1">{t.pbPosAfter}</option>
               </select>
             </div>
             <div className="space-y-2">
-              <label htmlFor="add-p-depth" className="block text-xs font-semibold text-gray-400">Độ sâu tiêm (Depth)</label>
+              <label htmlFor="add-p-depth" className="block text-xs font-semibold text-gray-400">{t.pbDepth}</label>
               <input
                 id="add-p-depth"
                 type="number"
@@ -175,7 +176,7 @@ export const StepPrompts: React.FC = () => {
                 onChange={(e) => setNewForm(prev => ({ ...prev, system_prompt: e.target.checked }))}
                 className="w-4 h-4 rounded text-purple-400 bg-gray-900 border-theme-border"
               />
-              <label htmlFor="add-p-sysprompt" className="text-xs text-gray-300 font-semibold cursor-pointer">System Prompt</label>
+              <label htmlFor="add-p-sysprompt" className="text-xs text-gray-300 font-semibold cursor-pointer">{t.pbSystemPrompt}</label>
             </div>
             <div className="flex items-center gap-2 pt-6">
               <input
@@ -185,18 +186,18 @@ export const StepPrompts: React.FC = () => {
                 onChange={(e) => setNewForm(prev => ({ ...prev, forbid_overrides: e.target.checked }))}
                 className="w-4 h-4 rounded text-purple-400 bg-gray-900 border-theme-border"
               />
-              <label htmlFor="add-p-forbid" className="text-xs text-gray-300 font-semibold cursor-pointer">Cấm ghi đè</label>
+              <label htmlFor="add-p-forbid" className="text-xs text-gray-300 font-semibold cursor-pointer">{t.pbForbid}</label>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="add-p-content" className="block text-xs font-semibold text-gray-400">Nội dung chỉ thị (Content)</label>
+            <label htmlFor="add-p-content" className="block text-xs font-semibold text-gray-400">{t.pbContent}</label>
             <textarea
               id="add-p-content"
               rows={4}
               value={newForm.content}
               onChange={(e) => setNewForm(prev => ({ ...prev, content: e.target.value }))}
-              placeholder="Nhập nội dung chỉ thị chi tiết cho mô hình..."
+              placeholder={t.pbContentPh}
               className="w-full bg-gray-900 border border-theme-border rounded-lg p-3 text-xs text-gray-200 font-mono focus:outline-none focus:border-purple-400 resize-y"
             />
           </div>
@@ -206,13 +207,13 @@ export const StepPrompts: React.FC = () => {
               onClick={() => setIsAdding(false)}
               className="text-xs font-semibold text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg transition"
             >
-              Hủy bỏ
+              {t.pbCancel}
             </button>
             <button
               onClick={handleAddPrompt}
               className="bg-purple-500 hover:bg-purple-600 text-white font-semibold text-xs px-4 py-2 rounded-lg transition"
             >
-              Hoàn tất thêm
+              {t.pbFinishAdd}
             </button>
           </div>
         </div>
@@ -269,12 +270,12 @@ export const StepPrompts: React.FC = () => {
                         <span className="font-bold text-gray-200 text-xs sm:text-sm">{p.name}</span>
                         {isMarker && (
                           <span className="bg-purple-950/60 text-purple-300 border border-purple-800/40 font-mono text-[9px] px-1.5 py-0.5 rounded font-bold">
-                            Anchor Hệ Thống
+                            {t.pbAnchor}
                           </span>
                         )}
                         {!isMarker && p.system_prompt && (
                           <span className="bg-gray-800 text-gray-300 font-mono text-[9px] px-1.5 py-0.5 rounded font-bold">
-                            System
+                            {t.pbTagSystem}
                           </span>
                         )}
                       </div>
@@ -286,9 +287,9 @@ export const StepPrompts: React.FC = () => {
                       <span>•</span>
                       <span>Role: {p.role}</span>
                       <span>•</span>
-                      <span>Vị trí: {p.injection_position === 0 ? 'Before' : 'After'}</span>
+                      <span>{t.pbLblPos} {p.injection_position === 0 ? t.pbBefore : t.pbAfter}</span>
                       <span>•</span>
-                      <span>Độ sâu: {p.injection_depth}</span>
+                      <span>{t.pbLblDepth} {p.injection_depth}</span>
                       <span>•</span>
                       <span>Order: {p.injection_order}</span>
                     </div>
@@ -305,7 +306,7 @@ export const StepPrompts: React.FC = () => {
                         ? 'bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20' 
                         : 'bg-gray-900 border-theme-border text-gray-500 hover:text-gray-300'
                     }`}
-                    title={p.enabled ? "Tắt prompt block" : "Bật prompt block"}
+                    title={p.enabled ? t.pbToggleOff : t.pbToggleOn}
                   >
                     {p.enabled ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
@@ -317,13 +318,13 @@ export const StepPrompts: React.FC = () => {
                       className="flex items-center gap-1 bg-green-500/20 border border-green-500/40 text-green-400 hover:bg-green-500/30 font-semibold text-xs px-2.5 py-1.5 rounded-lg transition"
                     >
                       <Save size={12} />
-                      Lưu
+                      {t.pbSave}
                     </button>
                   ) : (
                     <button
                       onClick={() => handleStartEdit(p)}
                       className="p-1.5 rounded-lg border border-theme-border text-gray-400 hover:text-purple-400 hover:border-purple-500/20 transition"
-                      title="Sửa prompt"
+                      title={t.pbEditTitle}
                     >
                       <Edit3 size={14} />
                     </button>
@@ -333,12 +334,12 @@ export const StepPrompts: React.FC = () => {
                   {!isMarker && (
                     <button
                       onClick={() => {
-                        if (confirm(`Bạn chắc chắn muốn xóa Prompt Block "${p.name}" chứ?`)) {
+                        if (confirm(fmt(t.pbConfirmDelete, { name: p.name }))) {
                           deletePromptBlock(p.identifier);
                         }
                       }}
                       className="p-1.5 rounded-lg border border-theme-border text-gray-500 hover:text-red-400 hover:border-red-500/20 transition"
-                      title="Xóa prompt block"
+                      title={t.pbDeleteTitle}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -353,18 +354,18 @@ export const StepPrompts: React.FC = () => {
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         <div>
-                          <label className="text-[10px] text-gray-500 block mb-1">Vị trí chèn</label>
+                          <label className="text-[10px] text-gray-500 block mb-1">{t.pbEditPos}</label>
                           <select
                             value={editForm.injection_position}
                             onChange={(e) => setEditForm(prev => ({ ...prev, injection_position: parseInt(e.target.value) || 0 }))}
                             className="w-full bg-gray-900 border border-theme-border rounded px-2 py-1 text-gray-300 focus:outline-none"
                           >
-                            <option value="0">Before (Trước)</option>
-                            <option value="1">After (Sau)</option>
+                            <option value="0">{t.pbEditPosBefore}</option>
+                            <option value="1">{t.pbEditPosAfter}</option>
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] text-gray-500 block mb-1">Độ sâu chèn</label>
+                          <label className="text-[10px] text-gray-500 block mb-1">{t.pbEditDepth}</label>
                           <input
                             type="number"
                             value={editForm.injection_depth}
@@ -373,7 +374,7 @@ export const StepPrompts: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-gray-500 block mb-1">Thứ tự chèn</label>
+                          <label className="text-[10px] text-gray-500 block mb-1">{t.pbEditOrder}</label>
                           <input
                             type="number"
                             value={editForm.injection_order}
@@ -382,7 +383,7 @@ export const StepPrompts: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-gray-500 block mb-1">Quy định</label>
+                          <label className="text-[10px] text-gray-500 block mb-1">{t.pbEditRules}</label>
                           <div className="flex items-center gap-1.5 mt-2">
                             <input
                               id={`edit-forbid-${p.identifier}`}
@@ -391,7 +392,7 @@ export const StepPrompts: React.FC = () => {
                               onChange={(e) => setEditForm(prev => ({ ...prev, forbid_overrides: e.target.checked }))}
                               className="rounded text-purple-400 bg-gray-900 border-theme-border w-3.5 h-3.5"
                             />
-                            <label htmlFor={`edit-forbid-${p.identifier}`} className="text-[10px] text-gray-400 font-semibold cursor-pointer">Khóa ghi đè</label>
+                            <label htmlFor={`edit-forbid-${p.identifier}`} className="text-[10px] text-gray-400 font-semibold cursor-pointer">{t.pbLockOverride}</label>
                           </div>
                         </div>
                       </div>
@@ -405,7 +406,7 @@ export const StepPrompts: React.FC = () => {
                     </div>
                   ) : (
                     <div className="text-xs text-gray-300 font-mono whitespace-pre-wrap line-clamp-6 bg-gray-900/20 border border-theme-border/30 rounded-lg p-3 overflow-y-auto max-h-40">
-                      {p.content || <span className="italic text-gray-600">Nội dung trống...</span>}
+                      {p.content || <span className="italic text-gray-600">{t.pbEmptyContent}</span>}
                     </div>
                   )}
                 </div>

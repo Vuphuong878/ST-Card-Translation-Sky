@@ -3,6 +3,7 @@ import { useApp } from '../storeContext';
 import { highlightJSON } from '../utils/parser';
 import { SillyTavernPreset } from '../types';
 import { Copy, Download, Check, FileCode, AlertTriangle, Upload, FileUp, Eye, ArrowDownToLine, X } from 'lucide-react';
+import { t, fmt } from '../i18n';
 
 type ImportedFileData = {
   fileName: string;
@@ -48,10 +49,10 @@ function detectFileType(data: unknown): 'preset' | 'regex' | 'regex_array' | 'un
 
 function getFileTypeLabel(type: string): string {
   switch (type) {
-    case 'preset': return '🎭 SillyTavern Preset';
-    case 'regex': return '🔍 Regex Script';
-    case 'regex_array': return '🔍 Danh sách Regex Scripts';
-    default: return '❓ Không xác định';
+    case 'preset': return t.exTypePreset;
+    case 'regex': return t.exTypeRegex;
+    case 'regex_array': return t.exTypeRegexArray;
+    default: return t.exTypeUnknown;
   }
 }
 
@@ -93,7 +94,7 @@ export const StepExport: React.FC = () => {
   const handleCopy = () => {
     navigator.clipboard.writeText(JSON.stringify(activeJSONData, null, 2));
     setCopied(true);
-    addToast("Đã sao chép vào bộ nhớ tạm!", "success");
+    addToast(t.exToastCopied, "success");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -112,13 +113,13 @@ export const StepExport: React.FC = () => {
     a.download = `${cleanName}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    addToast(`Đã tải về file ${cleanName}.json`, "success");
+    addToast(fmt(t.exToastDownloaded, { name: cleanName }), "success");
   };
 
   // === FILE IMPORT LOGIC ===
   const processFile = useCallback((file: File) => {
     if (!file.name.endsWith('.json')) {
-      addToast("Chỉ hỗ trợ file .json!", "error");
+      addToast(t.toastOnlyJson, "error");
       return;
     }
 
@@ -136,13 +137,13 @@ export const StepExport: React.FC = () => {
           rawJSON: content,
         });
         setShowPreview(true);
-        addToast(`Đã đọc file "${file.name}" thành công!`, "success");
+        addToast(fmt(t.exToastReadOk, { name: file.name }), "success");
       } catch {
-        addToast(`File "${file.name}" không phải JSON hợp lệ!`, "error");
+        addToast(fmt(t.toastBadJson, { name: file.name }), "error");
       }
     };
     reader.onerror = () => {
-      addToast("Không thể đọc file!", "error");
+      addToast(t.exToastReadFail, "error");
     };
     reader.readAsText(file);
   }, [addToast]);
@@ -244,7 +245,7 @@ export const StepExport: React.FC = () => {
         updatePresetParams(paramUpdates as Partial<SillyTavernPreset>);
       }
 
-      addToast(`Đã thêm ${addedPrompts} prompt blocks${addedRegexes > 0 ? ` và ${addedRegexes} regex scripts` : ''} vào dự án!`, 'success');
+      addToast(fmt(t.exToastAddedPrompts, { count: addedPrompts, extra: addedRegexes > 0 ? fmt(t.exToastAddedRegexSuffix, { count: addedRegexes }) : '' }), 'success');
 
     } else if (importedFile.fileType === 'regex') {
       const r = data as Record<string, unknown>;
@@ -263,7 +264,7 @@ export const StepExport: React.FC = () => {
         maxDepth: typeof r.maxDepth === 'number' ? r.maxDepth : null,
         id: String(r.id || undefined),
       });
-      addToast(`Đã thêm Regex Script vào dự án!`, 'success');
+      addToast(t.exToastAddedRegex, 'success');
 
     } else if (importedFile.fileType === 'regex_array') {
       const arr = data as Record<string, unknown>[];
@@ -284,10 +285,10 @@ export const StepExport: React.FC = () => {
           id: String(r.id || undefined),
         });
       });
-      addToast(`Đã thêm ${arr.length} Regex Scripts vào dự án!`, 'success');
+      addToast(fmt(t.exToastAddedRegexes, { count: arr.length }), 'success');
 
     } else {
-      addToast('Không nhận diện được loại dữ liệu trong file.', 'error');
+      addToast(t.exToastUnknownType, 'error');
     }
 
     setImportedFile(null);
@@ -306,7 +307,7 @@ export const StepExport: React.FC = () => {
       <div className="bg-theme-panel border border-theme-border rounded-xl overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-3.5 border-b border-theme-border bg-gray-900/40">
           <Upload size={16} className="text-emerald-400" />
-          <span className="text-xs font-bold text-gray-200 uppercase tracking-wider">Nhập Preset / Regex từ File JSON</span>
+          <span className="text-xs font-bold text-gray-200 uppercase tracking-wider">{t.exImportTitle}</span>
         </div>
 
         <div className="p-5 space-y-4">
@@ -339,10 +340,10 @@ export const StepExport: React.FC = () => {
             </div>
             
             <p className={`text-sm font-bold transition-colors ${isDragOver ? 'text-emerald-300' : 'text-gray-300'}`}>
-              {isDragOver ? 'Thả file vào đây!' : 'Kéo thả file JSON hoặc nhấp để chọn'}
+              {isDragOver ? t.exDropActive : t.exDropIdle}
             </p>
             <p className="text-[11px] text-gray-500 mt-1.5">
-              Hỗ trợ SillyTavern Preset (.json) và Regex Script (.json)
+              {t.exDropHint}
             </p>
           </div>
 
@@ -383,19 +384,19 @@ export const StepExport: React.FC = () => {
                   return (
                     <div className="grid grid-cols-3 gap-2">
                       <div className="p-2.5 bg-gray-950/50 rounded-lg border border-theme-border/40">
-                        <span className="block text-[9px] text-gray-500 uppercase font-bold">Khối Prompts</span>
+                        <span className="block text-[9px] text-gray-500 uppercase font-bold">{t.exStatPrompts}</span>
                         <span className="block text-xs font-bold text-purple-400 mt-0.5">
-                          {Array.isArray(pObj.prompts) ? (pObj.prompts as unknown[]).length : 0} blocks
+                          {fmt(t.exBlocksCount, { count: Array.isArray(pObj.prompts) ? (pObj.prompts as unknown[]).length : 0 })}
                         </span>
                       </div>
                       <div className="p-2.5 bg-gray-950/50 rounded-lg border border-theme-border/40">
-                        <span className="block text-[9px] text-gray-500 uppercase font-bold">Regex Scripts</span>
+                        <span className="block text-[9px] text-gray-500 uppercase font-bold">{t.exStatRegex}</span>
                         <span className="block text-xs font-bold text-cyan-400 mt-0.5">
-                          {regexCount} scripts
+                          {fmt(t.exScriptsCount, { count: regexCount })}
                         </span>
                       </div>
                       <div className="p-2.5 bg-gray-950/50 rounded-lg border border-theme-border/40">
-                        <span className="block text-[9px] text-gray-500 uppercase font-bold">Temperature</span>
+                        <span className="block text-[9px] text-gray-500 uppercase font-bold">{t.exStatTemp}</span>
                         <span className="block text-xs font-bold text-green-400 mt-0.5">
                           {typeof pObj.temperature === 'number' ? String(pObj.temperature) : 'N/A'}
                         </span>
@@ -405,15 +406,15 @@ export const StepExport: React.FC = () => {
                 })()}
                 {importedFile.fileType === 'regex_array' && (
                   <div className="p-2.5 bg-gray-950/50 rounded-lg border border-theme-border/40">
-                    <span className="block text-[9px] text-gray-500 uppercase font-bold">Số Regex Scripts</span>
+                    <span className="block text-[9px] text-gray-500 uppercase font-bold">{t.exStatRegexCount}</span>
                     <span className="block text-xs font-bold text-cyan-400 mt-0.5">
-                      {Array.isArray(importedFile.data) ? importedFile.data.length : 0} scripts
+                      {fmt(t.exScriptsCount, { count: Array.isArray(importedFile.data) ? importedFile.data.length : 0 })}
                     </span>
                   </div>
                 )}
                 {importedFile.fileType === 'regex' && (
                   <div className="p-2.5 bg-gray-950/50 rounded-lg border border-theme-border/40">
-                    <span className="block text-[9px] text-gray-500 uppercase font-bold">Script Name</span>
+                    <span className="block text-[9px] text-gray-500 uppercase font-bold">{t.exStatScriptName}</span>
                     <span className="block text-xs font-bold text-cyan-400 mt-0.5">
                       {String((importedFile.data as Record<string, unknown>)?.scriptName || 'N/A')}
                     </span>
@@ -424,7 +425,7 @@ export const StepExport: React.FC = () => {
               {/* Preview JSON (collapsed) */}
               <details className="mx-4 mb-3">
                 <summary className="text-[10px] text-gray-500 font-bold uppercase cursor-pointer hover:text-gray-300 transition py-1.5">
-                  ▸ Xem trước JSON ({(importedFile.rawJSON.length / 1024).toFixed(1)} KB)
+                  {fmt(t.exPreviewJson, { size: (importedFile.rawJSON.length / 1024).toFixed(1) })}
                 </summary>
                 <div className="mt-2 p-3 bg-gray-950 rounded-lg border border-theme-border/30 overflow-y-auto max-h-[250px] font-mono text-[11px] leading-relaxed select-text">
                   <pre 
@@ -439,7 +440,7 @@ export const StepExport: React.FC = () => {
                 {importedFile.fileType === 'unknown' && (
                   <div className="flex items-center gap-1.5 text-[10px] text-amber-400 flex-1">
                     <AlertTriangle size={12} />
-                    <span>Không xác định được loại file. Sẽ thử nhập như Preset.</span>
+                    <span>{t.exUnknownWarn}</span>
                   </div>
                 )}
                 <div className="flex-1" />
@@ -447,7 +448,7 @@ export const StepExport: React.FC = () => {
                   onClick={handleCancelImport}
                   className="px-3 py-2 text-[11px] font-bold text-gray-400 hover:text-gray-200 bg-gray-800 hover:bg-gray-700 border border-theme-border rounded-lg transition"
                 >
-                  Hủy
+                  {t.exCancel}
                 </button>
                 <button
                   onClick={handleImportConfirm}
@@ -455,10 +456,10 @@ export const StepExport: React.FC = () => {
                 >
                   <ArrowDownToLine size={13} />
                   {importedFile.fileType === 'preset' 
-                    ? 'Thêm Prompts & Regex Vào Dự Án' 
+                    ? t.exConfirmPreset
                     : importedFile.fileType === 'regex' || importedFile.fileType === 'regex_array'
-                      ? 'Thêm Regex Vào Dự Án'
-                      : 'Nhập Vào Dự Án'
+                      ? t.exConfirmRegex
+                      : t.exConfirmUnknown
                   }
                 </button>
               </div>
@@ -470,16 +471,16 @@ export const StepExport: React.FC = () => {
       {/* Overview stats */}
       <div className="bg-theme-panel border border-theme-border rounded-xl p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-3 bg-gray-900/40 rounded-lg border border-theme-border/50 space-y-1">
-          <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Tên Dự Án</span>
+          <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t.exOvName}</span>
           <span className="block text-xs font-bold text-gray-200 truncate">{activeProject.name}</span>
         </div>
         <div className="p-3 bg-gray-900/40 rounded-lg border border-theme-border/50 space-y-1">
-          <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Khối Chỉ Thị (Prompts)</span>
-          <span className="block text-xs font-bold text-purple-400">{presetJSON.prompts.length} blocks</span>
+          <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t.exOvPrompts}</span>
+          <span className="block text-xs font-bold text-purple-400">{fmt(t.exBlocksCount, { count: presetJSON.prompts.length })}</span>
         </div>
         <div className="p-3 bg-gray-900/40 rounded-lg border border-theme-border/50 space-y-1">
-          <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Bộ lọc Regex (Regexes)</span>
-          <span className="block text-xs font-bold text-cyan-400">{regexes.length} scripts</span>
+          <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t.exOvRegexes}</span>
+          <span className="block text-xs font-bold text-cyan-400">{fmt(t.exScriptsCount, { count: regexes.length })}</span>
         </div>
       </div>
 
@@ -496,7 +497,7 @@ export const StepExport: React.FC = () => {
             }`}
           >
             <FileCode size={14} />
-            Preset JSON
+            {t.exTabPreset}
           </button>
           
           {regexes.map((reg, idx) => (
@@ -510,7 +511,7 @@ export const StepExport: React.FC = () => {
               }`}
             >
               <FileCode size={14} />
-              Regex: {reg.scriptName}
+              {fmt(t.exTabRegexName, { name: reg.scriptName })}
             </button>
           ))}
         </div>
@@ -527,14 +528,14 @@ export const StepExport: React.FC = () => {
               className="flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-2.5 py-1.5 rounded-lg border border-theme-border transition"
             >
               {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
-              {copied ? 'Đã sao chép' : 'Sao chép'}
+              {copied ? t.exCopied : t.exCopy}
             </button>
             <button
               onClick={handleDownload}
               className="flex items-center gap-1 bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white font-semibold px-2.5 py-1.5 rounded-lg transition shadow-md shadow-purple-500/10"
             >
               <Download size={13} />
-              Tải xuống .json
+              {t.exDownload}
             </button>
           </div>
         </div>
@@ -544,7 +545,7 @@ export const StepExport: React.FC = () => {
           {activeTab !== 'preset' && !activeJSONData ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-500 gap-2">
               <AlertTriangle size={24} className="text-amber-500" />
-              <span>Regex Script không tồn tại hoặc đã bị xóa.</span>
+              <span>{t.exMissing}</span>
             </div>
           ) : (
             <pre 

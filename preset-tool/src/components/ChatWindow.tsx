@@ -5,6 +5,7 @@ import { extractJSONsFromText, ExtractedJSON } from '../utils/parser';
 import { buildProjectContext, resolveReferences, buildReferencedContext } from '../utils/contextBuilder';
 import { PromptBlock, RegexScript, ChatMessage } from '../types';
 import { Send, RefreshCw, Sparkles, Plus, Calendar, Code, Paperclip, X, FileJson } from 'lucide-react';
+import { t, fmt } from '../i18n';
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 
@@ -72,7 +73,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onOpenSettings }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.name.endsWith('.json')) {
-      addToast("Chỉ hỗ trợ file .json!", "error");
+      addToast(t.toastOnlyJson, "error");
       e.target.value = '';
       return;
     }
@@ -86,13 +87,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onOpenSettings }) => {
         // Build a summary for display
         let summary = '';
         if (parsed.prompts && Array.isArray(parsed.prompts)) {
-          summary = `Preset (${parsed.prompts.length} prompt blocks)`;
+          summary = fmt(t.cwSummaryPreset, { count: parsed.prompts.length });
         } else if (parsed.findRegex) {
-          summary = `Regex: ${parsed.scriptName || 'Script'}`;
+          summary = fmt(t.cwSummaryRegex, { name: parsed.scriptName || 'Script' });
         } else if (Array.isArray(parsed)) {
-          summary = `Mảng ${parsed.length} phần tử`;
+          summary = fmt(t.cwSummaryArray, { count: parsed.length });
         } else {
-          summary = `JSON object (${Object.keys(parsed).length} keys)`;
+          summary = fmt(t.cwSummaryObject, { count: Object.keys(parsed).length });
         }
 
         setAttachedFile({
@@ -100,9 +101,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onOpenSettings }) => {
           content: JSON.stringify(parsed, null, 2),
           summary,
         });
-        addToast(`Đã đính kèm "${file.name}" làm mẫu cho AI`, "success");
+        addToast(fmt(t.cwToastAttached, { name: file.name }), "success");
       } catch {
-        addToast(`File "${file.name}" không phải JSON hợp lệ!`, "error");
+        addToast(fmt(t.toastBadJson, { name: file.name }), "error");
       }
     };
     reader.readAsText(file);
@@ -123,7 +124,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onOpenSettings }) => {
     
     // Check if key is available
     if (!settings.useProxy && !settings.apiKey) {
-      addToast("Chưa nhập API key. Vào ⚙ Cài đặt.", "error");
+      addToast(t.cwToastNoKey, "error");
       onOpenSettings();
       return;
     }
@@ -140,7 +141,7 @@ ${attachedFile.content}
 
 Yêu cầu của người dùng:
 ${textToSend}`;
-      displayText = `📎 [Đính kèm: ${attachedFile.name}]\n\n${textToSend}`;
+      displayText = `${fmt(t.cwAttachPrefix, { name: attachedFile.name })}\n\n${textToSend}`;
       setAttachedFile(null);
     }
 
@@ -190,17 +191,17 @@ ${textToSend}`;
       });
       
       if (extracted.length > 0) {
-        addToast(`Đã tìm thấy ${extracted.length} khối JSON trong phản hồi!`, "success");
+        addToast(fmt(t.cwToastFoundJson, { count: extracted.length }), "success");
       }
     } catch (e: unknown) {
       if ((e as Error)?.name === 'AbortError') {
         setStreamingText('');
-        addChatMessage({ role: 'system', content: '⏹ Đã dừng theo yêu cầu.' });
+        addChatMessage({ role: 'system', content: t.cwStopped });
       } else {
-        const errMsg = e instanceof Error ? e.message : 'Không thể liên lạc với mô hình AI.';
+        const errMsg = e instanceof Error ? e.message : t.cwErrGeneric;
         addChatMessage({
           role: 'system',
-          content: `❌ Gặp sự cố kết nối: ${errMsg}`
+          content: fmt(t.cwErrConn, { msg: errMsg })
         });
         addToast(errMsg, "error");
       }
@@ -222,7 +223,7 @@ ${textToSend}`;
 
   const handleImportExtracted = (item: ExtractedJSON) => {
     if (item.type === 'preset') {
-      if (confirm(`Bạn muốn ghi đè Preset của dự án bằng Preset "${item.name}" vừa tạo chứ?`)) {
+      if (confirm(fmt(t.cwConfirmOverwrite, { name: item.name }))) {
         importFullPreset(item.data);
       }
     } else if (item.type === 'prompt') {
@@ -255,7 +256,7 @@ ${textToSend}`;
           forbid_overrides: block.forbid_overrides || false
         });
       });
-      addToast(`Đã thêm ${blocks.length} prompt blocks vào Preset!`, "success");
+      addToast(fmt(t.cwToastAddedPrompts, { count: blocks.length }), "success");
     } else if (item.type === 'regex') {
       const data = (item.data || {}) as Partial<RegexScript>;
       addRegexScript({
@@ -287,9 +288,9 @@ ${textToSend}`;
               <Sparkles size={32} />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-gray-200">Trợ Lý Kịch Bản ST Studio</h2>
+              <h2 className="text-sm sm:text-base font-bold text-gray-200">{t.cwWelcomeTitle}</h2>
               <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                Chào mừng bạn đến với **ST Studio**! Hãy trò chuyện để hướng dẫn AI xây dựng và tinh chỉnh SillyTavern Preset, Prompt Blocks, hoặc Regex Scripts của bạn.
+                {t.cwWelcomeBody}
               </p>
             </div>
             
@@ -300,14 +301,14 @@ ${textToSend}`;
                 className="flex items-center justify-center gap-2 p-3 bg-gray-900 border border-theme-border hover:border-purple-500/40 rounded-xl text-xs text-gray-300 transition text-left"
               >
                 <Code size={14} className="text-purple-400" />
-                <span>Thiết lập Preset Roleplay</span>
+                <span>{t.cwQuickPreset}</span>
               </button>
               <button
                 onClick={() => handlePrefill('regex')}
                 className="flex items-center justify-center gap-2 p-3 bg-gray-900 border border-theme-border hover:border-cyan-500/40 rounded-xl text-xs text-gray-300 transition text-left"
               >
                 <RefreshCw size={14} className="text-cyan-400" />
-                <span>Xây dựng Regex Script</span>
+                <span>{t.cwQuickRegex}</span>
               </button>
             </div>
           </div>
@@ -323,7 +324,7 @@ ${textToSend}`;
           >
             {/* Sender Label */}
             <span className="text-[10px] text-gray-500 font-bold px-1 uppercase tracking-wider font-mono">
-              {msg.role === 'user' ? 'Khách hàng' : msg.role === 'system' ? '⚠️ Hệ Thống' : '🔮 ST Studio'}
+              {msg.role === 'user' ? t.cwRoleUser : msg.role === 'system' ? t.cwRoleSystem : t.cwRoleAssistant}
             </span>
 
             {/* Bubble content */}
@@ -344,7 +345,7 @@ ${textToSend}`;
               {msg.extractedJSONs && msg.extractedJSONs.length > 0 && (
                 <div className="mt-3.5 pt-3 border-t border-theme-border/40 space-y-2">
                   <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest font-mono">
-                    📥 TÍCH HỢP TRÍCH XUẤT NHANH:
+                    {t.cwExtractHeader}
                   </span>
                   <div className="flex flex-col gap-1.5">
                     {msg.extractedJSONs.map((item, idx) => (
@@ -357,7 +358,7 @@ ${textToSend}`;
                           <div className="text-left">
                             <span className="block text-[11px] font-bold text-gray-300 truncate max-w-[200px] sm:max-w-xs">{item.name}</span>
                             <span className="block text-[9px] text-gray-500 uppercase font-mono font-bold">
-                              Phân loại: {item.type === 'preset' ? 'Preset ST' : item.type === 'regex' ? 'Regex Script' : 'Prompt Block(s)'}
+                              {fmt(t.cwKind, { type: item.type === 'preset' ? t.cwKindPreset : item.type === 'regex' ? t.cwKindRegex : t.cwKindPrompts })}
                             </span>
                           </div>
                         </div>
@@ -367,7 +368,7 @@ ${textToSend}`;
                           className="flex items-center gap-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-bold text-[10px] px-3 py-1.5 rounded-lg border border-purple-500/30 transition self-end sm:self-auto"
                         >
                           <Plus size={10} />
-                          {item.type === 'preset' ? 'Nạp Đè Preset' : 'Nhập Vào Dự Án'}
+                          {item.type === 'preset' ? t.cwImportOverwrite : t.cwImportAdd}
                         </button>
                       </div>
                     ))}
@@ -381,7 +382,7 @@ ${textToSend}`;
         {/* Streaming Placeholder */}
         {streamingText && (
           <div className="flex flex-col items-start space-y-1 animate-pulse">
-            <span className="text-[10px] text-gray-500 font-bold px-1 uppercase tracking-wider font-mono">🔮 ST Studio (Đang viết)</span>
+            <span className="text-[10px] text-gray-500 font-bold px-1 uppercase tracking-wider font-mono">{t.cwStreaming}</span>
             <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 py-3 bg-theme-panel border border-theme-border text-gray-200 text-xs sm:text-sm whitespace-pre-wrap leading-relaxed select-text">
               {streamingText}
             </div>
@@ -397,12 +398,12 @@ ${textToSend}`;
           <FileJson size={14} className="text-emerald-400 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <span className="block text-[11px] font-bold text-emerald-300 truncate">{attachedFile.name}</span>
-            <span className="block text-[9px] text-gray-500">{attachedFile.summary} — sẽ gửi làm mẫu cho AI</span>
+            <span className="block text-[9px] text-gray-500">{fmt(t.cwAttachSuffix, { summary: attachedFile.summary })}</span>
           </div>
           <button
             onClick={handleRemoveAttachment}
             className="p-1 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition flex-shrink-0"
-            title="Gỡ đính kèm"
+            title={t.cwRemoveAttach}
           >
             <X size={13} />
           </button>
@@ -416,31 +417,31 @@ ${textToSend}`;
           className="flex items-center gap-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition"
         >
           <Code size={12} />
-          📄 Tạo Preset
+          {t.cwBtnPreset}
         </button>
         <button
           onClick={() => handlePrefill('regex')}
           className="flex items-center gap-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/20 font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition"
         >
           <RefreshCw size={12} />
-          🔍 Tạo Regex
+          {t.cwBtnRegex}
         </button>
         <button
           onClick={() => handlePrefill('schedule')}
           className="flex items-center gap-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 border border-yellow-500/20 font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition"
         >
           <Calendar size={12} />
-          📋 Mẫu lịch trình
+          {t.cwBtnSchedule}
         </button>
         
         {/* File attach button */}
         <button
           onClick={() => templateFileRef.current?.click()}
           className="flex items-center gap-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition ml-auto"
-          title="Đính kèm file preset làm mẫu cho AI"
+          title={t.cwAttachTitle}
         >
           <Paperclip size={12} />
-          📎 Đính kèm mẫu
+          {t.cwAttachBtn}
         </button>
         <input
           ref={templateFileRef}
@@ -463,13 +464,13 @@ ${textToSend}`;
               handleSend();
             }
           }}
-          placeholder="Mô tả cấu hình hoặc yêu cầu chỉnh sửa prompt/regex..."
+          placeholder={t.cwInputPh}
           className="flex-1 bg-gray-900 border border-theme-border rounded-xl px-4 py-3 text-xs sm:text-sm text-gray-200 focus:outline-none focus:border-purple-400 placeholder-gray-500 resize-none max-h-24 font-sans"
         />
         {isSending ? (
           <button
             onClick={() => abortRef.current?.abort(new DOMException('Người dùng đã dừng', 'AbortError'))}
-            title="Dừng"
+            title={t.cwStop}
             className="flex items-center justify-center p-3 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-xl transition shadow-md shadow-red-500/10 self-end"
           >
             <X size={16} />
