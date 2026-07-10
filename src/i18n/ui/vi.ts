@@ -836,8 +836,8 @@ const ui: UiKeys = {
   tcPresetLabel: 'Preset nhanh:',
   tcPresetLight: '⚡ Dịch nhẹ',
   tcPresetFull: '📖 Dịch đầy đủ',
-  tcPresetLightHint: 'Chỉ dịch keyword + regex + tên biến MVU. Content giữ nguyên ngôn ngữ gốc — AI vẫn đọc hiểu và trả lời tiếng của bạn. Nhanh hơn nhiều với card nặng.',
-  tcPresetLightDone: 'Đã áp dụng preset Dịch nhẹ: bật keys + regex + đồng bộ MVU, tắt content.',
+  tcPresetLightHint: 'Dịch keyword + regex + lời mở đầu/greetings + tên biến MVU. Content lorebook to giữ nguyên ngôn ngữ gốc — AI vẫn đọc hiểu và trả lời tiếng của bạn. Nhanh hơn nhiều với card nặng.',
+  tcPresetLightDone: 'Đã áp dụng preset Dịch nhẹ: bật keys + regex + lời mở đầu + đồng bộ MVU, tắt content lorebook.',
   tcPresetFullDone: 'Đã áp dụng preset Dịch đầy đủ: bật mọi nhóm.',
 };
 

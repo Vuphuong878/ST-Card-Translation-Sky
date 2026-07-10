@@ -2339,8 +2339,11 @@ export function useTranslation() {
     runningRef.current = false;
     store.setPhase('done');
     store.saveTranslationCache();
-    const doneCount = store.fields.filter((f) => f.status === 'done').length;
-    const failCount = store.fields.filter((f) => f.status === 'error').length;
+    // `store` là snapshot lúc render → store.fields còn status CŨ (pending). Phải đọc
+    // FRESH từ getState() nếu không toast báo "0/16" dù đã xong 16/16.
+    const freshFields = useStore.getState().fields;
+    const doneCount = freshFields.filter((f) => f.status === 'done').length;
+    const failCount = freshFields.filter((f) => f.status === 'error').length;
     store.addLog('info', `🎉 Dịch xong: ${doneCount} thành công, ${failCount} lỗi`);
     store.addToast('success', `Translation complete! ${doneCount}/${fields.length} fields translated`);
 
@@ -2349,7 +2352,7 @@ export function useTranslation() {
     // ═══ Post-Translation MVU-ZOD Sync Verification Report ═══
     if (store.translationConfig.enableMvuSync && Object.keys(store.translationConfig.mvuDictionary).length > 0) {
       const syncReport = generateSyncReport(
-        store.fields.filter(f => f.status === 'done').map(f => ({
+        freshFields.filter(f => f.status === 'done').map(f => ({
           original: f.original,
           translated: f.translated,
           label: f.label,
@@ -2375,7 +2378,7 @@ export function useTranslation() {
 
     // ═══ Post-Translation Entry Name ↔ Text Sync Verification ═══
     {
-      const doneFields = store.fields.filter(f => f.status === 'done');
+      const doneFields = freshFields.filter(f => f.status === 'done');
       const entryNameResult = validateEntryNameSync(doneFields.map(f => ({
         path: f.path,
         label: f.label,
@@ -2407,7 +2410,7 @@ export function useTranslation() {
       const ejsEntryDict = store.translationConfig.ejsEntryNameDict;
       const ejsKwDict = store.translationConfig.ejsKeywordDict;
       if (Object.keys(ejsEntryDict).length > 0 || Object.keys(ejsKwDict).length > 0) {
-        const doneFields = store.fields.filter(f => f.status === 'done');
+        const doneFields = freshFields.filter(f => f.status === 'done');
         const ejsSyncResult = validateEjsSync(
           doneFields.map(f => ({
             path: f.path,
@@ -3938,10 +3941,13 @@ export function useTranslation() {
 
     store.saveTranslationCache();
 
+    // Report hậu-mod cũng phải đọc field FRESH (store là snapshot cũ).
+    const freshFields = useStore.getState().fields;
+
     // ═══ Post-Mod MVU-ZOD Sync Verification Report ═══
     if (store.translationConfig.enableMvuSync && Object.keys(store.translationConfig.mvuDictionary).length > 0) {
       const syncReport = generateSyncReport(
-        store.fields.filter(f => f.status === 'done').map(f => ({
+        freshFields.filter(f => f.status === 'done').map(f => ({
           original: f.original,
           translated: f.translated,
           label: f.label,
@@ -3967,7 +3973,7 @@ export function useTranslation() {
 
     // ═══ Post-Mod Entry Name ↔ Text Sync Verification (EJS) ═══
     {
-      const doneFields = store.fields.filter(f => f.status === 'done');
+      const doneFields = freshFields.filter(f => f.status === 'done');
       const entryNameResult = validateEntryNameSync(doneFields.map(f => ({
         path: f.path,
         label: f.label,

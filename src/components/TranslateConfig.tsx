@@ -506,9 +506,10 @@ export default function TranslateConfig() {
                   className="btn btn-sm"
                   title={ui.tcPresetLightHint}
                   onClick={() => {
-                    // Bật keys + regex; tắt content. Chiến lược B (đồng bộ tên biến MVU)
+                    // Bật keys + regex + messages (opening/first_mes — thứ người chơi thấy
+                    // đầu tiên); tắt content lorebook to. Chiến lược B (đồng bộ tên biến MVU)
                     // luôn chạy toàn thẻ khi export nên content tiếng gốc vẫn khớp schema đã dịch.
-                    const lightOn = new Set(['lorebook_keys', 'regex']);
+                    const lightOn = new Set(['lorebook_keys', 'regex', 'messages']);
                     setTranslationConfig({
                       fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({
                         ...g, enabled: lightOn.has(g.id),
