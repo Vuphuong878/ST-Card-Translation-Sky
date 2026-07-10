@@ -30,7 +30,10 @@ export default function ActiveCallsPanel() {
   const isTranslating = phase === 'translating';
   if (!isTranslating && activeCalls.length === 0) return null;
 
-  const keyCount = getUniqueKeyCount(proxy);
+  // Tổng key TOÀN pool = provider chính + mọi provider phụ đang bật (trước đây chỉ
+  // đếm proxy chính nên hiện "1 API key" dù có 2 provider).
+  const keyCount = getUniqueKeyCount(proxy)
+    + providers.filter((p) => p.enabled && p.model?.trim()).reduce((s, p) => s + getUniqueKeyCount(p), 0);
   const usage = getRateLimitUsage();
   const accent = 'var(--accent-secondary)';
 
