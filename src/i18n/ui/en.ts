@@ -826,7 +826,7 @@ const ui = {
   tcPresetLight: '⚡ Light translate',
   tcPresetFull: '📖 Full translate',
   tcPresetLightHint: 'Keys + regex + opening/greetings + card name + lorebook entry names/comments + MVU variable names. The big content (description, lorebook bodies) stays in the original language — the AI reads it fine and still replies in your language. Much faster for heavy cards.',
-  tcPresetLightDone: 'Light-translate preset applied: keys + regex + opening + card/lorebook names + MVU sync on, big content off.',
+  tcPresetLightDone: 'Light-translate applied: keys + regex + opening + card/lorebook names + MVU sync + surgical (protects regex) on, big content off.',
   tcPresetFullDone: 'Full-translate preset applied: every group on.',
 };
 

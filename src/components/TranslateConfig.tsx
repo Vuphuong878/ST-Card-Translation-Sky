@@ -518,6 +518,9 @@ export default function TranslateConfig() {
                       enableMvuSync: true,
                       exportKeyMode: 'merge',
                       lightSkipContent: true,
+                      // Dịch nhẹ dịch REGEX (code) → ép Dịch phẫu thuật để chỉ trích chuỗi CJK,
+                      // giữ 100% cấu trúc JS/HTML (mặc định surgical TẮT → dễ vỡ regex nếu quên bật).
+                      surgicalMode: true,
                     });
                     // Nếu field đã trích sẵn, ignore luôn content to cho UI phản ánh ngay
                     // (prepareFields vẫn là nguồn chân lý lúc Start).
