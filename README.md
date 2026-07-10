@@ -1,5 +1,7 @@
 # 🎴 SillyTavern Multitools
 
+**Tiếng Việt** | [English](README.en.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
+
 > **Bộ 5 công cụ giúp dịch & làm thẻ nhân vật SillyTavern — chạy hoàn toàn trên máy bạn.**
 > Kết hợp của **Guillichan × Sky**.
 
