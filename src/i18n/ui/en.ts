@@ -28,6 +28,31 @@ const ui = {
   hubWaitPrefix: 'Waiting for the',
   hubWaitSuffix: 'server to start',
   hubFirstRunHint: 'The first run of start.bat may take ~30s to install dependencies.',
+
+  // ─── Nút Cập nhật (rail + modal) ───
+  updRailUpdate: 'Update',
+  updRailNew: 'New version',
+  updTitleCheck: 'Check for updates',
+  updTitleHasUpdate: '{count} new update(s) — click to view',
+  updTitleError: 'Check failed: {error}',
+  updModalUpdating: 'Updating…',
+  updModalDone: 'Update complete',
+  updModalHasUpdate: '{count} new update(s)',
+  updModalCheckFailed: 'Could not check for updates',
+  updModalLatest: 'You are up to date',
+  updModalSub: 'Current: v{version} · one update covers all 5 tools',
+  updNoNewCommits: 'No new commits. You are on the latest version.',
+  updHelp1: 'How to fix: open the install folder and run',
+  updHelp2: 'once, then restart. If you never ran',
+  updHelp3: '(you downloaded a ZIP), the update button cannot work.',
+  updPreparing: 'Preparing…',
+  updLater: 'Later',
+  updNow: 'Update now',
+  updClose: 'Close',
+  updReload: 'Reload page',
+  updErrCheck: 'Could not check for updates.',
+  updErrApi: 'Could not reach the update-check API (is the dev server running?).',
+  updErrPrefix: 'Error',
 };
 
 export default ui;

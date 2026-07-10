@@ -30,6 +30,31 @@ const ui: UiKeys = {
   hubWaitPrefix: 'Đang chờ server',
   hubWaitSuffix: 'khởi động',
   hubFirstRunHint: 'Lần đầu chạy start.bat có thể mất ~30s để cài đặt.',
+
+  // ─── Nút Cập nhật (rail + modal) — nguyên văn từ HubUpdateButton ───
+  updRailUpdate: 'Cập nhật',
+  updRailNew: 'Có bản mới',
+  updTitleCheck: 'Kiểm tra cập nhật',
+  updTitleHasUpdate: 'Có {count} cập nhật mới — bấm để xem',
+  updTitleError: 'Không kiểm tra được: {error}',
+  updModalUpdating: 'Đang cập nhật…',
+  updModalDone: 'Cập nhật xong',
+  updModalHasUpdate: 'Có {count} cập nhật mới',
+  updModalCheckFailed: 'Không kiểm tra được cập nhật',
+  updModalLatest: 'Đã là bản mới nhất',
+  updModalSub: 'Bản hiện tại: v{version} · cập nhật 1 lần cho cả 5 tool',
+  updNoNewCommits: 'Không có commit mới. Bạn đang ở bản mới nhất.',
+  updHelp1: 'Cách xử lý: mở thư mục cài đặt, chạy',
+  updHelp2: 'một lần rồi khởi động lại. Nếu chưa từng',
+  updHelp3: '(tải ZIP) thì nút cập nhật không hoạt động được.',
+  updPreparing: 'Đang chuẩn bị…',
+  updLater: 'Để sau',
+  updNow: 'Cập nhật ngay',
+  updClose: 'Đóng',
+  updReload: 'Tải lại trang',
+  updErrCheck: 'Không kiểm tra được cập nhật.',
+  updErrApi: 'Không gọi được API kiểm tra cập nhật (server dev chưa chạy?).',
+  updErrPrefix: 'Lỗi',
 };
 
 export default ui;

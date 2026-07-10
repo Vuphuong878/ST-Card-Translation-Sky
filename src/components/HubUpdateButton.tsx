@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, X, RefreshCw, Sparkles, Check, AlertTriangle } from 'lucide-react';
 import { APP_VERSION } from '../version';
+import { useUi } from '../i18n/useLocale';
 
 interface Commit { hash: string; subject: string; }
 type Phase = 'idle' | 'open' | 'updating' | 'done';
@@ -19,6 +20,7 @@ const AUTO_CHECK_MS = 30 * 60 * 1000; // tự quét cập nhật mỗi 30 phút
  * - Click any time to re-check + update.
  */
 export default function HubUpdateButton() {
+  const ui = useUi();
   const [phase, setPhase] = useState<Phase>('idle');
   const [commits, setCommits] = useState<Commit[]>([]);
   const [behind, setBehind] = useState(0);
@@ -51,13 +53,13 @@ export default function HubUpdateButton() {
           return nBehind;
         }
         // ok:false → không kiểm tra được (không phải git clone / fetch lỗi / offline). BÁO RÕ.
-        setError(String(data?.error || 'Không kiểm tra được cập nhật.'));
+        setError(String(data?.error || ui.updErrCheck));
         setBehind(0); setCommits([]);
         if (opts?.openAlways) setPhase('open');
         return 0;
       }
     } catch {
-      setError('Không gọi được API kiểm tra cập nhật (server dev chưa chạy?).');
+      setError(ui.updErrApi);
       if (opts?.openAlways) setPhase('open');
     }
     finally { setChecking(false); }
@@ -90,7 +92,8 @@ export default function HubUpdateButton() {
       }
       setPhase('done');
     } catch (e: any) {
-      setLog((p) => p + `\nLỗi: ${e?.message || String(e)}`);
+      setLog((p) => p + `
+${ui.updErrPrefix}: ${e?.message || String(e)}`);
       setPhase('done');
     }
   };
@@ -108,7 +111,9 @@ export default function HubUpdateButton() {
       {/* ─── Rail button ─── */}
       <button
         onClick={() => check({ openAlways: true })}
-        title={hasUpdate ? `Có ${behind} cập nhật mới — bấm để xem` : error ? `Không kiểm tra được: ${error}` : 'Kiểm tra cập nhật'}
+        title={hasUpdate
+          ? ui.updTitleHasUpdate.replace('{count}', String(behind))
+          : error ? ui.updTitleError.replace('{error}', error) : ui.updTitleCheck}
         style={{
           position: 'relative',
           width: 64,
@@ -134,7 +139,7 @@ export default function HubUpdateButton() {
           ? <RefreshCw size={20} className="spin" />
           : <Download size={20} />}
         <span style={{ fontSize: '0.62rem', fontWeight: 700, lineHeight: 1.15 }}>
-          {hasUpdate ? 'Có bản mới' : 'Cập nhật'}
+          {hasUpdate ? ui.updRailNew : ui.updRailUpdate}
         </span>
         {hasUpdate && (
           <span style={{
@@ -153,9 +158,12 @@ export default function HubUpdateButton() {
               <Sparkles size={18} style={{ color: 'var(--accent-secondary, #4ecdc4)' }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary, #f1f0f7)' }}>
-                  {phase === 'updating' ? 'Đang cập nhật…' : phase === 'done' ? 'Cập nhật xong' : hasUpdate ? `Có ${behind} cập nhật mới` : error ? 'Không kiểm tra được cập nhật' : 'Đã là bản mới nhất'}
+                  {phase === 'updating' ? ui.updModalUpdating
+                    : phase === 'done' ? ui.updModalDone
+                    : hasUpdate ? ui.updModalHasUpdate.replace('{count}', String(behind))
+                    : error ? ui.updModalCheckFailed : ui.updModalLatest}
                 </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted, #9b98ae)' }}>Bản hiện tại: v{APP_VERSION} · cập nhật 1 lần cho cả 5 tool</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted, #9b98ae)' }}>{ui.updModalSub.replace('{version}', APP_VERSION)}</div>
               </div>
               {phase !== 'updating' && (
                 <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, display: 'flex' }}><X size={18} /></button>
@@ -174,7 +182,7 @@ export default function HubUpdateButton() {
               )}
               {phase === 'open' && !hasUpdate && !error && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary, #c8c5d8)', fontSize: '0.85rem' }}>
-                  <Check size={16} style={{ color: '#22c55e' }} /> Không có commit mới. Bạn đang ở bản mới nhất.
+                  <Check size={16} style={{ color: '#22c55e' }} /> {ui.updNoNewCommits}
                 </div>
               )}
               {phase === 'open' && !hasUpdate && !!error && (
@@ -183,23 +191,23 @@ export default function HubUpdateButton() {
                     <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} /> <span>{error}</span>
                   </div>
                   <div style={{ color: 'var(--text-muted, #b6b2c9)', fontSize: '0.75rem', lineHeight: 1.5 }}>
-                    Cách xử lý: mở thư mục cài đặt, chạy <code style={{ color: 'var(--accent-secondary)' }}>git pull origin main</code> một lần rồi khởi động lại. Nếu chưa từng <code style={{ color: 'var(--accent-secondary)' }}>git clone</code> (tải ZIP) thì nút cập nhật không hoạt động được.
+                    {ui.updHelp1} <code style={{ color: 'var(--accent-secondary)' }}>git pull origin main</code> {ui.updHelp2} <code style={{ color: 'var(--accent-secondary)' }}>git clone</code> {ui.updHelp3}
                   </div>
                 </div>
               )}
               {(phase === 'updating' || phase === 'done') && (
-                <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, fontSize: '0.75rem', fontFamily: 'monospace', minHeight: 120, maxHeight: 300, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>{log || 'Đang chuẩn bị…'}</pre>
+                <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, fontSize: '0.75rem', fontFamily: 'monospace', minHeight: 120, maxHeight: 300, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>{log || ui.updPreparing}</pre>
               )}
             </div>
             <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border-subtle, #2a2a3e)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               {phase === 'open' && hasUpdate && (
                 <>
-                  <button onClick={closeModal} style={btnGhost}>Để sau</button>
-                  <button onClick={runUpdate} style={btnPrimary}><Download size={14} /> Cập nhật ngay</button>
+                  <button onClick={closeModal} style={btnGhost}>{ui.updLater}</button>
+                  <button onClick={runUpdate} style={btnPrimary}><Download size={14} /> {ui.updNow}</button>
                 </>
               )}
-              {phase === 'open' && !hasUpdate && <button onClick={closeModal} style={btnPrimary}>Đóng</button>}
-              {phase === 'done' && <button onClick={() => window.location.reload()} style={btnPrimary}><RefreshCw size={14} /> Tải lại trang</button>}
+              {phase === 'open' && !hasUpdate && <button onClick={closeModal} style={btnPrimary}>{ui.updClose}</button>}
+              {phase === 'done' && <button onClick={() => window.location.reload()} style={btnPrimary}><RefreshCw size={14} /> {ui.updReload}</button>}
             </div>
           </div>
         </div>
