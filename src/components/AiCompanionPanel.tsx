@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useStore } from '../store';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import { callProvider } from '../utils/apiClient';
 import { safeSetItem } from '../utils/safeStorage';
 import { 
@@ -404,6 +405,7 @@ const TextSection = memo(({ text }: { text: string }) => {
 
 const CodeSection = memo(({ language, code }: { language: string; code: string }) => {
   const { card, updateCard, addToast, setFields } = useStore();
+  const ui = useUi();
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -438,11 +440,11 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
 
   const handleAddToLorebook = () => {
     if (!card) {
-      addToast('error', 'Chưa có thẻ nhân vật nào được tải lên!');
+      addToast('error', ui.acNoCard);
       return;
     }
     if (!lbKeys.trim()) {
-      addToast('error', 'Vui lòng nhập từ khóa (keys) kích hoạt!');
+      addToast('error', ui.acNeedKeys);
       return;
     }
 
@@ -483,23 +485,23 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
       }
       setFields(updatedFields);
 
-      addToast('success', 'Đã thêm entry mới vào Lorebook thành công!');
+      addToast('success', ui.acLbAdded);
       setActiveForm('none');
       setLbKeys('');
       setLbComment('');
     } catch (err: any) {
       console.error(err);
-      addToast('error', `Lỗi: ${err.message || 'Không thể thêm vào Lorebook'}`);
+      addToast('error', ui.acErrPrefix + (err.message || ui.acErrLb));
     }
   };
 
   const handleAddToRegex = () => {
     if (!card) {
-      addToast('error', 'Chưa có thẻ nhân vật nào được tải lên!');
+      addToast('error', ui.acNoCard);
       return;
     }
     if (!rgFind.trim()) {
-      addToast('error', 'Vui lòng nhập Regex tìm kiếm (findRegex)!');
+      addToast('error', ui.acNeedFindRegex);
       return;
     }
 
@@ -544,20 +546,20 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
       }
       setFields(updatedFields);
 
-      addToast('success', 'Đã thêm regex script mới thành công!');
+      addToast('success', ui.acRegexAdded);
       setActiveForm('none');
       setRgName('');
       setRgFind('');
       setRgReplace('');
     } catch (err: any) {
       console.error(err);
-      addToast('error', `Lỗi: ${err.message || 'Không thể thêm Regex script'}`);
+      addToast('error', ui.acErrPrefix + (err.message || ui.acErrRegex));
     }
   };
 
   const handleAddToTavernHelper = () => {
     if (!card) {
-      addToast('error', 'Chưa có thẻ nhân vật nào được tải lên!');
+      addToast('error', ui.acNoCard);
       return;
     }
 
@@ -598,13 +600,13 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
       }
       setFields(updatedFields);
 
-      addToast('success', 'Đã tích hợp TavernHelper script mới thành công!');
+      addToast('success', ui.acThAdded);
       setActiveForm('none');
       setThName('');
       setThInfo('');
     } catch (err: any) {
       console.error(err);
-      addToast('error', `Lỗi: ${err.message || 'Không thể thêm TavernHelper script'}`);
+      addToast('error', ui.acErrPrefix + (err.message || ui.acErrTh));
     }
   };
 
@@ -630,7 +632,7 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
                   <button 
                     onClick={() => setIsFullscreen(true)}
                     className="hover:text-white flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded text-[9px] transition-all font-bold"
-                    title="Mở rộng xem toàn màn hình"
+                    title={ui.acExpandFullscreen}
                   >
                     <Maximize size={10} /> PHÓNG TO
                   </button>
@@ -692,7 +694,7 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
 
         {/* Quick Inject Toolbar */}
         <div className="bg-[#101014] px-4 py-2 border-t border-zinc-850 flex items-center justify-between text-[11px] text-slate-400">
-          <span>Đưa nhanh vào Thẻ:</span>
+          <span>{ui.acQuickAdd}</span>
           <div className="flex gap-2">
             <button
               onClick={() => setActiveForm(activeForm === 'lorebook' ? 'none' : 'lorebook')}
@@ -735,13 +737,13 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
         {/* Form Lorebook */}
         {activeForm === 'lorebook' && (
           <div className="bg-[#131317] p-3 border-t border-zinc-850 flex flex-col gap-2.5 animate-fadeIn">
-            <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Tạo Lorebook Entry</div>
+            <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">{ui.acNewLorebook}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] text-slate-400 font-semibold">Từ khóa kích hoạt (Keys - phân cách bằng dấu phẩy):</label>
+                <label className="text-[9px] text-slate-400 font-semibold">{ui.acKeysLabel}</label>
                 <input
                   type="text"
-                  placeholder="Ví dụ: [initvar], mvu_update"
+                  placeholder={ui.acKeysPh}
                   value={lbKeys}
                   onChange={e => setLbKeys(e.target.value)}
                   style={{
@@ -755,10 +757,10 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] text-slate-400 font-semibold">Chú thích (Comment):</label>
+                <label className="text-[9px] text-slate-400 font-semibold">{ui.acCommentLabel}</label>
                 <input
                   type="text"
-                  placeholder="Ví dụ: Hệ thống biến số"
+                  placeholder={ui.acCommentPh}
                   value={lbComment}
                   onChange={e => setLbComment(e.target.value)}
                   style={{
@@ -777,14 +779,14 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
                 onClick={() => setActiveForm('none')}
                 className="btn btn-ghost btn-xs text-slate-400"
               >
-                Hủy
+                {ui.acCancel}
               </button>
               <button
                 onClick={handleAddToLorebook}
                 disabled={!lbKeys.trim()}
                 className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold rounded px-3 py-1 active:scale-95 transition-all shadow-sm"
               >
-                Xác nhận thêm
+                {ui.acConfirmAdd}
               </button>
             </div>
           </div>
@@ -793,13 +795,13 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
         {/* Form Regex */}
         {activeForm === 'regex' && (
           <div className="bg-[#131317] p-3 border-t border-zinc-850 flex flex-col gap-2.5 animate-fadeIn">
-            <div className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Tạo Regex Script</div>
+            <div className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">{ui.acNewRegex}</div>
             <div className="flex flex-col gap-2">
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] text-slate-400 font-semibold">Tên Script:</label>
+                <label className="text-[9px] text-slate-400 font-semibold">{ui.acScriptName}</label>
                 <input
                   type="text"
-                  placeholder="Ví dụ: Định dạng hội thoại"
+                  placeholder={ui.acRegexNamePh}
                   value={rgName}
                   onChange={e => setRgName(e.target.value)}
                   style={{
@@ -814,10 +816,10 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[9px] text-slate-400 font-semibold">Tìm kiếm (Find Regex):</label>
+                  <label className="text-[9px] text-slate-400 font-semibold">{ui.acFindRegexLabel}</label>
                   <input
                     type="text"
-                    placeholder="Ví dụ: /([a-z]+)/g"
+                    placeholder={ui.acFindRegexPh}
                     value={rgFind}
                     onChange={e => setRgFind(e.target.value)}
                     style={{
@@ -831,10 +833,10 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[9px] text-slate-400 font-semibold">Thay thế (Replace String):</label>
+                  <label className="text-[9px] text-slate-400 font-semibold">{ui.acReplaceLabel}</label>
                   <input
                     type="text"
-                    placeholder="Bỏ trống hoặc nhập chuỗi thay thế"
+                    placeholder={ui.acReplacePh}
                     value={rgReplace}
                     onChange={e => setRgReplace(e.target.value)}
                     style={{
@@ -854,14 +856,14 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
                 onClick={() => setActiveForm('none')}
                 className="btn btn-ghost btn-xs text-slate-400"
               >
-                Hủy
+                {ui.acCancel}
               </button>
               <button
                 onClick={handleAddToRegex}
                 disabled={!rgFind.trim()}
                 className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-semibold rounded px-3 py-1 active:scale-95 transition-all shadow-sm"
               >
-                Xác nhận thêm
+                {ui.acConfirmAdd}
               </button>
             </div>
           </div>
@@ -870,13 +872,13 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
         {/* Form TavernHelper */}
         {activeForm === 'tavern_helper' && (
           <div className="bg-[#131317] p-3 border-t border-zinc-850 flex flex-col gap-2.5 animate-fadeIn">
-            <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Tạo TavernHelper Script</div>
+            <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">{ui.acNewTh}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] text-slate-400 font-semibold">Tên Script:</label>
+                <label className="text-[9px] text-slate-400 font-semibold">{ui.acScriptName}</label>
                 <input
                   type="text"
-                  placeholder="Ví dụ: Cập nhật trạng thái"
+                  placeholder={ui.acThNamePh}
                   value={thName}
                   onChange={e => setThName(e.target.value)}
                   style={{
@@ -890,10 +892,10 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] text-slate-400 font-semibold">Thông tin mô tả (Info):</label>
+                <label className="text-[9px] text-slate-400 font-semibold">{ui.acThInfoLabel}</label>
                 <input
                   type="text"
-                  placeholder="Mô tả chức năng script"
+                  placeholder={ui.acThInfoPh}
                   value={thInfo}
                   onChange={e => setThInfo(e.target.value)}
                   style={{
@@ -912,13 +914,13 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
                 onClick={() => setActiveForm('none')}
                 className="btn btn-ghost btn-xs text-slate-400"
               >
-                Hủy
+                {ui.acCancel}
               </button>
               <button
                 onClick={handleAddToTavernHelper}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded px-3 py-1 active:scale-95 transition-all shadow-sm"
               >
-                Xác nhận thêm
+                {ui.acConfirmAdd}
               </button>
             </div>
           </div>
@@ -949,9 +951,9 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
             paddingBottom: '12px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="text-sm font-bold text-slate-200">Xem Trước HTML Toàn Màn Hình</span>
+              <span className="text-sm font-bold text-slate-200">{ui.acHtmlFullscreen}</span>
               <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'var(--bg-elevated)', borderRadius: '3px', color: 'var(--text-muted)' }}>
-                {isFullPage ? 'Trang nguyên bản (IFrame)' : 'Đoạn phân mảnh (SillyTavern CSS)'}
+                {isFullPage ? ui.acFullPage : ui.acFragment}
               </span>
             </div>
             <button
@@ -959,7 +961,7 @@ const CodeSection = memo(({ language, code }: { language: string; code: string }
               onClick={() => setIsFullscreen(false)}
               style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              <Minimize size={14} /> Thu nhỏ
+              <Minimize size={14} /> {ui.acMinimize}
             </button>
           </div>
 
@@ -1020,6 +1022,7 @@ const MessageList = memo(({
   handleRejectScript: () => void;
   scriptOutput: string;
 }) => {
+  const ui = useUi();
   return (
     <div className="companion-chat-messages custom-scrollbar">
       {messages.length === 0 ? (
@@ -1033,9 +1036,9 @@ const MessageList = memo(({
             <Code2 size={28} />
           </div>
           <div className="space-y-1.5">
-            <h4 className="font-bold text-slate-200">Trợ lý Lập trình Thẻ Nhân vật</h4>
+            <h4 className="font-bold text-slate-200">{ui.acWelcomeTitle}</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Chào bạn! Tôi có thể giúp bạn viết/sửa biểu thức chính quy (Regex), lập trình logic EJS cho Lorebook, kiểm tra lỗi cú pháp hoặc phân dịch các thành phần nâng cao.
+              {ui.acWelcomeBody}
             </p>
           </div>
         </div>
@@ -1046,7 +1049,7 @@ const MessageList = memo(({
             className={`companion-message-wrapper ${msg.role}`}
           >
             <div className="companion-message-sender">
-              {msg.role === 'user' ? (msg.isCommand ? '⚡ Lệnh' : 'Người dùng') : 'Trợ lý AI'}
+              {msg.role === 'user' ? (msg.isCommand ? ui.acRoleCommand : ui.acRoleUser) : ui.acRoleAssistant}
             </div>
             <div className="companion-message-bubble">
               <MessageContentRenderer content={msg.content} />
@@ -1146,7 +1149,7 @@ const MessageList = memo(({
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(34, 197, 94, 0.25)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)'; }}
                     >
-                      <CheckCircle2 size={14} /> Xác nhận tất cả
+                      <CheckCircle2 size={14} /> {ui.acConfirmAll}
                     </button>
                     <button
                       onClick={handleRejectActions}
@@ -1169,7 +1172,7 @@ const MessageList = memo(({
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
                     >
-                      <X size={14} /> Từ chối
+                      <X size={14} /> {ui.acRejectAll}
                     </button>
                   </div>
                 </div>
@@ -1227,7 +1230,7 @@ const MessageList = memo(({
             fontSize: '0.8rem',
           }}>
             <Shield size={14} />
-            Script yêu cầu xác nhận trước khi chạy
+            {ui.acScriptNeedsConfirm}
           </div>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
             {pendingScript.description}
@@ -1265,7 +1268,7 @@ const MessageList = memo(({
                 gap: '6px',
               }}
             >
-              <Play size={12} /> Chạy Script
+              <Play size={12} /> {ui.acRunScript}
             </button>
             <button
               onClick={handleRejectScript}
@@ -1285,7 +1288,7 @@ const MessageList = memo(({
                 gap: '6px',
               }}
             >
-              <X size={12} /> Hủy
+              <X size={12} /> {ui.acCancelScript}
             </button>
           </div>
           {scriptOutput && (
@@ -1307,10 +1310,10 @@ const MessageList = memo(({
       {/* Thinking Loader */}
       {isGenerating && (
         <div className="companion-message-wrapper assistant">
-          <div className="companion-message-sender">Trợ lý AI</div>
+          <div className="companion-message-sender">{ui.acRoleAssistant}</div>
           <div className="flex flex-col gap-1.5 py-2">
             <div className="flex items-center gap-2 text-indigo-400 text-sm font-medium">
-              <Loader2 size={14} className="animate-spin" /> Đang phân tích và viết câu trả lời...
+              <Loader2 size={14} className="animate-spin" /> {ui.acThinking}
             </div>
             {retryText && (
               <div className="text-[10px] text-amber-500 font-mono pl-5 animate-pulse">
@@ -1330,6 +1333,7 @@ const MessageList = memo(({
    ════════════════════════════════════════════════════════════════════ */
 export default function AiCompanionPanel({ onClose }: { onClose: () => void }) {
   const { card, proxy, updateCard, addToast } = useStore();
+  const ui = useUi();
   
   // ─── Local Storage States ───
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -1474,7 +1478,7 @@ export default function AiCompanionPanel({ onClose }: { onClose: () => void }) {
 
   const handleUndo = useCallback(() => {
     if (cardHistory.length === 0) {
-      addToast('info', 'Không có thao tác nào để hoàn tác');
+      addToast('info', ui.acNothingToUndo);
       return;
     }
     const lastSnapshot = cardHistory[cardHistory.length - 1];
@@ -1482,9 +1486,9 @@ export default function AiCompanionPanel({ onClose }: { onClose: () => void }) {
       const restoredCard = JSON.parse(lastSnapshot);
       updateCard(restoredCard);
       setCardHistory(prev => prev.slice(0, -1));
-      addToast('success', 'Đã hoàn tác thao tác cuối');
+      addToast('success', ui.acUndone);
     } catch (err) {
-      addToast('error', 'Lỗi khi hoàn tác');
+      addToast('error', ui.acUndoErr);
     }
   }, [cardHistory, updateCard, addToast]);
 
@@ -1628,7 +1632,7 @@ ${contextBlock ? `\n[DANH SÁCH TÀI LIỆU NGỮ CẢNH HIỆN TẠI]:\n${conte
     while (attempt < maxAttempts) {
       try {
         if (attempt > 0) {
-          setRetryText(`Đang thử gửi lại yêu cầu (${attempt}/${maxAttempts - 1})...`);
+          setRetryText(fmt(ui.acRetrying, { attempt, max: maxAttempts - 1 }));
         }
         
         finalResult = await callProvider(proxy, systemPrompt, textToSend, undefined, imagesList.length > 0 ? imagesList : undefined);
@@ -1726,10 +1730,10 @@ ${contextBlock ? `\n[DANH SÁCH TÀI LIỆU NGỮ CẢNH HIỆN TẠI]:\n${conte
         setMessages([...nextMessages, { role: 'assistant', content: finalResult }]);
       }
     } else {
-      const errMsg = lastError?.message || 'Không có phản hồi từ máy chủ API.';
+      const errMsg = lastError?.message || ui.acNoApiResponse;
       setMessages([...nextMessages, { 
         role: 'assistant', 
-        content: `❌ **Lỗi gọi API:** \`${errMsg}\`\n\nHãy kiểm tra lại API Key, Endpoint hoặc trạng thái kết nối mạng của bạn.` 
+        content: fmt(ui.acApiErrMsg, { msg: errMsg }) 
       }]);
     }
 
@@ -1784,14 +1788,14 @@ ${contextBlock ? `\n[DANH SÁCH TÀI LIỆU NGỮ CẢNH HIỆN TẠI]:\n${conte
           return {
             ...msg,
             pendingActions: undefined,
-            content: msg.content + '\n\n---\n❌ **Actions đã bị từ chối bởi người dùng.**',
+            content: msg.content + ui.acActionsRejectedMsg,
           };
         }
         return msg;
       }));
     }
     setPendingActions(null);
-    addToast('info', 'Đã từ chối tất cả actions');
+    addToast('info', ui.acActionsRejected);
   }, [pendingActions, addToast]);
 
   // ─── Execute pending script (sandboxed) ───
@@ -1839,7 +1843,7 @@ try {
         }
       }, 10000);
 
-      addToast('success', 'Đang chạy script...');
+      addToast('success', ui.acRunningScript);
     } catch (err: any) {
       setScriptOutput(`ERROR: ${err.message}`);
     }
@@ -1848,7 +1852,7 @@ try {
 
   const handleRejectScript = useCallback(() => {
     setPendingScript(null);
-    addToast('info', 'Đã hủy chạy script');
+    addToast('info', ui.acScriptCancelled);
   }, [addToast]);
 
   // Quick Action Commands
@@ -1882,7 +1886,7 @@ try {
           content = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result as string);
-            reader.onerror = () => reject(new Error('Lỗi đọc file ảnh.'));
+            reader.onerror = () => reject(new Error(ui.acImgReadErr));
             reader.readAsDataURL(file);
           });
         } else {
@@ -1900,10 +1904,10 @@ try {
       setAttachedFiles(prev => [...prev, ...loaded]);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: `📁 **Đã đính kèm ${loaded.some(f => f.isImage) ? 'ảnh/tài liệu' : 'tài liệu'} thành công:** ${selectedFiles.map(f => f.name).join(', ')}.` 
+        content: fmt(ui.acAttachedMsg, { kind: loaded.some(f => f.isImage) ? ui.acKindImage : ui.acKindDoc, names: selectedFiles.map(f => f.name).join(', ') }) 
       }]);
     } catch (err: any) {
-      setUploadError(err.message || 'Lỗi khi đọc file đính kèm.');
+      setUploadError(err.message || ui.acAttachErr);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -1915,7 +1919,7 @@ try {
 
   const handleClearContext = () => {
     setAttachedFiles([]);
-    setMessages(prev => [...prev, { role: 'assistant', content: '🧹 **Đã dọn sạch ngữ cảnh đính kèm.** Bắt đầu phiên làm việc mới.' }]);
+    setMessages(prev => [...prev, { role: 'assistant', content: ui.acContextCleared }]);
   };
 
   const handleClearChat = () => {
@@ -1937,9 +1941,9 @@ try {
               <Sparkles size={16} color="white" />
             </div>
             <div>
-              <div className="font-bold text-sm">Trợ Lý AI Lập Trình</div>
+              <div className="font-bold text-sm">{ui.acPanelTitle}</div>
               <div className="text-[10px] text-slate-400">
-                Model: <span className="text-indigo-400 font-mono font-bold">{proxy.model || 'Chưa thiết lập'}</span>
+                Model: <span className="text-indigo-400 font-mono font-bold">{proxy.model || ui.acModelUnset}</span>
               </div>
             </div>
           </div>
@@ -1950,7 +1954,7 @@ try {
                 onClick={handleClearChat}
                 className="btn btn-ghost btn-xs text-rose-400 hover:bg-rose-500/10"
               >
-                <RotateCcw size={12} className="mr-1" /> Xóa chat
+                <RotateCcw size={12} className="mr-1" /> {ui.acClearChat}
               </button>
             )}
             <button 
@@ -1978,7 +1982,7 @@ try {
               onClick={() => setActiveTab('chat')}
             >
               <Sparkles size={12} style={{ marginRight: 4, display: 'inline-block', verticalAlign: 'middle' }} />
-              <span style={{ verticalAlign: 'middle' }}>Trò Chuyện</span>
+              <span style={{ verticalAlign: 'middle' }}>{ui.acTabChat}</span>
             </button>
             <button
               type="button"
@@ -2002,7 +2006,7 @@ try {
               onClick={() => setActiveTab('mvu-zod')}
             >
               <Code2 size={12} style={{ marginRight: 4, display: 'inline-block', verticalAlign: 'middle' }} />
-              <span style={{ verticalAlign: 'middle' }}>Tạo MVU-Zod</span>
+              <span style={{ verticalAlign: 'middle' }}>{ui.acTabMvu}</span>
             </button>
           </div>
         </div>
@@ -2033,14 +2037,14 @@ try {
                     value={inputValue}
                     onChange={e => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Nhập câu hỏi hoặc yêu cầu tại đây... (Shift + Enter để xuống dòng)"
+                    placeholder={ui.acInputPh}
                     className="companion-textarea custom-scrollbar"
                     disabled={isGenerating}
                   />
                   <div className="companion-input-actions">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[9px] text-slate-500 flex items-center gap-1 select-none">
-                        <kbd className="kbd-key">Enter</kbd> Gửi
+                        <kbd className="kbd-key">Enter</kbd> {ui.acSend}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -2048,26 +2052,26 @@ try {
                         <button
                           onClick={handleContinue}
                           disabled={isGenerating}
-                          title="Tiếp tục xử lý ngữ cảnh cũ"
+                          title={ui.acContinueTitle}
                           className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg px-2.5 py-1.5 flex items-center gap-1 text-[10px] font-bold transition-all whitespace-nowrap"
                         >
-                          Tiếp tục
+                          {ui.acContinue}
                         </button>
                       )}
                       <button
                         onClick={handleCommand}
                         disabled={!inputValue.trim() || isGenerating}
-                        title="Gửi dưới dạng Lệnh Ưu Tiên"
+                        title={ui.acCommandTitle}
                         className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg px-2.5 py-1.5 flex items-center gap-1 text-[10px] font-bold transition-all"
                       >
-                        Linh Lệnh ⚔️
+                        {ui.acCommandBtn}
                       </button>
                       <button
                         onClick={() => handleSend()}
                         disabled={!inputValue.trim() || isGenerating}
                         className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-3.5 py-1.5 font-bold text-xs flex items-center gap-1 shadow-md active:scale-95 transition-all"
                       >
-                        Gửi <Send size={12} />
+                        {ui.acSend} <Send size={12} />
                       </button>
                     </div>
                   </div>
@@ -2080,30 +2084,30 @@ try {
               {/* Card metadata (auto-loaded context) */}
               <div className="p-4 border-bottom border-zinc-800">
                 <div className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider mb-3 flex items-center gap-1">
-                  <Eye size={12} /> Ngữ cảnh Thẻ Hồn
+                  <Eye size={12} /> {ui.acCardContext}
                 </div>
                 
                 {card ? (
                   <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-3 space-y-2">
                     <div className="font-semibold text-xs text-slate-200 truncate" title={card.name || card.data?.name}>
-                      {card.name || card.data?.name || 'Thẻ không tên'}
+                      {card.name || card.data?.name || ui.acUnnamedCard}
                     </div>
                     <div className="text-[10px] text-slate-400 space-y-1">
-                      <div>Loại: <span className="font-mono text-indigo-300">{card.spec || 'Character'}</span></div>
-                      <div>Lorebook: <span className="font-mono text-indigo-300">{card.data?.character_book?.entries?.length || 0} mục</span></div>
+                      <div>{ui.acCardType}<span className="font-mono text-indigo-300">{card.spec || 'Character'}</span></div>
+                      <div>{ui.acCardLorebook}<span className="font-mono text-indigo-300">{card.data?.character_book?.entries?.length || 0}{ui.acEntriesSuffix}</span></div>
                       <div>Regex: <span className="font-mono text-indigo-300">{card.data?.extensions?.regex_scripts?.length || 0} script</span></div>
                       {card.data?.extensions?.depth_prompt?.prompt && (
-                        <div className="text-emerald-400">✓ Có Depth Prompt</div>
+                        <div className="text-emerald-400">{ui.acHasDepthPrompt}</div>
                       )}
                     </div>
                     <div className="text-[9px] text-emerald-400/80 mt-1 flex items-center gap-1 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/10">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Đã tự động nạp ngữ cảnh
+                      {ui.acContextLoaded}
                     </div>
                   </div>
                 ) : (
                   <div className="text-xs text-slate-500 text-center py-4 bg-zinc-900/20 border border-dashed border-zinc-800 rounded-xl">
-                    Chưa tải thẻ nhân vật nào
+                    {ui.acNoCardLoaded}
                   </div>
                 )}
               </div>
@@ -2111,12 +2115,12 @@ try {
               {/* Files Context Panel */}
               <div className="p-4 flex-1 flex flex-col min-h-0 border-bottom border-zinc-800">
                 <div className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider mb-2 flex justify-between items-center">
-                  <span>Tài Liệu Đính Kèm</span>
+                  <span>{ui.acAttachedDocs}</span>
                   {attachedFiles.length > 0 && (
                     <button 
                       onClick={handleClearContext}
                       className="text-rose-400 hover:text-rose-300 transition-colors text-[9px] font-bold flex items-center gap-0.5"
-                      title="Dọn sạch file đính kèm"
+                      title={ui.acClearAttachments}
                     >
                       <Trash2 size={10} /> DỌN DẸP
                     </button>
@@ -2127,7 +2131,7 @@ try {
                   {attachedFiles.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-8 gap-2">
                       <Upload size={24} />
-                      <p className="text-[10px]">Chưa đính kèm tài liệu</p>
+                      <p className="text-[10px]">{ui.acNoAttachments}</p>
                     </div>
                   ) : (
                     attachedFiles.map((file, idx) => (
@@ -2164,7 +2168,7 @@ try {
                   <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[10px] p-2.5 rounded-xl leading-relaxed space-y-1 mb-2">
                     <div className="font-semibold flex items-center gap-1">
                       <AlertCircle size={10} className="text-rose-400 shrink-0" />
-                      <span>Lỗi tệp tin:</span>
+                      <span>{ui.acFileError}</span>
                     </div>
                     <p className="break-all font-mono text-[9px] bg-black/20 p-1 rounded">{uploadError}</p>
                   </div>
@@ -2174,7 +2178,7 @@ try {
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full py-2 border border-dashed border-zinc-800 rounded-xl text-center text-[10px] font-semibold text-slate-400 hover:bg-zinc-800/50 hover:border-indigo-500 hover:text-indigo-400 transition-all flex items-center justify-center gap-1"
                 >
-                  <Plus size={12} /> Đính kèm tệp/ảnh
+                  <Plus size={12} /> {ui.acAttachFile}
                 </button>
                 <input 
                   type="file" 
@@ -2193,7 +2197,7 @@ try {
                   <label className="flex items-center justify-between cursor-pointer group select-none">
                     <span className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400 group-hover:text-rose-400 transition-colors">
                       <Flame size={12} className="opacity-70 group-hover:opacity-100" />
-                      Chế độ NSFW / R18
+                      {ui.acNsfwMode}
                     </span>
                     <input 
                       type="checkbox" 
@@ -2203,7 +2207,7 @@ try {
                     />
                   </label>
                   <div className="text-[9px] text-slate-500 leading-relaxed">
-                    Cho phép dịch và viết các kịch bản nhạy cảm (R18/NSFW).
+                    {ui.acNsfwDesc}
                   </div>
                 </div>
 
@@ -2212,7 +2216,7 @@ try {
                   <label className="flex items-center justify-between cursor-pointer group select-none">
                     <span className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400 group-hover:text-amber-400 transition-colors">
                       <RefreshCw size={12} className="opacity-70 group-hover:opacity-100" />
-                      Tự động thử lại
+                      {ui.acAutoRetry}
                     </span>
                     <input 
                       type="checkbox" 
@@ -2222,7 +2226,7 @@ try {
                     />
                   </label>
                   <div className="text-[9px] text-slate-500 leading-relaxed">
-                    Tự động thử lại cuộc gọi API khi xảy ra lỗi mạng hoặc quá tải (Tối đa 3 lần).
+                    {ui.acAutoRetryDesc}
                   </div>
                 </div>
 
@@ -2231,7 +2235,7 @@ try {
                   <label className="group flex items-center justify-between gap-2 cursor-pointer">
                     <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300">
                       <Zap size={12} className="opacity-70 group-hover:opacity-100 text-purple-400" />
-                      Tự động thực thi Actions
+                      {ui.acAutoActions}
                     </span>
                     <input 
                       type="checkbox" 
@@ -2241,7 +2245,7 @@ try {
                     />
                   </label>
                   <div className="text-[9px] text-slate-500 leading-relaxed">
-                    Khi bật, AI actions sẽ được thực thi ngay lập tức không cần xác nhận. Tắt = yêu cầu xác nhận mỗi lần.
+                    {ui.acAutoActionsDesc}
                   </div>
                 </div>
 
@@ -2259,10 +2263,10 @@ try {
                     }}
                   >
                     <Undo2 size={12} />
-                    Hoàn tác ({cardHistory.length}/{MAX_HISTORY})
+                    {fmt(ui.acUndoBtn, { count: cardHistory.length, max: MAX_HISTORY })}
                   </button>
                   <div className="text-[9px] text-slate-500 leading-relaxed">
-                    Hoàn tác thay đổi card gần nhất do AI thực hiện (lưu tối đa {MAX_HISTORY} bước).
+                    {fmt(ui.acUndoDesc, { max: MAX_HISTORY })}
                   </div>
                 </div>
               </div>
@@ -2333,6 +2337,7 @@ function SandboxTab({
   setSandboxReplace: (v: string) => void;
   sandboxResult: { result: string; error?: string };
 }) {
+  const ui = useUi();
   const [viewMode, setViewMode] = useState<'render' | 'raw'>('render');
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -2398,7 +2403,7 @@ function SandboxTab({
                 className="btn btn-ghost btn-xs text-indigo-400"
                 style={{ padding: '2px 6px', display: 'flex', alignItems: 'center', gap: '4px' }}
                 onClick={() => setIsFullscreen(true)}
-                title="Mở rộng xem toàn màn hình"
+                title={ui.acExpandFullscreen}
               >
                 <Maximize size={10} /> Phóng to
               </button>
@@ -2490,7 +2495,7 @@ function SandboxTab({
               onClick={() => setIsFullscreen(false)}
               style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              <Minimize size={14} /> Thu nhỏ
+              <Minimize size={14} /> {ui.acMinimize}
             </button>
           </div>
 
@@ -2789,6 +2794,7 @@ function PresetCard({
 
 function MvuZodTab() {
   const { card, proxy, updateCard, addToast, setFields } = useStore();
+  const ui = useUi();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -2850,7 +2856,7 @@ function MvuZodTab() {
           content = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result as string);
-            reader.onerror = () => reject(new Error('Lỗi đọc file ảnh.'));
+            reader.onerror = () => reject(new Error(ui.acImgReadErr));
             reader.readAsDataURL(file);
           });
         } else {
