@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import { Download, AlertTriangle, Image as ImageIcon, KeyRound, Code, Activity, FileText, XCircle, Info } from 'lucide-react';
 import { embedCharaToPNG } from '../utils/pngHandler';
 import { cardToWorldbook } from '../utils/worldbookParser';
@@ -9,16 +10,18 @@ import { setNestedValue } from '../utils/cardFields';
 import { scanFieldsHealth, buildTranslationReport, type HealthSeverity } from '../utils/cardHealth';
 import type { ExportKeyMode } from '../types/card';
 
-const KEY_MODE_OPTIONS: { value: ExportKeyMode; labelEn: string; labelVi: string; desc: string }[] = [
-  { value: 'merge', labelEn: 'Merge (Both)', labelVi: 'Gộp (Cả hai)', desc: '原Key + 译Key' },
-  { value: 'translated_only', labelEn: 'Translated Only', labelVi: 'Chỉ bản dịch', desc: '译Key only' },
-  { value: 'original_only', labelEn: 'Original Only', labelVi: 'Chỉ bản gốc', desc: '原Key only' },
+/** Nhãn ở module scope nên chỉ giữ KEY, tra `ui` lúc render. `desc` là chữ Hán cố ý (nhãn kỹ thuật). */
+const KEY_MODE_OPTIONS: { value: ExportKeyMode; labelKey: 'epKeyModeMerge' | 'epKeyModeTranslated' | 'epKeyModeOriginal'; desc: string }[] = [
+  { value: 'merge', labelKey: 'epKeyModeMerge', desc: '原Key + 译Key' },
+  { value: 'translated_only', labelKey: 'epKeyModeTranslated', desc: '译Key only' },
+  { value: 'original_only', labelKey: 'epKeyModeOriginal', desc: '原Key only' },
 ];
 
 export default function ExportPanel() {
   const { card, fields, cardFileName, originalImage, _pngArrayBuffer, translationConfig, setTranslationConfig, phase, saveTranslationCache, locale, contentType, originalWorldbook, setJumpToFieldPath } = useStore();
   const { getExportCard } = useTranslation();
   const t = useT();
+  const ui = useUi();
   const isWorldbook = contentType === 'worldbook';
 
   const doneCount = fields.filter((f) => f.status === 'done').length;
@@ -346,22 +349,20 @@ export default function ExportPanel() {
           <Activity size={15} style={{ flexShrink: 0, color: health.ok ? 'var(--accent-success)' : 'var(--accent-danger)' }} />
           <span style={{ fontWeight: 600, color: health.ok ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
             {health.ok
-              ? (locale === 'vi' ? 'Sức khoẻ thẻ: an toàn để xuất' : 'Card health: safe to export')
-              : (locale === 'vi'
-                  ? `Sức khoẻ thẻ: còn ${health.issues.filter(i => i.severity === 'error').length} vấn đề nặng nên sửa trước khi xuất`
-                  : `Card health: ${health.issues.filter(i => i.severity === 'error').length} serious issue(s) to fix before export`)}
+              ? ui.epHealthOk
+              : fmt(ui.epHealthBad, { count: health.issues.filter(i => i.severity === 'error').length })}
           </span>
         </div>
 
         {/* Chỉ số nhanh */}
         {(health.counts.error > 0 || health.counts.brokenScripts > 0 || health.counts.residualCjkCode > 0 || health.counts.residualCjkText > 0 || health.counts.pending > 0) && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-            {health.counts.error > 0 && <span>❌ {health.counts.error} trường lỗi</span>}
-            {health.counts.pending > 0 && <span>⏳ {health.counts.pending} chưa xong</span>}
-            {health.counts.brokenScripts > 0 && <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>💥 {health.counts.brokenScripts} script vỡ</span>}
-            {health.counts.residualCjkCode > 0 && <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>🈲 {health.counts.residualCjkCode} chữ Hán trong code</span>}
-            {health.counts.residualCjkText > 0 && <span>🔤 {health.counts.residualCjkText} trường còn chữ Hán</span>}
-            {health.counts.glossaryUnapplied > 0 && <span>📖 {health.counts.glossaryUnapplied} trường lệch thuật ngữ</span>}
+            {health.counts.error > 0 && <span>{fmt(ui.epCntError, { count: health.counts.error })}</span>}
+            {health.counts.pending > 0 && <span>{fmt(ui.epCntPending, { count: health.counts.pending })}</span>}
+            {health.counts.brokenScripts > 0 && <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>{fmt(ui.epCntBroken, { count: health.counts.brokenScripts })}</span>}
+            {health.counts.residualCjkCode > 0 && <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>{fmt(ui.epCntCjkCode, { count: health.counts.residualCjkCode })}</span>}
+            {health.counts.residualCjkText > 0 && <span>{fmt(ui.epCntCjkText, { count: health.counts.residualCjkText })}</span>}
+            {health.counts.glossaryUnapplied > 0 && <span>{fmt(ui.epCntGlossary, { count: health.counts.glossaryUnapplied })}</span>}
           </div>
         )}
 
@@ -372,7 +373,7 @@ export default function ExportPanel() {
               onClick={() => setShowIssues(v => !v)}
               style={{ marginTop: '8px', background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
             >
-              {showIssues ? '▾ Ẩn chi tiết' : `▸ Xem chi tiết (${health.issues.length})`}
+              {showIssues ? ui.epHideDetails : fmt(ui.epShowDetails, { count: health.issues.length })}
             </button>
             {showIssues && (
               <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '220px', overflow: 'auto' }}>
@@ -380,17 +381,17 @@ export default function ExportPanel() {
                   <div
                     key={idx}
                     onClick={() => setJumpToFieldPath(iss.path)}
-                    title={locale === 'vi' ? 'Bấm để nhảy tới trường này ở bảng Field bên dưới' : 'Click to jump to this field below'}
+                    title={ui.epJumpTitle}
                     style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '0.7rem', color: 'var(--text-secondary)', cursor: 'pointer', padding: '2px 4px', borderRadius: 'var(--radius-sm)' }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(124,106,240,0.08)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
                     <IssueIcon severity={iss.severity} />
-                    <span><b>{iss.label}</b> — {iss.detail} <span style={{ color: 'var(--text-muted)', fontSize: '0.64rem' }}>{iss.path}</span> <span style={{ color: 'var(--accent-primary)', fontSize: '0.64rem' }}>↪ tới</span></span>
+                    <span><b>{iss.label}</b> — {iss.detail} <span style={{ color: 'var(--text-muted)', fontSize: '0.64rem' }}>{iss.path}</span> <span style={{ color: 'var(--accent-primary)', fontSize: '0.64rem' }}>{ui.epJump}</span></span>
                   </div>
                 ))}
                 {health.issues.length > 60 && (
-                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>… và {health.issues.length - 60} vấn đề nữa (xem đầy đủ trong báo cáo).</span>
+                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>{fmt(ui.epMoreIssues, { count: health.issues.length - 60 })}</span>
                 )}
               </div>
             )}
@@ -407,7 +408,7 @@ export default function ExportPanel() {
             marginBottom: '6px',
           }}>
             <KeyRound size={13} />
-            {locale === 'vi' ? 'Chế độ xuất từ khóa Lorebook' : 'Lorebook Key Export Mode'}
+            {ui.epKeyModeTitle}
           </div>
           <div style={{
             display: 'flex', gap: '4px',
@@ -438,17 +439,17 @@ export default function ExportPanel() {
                   }}
                   title={opt.desc}
                 >
-                  {locale === 'vi' ? opt.labelVi : opt.labelEn}
+                  {ui[opt.labelKey]}
                 </button>
               );
             })}
           </div>
           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px' }}>
             {translationConfig.exportKeyMode === 'merge'
-              ? (locale === 'vi' ? 'Giữ từ khóa gốc + thêm từ khóa đã dịch (khuyến nghị)' : 'Keep original + add translated keywords (recommended)')
+              ? ui.epKeyModeDescMerge
               : translationConfig.exportKeyMode === 'translated_only'
-                ? (locale === 'vi' ? 'Chỉ giữ từ khóa đã dịch, xóa từ khóa gốc' : 'Keep only translated keywords, remove originals')
-                : (locale === 'vi' ? 'Giữ nguyên từ khóa gốc, bỏ qua bản dịch' : 'Keep original keywords unchanged, ignore translations')
+                ? ui.epKeyModeDescTranslated
+                : ui.epKeyModeDescOriginal
             }
           </div>
         </div>
@@ -483,10 +484,10 @@ export default function ExportPanel() {
           onClick={handleExportReport}
           disabled={fields.length === 0}
           style={{ width: '100%', background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
-          title={locale === 'vi' ? 'Tải file .md tổng hợp: đã dịch/lỗi/bỏ qua + script vỡ + chữ Hán sót' : 'Download a .md summary report'}
+          title={ui.epReportTitle}
         >
           <FileText size={15} />
-          {locale === 'vi' ? 'Xuất báo cáo dịch (.md)' : 'Export translation report (.md)'}
+          {ui.epReportBtn}
         </button>
       </div>
 
@@ -495,7 +496,7 @@ export default function ExportPanel() {
         <div style={{ marginTop: '20px', borderTop: '1px solid var(--border-subtle)', paddingTop: '15px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 600, marginBottom: '12px', color: 'var(--text-primary)' }}>
             <Code size={15} style={{ color: 'var(--accent-primary)' }} />
-            {locale === 'vi' ? 'Xuất Script đã Dịch/Mod' : 'Export Translated/Modded Scripts'}
+            {ui.epScriptSection}
           </div>
           
           {translatedRegexes.length > 0 && (
@@ -521,10 +522,10 @@ export default function ExportPanel() {
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(124, 106, 240, 0.1)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                    title={locale === 'vi' ? 'Xuất toàn bộ regex thành file JSON mảng' : 'Export all regex as a single JSON array file'}
+                    title={ui.epDownloadAllRegexTitle}
                   >
                     <Download size={11} />
-                    {locale === 'vi' ? 'Tải tất cả' : 'Download all'}
+                    {ui.epDownloadAll}
                   </button>
                 )}
               </div>
@@ -589,7 +590,7 @@ export default function ExportPanel() {
                         e.currentTarget.style.background = 'rgba(124, 106, 240, 0.1)';
                         e.currentTarget.style.borderColor = 'rgba(124, 106, 240, 0.2)';
                       }}
-                      title={locale === 'vi' ? 'Tải Regex JSON' : 'Download Regex JSON'}
+                      title={ui.epDownloadRegexTitle}
                     >
                       <Download size={11} />
                       JSON
@@ -623,10 +624,10 @@ export default function ExportPanel() {
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(124, 106, 240, 0.1)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                    title={locale === 'vi' ? 'Xuất toàn bộ TavernHelper thành file JSON mảng' : 'Export all TavernHelper as a single JSON array file'}
+                    title={ui.epDownloadAllThTitle}
                   >
                     <Download size={11} />
-                    {locale === 'vi' ? 'Tải tất cả' : 'Download all'}
+                    {ui.epDownloadAll}
                   </button>
                 )}
               </div>
@@ -691,7 +692,7 @@ export default function ExportPanel() {
                         e.currentTarget.style.background = 'rgba(124, 106, 240, 0.1)';
                         e.currentTarget.style.borderColor = 'rgba(124, 106, 240, 0.2)';
                       }}
-                      title={locale === 'vi' ? 'Tải TavernHelper JSON' : 'Download TavernHelper JSON'}
+                      title={ui.epDownloadThTitle}
                     >
                       <Download size={11} />
                       JSON

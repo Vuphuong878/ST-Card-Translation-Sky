@@ -207,6 +207,53 @@ const ui: UiKeys = {
   tpManualHint2: 'Bỏ tick',
   tpManualHint3: 'ô của trường đó ở bảng',
   tpManualHint4: 'bên dưới (hoặc bấm nút ⊘) rồi bấm Bắt đầu — trường đó sẽ KHÔNG gọi API, bạn gõ bản dịch thẳng vào ô của nó.',
+
+  // ─── ExportPanel ───
+  // ⚠️ Các key dưới đây trước đây đi qua `locale === 'vi' ? VN : EN` và LUÔN ra bản ANH
+  //    (store.locale = 'en'). Giữ nguyên tiếng Anh để bản VI không đổi một chữ.
+  epKeyModeMerge: 'Merge (Both)',
+  epKeyModeTranslated: 'Translated Only',
+  epKeyModeOriginal: 'Original Only',
+  epHealthOk: 'Card health: safe to export',
+  epHealthBad: 'Card health: {count} serious issue(s) to fix before export',
+  // Các chuỗi dưới đây vốn HARDCODE tiếng Việt → giữ nguyên tiếng Việt.
+  epCntError: '❌ {count} trường lỗi',
+  epCntPending: '⏳ {count} chưa xong',
+  epCntBroken: '💥 {count} script vỡ',
+  epCntCjkCode: '🈲 {count} chữ Hán trong code',
+  epCntCjkText: '🔤 {count} trường còn chữ Hán',
+  epCntGlossary: '📖 {count} trường lệch thuật ngữ',
+  epHideDetails: '▾ Ẩn chi tiết',
+  epShowDetails: '▸ Xem chi tiết ({count})',
+  epJumpTitle: 'Click to jump to this field below',
+  epJump: '↪ tới',
+  epMoreIssues: '… và {count} vấn đề nữa (xem đầy đủ trong báo cáo).',
+  epKeyModeTitle: 'Lorebook Key Export Mode',
+  epKeyModeDescMerge: 'Keep original + add translated keywords (recommended)',
+  epKeyModeDescTranslated: 'Keep only translated keywords, remove originals',
+  epKeyModeDescOriginal: 'Keep original keywords unchanged, ignore translations',
+  epReportTitle: 'Download a .md summary report',
+  epReportBtn: 'Export translation report (.md)',
+  epScriptSection: 'Export Translated/Modded Scripts',
+  epDownloadAllRegexTitle: 'Export all regex as a single JSON array file',
+  epDownloadAll: 'Download all',
+  epDownloadRegexTitle: 'Download Regex JSON',
+  epDownloadAllThTitle: 'Export all TavernHelper as a single JSON array file',
+  epDownloadThTitle: 'Download TavernHelper JSON',
+
+  // ─── FieldEditor ───
+  feChunkBig: '🔗 Mục lớn — chia {count} phần, đang dịch SONG SONG',
+  feChunkDone: '(đã xong {done}/{total} phần)',
+  feChunkFailed: 'Lỗi ở chunk {idx}/{total}',
+  feChunkSaved: '(Đã lưu {count} chunk)',
+  feChunkResumeFrom: 'Dịch tiếp từ chunk {idx}',
+  feChunkRestart: 'Dịch lại từ đầu',
+  feChunkSavedOf: 'Đã lưu {done}/{total} chunks',
+  feChunkContinue: 'Tiếp tục dịch',
+  feApplyAllTitle: 'Apply selection to all {key}',
+  feApplyAllToast: 'Applied selection to all {key} fields',
+  feSkip: 'Bỏ qua',
+  feIgnoreFallback: 'Bỏ qua (không dịch)',
 };
 
 export default ui;

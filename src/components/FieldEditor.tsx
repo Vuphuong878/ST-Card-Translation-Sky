@@ -1,7 +1,8 @@
 import { useState, useMemo, useRef, useCallback, useEffect, lazy, Suspense, memo } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { FieldGroup, TranslationField, TranslationStatus } from '../types/card';
 import { RotateCcw, AlertTriangle, CheckCircle2, Clock, ArrowLeftRight, BarChart3, Ban, Search, X, Copy, Check, Eye, Wand2, Zap, Brain, Download } from 'lucide-react';
@@ -189,6 +190,7 @@ function ChunkStatusAndResume({
   phase: string;
 }) {
   const { proxy, translationConfig } = useStore();
+  const ui = useUi();
   const [expanded, setExpanded] = useState(false);
 
   // Ngưỡng chia chunk THỰC TẾ = 15.000 ký tự (khớp chunkText ở apiClient). Nguồn tin cậy nhất là
@@ -359,10 +361,10 @@ function ChunkStatusAndResume({
       <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
         <div style={{ fontSize: '0.62rem', color: 'var(--accent-info)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ padding: '1px 5px', background: 'rgba(124,106,240,0.12)', borderRadius: '3px', fontWeight: 600 }}>
-            🔗 Mục lớn — chia {totalChunks} phần, đang dịch SONG SONG
+            {fmt(ui.feChunkBig, { count: totalChunks })}
           </span>
           <span style={{ color: 'var(--text-muted)' }}>
-            (đã xong {completedCount}/{totalChunks} phần)
+            {fmt(ui.feChunkDone, { done: completedCount, total: totalChunks })}
           </span>
         </div>
         {renderDetailsButton()}
@@ -398,11 +400,11 @@ function ChunkStatusAndResume({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.68rem', color: 'var(--accent-danger)' }}>
             <AlertTriangle size={12} />
             <span style={{ fontWeight: 600 }}>
-              Lỗi ở chunk {(failedIdx !== undefined ? failedIdx : 0) + 1}/{totalChunks}
+              {fmt(ui.feChunkFailed, { idx: (failedIdx !== undefined ? failedIdx : 0) + 1, total: totalChunks })}
             </span>
             {completedCount > 0 && (
               <span style={{ color: 'var(--text-muted)' }}>
-                (Đã lưu {completedCount} chunk)
+                {fmt(ui.feChunkSaved, { count: completedCount })}
               </span>
             )}
           </div>
@@ -426,7 +428,7 @@ function ChunkStatusAndResume({
               }}
             >
               <RotateCcw size={10} />
-              {completedCount > 0 ? `Dịch tiếp từ chunk ${completedCount + 1}` : 'Dịch lại từ đầu'}
+              {completedCount > 0 ? fmt(ui.feChunkResumeFrom, { idx: completedCount + 1 }) : ui.feChunkRestart}
             </button>
             {completedCount > 0 && (
               <button
@@ -443,7 +445,7 @@ function ChunkStatusAndResume({
                   cursor: phase === 'translating' ? 'not-allowed' : 'pointer',
                 }}
               >
-                Dịch lại từ đầu
+                {ui.feChunkRestart}
               </button>
             )}
           </div>
@@ -460,7 +462,7 @@ function ChunkStatusAndResume({
       <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
         <div style={{ fontSize: '0.62rem', color: 'var(--accent-info)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ padding: '1px 5px', background: 'rgba(124,106,240,0.12)', borderRadius: '3px', fontWeight: 600 }}>
-            Đã lưu {completedCount}/{totalChunks} chunks
+            {fmt(ui.feChunkSavedOf, { done: completedCount, total: totalChunks })}
           </span>
           <button
             className="btn btn-ghost btn-xs"
@@ -476,7 +478,7 @@ function ChunkStatusAndResume({
               cursor: phase === 'translating' ? 'not-allowed' : 'pointer',
             }}
           >
-            Tiếp tục dịch
+            {ui.feChunkContinue}
           </button>
         </div>
         {renderDetailsButton()}
@@ -755,7 +757,6 @@ const VirtualFieldTableRow = memo(({
   allFields,
   setFields,
   addToast,
-  locale,
   setRagDebugField,
 }: {
   field: any;
@@ -768,9 +769,9 @@ const VirtualFieldTableRow = memo(({
   allFields: any[];
   setFields: any;
   addToast: any;
-  locale: string;
   setRagDebugField: any;
 }) => {
+  const ui = useUi();
   const handleRowCheckboxChange = (field: any, checked: boolean) => {
     if (checked) {
       const nextStatus = field.translated?.trim() ? 'done' : 'pending';
@@ -806,7 +807,7 @@ const VirtualFieldTableRow = memo(({
               return (
                 <button
                   className="btn btn-ghost tooltip"
-                  data-tooltip={locale === 'vi' ? `Áp dụng trạng thái chọn cho tất cả ${baseKey}` : `Apply selection to all ${baseKey}`}
+                  data-tooltip={fmt(ui.feApplyAllTitle, { key: baseKey })}
                   onClick={() => {
                     const targetStatus = field.status;
                     const nextFields = allFields.map(f => {
@@ -821,14 +822,11 @@ const VirtualFieldTableRow = memo(({
                       return f;
                     });
                     setFields(nextFields);
-                    addToast('success', locale === 'vi' 
-                      ? `Đã áp dụng chọn cho tất cả các trường ${baseKey}` 
-                      : `Applied selection to all ${baseKey} fields`
-                    );
+                    addToast('success', fmt(ui.feApplyAllToast, { key: baseKey }));
                   }}
                   disabled={phase === 'translating'}
                   style={{ padding: '2px', height: '18px', width: '18px', minHeight: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', opacity: 0.8 }}
-                  title={locale === 'vi' ? `Áp dụng trạng thái chọn cho tất cả ${baseKey}` : `Apply selection to all ${baseKey}`}
+                  title={fmt(ui.feApplyAllTitle, { key: baseKey })}
                 >
                   <Zap size={10} />
                 </button>
@@ -991,7 +989,7 @@ function VirtualTableView({
   scrollToPath?: string | null;
   highlightPath?: string | null;
 }) {
-  const { setFields, fields: allFields, addToast, locale } = useStore();
+  const { setFields, fields: allFields, addToast } = useStore();
   const parentRef = useRef<HTMLDivElement>(null);
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
@@ -1166,7 +1164,6 @@ function VirtualTableView({
                 allFields={allFields}
                 setFields={setFields}
                 addToast={addToast}
-                locale={locale}
                 setRagDebugField={setRagDebugField}
               />
             </div>
@@ -1190,7 +1187,6 @@ const VirtualFieldCardRow = memo(({
   allFields,
   setFields,
   addToast,
-  locale,
 }: {
   field: any;
   updateField: any;
@@ -1202,8 +1198,8 @@ const VirtualFieldCardRow = memo(({
   allFields: any[];
   setFields: any;
   addToast: any;
-  locale: string;
 }) => {
+  const ui = useUi();
   const handleRowCheckboxChange = (field: any, checked: boolean) => {
     if (checked) {
       const nextStatus = field.translated?.trim() ? 'done' : 'pending';
@@ -1245,7 +1241,7 @@ const VirtualFieldCardRow = memo(({
               return (
                 <button
                   className="btn btn-ghost tooltip"
-                  data-tooltip={locale === 'vi' ? `Áp dụng trạng thái chọn cho tất cả ${baseKey}` : `Apply selection to all ${baseKey}`}
+                  data-tooltip={fmt(ui.feApplyAllTitle, { key: baseKey })}
                   onClick={() => {
                     const targetStatus = field.status;
                     const nextFields = allFields.map(f => {
@@ -1260,14 +1256,11 @@ const VirtualFieldCardRow = memo(({
                       return f;
                     });
                     setFields(nextFields);
-                    addToast('success', locale === 'vi' 
-                      ? `Đã áp dụng chọn cho tất cả các trường ${baseKey}` 
-                      : `Applied selection to all ${baseKey} fields`
-                    );
+                    addToast('success', fmt(ui.feApplyAllToast, { key: baseKey }));
                   }}
                   disabled={phase === 'translating'}
                   style={{ padding: '2px', height: '18px', width: '18px', minHeight: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', opacity: 0.8 }}
-                  title={locale === 'vi' ? `Áp dụng trạng thái chọn cho tất cả ${baseKey}` : `Apply selection to all ${baseKey}`}
+                  title={fmt(ui.feApplyAllTitle, { key: baseKey })}
                 >
                   <Zap size={10} />
                 </button>
@@ -1377,7 +1370,7 @@ function VirtualDiffView({
   scrollToPath?: string | null;
   highlightPath?: string | null;
 }) {
-  const { setFields, fields: allFields, addToast, locale } = useStore();
+  const { setFields, fields: allFields, addToast } = useStore();
   const parentRef = useRef<HTMLDivElement>(null);
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
@@ -1551,7 +1544,6 @@ function VirtualDiffView({
                 allFields={allFields}
                 setFields={setFields}
                 addToast={addToast}
-                locale={locale}
               />
             </div>
           );
@@ -1791,6 +1783,7 @@ export default function FieldEditor() {
 
 /** Status badge mini-component */
 function StatusBadge({ status, t }: { status: string; t: Record<string, string> }) {
+  const ui = useUi();
   if (status === 'done') {
     return (
       <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>
@@ -1801,14 +1794,14 @@ function StatusBadge({ status, t }: { status: string; t: Record<string, string> 
   if (status === 'skipped') {
     return (
       <span className="badge badge-warning" style={{ fontSize: '0.65rem', background: 'var(--accent-warning)', color: '#fff', border: 'none' }}>
-        <CheckCircle2 size={8} /> Bỏ qua
+        <CheckCircle2 size={8} /> {ui.feSkip}
       </span>
     );
   }
   if (status === 'ignored') {
     return (
       <span className="badge badge-neutral" style={{ fontSize: '0.65rem', background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
-        <Ban size={8} /> {t.ignored || 'Bỏ qua (không dịch)'}
+        <Ban size={8} /> {t.ignored || ui.feIgnoreFallback}
       </span>
     );
   }
