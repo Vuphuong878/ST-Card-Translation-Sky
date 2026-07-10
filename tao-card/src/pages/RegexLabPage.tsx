@@ -20,6 +20,7 @@ import { renderSafeHtml, processCaptureGroups } from '../lib/regexEngine/renderS
 import { validateReplaceString } from '../lib/regexEngine/regexValidator';
 import type { RegexScript, RegexPlacement } from '../types';
 import { PLACEMENT_LABELS, SUBSTITUTE_REGEX_LABELS } from '../types';
+import { t as ui, fmt } from '../i18n';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -78,7 +79,7 @@ export function RegexLabPage() {
 
   const handleDelete = useCallback((id: string) => {
     const name = scripts.find(s => s.id === id)?.scriptName;
-    if (!confirm(`Xóa regex "${name}"?`)) return;
+    if (!confirm(fmt(ui.rlConfirmDelete, { name: name ?? '' }))) return;
     updateCard(c => {
       c.data.extensions.regex_scripts = c.data.extensions.regex_scripts.filter(s => s.id !== id);
     });
@@ -166,7 +167,7 @@ export function RegexLabPage() {
           </div>
           <button onClick={handleAdd}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-            <Plus className="w-4 h-4" /> Thêm
+            <Plus className="w-4 h-4" /> {ui.rlAdd}
           </button>
         </div>
 
@@ -174,7 +175,7 @@ export function RegexLabPage() {
         <div className="shrink-0 max-h-[200px] overflow-y-auto scrollbar-thin border-b border-border">
           {scripts.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              Chưa có regex script. <button onClick={handleAdd} className="text-primary hover:underline">Tạo mới</button>
+              {ui.rlNoScript} <button onClick={handleAdd} className="text-primary hover:underline">{ui.rlCreateNew}</button>
             </div>
           ) : (
             scripts.map(s => (
@@ -211,7 +212,7 @@ export function RegexLabPage() {
                   <button onClick={e => { e.stopPropagation(); handleDuplicate(s); }} className="p-1 text-muted-foreground hover:text-foreground" title="Copy">
                     <Copy className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={e => { e.stopPropagation(); handleDelete(s.id); }} className="p-1 text-muted-foreground hover:text-destructive" title="Xóa">
+                  <button onClick={e => { e.stopPropagation(); handleDelete(s.id); }} className="p-1 text-muted-foreground hover:text-destructive" title={ui.rlDelete}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -226,7 +227,7 @@ export function RegexLabPage() {
             <RegexEditor script={selectedScript} onUpdate={patch => handleUpdateScript(selectedScript.id, patch)} />
           ) : (
             <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-              Chọn một script để chỉnh sửa
+              {ui.rlPickScript}
             </div>
           )}
         </div>
@@ -254,7 +255,7 @@ export function RegexLabPage() {
         {/* Input text */}
         <div className="shrink-0 border-b border-border">
           <div className="px-4 py-1.5 bg-muted/30 text-xs text-muted-foreground font-medium flex items-center gap-1">
-            <Code className="w-3 h-3" /> Text gốc
+            <Code className="w-3 h-3" /> {ui.rlOriginalText}
           </div>
           <textarea value={previewText} onChange={e => setPreviewText(e.target.value)}
             rows={6} className="w-full px-4 py-2 bg-background text-xs font-mono leading-relaxed resize-none outline-none border-none" />
@@ -303,7 +304,7 @@ export function RegexLabPage() {
                     "flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors",
                     outputTab === 'template' ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"
                   )}>
-                  <Layers className="w-3 h-3" /> Mẫu HTML
+                  <Layers className="w-3 h-3" /> {ui.rlHtmlTemplate}
                 </button>
               )}
               <button onClick={() => setOutputTab('structure')}
@@ -334,7 +335,7 @@ export function RegexLabPage() {
                   activePreviewMode === 'all' ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                Tất cả (Pipeline)
+                {ui.rlAllPipeline}
               </button>
               {selectedScript && (
                 <>
@@ -345,7 +346,7 @@ export function RegexLabPage() {
                       activePreviewMode === 'selected' ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Chỉ script đang chọn
+                    {ui.rlOnlySelected}
                   </button>
                   <button
                     onClick={() => setPreviewMode('upto')}
@@ -354,7 +355,7 @@ export function RegexLabPage() {
                       activePreviewMode === 'upto' ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Đến script đang chọn
+                    {ui.rlUpToSelected}
                   </button>
                 </>
               )}
@@ -367,7 +368,7 @@ export function RegexLabPage() {
               <div className="h-full relative">
                 {previewResult.result === previewText && (
                   <div className="absolute top-2 right-2 z-20 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-400 flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3 text-amber-400" /> Không có thay đổi (Văn bản gốc)
+                    <AlertTriangle className="w-3 h-3 text-amber-400" /> {ui.rlNoChange}
                   </div>
                 )}
                 <iframe
@@ -567,9 +568,9 @@ function RegexEditor({ script, onUpdate }: {
     <div className="p-5 space-y-4">
       {/* Script name */}
       <div>
-        <label className="settings-label">Tên Script</label>
+        <label className="settings-label">{ui.rlScriptName}</label>
         <input type="text" value={script.scriptName} onChange={e => onUpdate({ scriptName: e.target.value })}
-          className="settings-input" placeholder="Tên regex script" />
+          className="settings-input" placeholder={ui.rlScriptNamePh} />
       </div>
 
       {/* Find regex */}
@@ -577,7 +578,7 @@ function RegexEditor({ script, onUpdate }: {
         <label className="settings-label">Find Regex</label>
         <input type="text" value={script.findRegex} onChange={e => onUpdate({ findRegex: e.target.value })}
           className={`settings-input font-mono text-xs ${!validation.valid && script.findRegex ? 'border-destructive/50 focus:ring-destructive/30' : ''}`}
-          placeholder="/pattern/flags hoặc plain text" />
+          placeholder={ui.rlFindPh} />
         {!validation.valid && script.findRegex && (
           <p className="text-xs text-destructive mt-1 flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" /> {validation.error}
@@ -605,7 +606,7 @@ function RegexEditor({ script, onUpdate }: {
         </div>
         <textarea value={script.replaceString} onChange={e => onUpdate({ replaceString: e.target.value })}
           rows={4} className="settings-input font-mono text-xs leading-relaxed resize-y"
-          placeholder="Nội dung thay thế ($1, $2 cho groups)" />
+          placeholder={ui.rlReplacePh} />
 
         {/* Structure summary */}
         {replaceStructure && (
@@ -633,7 +634,7 @@ function RegexEditor({ script, onUpdate }: {
 
       {/* Placement */}
       <div>
-        <label className="settings-label">Placement (áp dụng cho)</label>
+        <label className="settings-label">{ui.rlPlacement}</label>
         <div className="flex flex-wrap gap-1.5">
           {([1, 2, 3, 4, 5] as RegexPlacement[]).map(p => (
             <button key={p} onClick={() => togglePlacement(p)}

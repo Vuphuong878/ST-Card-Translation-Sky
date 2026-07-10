@@ -23,6 +23,7 @@ import { EJSTemplateLibrary } from '../components/ejs/EJSTemplateLibrary';
 import type { MVUZODSchema } from '../types/mvuzod.types';
 import type { TavernHelperScript } from '../types/tavernHelper.types';
 import { isPreprocessingEntry } from '../lib/ejs/ejsParser';
+import { t as ui, fmt } from '../i18n';
 
 type ActiveView = 'ejs' | 'analyzer';
 type RightPanel = 'preview' | 'analysis' | 'reference' | 'ai_generate' | 'library';
@@ -56,32 +57,32 @@ on("message_received", (msg) => {
 // ─── Built-in function reference ────────────────────────────────────────
 
 const BUILTIN_FUNCTIONS = [
-  { group: '📖 Đọc/Ghi biến', funcs: [
-    { name: 'getvar(key, opts)', desc: 'Đọc biến. opts: { defaults, scope }', example: "getvar('stat_data.HP', { defaults: 100 })" },
-    { name: 'setvar(key, value)', desc: 'Ghi biến', example: "setvar('stat_data.HP', 80)" },
-    { name: 'getMvuData(opts)', desc: 'Đọc MVU state', example: "Mvu.getMvuData({type:'message',message_id:'latest'})" },
+  { group: ui.esGroupVars, funcs: [
+    { name: 'getvar(key, opts)', desc: ui.esFnGetvar, example: "getvar('stat_data.HP', { defaults: 100 })" },
+    { name: 'setvar(key, value)', desc: ui.esFnSetvar, example: "setvar('stat_data.HP', 80)" },
+    { name: 'getMvuData(opts)', desc: ui.esFnGetMvuData, example: "Mvu.getMvuData({type:'message',message_id:'latest'})" },
   ]},
-  { group: '📝 Output', funcs: [
-    { name: 'print(text)', desc: 'In text vào prompt', example: "print('Hello World')" },
-    { name: '<%= expr %>', desc: 'In giá trị expression', example: "<%= getvar('stat_data.HP') %>" },
-    { name: '<%- html %>', desc: 'In HTML không escape', example: "<%- '<b>Bold</b>' %>" },
+  { group: ui.esGroupOutput, funcs: [
+    { name: 'print(text)', desc: ui.esFnPrint, example: "print('Hello World')" },
+    { name: '<%= expr %>', desc: ui.esFnEq, example: "<%= getvar('stat_data.HP') %>" },
+    { name: '<%- html %>', desc: ui.esFnRaw, example: "<%- '<b>Bold</b>' %>" },
   ]},
-  { group: '📚 Worldbook', funcs: [
-    { name: 'getwi(comment)', desc: 'Đọc nội dung entry theo comment', example: "getwi('Kỹ năng')" },
-    { name: 'activateEntry(id, bool)', desc: 'Bật/tắt entry theo ID', example: "activateEntry(42, true)" },
-    { name: 'setEntryEnabled(comment, bool)', desc: 'Bật/tắt entry theo comment', example: "setEntryEnabled('WB: Cổ đại', false)" },
-    { name: 'setEntryContent(comment, text)', desc: 'Ghi nội dung entry', example: "setEntryContent('Dynamic', 'text...')" },
+  { group: ui.esGroupWorldbook, funcs: [
+    { name: 'getwi(comment)', desc: ui.esFnGetwi, example: "getwi('Kỹ năng')" },
+    { name: 'activateEntry(id, bool)', desc: ui.esFnActivateEntry, example: "activateEntry(42, true)" },
+    { name: 'setEntryEnabled(comment, bool)', desc: ui.esFnSetEntryEnabled, example: "setEntryEnabled('WB: Cổ đại', false)" },
+    { name: 'setEntryContent(comment, text)', desc: ui.esFnSetEntryContent, example: "setEntryContent('Dynamic', 'text...')" },
   ]},
-  { group: '💉 Injection', funcs: [
-    { name: 'injectPrompt(opts)', desc: 'Inject text vào prompt context', example: "injectPrompt({ text: '...', position: 'in_chat', depth: 4 })" },
+  { group: ui.esGroupInjection, funcs: [
+    { name: 'injectPrompt(opts)', desc: ui.esFnInjectPrompt, example: "injectPrompt({ text: '...', position: 'in_chat', depth: 4 })" },
   ]},
-  { group: '💬 Chat', funcs: [
-    { name: 'getChatMessages(idx, role)', desc: 'Đọc tin nhắn chat', example: "getChatMessages(-1, 'assistant')" },
+  { group: ui.esGroupChat, funcs: [
+    { name: 'getChatMessages(idx, role)', desc: ui.esFnGetChatMessages, example: "getChatMessages(-1, 'assistant')" },
   ]},
-  { group: '📌 Constants', funcs: [
-    { name: 'CHARS_COUNT', desc: 'Số nhân vật trong group', example: 'CHARS_COUNT' },
-    { name: 'CHAT_ID', desc: 'ID chat hiện tại', example: 'CHAT_ID' },
-    { name: 'MESSAGE_ID', desc: 'ID tin nhắn hiện tại', example: 'MESSAGE_ID' },
+  { group: ui.esGroupConstants, funcs: [
+    { name: 'CHARS_COUNT', desc: ui.esFnCharsCount, example: 'CHARS_COUNT' },
+    { name: 'CHAT_ID', desc: ui.esFnChatId, example: 'CHAT_ID' },
+    { name: 'MESSAGE_ID', desc: ui.esFnMessageId, example: 'MESSAGE_ID' },
   ]},
 ];
 
@@ -257,7 +258,7 @@ export function EJSStudioPage() {
                   </button>
                 ))}
                 {ejsEntries.length === 0 && (
-                  <p className="text-[9px] text-muted-foreground/50 px-2 py-1">Không có EJS entry</p>
+                  <p className="text-[9px] text-muted-foreground/50 px-2 py-1">{ui.esNoEjsEntry}</p>
                 )}
               </div>
 
@@ -295,7 +296,7 @@ export function EJSStudioPage() {
                   </div>
                 ))}
                 {scripts.length === 0 && (
-                  <p className="text-[9px] text-muted-foreground/50 px-2 py-1">Không có scripts</p>
+                  <p className="text-[9px] text-muted-foreground/50 px-2 py-1">{ui.esNoScript}</p>
                 )}
               </div>
 
@@ -342,13 +343,13 @@ export function EJSStudioPage() {
             {activeView === 'ejs' && selectedEntryId !== null && isDirty && (
               <button onClick={handleSaveToEntry}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-                <Check className="w-3 h-3" /> Lưu vào Entry #{selectedEntryId}
+                <Check className="w-3 h-3" /> {fmt(ui.esSaveToEntry, { id: selectedEntryId })}
               </button>
             )}
             {activeView === 'analyzer' && selectedScriptIdx !== null && isDirty && (
               <button onClick={handleSaveToScript}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-                <Check className="w-3 h-3" /> Lưu Script: {(scripts[selectedScriptIdx] as TavernHelperScript)?.name || `#${selectedScriptIdx + 1}`}
+                <Check className="w-3 h-3" /> {ui.esSaveScript}{(scripts[selectedScriptIdx] as TavernHelperScript)?.name || `#${selectedScriptIdx + 1}`}
               </button>
             )}
           </div>
@@ -487,11 +488,11 @@ function BuiltinReference() {
 
       {/* Warnings */}
       <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3 space-y-1.5 mt-4">
-        <p className="text-[10px] font-medium text-amber-400">⚠️ Lưu ý quan trọng</p>
-        <p className="text-[9px] text-amber-400/80">• KHÔNG dùng <code>this.variables</code> trong @@preprocessing — dùng <code>getvar()</code></p>
-        <p className="text-[9px] text-amber-400/80">• stat_data dùng dấu chấm (<code>.</code>) làm path separator, KHÔNG phải gạch chéo (<code>/</code>)</p>
-        <p className="text-[9px] text-amber-400/80">• Khi tạo card: <strong>tắt</strong> EJS để AI thấy code gốc</p>
-        <p className="text-[9px] text-amber-400/80">• Khi chơi: <strong>bật</strong> EJS để AI thấy kết quả render</p>
+        <p className="text-[10px] font-medium text-amber-400">{ui.esWarnTitle}</p>
+        <p className="text-[9px] text-amber-400/80">{ui.esWarn1a} <code>this.variables</code> {ui.esWarn1b} <code>getvar()</code></p>
+        <p className="text-[9px] text-amber-400/80">{ui.esWarn2a}<code>.</code>{ui.esWarn2b}<code>/</code>{ui.esWarn2c}</p>
+        <p className="text-[9px] text-amber-400/80">{ui.esWarn3a} <strong>{ui.esWarn3b}</strong> {ui.esWarn3c}</p>
+        <p className="text-[9px] text-amber-400/80">{ui.esWarn4a} <strong>{ui.esWarn4b}</strong> {ui.esWarn4c}</p>
       </div>
     </div>
   );

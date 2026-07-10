@@ -15,16 +15,48 @@ import { AUTO_CREATOR_PRESETS } from '../lib/ai/autoCreatorPresets';
 import { MINH_NGUYET_STEP_LABELS } from '../prompts/minhNguyetTemplates';
 import type { AutoCreatorStep, MinhNguyetStep, AnyPipelineStep } from '../types';
 import { cn } from '../lib/utils';
+import { t as ui } from '../i18n';
 
 const STEP_DEFS: { id: AutoCreatorStep; label: string; icon: LucideIcon; desc: string }[] = [
-  { id: 'basic_info', label: 'Thông tin cơ bản', icon: User, desc: 'Name, Description, Personality, Scenario' },
-  { id: 'lorebook', label: 'Lorebook Entries', icon: BookOpen, desc: 'Tạo hàng loạt World Info entries' },
-  { id: 'regex', label: 'Regex Scripts', icon: Settings2, desc: 'Tự động tạo regex xử lý văn bản' },
-  { id: 'mvuzod', label: 'MVUZOD Schema', icon: Hash, desc: 'Cấu trúc biến trạng thái & update rules' },
-  { id: 'system_prompt', label: 'System Prompt', icon: Terminal, desc: 'Prompt hệ thống & Depth prompt' },
-  { id: 'first_message', label: 'First Message', icon: MessageSquare, desc: 'Lời chào mở đầu & Alternate greetings' },
-  { id: 'mes_example', label: 'Message Examples', icon: MessageSquare, desc: 'Các đoạn hội thoại mẫu' },
+  { id: 'basic_info', label: ui.acStepBasicInfo, icon: User, desc: 'Name, Description, Personality, Scenario' },
+  { id: 'lorebook', label: 'Lorebook Entries', icon: BookOpen, desc: ui.acStepLorebookDesc },
+  { id: 'regex', label: 'Regex Scripts', icon: Settings2, desc: ui.acStepRegexDesc },
+  { id: 'mvuzod', label: 'MVUZOD Schema', icon: Hash, desc: ui.acStepMvuzodDesc },
+  { id: 'system_prompt', label: 'System Prompt', icon: Terminal, desc: ui.acStepSysPromptDesc },
+  { id: 'first_message', label: 'First Message', icon: MessageSquare, desc: ui.acStepFirstMesDesc },
+  { id: 'mes_example', label: 'Message Examples', icon: MessageSquare, desc: ui.acStepMesExampleDesc },
 ];
+
+/** Nhãn hiển thị của preset. Giữ `AUTO_CREATOR_PRESETS` nguyên vẹn (config là dữ liệu). */
+const PRESET_UI: Record<string, { label: string; desc: string }> = {
+  romance_simple: { label: ui.acPresetRomance, desc: ui.acPresetRomanceDesc },
+  rpg_complex:    { label: ui.acPresetRpg, desc: ui.acPresetRpgDesc },
+  slice_of_life:  { label: ui.acPresetSol, desc: ui.acPresetSolDesc },
+  wuxia_xianxia:  { label: ui.acPresetWuxia, desc: ui.acPresetWuxiaDesc },
+  multi_char:     { label: ui.acPresetMulti, desc: ui.acPresetMultiDesc },
+  mn_romance:     { label: ui.acPresetMnRomance, desc: ui.acPresetMnRomanceDesc },
+  mn_deep_character: { label: ui.acPresetMnDeep, desc: ui.acPresetMnDeepDesc },
+  mn_large_world: { label: ui.acPresetMnWorld, desc: ui.acPresetMnWorldDesc },
+};
+
+/**
+ * Nhãn hiển thị của các bước Minh Nguyệt.
+ * KHÔNG i18n hoá `MINH_NGUYET_STEP_LABELS.label` — chuỗi đó đi thẳng vào prompt AI
+ * (lib/ai/minhNguyetPipeline.ts). Ở đây chỉ thay phần người dùng nhìn thấy; `icon`
+ * vẫn lấy từ bảng gốc.
+ */
+const MN_UI: Record<string, { label: string; desc: string }> = {
+  worldview:             { label: ui.mnWorldview, desc: ui.mnWorldviewDesc },
+  character_basic:       { label: ui.mnCharacterBasic, desc: ui.mnCharacterBasicDesc },
+  color_palette:         { label: ui.mnColorPalette, desc: ui.mnColorPaletteDesc },
+  three_faces:           { label: ui.mnThreeFaces, desc: ui.mnThreeFacesDesc },
+  secondary_explanation: { label: ui.mnSecondaryExplanation, desc: ui.mnSecondaryExplanationDesc },
+  wardrobe:              { label: ui.mnWardrobe, desc: ui.mnWardrobeDesc },
+  nsfw_palette:          { label: ui.mnNsfwPalette, desc: ui.mnNsfwPaletteDesc },
+  npc_creation:          { label: ui.mnNpcCreation, desc: ui.mnNpcCreationDesc },
+  character_overview:    { label: ui.mnCharacterOverview, desc: ui.mnCharacterOverviewDesc },
+  opening:               { label: ui.mnOpening, desc: ui.mnOpeningDesc },
+};
 
 export function AutoCreatorPage() {
   const store = useAutoCreatorStore();
@@ -42,8 +74,8 @@ export function AutoCreatorPage() {
   }, [store.logs]);
 
   const handleStart = async () => {
-    if (!activeProfile) { useToastStore.getState().warning('Vui lòng cấu hình AI Profile trong Cài đặt trước!'); return; }
-    if (!store.config.idea.trim()) { useToastStore.getState().warning('Vui lòng nhập ý tưởng card!'); return; }
+    if (!activeProfile) { useToastStore.getState().warning(ui.acNeedProfile); return; }
+    if (!store.config.idea.trim()) { useToastStore.getState().warning(ui.acNeedIdea); return; }
     if (store.isPaused) { store.setPaused(false); return; }
     if (!store.isRunning && store.currentStep) { store.resetPipeline(); }
     
@@ -90,7 +122,7 @@ export function AutoCreatorPage() {
         disabled={store.isRunning}
       >
         <Moon className="w-3.5 h-3.5" />
-        Minh Nguyệt
+        {ui.acMinhNguyet}
       </button>
     </div>
   );
@@ -98,7 +130,7 @@ export function AutoCreatorPage() {
   const renderPresetSelector = () => (
     <div className="space-y-2">
       <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-        <Zap className="w-3.5 h-3.5" /> PRESET NHANH
+        <Zap className="w-3.5 h-3.5" /> {ui.acQuickPreset}
       </label>
       <div className="flex flex-wrap gap-1.5">
         {AUTO_CREATOR_PRESETS.map(p => (
@@ -114,9 +146,9 @@ export function AutoCreatorPage() {
               store.applyPreset({ ...p.config, presetId: p.id });
             }}
             disabled={store.isRunning}
-            title={p.description}
+            title={PRESET_UI[p.id]?.desc ?? p.description}
           >
-            {p.icon} {p.label.replace(/^[^\s]+\s/, '')}
+            {p.icon} {PRESET_UI[p.id]?.label ?? p.label.replace(/^[^\s]+\s/, '')}
           </button>
         ))}
       </div>
@@ -150,10 +182,10 @@ export function AutoCreatorPage() {
           <div className="px-10 py-3 border-t border-border/50 bg-background/50 text-xs space-y-3">
             {step === 'basic_info' && (
               <>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.basic_info.includePersonality} onChange={(e) => store.updateStepConfig('basic_info', { includePersonality: e.target.checked })} disabled={store.isRunning} /> Bao gồm Personality</label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.basic_info.includeScenario} onChange={(e) => store.updateStepConfig('basic_info', { includeScenario: e.target.checked })} disabled={store.isRunning} /> Bao gồm Scenario</label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.basic_info.includePersonality} onChange={(e) => store.updateStepConfig('basic_info', { includePersonality: e.target.checked })} disabled={store.isRunning} /> {ui.acIncludePersonality}</label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.basic_info.includeScenario} onChange={(e) => store.updateStepConfig('basic_info', { includeScenario: e.target.checked })} disabled={store.isRunning} /> {ui.acIncludeScenario}</label>
                 <div className="flex items-center gap-2">
-                  <span>Ngôn ngữ:</span>
+                  <span>{ui.acLanguage}</span>
                   <select className="border rounded px-2 py-1 bg-background" value={stepConfigs.basic_info.language} onChange={(e) => store.updateStepConfig('basic_info', { language: e.target.value as 'vi' | 'en' | 'zh' | 'ja' })} disabled={store.isRunning}>
                     <option value="vi">Tiếng Việt</option><option value="en">English</option><option value="zh">中文</option><option value="ja">日本語</option>
                   </select>
@@ -163,28 +195,28 @@ export function AutoCreatorPage() {
 
             {step === 'lorebook' && (
               <>
-                <SliderControl label="Tổng số entries" value={stepConfigs.lorebook.totalEntries} min={5} max={100} step={5} onChange={(v) => store.updateStepConfig('lorebook', { totalEntries: v })} disabled={store.isRunning} />
+                <SliderControl label={ui.acTotalEntries} value={stepConfigs.lorebook.totalEntries} min={5} max={100} step={5} onChange={(v) => store.updateStepConfig('lorebook', { totalEntries: v })} disabled={store.isRunning} />
                 <SliderControl label="Entries / Batch" value={stepConfigs.lorebook.entriesPerBatch} min={1} max={10} onChange={(v) => store.updateStepConfig('lorebook', { entriesPerBatch: v })} disabled={store.isRunning} />
-                <SliderControl label="Batch song song" value={stepConfigs.lorebook.concurrentBatches} min={1} max={5} onChange={(v) => store.updateStepConfig('lorebook', { concurrentBatches: v })} disabled={store.isRunning} />
+                <SliderControl label={ui.acConcurrentBatches} value={stepConfigs.lorebook.concurrentBatches} min={1} max={5} onChange={(v) => store.updateStepConfig('lorebook', { concurrentBatches: v })} disabled={store.isRunning} />
                 <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.lorebook.useWebSearch} onChange={(e) => store.updateStepConfig('lorebook', { useWebSearch: e.target.checked })} disabled={store.isRunning} /> Web Search (RAG)</label>
               </>
             )}
 
             {step === 'regex' && (
-              <SliderControl label="Số regex scripts" value={stepConfigs.regex.count} min={1} max={10} onChange={(v) => store.updateStepConfig('regex', { count: v })} disabled={store.isRunning} />
+              <SliderControl label={ui.acRegexCount} value={stepConfigs.regex.count} min={1} max={10} onChange={(v) => store.updateStepConfig('regex', { count: v })} disabled={store.isRunning} />
             )}
 
             {step === 'mvuzod' && (
               <>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.mvuzod.createInitVar} onChange={(e) => store.updateStepConfig('mvuzod', { createInitVar: e.target.checked })} disabled={store.isRunning} /> Tạo [initvar]</label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.mvuzod.createVarList} onChange={(e) => store.updateStepConfig('mvuzod', { createVarList: e.target.checked })} disabled={store.isRunning} /> Tạo Danh sách biến</label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.mvuzod.createUpdateRules} onChange={(e) => store.updateStepConfig('mvuzod', { createUpdateRules: e.target.checked })} disabled={store.isRunning} /> Tạo Update Rules</label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.mvuzod.createInitVar} onChange={(e) => store.updateStepConfig('mvuzod', { createInitVar: e.target.checked })} disabled={store.isRunning} /> {ui.acCreateInitVar}</label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.mvuzod.createVarList} onChange={(e) => store.updateStepConfig('mvuzod', { createVarList: e.target.checked })} disabled={store.isRunning} /> {ui.acCreateVarList}</label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.mvuzod.createUpdateRules} onChange={(e) => store.updateStepConfig('mvuzod', { createUpdateRules: e.target.checked })} disabled={store.isRunning} /> {ui.acCreateUpdateRules}</label>
               </>
             )}
 
             {step === 'system_prompt' && (
               <>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.system_prompt.includeDepthPrompt} onChange={(e) => store.updateStepConfig('system_prompt', { includeDepthPrompt: e.target.checked })} disabled={store.isRunning} /> Kèm Depth Prompt</label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={stepConfigs.system_prompt.includeDepthPrompt} onChange={(e) => store.updateStepConfig('system_prompt', { includeDepthPrompt: e.target.checked })} disabled={store.isRunning} /> {ui.acIncludeDepthPrompt}</label>
                 {stepConfigs.system_prompt.includeDepthPrompt && (
                   <div className="flex items-center gap-2 mt-1"><span>Depth:</span><input type="number" min="0" max="10" className="border rounded px-2 py-1 w-16 bg-background" value={stepConfigs.system_prompt.depthValue} onChange={(e) => store.updateStepConfig('system_prompt', { depthValue: parseInt(e.target.value) || 4 })} disabled={store.isRunning} /></div>
                 )}
@@ -196,23 +228,23 @@ export function AutoCreatorPage() {
             )}
 
             {step === 'mes_example' && (
-              <SliderControl label="Số hội thoại mẫu" value={stepConfigs.mes_example.exampleCount} min={1} max={5} onChange={(v) => store.updateStepConfig('mes_example', { exampleCount: v })} disabled={store.isRunning} />
+              <SliderControl label={ui.acExampleCount} value={stepConfigs.mes_example.exampleCount} min={1} max={5} onChange={(v) => store.updateStepConfig('mes_example', { exampleCount: v })} disabled={store.isRunning} />
             )}
 
             {/* v3: Prompt Override */}
             <div className="pt-2 border-t border-border/30">
               <button className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors" onClick={() => setShowPromptOverride(isPromptOverrideOpen ? null : step)}>
-                <Edit3 className="w-3 h-3" /> {isPromptOverrideOpen ? 'Ẩn' : 'Custom Prompt'}
+                <Edit3 className="w-3 h-3" /> {isPromptOverrideOpen ? ui.acHide : 'Custom Prompt'}
               </button>
               {isPromptOverrideOpen && (
                 <div className="mt-2 space-y-2">
                   <select className="border rounded px-2 py-1 bg-background text-[10px] w-full" value={(currentConfig.promptMode as string) || 'default'} onChange={(e) => store.updateStepConfig(step, { promptMode: e.target.value } as never)} disabled={store.isRunning}>
-                    <option value="default">Mặc định</option>
-                    <option value="append">Nối thêm vào prompt</option>
-                    <option value="replace">Thay thế hoàn toàn</option>
+                    <option value="default">{ui.acPromptDefault}</option>
+                    <option value="append">{ui.acPromptAppend}</option>
+                    <option value="replace">{ui.acPromptReplace}</option>
                   </select>
                   {(currentConfig.promptMode as string) !== 'default' && (
-                    <textarea className="w-full h-20 p-2 text-[10px] rounded border border-border bg-card resize-none focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Nhập prompt tùy chỉnh..." value={(currentConfig.promptOverride as string) || ''} onChange={(e) => store.updateStepConfig(step, { promptOverride: e.target.value } as never)} disabled={store.isRunning} />
+                    <textarea className="w-full h-20 p-2 text-[10px] rounded border border-border bg-card resize-none focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder={ui.acPromptOverridePh} value={(currentConfig.promptOverride as string) || ''} onChange={(e) => store.updateStepConfig(step, { promptOverride: e.target.value } as never)} disabled={store.isRunning} />
                   )}
                 </div>
               )}
@@ -274,10 +306,10 @@ export function AutoCreatorPage() {
             <span className="text-sm">{meta.icon}</span>
             <div>
               <div className="text-sm font-medium">
-                {meta.label}
-                {isOptional && <span className="ml-1 text-[10px] text-muted-foreground font-normal">(tùy chọn)</span>}
+                {MN_UI[step]?.label ?? meta.label}
+                {isOptional && <span className="ml-1 text-[10px] text-muted-foreground font-normal">{ui.acOptional}</span>}
               </div>
-              <div className="text-[10px] text-muted-foreground">{meta.desc}</div>
+              <div className="text-[10px] text-muted-foreground">{MN_UI[step]?.desc ?? meta.desc}</div>
             </div>
           </div>
           <button className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors" onClick={(e) => { e.stopPropagation(); setExpandedStep(isExpanded ? null : step); }}>
@@ -288,7 +320,7 @@ export function AutoCreatorPage() {
         {isExpanded && (
           <div className="px-10 py-3 border-t border-border/50 bg-background/50 text-xs space-y-3">
             {step === 'npc_creation' && (
-              <SliderControl label="Số lượng NPC" value={currentConfig.npcCount as number} min={1} max={10} onChange={(v) => store.updateMnStepConfig('npc_creation', { npcCount: v })} disabled={store.isRunning} />
+              <SliderControl label={ui.acNpcCount} value={currentConfig.npcCount as number} min={1} max={10} onChange={(v) => store.updateMnStepConfig('npc_creation', { npcCount: v })} disabled={store.isRunning} />
             )}
             
             {step === 'opening' && (
@@ -297,17 +329,17 @@ export function AutoCreatorPage() {
 
             <div className="pt-2 border-t border-border/30">
               <button className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors" onClick={() => setShowMnPromptOverride(isPromptOverrideOpen ? null : step)}>
-                <Edit3 className="w-3 h-3" /> {isPromptOverrideOpen ? 'Ẩn' : 'Custom Prompt'}
+                <Edit3 className="w-3 h-3" /> {isPromptOverrideOpen ? ui.acHide : 'Custom Prompt'}
               </button>
               {isPromptOverrideOpen && (
                 <div className="mt-2 space-y-2">
                   <select className="border rounded px-2 py-1 bg-background text-[10px] w-full" value={(currentConfig.promptMode as string) || 'default'} onChange={(e) => store.updateMnStepConfig(step, { promptMode: e.target.value } as never)} disabled={store.isRunning}>
-                    <option value="default">Mặc định</option>
-                    <option value="append">Nối thêm vào prompt</option>
-                    <option value="replace">Thay thế hoàn toàn</option>
+                    <option value="default">{ui.acPromptDefault}</option>
+                    <option value="append">{ui.acPromptAppend}</option>
+                    <option value="replace">{ui.acPromptReplace}</option>
                   </select>
                   {(currentConfig.promptMode as string) !== 'default' && (
-                    <textarea className="w-full h-20 p-2 text-[10px] rounded border border-border bg-card resize-none focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder="Nhập prompt tùy chỉnh..." value={(currentConfig.promptOverride as string) || ''} onChange={(e) => store.updateMnStepConfig(step, { promptOverride: e.target.value } as never)} disabled={store.isRunning} />
+                    <textarea className="w-full h-20 p-2 text-[10px] rounded border border-border bg-card resize-none focus:outline-none focus:ring-1 focus:ring-primary/50" placeholder={ui.acPromptOverridePh} value={(currentConfig.promptOverride as string) || ''} onChange={(e) => store.updateMnStepConfig(step, { promptOverride: e.target.value } as never)} disabled={store.isRunning} />
                   )}
                 </div>
               )}
@@ -326,7 +358,7 @@ export function AutoCreatorPage() {
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><Wand2 className="w-4 h-4 text-primary" /></div>
           <div>
             <h2 className="font-bold flex items-center gap-1.5">Auto Creator <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-normal">v3</span></h2>
-            <p className="text-[10px] text-muted-foreground">Blueprint-driven • Preview mode • Smart retry</p>
+            <p className="text-[10px] text-muted-foreground">{ui.acTagline}</p>
           </div>
         </div>
 
@@ -335,14 +367,14 @@ export function AutoCreatorPage() {
           {renderPresetSelector()}
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">💡 Ý TƯỞNG CỦA BẠN</label>
-            <textarea className="w-full h-28 p-3 text-sm rounded-xl border border-border bg-card resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/50 disabled:opacity-50" placeholder="Nhập chi tiết ý tưởng về nhân vật, bối cảnh, hệ thống RPG...&#10;AI sẽ phân tích ý tưởng (Phase 0) rồi tạo toàn bộ card." value={store.config.idea} onChange={(e) => store.setIdea(e.target.value)} disabled={store.isRunning} />
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">{ui.acYourIdea}</label>
+            <textarea className="w-full h-28 p-3 text-sm rounded-xl border border-border bg-card resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/50 disabled:opacity-50" placeholder={ui.acIdeaPh} value={store.config.idea} onChange={(e) => store.setIdea(e.target.value)} disabled={store.isRunning} />
           </div>
 
           {/* v3: Auto Apply toggle */}
           <div className="flex items-center justify-between px-1">
             <label className="text-xs text-muted-foreground flex items-center gap-2">
-              <Eye className="w-3.5 h-3.5" /> Preview trước khi apply
+              <Eye className="w-3.5 h-3.5" /> {ui.acPreviewBeforeApply}
             </label>
             <button className={cn("relative w-10 h-5 rounded-full transition-colors", !store.config.autoApplyAll ? "bg-primary" : "bg-muted")} onClick={() => store.setAutoApplyAll(!store.config.autoApplyAll)} disabled={store.isRunning}>
               <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform", !store.config.autoApplyAll ? "translate-x-5" : "translate-x-0.5")} />
@@ -354,32 +386,32 @@ export function AutoCreatorPage() {
               {/* MN Config */}
               <div className="space-y-3">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Moon className="w-3.5 h-3.5" /> CẤU HÌNH MINH NGUYỆT
+                  <Moon className="w-3.5 h-3.5" /> {ui.acMnConfig}
                 </label>
                 <div className="space-y-2 p-3 rounded-lg border bg-card text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Đường thế giới quan</span>
+                    <span className="text-muted-foreground">{ui.acWorldviewPath}</span>
                     <select
                       className="border rounded px-2 py-1 bg-background text-xs"
                       value={store.config.mnConfig.worldviewPath}
                       onChange={(e) => store.updateMnConfig({ worldviewPath: e.target.value as 'real_background' | 'small_world' | 'large_world' })}
                       disabled={store.isRunning}
                     >
-                      <option value="real_background">Đường A: Bối cảnh thực</option>
-                      <option value="small_world">Đường B: Thế giới nhỏ</option>
-                      <option value="large_world">Đường C: Thế giới lớn</option>
+                      <option value="real_background">{ui.acPathA}</option>
+                      <option value="small_world">{ui.acPathB}</option>
+                      <option value="large_world">{ui.acPathC}</option>
                     </select>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Loại thẻ</span>
+                    <span className="text-muted-foreground">{ui.acMnCardType}</span>
                     <select
                       className="border rounded px-2 py-1 bg-background text-xs"
                       value={store.config.mnConfig.cardType}
                       onChange={(e) => store.updateMnConfig({ cardType: e.target.value as 'single' | 'multi' })}
                       disabled={store.isRunning}
                     >
-                      <option value="single">Nhân vật đơn</option>
-                      <option value="multi">Nhiều nhân vật</option>
+                      <option value="single">{ui.acSingleChar}</option>
+                      <option value="multi">{ui.acMultiChar}</option>
                     </select>
                   </div>
                   <div className="flex items-center justify-between">
@@ -397,7 +429,7 @@ export function AutoCreatorPage() {
 
               {/* MN Steps */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">🌙 CÁC BƯỚC MINH NGUYỆT</label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">{ui.acMnSteps}</label>
                 <div className="space-y-1.5">
                   {Object.keys(MINH_NGUYET_STEP_LABELS).map(stepId => renderMnStepConfig(stepId as MinhNguyetStep))}
                 </div>
@@ -405,7 +437,7 @@ export function AutoCreatorPage() {
             </>
           ) : (
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">☑️ CÁC BƯỚC TẠO CARD</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">{ui.acCardSteps}</label>
               <div className="space-y-1.5">{STEP_DEFS.map(s => renderStepConfig(s.id))}</div>
             </div>
           )}
@@ -414,17 +446,17 @@ export function AutoCreatorPage() {
         <div className="p-4 border-t border-border bg-card/50 shrink-0">
           {!activeProfile && (
             <div className="text-center p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-center justify-center gap-2 mb-3">
-              <AlertTriangle className="w-4 h-4" /> Chưa cấu hình AI Profile
+              <AlertTriangle className="w-4 h-4" /> {ui.acNoProfile}
             </div>
           )}
           <button onClick={handleStart} disabled={!activeProfile || !store.config.idea.trim() || (store.isRunning && !store.isPaused)}
             className={cn("w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm",
               store.isRunning && !store.isPaused ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow")}>
-            {store.isBlueprintLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> ĐANG PHÂN TÍCH...</> :
-              store.isPaused ? <><Play className="w-5 h-5 fill-current" /> TIẾP TỤC</> :
-              store.isRunning ? <><Loader2 className="w-5 h-5 animate-spin" /> ĐANG CHẠY...</> :
-              store.currentStep ? <><RotateCcw className="w-5 h-5" /> BẮT ĐẦU LẠI</> :
-              <><Sparkles className="w-5 h-5" /> 🚀 BẮT ĐẦU TẠO CARD</>}
+            {store.isBlueprintLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> {ui.acAnalysing}</> :
+              store.isPaused ? <><Play className="w-5 h-5 fill-current" /> {ui.acResume}</> :
+              store.isRunning ? <><Loader2 className="w-5 h-5 animate-spin" /> {ui.acRunning}</> :
+              store.currentStep ? <><RotateCcw className="w-5 h-5" /> {ui.acRestart}</> :
+              <><Sparkles className="w-5 h-5" /> {ui.acStart}</>}
           </button>
         </div>
       </div>
@@ -434,8 +466,8 @@ export function AutoCreatorPage() {
         {!store.currentStep && store.logs.length === 0 && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-muted-foreground/50 pointer-events-none">
             <Wand2 className="w-16 h-16 mb-4 opacity-20" />
-            <p className="font-medium">Chưa có tiến trình nào</p>
-            <p className="text-xs mt-1">Cấu hình bên trái và bấm Bắt Đầu</p>
+            <p className="font-medium">{ui.acNoProgress}</p>
+            <p className="text-xs mt-1">{ui.acConfigureLeft}</p>
           </div>
         )}
 
@@ -453,7 +485,7 @@ export function AutoCreatorPage() {
         {/* Stepper */}
         <div className="flex-1 overflow-y-auto scrollbar-thin p-6 border-b border-border bg-card/50 min-h-0">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-            {isMinhNguyet ? '🌙 TIẾN TRÌNH MINH NGUYỆT' : '📊 TIẾN TRÌNH'}
+            {isMinhNguyet ? ui.acMnProgress : ui.acProgress}
           </h3>
           <div className="space-y-3">
             {isMinhNguyet ? (
@@ -471,7 +503,7 @@ export function AutoCreatorPage() {
                     {renderStatusIcon(status)}
                     <span className="text-sm">{meta?.icon}</span>
                     <div className="flex-1 min-w-0">
-                      <span className={cn('text-xs font-medium', isActive && 'text-violet-400')}>{meta?.label}</span>
+                      <span className={cn('text-xs font-medium', isActive && 'text-violet-400')}>{MN_UI[step]?.label ?? meta?.label}</span>
                       {result && <span className="text-[10px] text-muted-foreground ml-2">{result}</span>}
                     </div>
                     {status === 'error' && (
@@ -521,8 +553,8 @@ export function AutoCreatorPage() {
             <div className="flex items-center gap-2"><Terminal className="w-3.5 h-3.5" /><span>Pipeline Console</span></div>
             {store.isRunning && (
               <div className="flex items-center gap-1.5">
-                <button onClick={() => store.setPaused(true)} className="px-2 py-1 bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 rounded flex items-center gap-1 transition-colors"><Pause className="w-3 h-3" /> Tạm dừng</button>
-                <button onClick={() => { store.setIsRunning(false); store.setPaused(false); }} className="px-2 py-1 bg-red-500/20 text-red-500 hover:bg-red-500/30 rounded flex items-center gap-1 transition-colors"><Square className="w-3 h-3" /> Dừng</button>
+                <button onClick={() => store.setPaused(true)} className="px-2 py-1 bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 rounded flex items-center gap-1 transition-colors"><Pause className="w-3 h-3" /> {ui.acPause}</button>
+                <button onClick={() => { store.setIsRunning(false); store.setPaused(false); }} className="px-2 py-1 bg-red-500/20 text-red-500 hover:bg-red-500/30 rounded flex items-center gap-1 transition-colors"><Square className="w-3 h-3" /> {ui.acStop}</button>
               </div>
             )}
             {!store.isRunning && store.logs.length > 0 && (
