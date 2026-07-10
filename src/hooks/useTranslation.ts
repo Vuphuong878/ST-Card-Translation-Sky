@@ -3201,7 +3201,7 @@ export function useTranslation() {
         store.translationConfig.chunkSize,
         undefined, // previouslyCompletedChunks
         undefined, // onChunkComplete
-        undefined, // parallelChunks
+        computePoolConcurrency(store.proxy), // parallelChunks — field to (mod) cũng chunk song song qua pool
         undefined, // enableChunkVerification
         undefined, // onChunksReady
         store.translationConfig.cssCjkHandling,

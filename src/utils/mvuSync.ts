@@ -2087,14 +2087,22 @@ ${currentVarList}${retryHint}`;
     onProgress?.(Math.min(translatedSoFar, keysToTranslate.length), keysToTranslate.length);
   }; // end processBatch
 
-  // Chạy các lô SONG SONG theo ngân sách pool. concurrency do caller truyền
-  // (computePoolConcurrency = Σ key×RPM mọi provider). pickLane trong callProvider lo RPM.
-  await runWorkerPool({
-    total: batches.length,
-    concurrency: Math.max(1, concurrency),
-    runOne: (i) => processBatch(batches[i]),
-    shouldStop: () => !!signal?.aborted,
-  });
+  // ── SEED COVARIANCE: lô ĐẦU chạy một mình để "định chuẩn" quy ước đặt tên
+  // (Mức X / Độ X, Title Case…). Các lô SAU chạy SONG SONG và đọc kết quả lô đầu
+  // qua covarianceBlock (allConstraints gộp `result` tại lúc chạy) → giữ nhất quán
+  // gần bằng bản tuần tự mà chỉ trả giá 1 call chờ. pickLane trong callProvider lo RPM.
+  if (batches.length > 0) {
+    await processBatch(batches[0]);
+  }
+  if (batches.length > 1) {
+    const rest = batches.slice(1);
+    await runWorkerPool({
+      total: rest.length,
+      concurrency: Math.max(1, concurrency),
+      runOne: (i) => processBatch(rest[i]),
+      shouldStop: () => !!signal?.aborted,
+    });
+  }
 
   // ── POST-BATCH: Bảo toàn prefix chức năng "_" (readonly) / "$" (ẩn) ───────
   // Chạy TRƯỚC dedup để `类型`→`Loại` và `_类型`→`_Loại` được xem là hai bản
