@@ -62,6 +62,16 @@ export const FLOWS: FlowDef[] = [
     color: '#a855f7',
   },
   {
+    id: 'crawler',
+    label: 'Web Crawler',
+    labelKey: 'railCrawler',
+    emoji: '🧭',
+    kind: 'iframe',
+    // crawler (Next.js) on fixed port 5177.
+    url: (import.meta as any).env?.VITE_CRAWLER_TOOL_URL || 'http://localhost:5177',
+    color: '#6366f1',
+  },
+  {
     id: 'novalcard',
     label: 'Trích Card',
     labelKey: 'railExtract',
