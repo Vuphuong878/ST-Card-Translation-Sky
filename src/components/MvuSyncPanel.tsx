@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import { 
   extractPotentialMvuKeys, 
   aiTranslateMvuKeys, 
@@ -66,7 +67,7 @@ export default function MvuSyncPanel() {
     unknown: false
   });
   
-  const isVi = locale === 'vi';
+  const ui = useUi();
   const { enableMvuSync, mvuDictionary } = translationConfig;
 
   if (!card) return null;
@@ -148,7 +149,7 @@ export default function MvuSyncPanel() {
   const autoExtract = () => {
     const keyInfos = extractPotentialMvuKeys(card);
     if (keyInfos.length === 0) {
-      addToast('info', isVi ? 'Không tìm thấy key MVU nào.' : 'No MVU keys found.');
+      addToast('info', ui.msNoKeys);
       return;
     }
     
@@ -193,13 +194,11 @@ export default function MvuSyncPanel() {
     setTranslationConfig({ mvuDictionary: nextDict });
     
     if (schemaMappingKeys.length > 0) {
-      addToast('success', isVi 
-        ? `Đã quét và tự động trích xuất ${schemaMappingKeys.length} biến từ Zod Schema đã dịch.` 
-        : `Extracted ${schemaMappingKeys.length} variables from translated Zod Schema.`);
+      addToast('success', fmt(ui.msExtractedZod, { count: schemaMappingKeys.length }));
     } else if (added > 0) {
-      addToast('success', isVi ? `Đã thêm ${added} key mới.` : `Added ${added} new keys.`);
+      addToast('success', fmt(ui.msAddedKeys, { count: added }));
     } else {
-      addToast('info', isVi ? 'Các key đều đã có sẵn.' : 'Keys already exist.');
+      addToast('info', ui.msKeysExist);
     }
   };
 
@@ -208,7 +207,7 @@ export default function MvuSyncPanel() {
     const keyInfos = extractPotentialMvuKeys(card);
     const keys = keyInfos.map(ki => ki.key);
     if (keys.length === 0) {
-      addToast('info', isVi ? 'Không tìm thấy key MVU nào.' : 'No MVU keys found.');
+      addToast('info', ui.msNoKeys);
       return;
     }
 
@@ -242,12 +241,9 @@ export default function MvuSyncPanel() {
     const keysNeedTranslation = keys.filter(k => !(k in currentDict) || !currentDict[k]);
     if (keysNeedTranslation.length === 0) {
       if (extractedCount > 0) {
-        addToast('success', isVi
-          ? `Đã đồng bộ ${extractedCount} biến từ Zod Schema đã dịch. Tất cả key khác đã có bản dịch.`
-          : `Synced ${extractedCount} variables from translated Zod Schema. All other keys already translated.`
-        );
+        addToast('success', fmt(ui.msSyncedZod, { count: extractedCount }));
       } else {
-        addToast('info', isVi ? 'Tất cả key đều đã có bản dịch.' : 'All keys already have translations.');
+        addToast('info', ui.msAllTranslated);
       }
       return;
     }
@@ -304,21 +300,13 @@ export default function MvuSyncPanel() {
       const { fixedDict, fixes } = enforceExactConsistency(nextDict, nextMetadata);
       if (fixes.length > 0) {
         setTranslationConfig({ mvuDictionary: fixedDict });
-        addToast('success', isVi 
-          ? `Đã dịch ${added} biến và sửa ${fixes.length} biến thể.` 
-          : `AI translated ${added} variables and fixed ${fixes.length} variants.`);
+        addToast('success', fmt(ui.msAiFixed, { added, fixes: fixes.length }));
       } else {
         setTranslationConfig({ mvuDictionary: nextDict });
-        addToast('success', isVi
-          ? `AI đã dịch ${added}/${keysNeedTranslation.length} tên biến.`
-          : `AI translated ${added}/${keysNeedTranslation.length} variable names.`
-        );
+        addToast('success', fmt(ui.msAiTranslated, { added, total: keysNeedTranslation.length }));
       }
     } catch (err) {
-      addToast('error', isVi
-        ? `Lỗi AI: ${err instanceof Error ? err.message : String(err)}`
-        : `AI Error: ${err instanceof Error ? err.message : String(err)}`
-      );
+      addToast('error', fmt(ui.msAiErr, { msg: err instanceof Error ? err.message : String(err) }));
     } finally {
       setIsAutoTranslating(false);
     }
@@ -337,7 +325,7 @@ export default function MvuSyncPanel() {
         keyDescriptions = extractZodDescriptions(schemaContext);
       }
 
-      addToast('info', isVi ? 'Đang gọi AI giải quyết xung đột bản dịch...' : 'Calling AI to resolve translation conflicts...');
+      addToast('info', ui.msResolving);
 
       const { fixedDict, fixedCount } = await aiResolveMvuConflicts(
         mvuDictionary,
@@ -365,21 +353,12 @@ export default function MvuSyncPanel() {
         
         setMvuKeyMetadata(nextMetadata);
         setTranslationConfig({ mvuDictionary: fixedDict });
-        addToast('success', isVi
-          ? `Đã giải quyết ${fixedCount} xung đột tên biến.`
-          : `Resolved ${fixedCount} variable conflicts.`
-        );
+        addToast('success', fmt(ui.msResolved, { count: fixedCount }));
       } else {
-        addToast('info', isVi
-          ? 'Không tìm thấy thay đổi nào mới hoặc không thể tự động giải quyết.'
-          : 'No changes found or could not resolve automatically.'
-        );
+        addToast('info', ui.msNoResolve);
       }
     } catch (err) {
-      addToast('error', isVi
-        ? `Lỗi giải quyết xung đột: ${err instanceof Error ? err.message : String(err)}`
-        : `Conflict resolution error: ${err instanceof Error ? err.message : String(err)}`
-      );
+      addToast('error', fmt(ui.msResolveErr, { msg: err instanceof Error ? err.message : String(err) }));
     } finally {
       setIsResolvingConflicts(false);
     }
@@ -412,10 +391,10 @@ export default function MvuSyncPanel() {
           const merged = { ...mvuDictionary, ...imported };
           setTranslationConfig({ mvuDictionary: merged });
           const newCount = Object.keys(imported).length;
-          addToast('success', isVi ? `Đã nhập ${newCount} key.` : `Imported ${newCount} keys.`);
+          addToast('success', fmt(ui.msImported, { count: newCount }));
         }
       } catch {
-        addToast('error', isVi ? 'File JSON không hợp lệ.' : 'Invalid JSON file.');
+        addToast('error', ui.msImportBad);
       }
     };
     input.click();
@@ -547,11 +526,11 @@ export default function MvuSyncPanel() {
   };
 
   // ─── Group display metadata ───
-  const groupMeta: Record<string, { vi: string; en: string; icon: string }> = {
-    field_name: { vi: 'Tên trường (Fields)', en: 'Field Names', icon: '🏷️' },
-    enum_value: { vi: 'Giá trị Enum (Enums)', en: 'Enum Values', icon: '🔢' },
-    string_literal: { vi: 'Hằng chuỗi (Literals)', en: 'String Literals', icon: '📝' },
-    unknown: { vi: 'Chưa phân loại (Unknown)', en: 'Unknown / Other', icon: '❓' }
+  const groupMeta: Record<string, { titleKey: 'msGroupFieldName' | 'msGroupEnum' | 'msGroupLiteral' | 'msGroupUnknown'; icon: string }> = {
+    field_name: { titleKey: 'msGroupFieldName', icon: '🏷️' },
+    enum_value: { titleKey: 'msGroupEnum', icon: '🔢' },
+    string_literal: { titleKey: 'msGroupLiteral', icon: '📝' },
+    unknown: { titleKey: 'msGroupUnknown', icon: '❓' }
   };
 
   const toggleGroup = (group: string) => {
@@ -593,7 +572,7 @@ export default function MvuSyncPanel() {
     }
     setTranslationConfig({ mvuDictionary: nextDict });
     setMvuKeyMetadata(nextMetadata);
-    addToast('success', isVi ? `Đã xóa ${selectedKeys.size} khóa.` : `Deleted ${selectedKeys.size} keys.`);
+    addToast('success', fmt(ui.msDeleted, { count: selectedKeys.size }));
     setSelectedKeys(new Set());
   };
 
@@ -610,7 +589,7 @@ export default function MvuSyncPanel() {
     }
     setTranslationConfig({ mvuDictionary: nextDict });
     setMvuKeyMetadata(nextMetadata);
-    addToast('success', isVi ? `Đã đặt lại ${selectedKeys.size} khóa.` : `Reset ${selectedKeys.size} keys.`);
+    addToast('success', fmt(ui.msReset, { count: selectedKeys.size }));
     setSelectedKeys(new Set());
   };
 
@@ -621,7 +600,7 @@ export default function MvuSyncPanel() {
     useStore.setState({
       mvuDictionaryHistory: mvuDictionaryHistory.slice(0, -1)
     });
-    addToast('success', isVi ? 'Đã hoàn tác thay đổi.' : 'Undid last change.');
+    addToast('success', ui.msUndone);
   };
 
   const handleForceConsistency = () => {
@@ -629,11 +608,9 @@ export default function MvuSyncPanel() {
     if (fixes.length > 0) {
       pushDictionaryHistory(mvuDictionary);
       setTranslationConfig({ mvuDictionary: fixedDict });
-      addToast('success', isVi 
-        ? `Đã sửa ${fixes.length} biến thể viết hoa/chính tả.` 
-        : `Fixed ${fixes.length} case/spelling variants.`);
+      addToast('success', fmt(ui.msFixedVariants, { count: fixes.length }));
     } else {
-      addToast('info', isVi ? 'Từ điển đã hoàn toàn nhất quán.' : 'Dictionary is fully consistent.');
+      addToast('info', ui.msConsistent);
     }
   };
 
@@ -660,7 +637,7 @@ export default function MvuSyncPanel() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Settings size={16} color="var(--accent-primary)" />
           <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
-            {isVi ? 'Chiến Lược B (Đồng bộ Biến MVU/Zod)' : 'Strategy B (Sync MVU Variables)'}
+            {ui.msTitle}
           </span>
           {dictEntries.length > 0 && (
             <span style={{
@@ -711,9 +688,7 @@ export default function MvuSyncPanel() {
             }}>
               <Zap size={14} color="#818cf8" style={{ flexShrink: 0 }} />
               <span>
-                {isVi 
-                  ? `Phát hiện: ${mvuSummary.variableCount} biến, ${mvuSummary.initvarCount} initvar, Patch: ${mvuSummary.jsonPatchEntries || 0}, Zod: ${mvuSummary.hasZodSchema ? '✓' : '✗'}, Conf: ${(mvuSummary.confidence * 100).toFixed(0)}%`
-                  : `Detected: ${mvuSummary.variableCount} vars, ${mvuSummary.initvarCount} initvar, Patch: ${mvuSummary.jsonPatchEntries || 0}, Zod: ${mvuSummary.hasZodSchema ? '✓' : '✗'}, Conf: ${(mvuSummary.confidence * 100).toFixed(0)}%`}
+                {fmt(ui.msDetected, { vars: mvuSummary.variableCount, initvar: mvuSummary.initvarCount, patch: mvuSummary.jsonPatchEntries || 0, zod: mvuSummary.hasZodSchema ? '✓' : '✗', conf: (mvuSummary.confidence * 100).toFixed(0) })}
               </span>
             </div>
           )}
@@ -735,15 +710,13 @@ export default function MvuSyncPanel() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}>
                 <AlertTriangle size={14} />
                 <span>
-                  {isVi 
-                    ? `Phát hiện ${conflicts.length} xung đột bản dịch (trùng tên dịch):` 
-                    : `Detected ${conflicts.length} translation conflict(s) (same translation name):`}
+                  {fmt(ui.msConflictHeader, { count: conflicts.length })}
                 </span>
               </div>
               <div style={{ maxHeight: '90px', overflowY: 'auto', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {conflicts.map((c, idx) => (
                   <div key={idx} style={{ opacity: 0.9 }}>
-                    <code>"{c.key1}"</code> & <code>"{c.key2}"</code> {isVi ? 'đều dịch thành' : 'both translate to'} <strong>"{c.sharedValue}"</strong>
+                    <code>"{c.key1}"</code> & <code>"{c.key2}"</code> {ui.msBothTranslate} <strong>"{c.sharedValue}"</strong>
                   </div>
                 ))}
               </div>
@@ -773,7 +746,7 @@ export default function MvuSyncPanel() {
                 ) : (
                   <Bot size={12} />
                 )}
-                {isVi ? 'Gọi AI dịch lại từ xung đột' : 'Call AI to re-translate conflicts'}
+                {ui.msResolveBtn}
               </button>
             </div>
           )}
@@ -789,9 +762,7 @@ export default function MvuSyncPanel() {
           }}>
             <Info size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
             <span>
-              {isVi 
-                ? 'Đổi tên biến hệ thống để thẻ MVU vẫn hoạt động sau khi dịch. Bật ON → khi dịch, AI sẽ TỰ ĐỘNG quét key và dịch tên biến.' 
-                : 'Rename system variables to keep MVU cards functional after translation. ON → AI will AUTO-DETECT keys and translate variable names during translation.'}
+              {ui.msExplain}
             </span>
           </div>
 
@@ -804,7 +775,7 @@ export default function MvuSyncPanel() {
             fontSize: '0.75rem',
           }}>
             <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-              {isVi ? '🔄 Số lần quét biến:' : '🔄 Scan passes:'}
+              {ui.msPasses}
             </span>
             <input
               type="number"
@@ -823,7 +794,7 @@ export default function MvuSyncPanel() {
               }}
             />
             <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>
-              {isVi ? '(1-5, mỗi pass chỉ dịch biến mới)' : '(1-5, each pass translates new vars only)'}
+              {ui.msPassesHint}
             </span>
           </div>
 
@@ -847,14 +818,12 @@ export default function MvuSyncPanel() {
                 cursor: 'default',
               }}
             >
-              📝 {isVi ? 'Custom Prompt (tuỳ chỉnh cách dịch biến)' : 'Custom Prompt (variable translation rules)'}
+              📝 {ui.msCustomPrompt}
             </div>
             <textarea
               value={translationConfig.mvuTranslationPrompt || ''}
               onChange={(e) => setTranslationConfig({ mvuTranslationPrompt: e.target.value })}
-              placeholder={isVi
-                ? 'Ví dụ: Không dùng Hán Việt, dịch tên nhân vật sang tiếng Việt tự nhiên. Tên Nhật → Romaji...'
-                : 'Example: Do not use Sino-Vietnamese. Translate character names naturally. Japanese names → Romaji...'}
+              placeholder={ui.msCustomPromptPh}
               style={{
                 width: '100%',
                 minHeight: '52px',
@@ -875,7 +844,7 @@ export default function MvuSyncPanel() {
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
             <button className="btn btn-secondary" onClick={autoExtract} style={{ flex: 1, padding: '6px', fontSize: '0.75rem', minWidth: '100px' }}>
               <Wand2 size={14} />
-              {isVi ? 'Quét Key' : 'Extract Keys'}
+              {ui.msExtractKeys}
             </button>
             <button
               className="btn btn-primary"
@@ -884,8 +853,8 @@ export default function MvuSyncPanel() {
               style={{ flex: 1, padding: '6px', fontSize: '0.75rem', minWidth: '100px' }}
             >
               {isAutoTranslating
-                ? <><Loader2 size={14} className="spin" /> {isVi ? 'Đang dịch...' : 'Translating...'}</>
-                : <><Bot size={14} /> {isVi ? 'AI Quét + Dịch Key' : 'AI Extract + Translate'}</>
+                ? <><Loader2 size={14} className="spin" /> {ui.msTranslating}</>
+                : <><Bot size={14} /> {ui.msAiExtract}</>
               }
             </button>
           </div>
@@ -902,7 +871,7 @@ export default function MvuSyncPanel() {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder={isVi ? 'Tìm kiếm biến...' : 'Search variables...'}
+                placeholder={ui.msSearchPh}
                 style={{
                   flex: 1, padding: '5px 6px', fontSize: '0.72rem',
                   background: 'transparent', border: 'none', outline: 'none',
@@ -913,7 +882,7 @@ export default function MvuSyncPanel() {
             {mvuDictionaryHistory.length > 0 && (
               <button
                 onClick={handleUndo}
-                title={isVi ? 'Hoàn tác' : 'Undo'}
+                title={ui.msUndo}
                 style={{
                   background: 'rgba(99,102,241,0.06)',
                   border: '1px solid rgba(99,102,241,0.18)',
@@ -928,7 +897,7 @@ export default function MvuSyncPanel() {
 
             <button
               onClick={handleForceConsistency}
-              title={isVi ? 'Chuẩn hóa tính nhất quán 100%' : 'Force 100% exact consistency'}
+              title={ui.msForceConsistency}
               style={{
                 background: 'rgba(34,197,94,0.06)',
                 border: '1px solid rgba(34,197,94,0.18)',
@@ -942,7 +911,7 @@ export default function MvuSyncPanel() {
 
             <button
               onClick={() => setShowStats(!showStats)}
-              title={isVi ? 'Thống kê' : 'Statistics'}
+              title={ui.msStats}
               style={{
                 background: showStats ? 'rgba(99,102,241,0.1)' : 'none',
                 border: '1px solid var(--border-subtle)',
@@ -955,7 +924,7 @@ export default function MvuSyncPanel() {
             </button>
             <button
               onClick={exportDict}
-              title={isVi ? 'Xuất từ điển' : 'Export dictionary'}
+              title={ui.msExportDict}
               style={{
                 background: 'none', border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-sm)',
@@ -967,7 +936,7 @@ export default function MvuSyncPanel() {
             </button>
             <button
               onClick={importDict}
-              title={isVi ? 'Nhập từ điển' : 'Import dictionary'}
+              title={ui.msImportDict}
               style={{
                 background: 'none', border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-sm)',
@@ -994,15 +963,15 @@ export default function MvuSyncPanel() {
             }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-primary)' }}>{dictEntries.length}</div>
-                <div style={{ color: 'var(--text-muted)' }}>{isVi ? 'Tổng' : 'Total'}</div>
+                <div style={{ color: 'var(--text-muted)' }}>{ui.msTotal}</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-success)' }}>{filledCount}</div>
-                <div style={{ color: 'var(--text-muted)' }}>{isVi ? 'Đã dịch' : 'Translated'}</div>
+                <div style={{ color: 'var(--text-muted)' }}>{ui.msTranslatedLabel}</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, color: emptyCount > 0 ? 'var(--accent-warning)' : 'var(--text-muted)' }}>{emptyCount}</div>
-                <div style={{ color: 'var(--text-muted)' }}>{isVi ? 'Chưa dịch' : 'Pending'}</div>
+                <div style={{ color: 'var(--text-muted)' }}>{ui.msPending}</div>
               </div>
             </div>
           )}
@@ -1021,7 +990,7 @@ export default function MvuSyncPanel() {
               fontSize: '0.72rem',
             }}>
               <div style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-                {isVi ? `Đang chọn ${selectedKeys.size} mục` : `Selected ${selectedKeys.size} items`}
+                {fmt(ui.msSelected, { count: selectedKeys.size })}
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button 
@@ -1032,7 +1001,7 @@ export default function MvuSyncPanel() {
                     color: 'var(--text-secondary)'
                   }}
                 >
-                  {isVi ? 'Đặt lại' : 'Reset'}
+                  {ui.msResetBtn}
                 </button>
                 <button 
                   onClick={handleBulkDelete}
@@ -1043,7 +1012,7 @@ export default function MvuSyncPanel() {
                   }}
                 >
                   <Trash2 size={12} />
-                  {isVi ? 'Xóa' : 'Delete'}
+                  {ui.msDeleteBtn}
                 </button>
               </div>
             </div>
@@ -1056,7 +1025,7 @@ export default function MvuSyncPanel() {
               
               const meta = groupMeta[groupName] || groupMeta.unknown;
               const isCollapsed = collapsedGroups[groupName];
-              const groupTitle = isVi ? meta.vi : meta.en;
+              const groupTitle = ui[meta.titleKey];
               const allSelected = entries.every(([k]) => selectedKeys.has(k));
               const someSelected = entries.some(([k]) => selectedKeys.has(k)) && !allSelected;
 
@@ -1175,7 +1144,7 @@ export default function MvuSyncPanel() {
                               type="text"
                               value={v}
                               onChange={(e) => updateEntry(k, e.target.value)}
-                              placeholder={isVi ? 'Bản dịch (VD: Độ Hảo Cảm)' : 'Translation'}
+                              placeholder={ui.msTranslationPh}
                               style={{
                                 flex: 1, padding: '5px 7px', fontSize: '0.72rem',
                                 background: v ? 'var(--bg-primary)' : 'rgba(240,196,106,0.06)',
@@ -1203,7 +1172,7 @@ export default function MvuSyncPanel() {
             
             {filteredEntries.length === 0 && dictEntries.length > 0 && (
               <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                {isVi ? 'Không tìm thấy kết quả' : 'No results found'}
+                {ui.msNoResults}
               </div>
             )}
           </div>
@@ -1214,7 +1183,7 @@ export default function MvuSyncPanel() {
               type="text"
               value={newKey}
               onChange={(e) => setNewKey(e.target.value)}
-              placeholder={isVi ? 'Key gốc' : 'Original Key'}
+              placeholder={ui.msOriginalKeyPh}
               style={{
                 flex: 1, padding: '6px 8px', fontSize: '0.75rem',
                 background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)',
@@ -1226,7 +1195,7 @@ export default function MvuSyncPanel() {
               type="text"
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
-              placeholder={isVi ? 'Dịch' : 'Translated'}
+              placeholder={ui.msTranslatedPh}
               style={{
                 flex: 1, padding: '6px 8px', fontSize: '0.75rem',
                 background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)',

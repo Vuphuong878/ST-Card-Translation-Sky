@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import { detectEjsCard, extractEjsEntryNames, extractEjsKeywords, extractAllDecorators, aiTranslateEjsEntries } from '../utils/ejsSync';
 import { Settings, Plus, Trash2, Wand2, Loader2, Search, Download, Upload, Shield, Zap, Hash, BookOpen, Eye } from 'lucide-react';
 
 export default function EjsSyncPanel() {
-  const { card, translationConfig, setTranslationConfig, locale, proxy, addToast } = useStore();
+  const { card, translationConfig, setTranslationConfig, proxy, addToast } = useStore();
   const t = useT();
   const [isExpanded, setIsExpanded] = useState(false);
   const [newKey, setNewKey] = useState('');
@@ -13,7 +14,7 @@ export default function EjsSyncPanel() {
   const [activeTab, setActiveTab] = useState<'entries' | 'keywords' | 'decorators'>('entries');
   const [isAutoTranslating, setIsAutoTranslating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const isVi = locale === 'vi';
+  const ui = useUi();
 
   const { enableEjsSync, ejsDecoratorPreserve } = translationConfig;
   const ejsEntryNameDict = translationConfig.ejsEntryNameDict || {};
@@ -91,7 +92,7 @@ export default function EjsSyncPanel() {
       const newKws = ejsKeywords.map(k => k.keyword).filter(k => !(k in ejsKeywordDict));
 
       if (newEntryNames.length === 0 && newKws.length === 0) {
-        addToast('info', isVi ? 'Tất cả đã được map sẵn.' : 'All items already mapped.');
+        addToast('info', ui.esAllMapped);
         return;
       }
 
@@ -119,10 +120,7 @@ export default function EjsSyncPanel() {
 
       const addedE = Object.keys(entryTranslations).length;
       const addedK = Object.keys(keywordTranslations).length;
-      addToast('success', isVi
-        ? `Đã dịch ${addedE} entry names + ${addedK} keywords.`
-        : `Translated ${addedE} entry names + ${addedK} keywords.`
-      );
+      addToast('success', fmt(ui.esTranslated, { entries: addedE, keywords: addedK }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       addToast('error', `AI translate failed: ${msg}`);
@@ -150,9 +148,9 @@ export default function EjsSyncPanel() {
     }
     if (added > 0) {
       setTranslationConfig({ ejsEntryNameDict: nextEntries, ejsKeywordDict: nextKws });
-      addToast('success', isVi ? `Đã thêm ${added} items mới.` : `Added ${added} new items.`);
+      addToast('success', fmt(ui.esAdded, { count: added }));
     } else {
-      addToast('info', isVi ? 'Tất cả đã có sẵn.' : 'All items already exist.');
+      addToast('info', ui.esAllExist);
     }
   };
 
@@ -184,9 +182,9 @@ export default function EjsSyncPanel() {
         if (data.ejsKeywordDict) {
           setTranslationConfig({ ejsKeywordDict: { ...ejsKeywordDict, ...data.ejsKeywordDict } });
         }
-        addToast('success', isVi ? 'Import thành công!' : 'Import successful!');
+        addToast('success', ui.esImportOk);
       } catch {
-        addToast('error', isVi ? 'File JSON không hợp lệ.' : 'Invalid JSON file.');
+        addToast('error', ui.esImportBad);
       }
     };
     input.click();
@@ -214,7 +212,7 @@ export default function EjsSyncPanel() {
       >
         <Settings size={16} style={{ color: 'var(--color-info)' }} />
         <span style={{ fontWeight: 600 }}>
-          {isVi ? 'Chiến Lược C (Đồng bộ EJS)' : 'Strategy C (EJS Sync)'}
+          {ui.esTitle}
         </span>
 
         {/* Toggle */}
@@ -255,7 +253,7 @@ export default function EjsSyncPanel() {
                   {ejsDetection.hasDecorators && ', decorators'}
                 </>
               ) : (
-                <>{isVi ? 'Không phát hiện EJS trong card này.' : 'No EJS detected in this card.'}</>
+                <>{ui.esNoEjs}</>
               )}
             </span>
           </div>
@@ -263,7 +261,7 @@ export default function EjsSyncPanel() {
           {/* ─── Action Buttons ─── */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
             <button className="btn btn-sm btn-primary" onClick={autoExtractOnly} title="Extract entry names + keywords (no AI)">
-              <Search size={13} /> {isVi ? 'Quét' : 'Scan'}
+              <Search size={13} /> {ui.esScan}
             </button>
             <button
               className="btn btn-sm btn-accent"
@@ -272,7 +270,7 @@ export default function EjsSyncPanel() {
               title="Scan + AI translate"
             >
               {isAutoTranslating ? <Loader2 size={13} className="spin" /> : <Wand2 size={13} />}
-              {isVi ? 'Quét + Dịch AI' : 'Scan + AI Translate'}
+              {ui.esScanTranslate}
             </button>
             <button className="btn btn-sm" onClick={exportDict} title="Export dictionaries">
               <Download size={13} />
@@ -291,7 +289,7 @@ export default function EjsSyncPanel() {
             fontSize: 13,
           }}>
             <span style={{ whiteSpace: 'nowrap' }}>
-              {isVi ? '🔄 Số lần quét:' : '🔄 Scan passes:'}
+              {ui.esPasses}
             </span>
             <input
               type="number"
@@ -310,7 +308,7 @@ export default function EjsSyncPanel() {
               }}
             />
             <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-              {isVi ? '(1-5, mỗi pass chỉ dịch biến mới)' : '(1-5, each pass translates new vars only)'}
+              {ui.esPassesHint}
             </span>
           </div>
 
@@ -331,14 +329,12 @@ export default function EjsSyncPanel() {
               alignItems: 'center',
               gap: 6,
             }}>
-              📝 {isVi ? 'Custom Prompt (tuỳ chỉnh cách dịch entry/keyword)' : 'Custom Prompt (entry/keyword translation rules)'}
+              📝 {ui.esCustomPrompt}
             </div>
             <textarea
               value={translationConfig.ejsTranslationPrompt || ''}
               onChange={(e) => setTranslationConfig({ ejsTranslationPrompt: e.target.value })}
-              placeholder={isVi
-                ? 'Ví dụ: Không dùng Hán Việt, dịch tên nhân vật tự nhiên. Tên Nhật → Romaji...'
-                : 'Example: Do not use Sino-Vietnamese. Translate names naturally. Japanese → Romaji...'}
+              placeholder={ui.esCustomPromptPh}
               style={{
                 width: '100%',
                 minHeight: 48,
@@ -359,7 +355,7 @@ export default function EjsSyncPanel() {
           {/* ─── Decorator Preserve Toggle ─── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 13 }}>
             <Shield size={14} style={{ color: 'var(--color-info)' }} />
-            <span>{isVi ? 'Bảo vệ Decorators (@@, [GENERATE:], @INJECT)' : 'Protect Decorators'}</span>
+            <span>{ui.esProtectDecorators}</span>
             <label className="toggle-switch" style={{ marginLeft: 'auto' }}>
               <input
                 type="checkbox"
@@ -400,7 +396,7 @@ export default function EjsSyncPanel() {
                 type="text"
                 className="input input-sm"
                 style={{ paddingLeft: 28, width: '100%' }}
-                placeholder={isVi ? 'Tìm kiếm...' : 'Search...'}
+                placeholder={ui.esSearchPh}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -413,14 +409,14 @@ export default function EjsSyncPanel() {
               <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 8 }}>
                 {filteredEntries.length === 0 ? (
                   <div style={{ padding: 16, textAlign: 'center', opacity: 0.6, fontSize: 13 }}>
-                    {isVi ? 'Chưa có dữ liệu. Nhấn "Quét" để bắt đầu.' : 'No data. Click "Scan" to start.'}
+                    {ui.esNoData}
                   </div>
                 ) : (
                   <table className="dict-table" style={{ width: '100%', fontSize: 12 }}>
                     <thead>
                       <tr>
                         <th style={{ width: '40%' }}>Original</th>
-                        <th style={{ width: '40%' }}>{isVi ? 'Dịch' : 'Translated'}</th>
+                        <th style={{ width: '40%' }}>{ui.esTranslatedCol}</th>
                         <th style={{ width: '20%' }}></th>
                       </tr>
                     </thead>
@@ -472,7 +468,7 @@ export default function EjsSyncPanel() {
                 <input
                   type="text"
                   className="input input-sm"
-                  placeholder={isVi ? 'Dịch' : 'Translated'}
+                  placeholder={ui.esTranslatedCol}
                   value={newValue}
                   onChange={(e) => setNewValue(e.target.value)}
                   style={{ flex: 1, fontSize: 12 }}
@@ -493,7 +489,7 @@ export default function EjsSyncPanel() {
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {ejsDecorators.length === 0 ? (
                 <div style={{ padding: 16, textAlign: 'center', opacity: 0.6, fontSize: 13 }}>
-                  {isVi ? 'Không có decorator nào.' : 'No decorators found.'}
+                  {ui.esNoDecorators}
                 </div>
               ) : (
                 <table className="dict-table" style={{ width: '100%', fontSize: 11 }}>
@@ -531,8 +527,8 @@ export default function EjsSyncPanel() {
 
           {/* ─── Stats ─── */}
           <div style={{ fontSize: 11, opacity: 0.7, marginTop: 8, display: 'flex', gap: 12 }}>
-            <span>📊 {isVi ? 'Entry Names' : 'Entry Names'}: {entryCount} ({Object.values(ejsEntryNameDict).filter(v => v.trim()).length} {isVi ? 'đã dịch' : 'translated'})</span>
-            <span>🏷️ Keywords: {kwCount} ({Object.values(ejsKeywordDict).filter(v => v.trim()).length} {isVi ? 'đã dịch' : 'translated'})</span>
+            <span>📊 {ui.esEntryNames}: {entryCount} ({Object.values(ejsEntryNameDict).filter(v => v.trim()).length} {ui.esTranslatedWord})</span>
+            <span>🏷️ Keywords: {kwCount} ({Object.values(ejsKeywordDict).filter(v => v.trim()).length} {ui.esTranslatedWord})</span>
             <span>🛡️ Decorators: {ejsDecorators.length}</span>
           </div>
         </div>
