@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import { aiVerifyCard, aiVerifyCardStreaming, aiRegexScan, aiRegexFixAll, quickVerify, extractSystemReferences, verifyFields, applyAutoFix, aiFixIssues, aiFixSingleIssue } from '../utils/aiVerify';
 import type { VerifyIssue, VerifyResult, FieldIssue, AIFixReport, StreamingVerifyProgress, RegexScanProgress, RegexFixResult } from '../utils/aiVerify';
 import { crossCheckHtmlVsInitvar, validateFindRegexVsNarrative } from '../utils/mvuValidator';
@@ -47,10 +48,10 @@ type VerifyTab = 'field' | 'card';
 
 export default function VerifyPanel() {
   const store = useStore();
-  const { card, fields, proxy, translationConfig, locale, addToast, addLog, updateField } = store;
+  const { card, fields, proxy, translationConfig, addToast, addLog, updateField } = store;
   const { getExportCard } = useTranslation();
   const t = useT() as Record<string, string>;
-  const isVi = locale === 'vi';
+  const ui = useUi();
 
   const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
   const [fieldIssues, setFieldIssues] = useState<FieldIssue[]>([]);
@@ -137,7 +138,7 @@ export default function VerifyPanel() {
     } finally {
       setIsVerifying(false);
     }
-  }, [fields, translationConfig, addLog, addToast, isVi]);
+  }, [fields, translationConfig, addLog, addToast, ui]);
 
   // ─── Card-level quick verify ───
   const handleQuickVerify = useCallback(() => {
@@ -146,7 +147,7 @@ export default function VerifyPanel() {
     setActiveTab('card');
     try {
       const exportCard = getExportCard();
-      if (!exportCard) { addToast('error', isVi ? 'Không thể tạo card xuất' : 'Cannot generate export card'); return; }
+      if (!exportCard) { addToast('error', ui.vpNoExportCard); return; }
       const origRefs = extractSystemReferences(card);
       const types: Record<string, number> = {};
       for (const r of origRefs) types[r.type] = (types[r.type] || 0) + 1;
@@ -167,7 +168,7 @@ export default function VerifyPanel() {
     } finally {
       setIsVerifying(false);
     }
-  }, [card, getExportCard, addToast, isVi, addLog]);
+  }, [card, getExportCard, addToast, ui, addLog]);
 
   // ─── AI deep verify (streaming) ───
   const handleAIVerify = useCallback(async () => {
@@ -178,8 +179,8 @@ export default function VerifyPanel() {
     aiVerifyAbortRef.current = new AbortController();
     try {
       const exportCard = getExportCard();
-      if (!exportCard) { addToast('error', isVi ? 'Không thể tạo card xuất' : 'Cannot generate export card'); return; }
-      addLog('active', isVi ? '🔍 AI Streaming — quét từng section...' : '🔍 AI Streaming — scanning sections...');
+      if (!exportCard) { addToast('error', ui.vpNoExportCard); return; }
+      addLog('active', ui.vpAiStreaming);
       const result = await aiVerifyCardStreaming(
         card, exportCard, proxy, translationConfig.targetLanguage,
         translationConfig.mvuDictionary,
@@ -198,13 +199,13 @@ export default function VerifyPanel() {
       setIsVerifying(false);
       aiVerifyAbortRef.current = null;
     }
-  }, [card, getExportCard, proxy, translationConfig, addToast, addLog, isVi]);
+  }, [card, getExportCard, proxy, translationConfig, addToast, addLog, ui]);
 
   // ─── Cancel AI Verify ───
   const handleCancelAIVerify = useCallback(() => {
     aiVerifyAbortRef.current?.abort();
-    addLog('warning', isVi ? '🛑 AI Verify đã hủy' : '🛑 AI Verify cancelled');
-  }, [addLog, isVi]);
+    addLog('warning', ui.vpAiCancelled);
+  }, [addLog, ui]);
 
   // ─── Regex Scan ───
   const handleRegexScan = useCallback(async () => {
@@ -214,7 +215,7 @@ export default function VerifyPanel() {
     setRegexFixResults([]);
     regexAbortRef.current = new AbortController();
     try {
-      addLog('active', isVi ? '🔍 Đang quét regex scripts...' : '🔍 Scanning regex scripts...');
+      addLog('active', ui.vpRegexScanning);
       const { issues, regexResults } = await aiRegexScan(
         fields, proxy, translationConfig.targetLanguage,
         translationConfig.mvuDictionary, translationConfig.sourceLanguage,
@@ -225,8 +226,8 @@ export default function VerifyPanel() {
       const errCount = issues.filter(i => i.severity === 'error').length;
       const warnCount = issues.filter(i => i.severity === 'warning').length;
       addLog(errCount > 0 ? 'error' : 'success',
-        isVi ? `Regex scan: ${errCount} lỗi, ${warnCount} cảnh báo` : `Regex scan: ${errCount} errors, ${warnCount} warnings`);
-      if (issues.length === 0) addToast('success', isVi ? '✅ Regex sạch!' : '✅ Regex clean!');
+        fmt(ui.vpRegexScanResult, { err: errCount, warn: warnCount }));
+      if (issues.length === 0) addToast('success', ui.vpRegexClean);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg !== 'The operation was aborted.' && msg !== 'AbortError') {
@@ -236,12 +237,12 @@ export default function VerifyPanel() {
       setIsRegexScanning(false);
       regexAbortRef.current = null;
     }
-  }, [fields, proxy, translationConfig, addLog, addToast, isVi]);
+  }, [fields, proxy, translationConfig, addLog, addToast, ui]);
 
   const handleCancelRegexScan = useCallback(() => {
     regexAbortRef.current?.abort();
-    addLog('warning', isVi ? '🛑 Regex scan đã hủy' : '🛑 Regex scan cancelled');
-  }, [addLog, isVi]);
+    addLog('warning', ui.vpRegexScanCancelled);
+  }, [addLog, ui]);
 
   // ─── Regex Fix All ───
   const handleRegexFix = useCallback(async () => {
@@ -250,12 +251,12 @@ export default function VerifyPanel() {
     setRegexFixResults([]);
     regexAbortRef.current = new AbortController();
     try {
-      addLog('active', isVi ? `🔧 Đang sửa ${regexIssues.length} lỗi regex...` : `🔧 Fixing ${regexIssues.length} regex issues...`);
+      addLog('active', fmt(ui.vpRegexFixing, { count: regexIssues.length }));
       const results = await aiRegexFixAll(
         regexIssues, fields, proxy, translationConfig.targetLanguage,
         translationConfig.mvuDictionary, translationConfig.sourceLanguage,
         ({ fixing, done, total, results: r }) => {
-          setRegexFixProgress(isVi ? `Sửa ${done}/${total}: ${fixing}` : `Fix ${done}/${total}: ${fixing}`);
+          setRegexFixProgress(fmt(ui.vpRegexFixProgress, { done, total, name: fixing }));
           setRegexFixResults([...r]);
         },
         regexAbortRef.current.signal,
@@ -276,15 +277,15 @@ export default function VerifyPanel() {
       setRegexFixProgress('');
       regexAbortRef.current = null;
     }
-  }, [regexIssues, fields, proxy, translationConfig, addLog, addToast, isVi, t]);
+  }, [regexIssues, fields, proxy, translationConfig, addLog, addToast, ui, t]);
 
   // ─── Apply single regex fix ───
   const handleApplyRegexFix = useCallback((result: RegexFixResult) => {
     if (!result.success || !result.after) return;
     updateField(result.fieldPath, { translated: result.after });
     addLog('success', `✅ Applied regex fix: ${result.scriptName} → ${result.fieldType}`);
-    addToast('success', isVi ? `Đã áp dụng: ${result.scriptName}` : `Applied: ${result.scriptName}`);
-  }, [updateField, addLog, addToast, isVi]);
+    addToast('success', fmt(ui.vpRegexApplied, { name: result.scriptName }));
+  }, [updateField, addLog, addToast, ui]);
 
   // ─── Apply all successful regex fixes ───
   const handleApplyAllRegexFixes = useCallback(() => {
@@ -292,9 +293,9 @@ export default function VerifyPanel() {
     for (const r of successful) {
       updateField(r.fieldPath, { translated: r.after });
     }
-    addLog('success', isVi ? `✅ Đã áp dụng ${successful.length} regex fix` : `✅ Applied ${successful.length} regex fixes`);
-    addToast('success', isVi ? `${successful.length} regex đã sửa` : `${successful.length} regex fixed`);
-  }, [regexFixResults, updateField, addLog, addToast, isVi]);
+    addLog('success', fmt(ui.vpRegexAppliedAllLog, { count: successful.length }));
+    addToast('success', fmt(ui.vpRegexAppliedAll, { count: successful.length }));
+  }, [regexFixResults, updateField, addLog, addToast, ui]);
 
   // ─── Auto-fix handler ───
   const handleAutoFix = useCallback((issue: FieldIssue) => {
@@ -324,31 +325,29 @@ export default function VerifyPanel() {
     setFieldIssues(prev => prev.filter(i => !i.autoFixable));
     addLog('success', `🔧 Auto-fixed ${fixCount} issues`);
     addToast('success', t.verifyAutoFixed.replace('{count}', String(fixCount)));
-  }, [fieldIssues, updateField, addLog, addToast, isVi]);
+  }, [fieldIssues, updateField, addLog, addToast, ui]);
 
   // ─── AI Fix all issues (multi-round) ───
   const handleAIFix = useCallback(async () => {
     aiFixAbortRef.current = new AbortController();
     setIsAIFixing(true);
     setAiFixReport(null);
-    setAiFixProgress(isVi ? 'Đang chuẩn bị...' : 'Preparing...');
+    setAiFixProgress(ui.vpAiFixPreparing);
     try {
       const allIssues: (FieldIssue | VerifyIssue)[] = [
         ...fieldIssues,
         ...(verifyResult?.issues || []),
       ];
       if (allIssues.length === 0) {
-        addToast('info', isVi ? 'Không có lỗi để sửa' : 'No issues to fix');
+        addToast('info', ui.vpAiFixNothing);
         return;
       }
-      addLog('active', isVi ? `🤖 AI đang sửa ${allIssues.length} lỗi (tối đa 3 round)...` : `🤖 AI fixing ${allIssues.length} issues (up to 3 rounds)...`);
+      addLog('active', fmt(ui.vpAiFixStart, { count: allIssues.length }));
 
       const report = await aiFixIssues(
         allIssues, fields, proxy, translationConfig.targetLanguage,
         (done, total, label, round) => {
-          setAiFixProgress(isVi
-            ? `Round ${round || 1}/3 — Sửa ${done}/${total}: ${label}`
-            : `Round ${round || 1}/3 — Fixing ${done}/${total}: ${label}`);
+          setAiFixProgress(fmt(ui.vpAiFixProgress, { round: round || 1, done, total, label }));
         },
         aiFixAbortRef.current.signal,
         translationConfig.mvuDictionary,
@@ -362,9 +361,7 @@ export default function VerifyPanel() {
         updateField(path, { translated: fixedText });
       }
 
-      const summary = isVi
-        ? `🤖 AI tự sửa lỗi: đã áp dụng ${report.fixes.length} bản sửa tốt · giữ nguyên ${report.totalRejected} mục (bản sửa không tốt hơn) · ${report.roundsCompleted} vòng`
-        : `🤖 AI fix: applied ${report.fixes.length} good fixes · kept ${report.totalRejected} original (fix not better) · ${report.roundsCompleted} rounds`;
+      const summary = fmt(ui.vpAiFixSummary, { applied: report.fixes.length, kept: report.totalRejected, rounds: report.roundsCompleted });
       addLog(report.fixes.length > 0 ? 'success' : 'warning', summary);
       addToast(report.fixes.length > 0 ? 'success' : 'info', summary);
 
@@ -394,13 +391,13 @@ export default function VerifyPanel() {
       setAiFixProgress('');
       aiFixAbortRef.current = null;
     }
-  }, [fieldIssues, verifyResult, fields, proxy, translationConfig, updateField, addLog, addToast, isVi]);
+  }, [fieldIssues, verifyResult, fields, proxy, translationConfig, updateField, addLog, addToast, ui]);
 
   // ─── Cancel AI Fix ───
   const handleCancelAIFix = useCallback(() => {
     aiFixAbortRef.current?.abort();
-    addLog('warning', isVi ? '🛑 AI Fix đã bị hủy' : '🛑 AI Fix cancelled');
-  }, [addLog, isVi]);
+    addLog('warning', ui.vpAiFixCancelled);
+  }, [addLog, ui]);
 
   // ─── AI Fix single issue ───
   const handleAISingleFix = useCallback(async (issue: FieldIssue) => {
@@ -416,17 +413,17 @@ export default function VerifyPanel() {
         updateField(issue.fieldPath, { translated: result.fixedText });
         setFieldIssues(prev => prev.filter(i => i.id !== issue.id));
         addLog('success', `🤖 AI fixed: ${issue.location} — ${issue.category}`);
-        addToast('success', isVi ? `AI đã sửa ${issue.location}` : `AI fixed ${issue.location}`);
+        addToast('success', fmt(ui.vpAiFixedOne, { loc: issue.location }));
       } else {
         addLog('warning', `🤖 AI could not fix ${issue.location}: ${result.reason}`);
-        addToast('info', isVi ? `AI không sửa được: ${result.reason}` : `AI could not fix: ${result.reason}`);
+        addToast('info', fmt(ui.vpAiCouldNotFix, { reason: result.reason ?? '' }));
       }
     } catch (err) {
       addToast('error', `AI Fix failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setAiFixingIssueId(null);
     }
-  }, [fields, proxy, translationConfig, updateField, addLog, addToast, isVi]);
+  }, [fields, proxy, translationConfig, updateField, addLog, addToast, ui]);
 
   // ─── Derived data ───
   const categoryCounts = useMemo(() => {
@@ -582,7 +579,7 @@ export default function VerifyPanel() {
           {/* Accumulated issues count */}
           {streamingProgress.issuesSoFar.length > 0 && (
             <div style={{ marginTop: '6px', fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
-              {isVi ? `Đã tìm thấy ${streamingProgress.issuesSoFar.length} lỗi` : `Found ${streamingProgress.issuesSoFar.length} issues so far`}
+              {fmt(ui.vpFoundIssues, { count: streamingProgress.issuesSoFar.length })}
             </div>
           )}
         </div>
@@ -598,7 +595,7 @@ export default function VerifyPanel() {
               {regexScanProgress.status === 'done'
                 ? t.regexScanDone.replace('{count}', String(regexScanProgress.totalRegex))
                 : regexScanProgress.status === 'cancelled'
-                  ? (isVi ? 'Đã hủy' : 'Cancelled')
+                  ? ui.vpCancelled
                   : t.regexScanning.replace('{name}', regexScanProgress.currentRegex || '...')}
             </span>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
@@ -633,8 +630,7 @@ export default function VerifyPanel() {
           {regexScanProgress.status === 'done' && regexIssues.length > 0 && (
             <div style={{ marginTop: '8px', display: 'flex', gap: '6px', alignItems: 'center' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                {isVi ? `${regexIssues.filter(i => i.severity === 'error').length} lỗi, ${regexIssues.filter(i => i.severity === 'warning').length} cảnh báo`
-                  : `${regexIssues.filter(i => i.severity === 'error').length} errors, ${regexIssues.filter(i => i.severity === 'warning').length} warnings`}
+                {fmt(ui.vpErrWarnCount, { err: regexIssues.filter(i => i.severity === 'error').length, warn: regexIssues.filter(i => i.severity === 'warning').length })}
               </span>
               <button className="btn btn-primary" onClick={handleRegexFix}
                 disabled={isRegexFixing}
@@ -655,7 +651,7 @@ export default function VerifyPanel() {
           )}
           {regexScanProgress.status === 'done' && regexIssues.length === 0 && (
             <div style={{ marginTop: '6px', fontSize: '0.72rem', color: 'var(--accent-success)', fontWeight: 600 }}>
-              ✅ {isVi ? 'Tất cả regex scripts đều sạch!' : 'All regex scripts are clean!'}
+              ✅ {ui.vpAllRegexClean}
             </div>
           )}
         </div>
@@ -664,7 +660,7 @@ export default function VerifyPanel() {
       {/* ═══ Regex Scan Issues List ═══ */}
       {regexIssues.length > 0 && !isRegexFixing && regexFixResults.length === 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
-          {regexIssues.map(issue => <IssueRow key={issue.id} issue={issue} isVi={isVi}
+          {regexIssues.map(issue => <IssueRow key={issue.id} issue={issue}
             expanded={expandedIssues.has(issue.id)} onToggle={() => toggleIssue(issue.id)} />)}
         </div>
       )}
@@ -717,7 +713,7 @@ export default function VerifyPanel() {
                 {r.success && r.after && (
                   <details>
                     <summary style={{ fontSize: '0.6rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                      {isVi ? 'Xem chi tiết' : 'View changes'} ({r.before.length}→{r.after.length} chars)
+                      {ui.vpViewChanges} ({r.before.length}→{r.after.length} chars)
                     </summary>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px' }}>
                       <pre style={{
@@ -747,7 +743,7 @@ export default function VerifyPanel() {
 
       {/* ═══ Diff Viewer ═══ */}
       {showDiff && (
-        <DiffViewer fields={fields} selectedPath={diffFieldPath} onSelectPath={setDiffFieldPath} t={t} isVi={isVi} />
+        <DiffViewer fields={fields} selectedPath={diffFieldPath} onSelectPath={setDiffFieldPath} t={t} />
       )}
 
       {/* Severity filter tabs */}
@@ -775,18 +771,16 @@ export default function VerifyPanel() {
       {/* Chú thích phân biệt 2 nút sửa: xanh = hàm app (miễn phí), tím = gọi AI (tốn quota) */}
       {(autoFixableCount > 0 || fieldIssues.length > 0 || (verifyResult && verifyResult.issues.length > 0)) && (
         <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '6px' }}>
-          {isVi
-            ? <>🟢 <b>Sửa nhanh</b> = hàm của app (tức thì, KHÔNG tốn API): cân ngoặc, bỏ ký tự thừa, khôi phục macro/format cơ bản. &nbsp;🟣 <b>AI Sửa</b> = gọi AI cho các lỗi phức tạp còn lại (tốn quota).</>
-            : <>🟢 <b>Quick Fix</b> = app function (instant, NO API cost): balance brackets, strip junk, restore basic macros/format. &nbsp;🟣 <b>AI Fix</b> = calls AI for the remaining complex issues (uses quota).</>}
+          <>🟢 <b>{ui.vpFixLegend1}</b> {ui.vpFixLegend2} &nbsp;🟣 <b>{ui.vpFixLegend3}</b> {ui.vpFixLegend4}</>
         </div>
       )}
 
       {/* Auto-fix all button (deterministic, no AI) */}
       {autoFixableCount > 0 && (
         <button className="btn btn-primary" onClick={handleFixAll}
-          title={isVi ? 'Sửa tức thì bằng hàm của app — KHÔNG gọi AI, không tốn quota (cân ngoặc, bỏ ký tự thừa, khôi phục macro/format cơ bản).' : 'Instant deterministic fix by app function — NO AI, no quota (balance brackets, strip junk, restore basic macros/format).'}
+          title={ui.vpQuickFixTitle}
           style={{ width: '100%', padding: '8px', fontSize: '0.78rem', marginBottom: '6px', background: 'var(--accent-success)', border: 'none' }}>
-          <Wrench size={14} /> {t.verifyAutoFixAll.replace('{count}', String(autoFixableCount))}{isVi ? ' · không AI' : ' · no AI'}
+          <Wrench size={14} /> {t.verifyAutoFixAll.replace('{count}', String(autoFixableCount))}{ui.vpNoAiSuffix}
         </button>
       )}
 
@@ -794,12 +788,12 @@ export default function VerifyPanel() {
       {(fieldIssues.length > 0 || (verifyResult && verifyResult.issues.length > 0)) && (
         <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
           <button className="btn btn-primary" onClick={handleAIFix} disabled={isAIFixing || isVerifying}
-            title={isVi ? 'Nhờ AI sửa các lỗi phức tạp mà nút Sửa nhanh không xử lý được — CÓ gọi AI, tốn quota (tối đa 3 vòng).' : 'Ask AI to fix complex issues the Quick Fix cannot — calls AI, uses quota (up to 3 rounds).'}
+            title={ui.vpAiFixTitle}
             style={{ flex: 1, padding: '8px', fontSize: '0.78rem',
               background: 'linear-gradient(135deg, var(--accent-primary), #a78bfa)', border: 'none', opacity: isAIFixing ? 0.8 : 1 }}>
             {isAIFixing
               ? <><Loader2 size={14} className="spin" /> {aiFixProgress}</>
-              : <><Bot size={14} /> {isVi ? '🤖 AI Sửa Tất Cả (3 Rounds)' : '🤖 AI Fix All (3 Rounds)'}</>}
+              : <><Bot size={14} /> {ui.vpAiFixAllBtn}</>}
           </button>
           {isAIFixing && (
             <button className="btn btn-secondary" onClick={handleCancelAIFix}
@@ -816,7 +810,7 @@ export default function VerifyPanel() {
           borderRadius: 'var(--radius-sm)', marginBottom: '10px', fontSize: '0.68rem', lineHeight: 1.5 }}>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
-              {isVi ? `🤖 Kết quả AI Fix (${aiFixReport.roundsCompleted} rounds):` : `🤖 AI Fix Report (${aiFixReport.roundsCompleted} rounds):`}
+              {fmt(ui.vpAiFixReport, { rounds: aiFixReport.roundsCompleted })}
             </span>
             <Badge color="var(--accent-success)" bg="rgba(76,175,80,0.1)" text={`✅ ${aiFixReport.totalAccepted}`} />
             <Badge color="var(--accent-danger)" bg="rgba(255,82,82,0.1)" text={`❌ ${aiFixReport.totalRejected}`} />
@@ -825,7 +819,7 @@ export default function VerifyPanel() {
           {aiFixReport.totalRejected > 0 && (
             <details style={{ marginTop: '4px' }}>
               <summary style={{ cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.62rem' }}>
-                {isVi ? 'Xem lý do từ chối' : 'View rejection reasons'}
+                {ui.vpViewRejections}
               </summary>
               <div style={{ marginTop: '3px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {aiFixReport.report.filter(r => r.status === 'rejected').map((r, i) => (
@@ -854,7 +848,7 @@ export default function VerifyPanel() {
       {/* Field Issues List */}
       {fieldIssues.length > 0 && activeTab === 'field' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          {filteredFieldIssues.map(issue => <IssueRow key={issue.id} issue={issue} isVi={isVi}
+          {filteredFieldIssues.map(issue => <IssueRow key={issue.id} issue={issue}
             expanded={expandedIssues.has(issue.id)} onToggle={() => toggleIssue(issue.id)}
             onAutoFix={issue.autoFixable ? () => handleAutoFix(issue) : undefined}
             onAIFix={() => handleAISingleFix(issue)}
@@ -894,7 +888,7 @@ export default function VerifyPanel() {
           </div>
           {verifyResult.issues.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              {verifyResult.issues.map(issue => <IssueRow key={issue.id} issue={issue} isVi={isVi}
+              {verifyResult.issues.map(issue => <IssueRow key={issue.id} issue={issue}
                 expanded={expandedIssues.has(issue.id)} onToggle={() => toggleIssue(issue.id)} />)}
             </div>
           )}
@@ -917,7 +911,7 @@ export default function VerifyPanel() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
             <Link2 size={14} color={crossCheckResult.valid ? 'var(--accent-success)' : 'var(--accent-danger)'} />
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {isVi ? 'Đồng bộ HTML ↔ Initvar' : 'HTML ↔ Initvar Sync'}
+              {ui.vpHtmlInitvarSync}
             </span>
             <Badge color={crossCheckResult.valid ? 'var(--accent-success)' : 'var(--accent-danger)'}
               bg={crossCheckResult.valid ? 'rgba(76,175,80,0.1)' : 'rgba(255,82,82,0.1)'}
@@ -931,10 +925,10 @@ export default function VerifyPanel() {
                   <div key={i} style={{ padding: '4px 8px', fontSize: '0.66rem', borderRadius: 'var(--radius-sm)',
                     background: 'rgba(255,82,82,0.04)', border: '1px solid rgba(255,82,82,0.1)' }}>
                     <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>❌ "{orphan.varName}"</span>
-                    <span style={{ color: 'var(--text-muted)' }}> — {isVi ? 'trong' : 'in'} {orphan.source} ({orphan.context})</span>
+                    <span style={{ color: 'var(--text-muted)' }}> — {ui.vpIn} {orphan.source} ({orphan.context})</span>
                     {suggestion && (
                       <span style={{ color: 'var(--accent-success)', marginLeft: '6px' }}>
-                        💡 {isVi ? 'Có thể là' : 'Did you mean'} "{suggestion.closest}" ({Math.round(suggestion.similarity * 100)}%)
+                        💡 {ui.vpDidYouMean} "{suggestion.closest}" ({Math.round(suggestion.similarity * 100)}%)
                       </span>
                     )}
                   </div>
@@ -944,7 +938,7 @@ export default function VerifyPanel() {
           )}
           {crossCheckResult.valid && (
             <div style={{ fontSize: '0.68rem', color: 'var(--accent-success)' }}>
-              ✅ {isVi ? 'Tất cả biến trong HTML đều khớp với Initvar/Dictionary' : 'All HTML variables match Initvar/Dictionary'}
+              ✅ {ui.vpAllHtmlVarsOk}
             </div>
           )}
         </div>
@@ -958,7 +952,7 @@ export default function VerifyPanel() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
             <Code2 size={14} color={findRegexResult.valid ? 'var(--accent-success)' : 'var(--accent-warning)'} />
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {isVi ? 'findRegex ↔ Tag Narrative' : 'findRegex ↔ Narrative Tags'}
+              {ui.vpFindRegexNarrative}
             </span>
             <Badge color={findRegexResult.valid ? 'var(--accent-success)' : 'var(--accent-warning)'}
               bg={findRegexResult.valid ? 'rgba(76,175,80,0.1)' : 'rgba(255,180,0,0.1)'}
@@ -971,7 +965,7 @@ export default function VerifyPanel() {
                   background: 'rgba(255,180,0,0.04)', border: '1px solid rgba(255,180,0,0.1)' }}>
                   <span style={{ color: 'var(--accent-warning)', fontWeight: 600 }}>⚠️ &lt;{mt.tag}&gt;</span>
                   <span style={{ color: 'var(--text-muted)' }}>
-                    {' '}{isVi ? `trong ${mt.regexLabel} — không tìm thấy trong bất kỳ field nào` : `in ${mt.regexLabel} — not found in any narrative field`}
+                    {' '}{fmt(ui.vpTagMissing, { label: mt.regexLabel })}
                   </span>
                 </div>
               ))}
@@ -979,7 +973,7 @@ export default function VerifyPanel() {
           )}
           {findRegexResult.valid && (
             <div style={{ fontSize: '0.68rem', color: 'var(--accent-success)' }}>
-              ✅ {isVi ? 'Tất cả custom tags đều khớp với nội dung narrative' : 'All custom tags match narrative content'}
+              ✅ {ui.vpAllTagsOk}
             </div>
           )}
         </div>
@@ -1010,8 +1004,8 @@ function FilterChip({ label, count, active, onClick }: { label: string; count: n
   );
 }
 
-function IssueRow({ issue, isVi, expanded, onToggle, onAutoFix, onAIFix, isAIFixing, onManualEdit, fields }: {
-  issue: VerifyIssue | FieldIssue; isVi: boolean; expanded: boolean; onToggle: () => void; onAutoFix?: () => void;
+function IssueRow({ issue, expanded, onToggle, onAutoFix, onAIFix, isAIFixing, onManualEdit, fields }: {
+  issue: VerifyIssue | FieldIssue; expanded: boolean; onToggle: () => void; onAutoFix?: () => void;
   onAIFix?: () => void; isAIFixing?: boolean;
   onManualEdit?: (newValue: string) => void; fields?: { path: string; translated: string }[];
 }) {
@@ -1022,6 +1016,7 @@ function IssueRow({ issue, isVi, expanded, onToggle, onAutoFix, onAIFix, isAIFix
   const catLabel = category ? (CATEGORY_I18N_KEY[category] && t[CATEGORY_I18N_KEY[category]] ? t[CATEGORY_I18N_KEY[category]] : category.replace(/_/g, ' ')) : null;
   const fieldPath = 'fieldPath' in issue ? (issue as FieldIssue).fieldPath : null;
 
+  const ui = useUi();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
 
@@ -1109,11 +1104,11 @@ function IssueRow({ issue, isVi, expanded, onToggle, onAutoFix, onAIFix, isAIFix
               <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                 <button onClick={() => setEditing(false)} className="btn btn-ghost btn-xs"
                   style={{ padding: '3px 8px', fontSize: '0.6rem' }}>
-                  {isVi ? 'Hủy' : 'Cancel'}
+                  {ui.vpCancel}
                 </button>
                 <button onClick={saveEdit} className="btn btn-xs"
                   style={{ padding: '3px 8px', fontSize: '0.6rem', background: 'var(--accent-success)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)' }}>
-                  <Save size={11} /> {isVi ? 'Lưu' : 'Save'}
+                  <Save size={11} /> {ui.vpSave}
                 </button>
               </div>
             </div>
@@ -1136,12 +1131,11 @@ function countStructures(text: string) {
   };
 }
 
-function DiffViewer({ fields, selectedPath, onSelectPath, t, isVi }: {
+function DiffViewer({ fields, selectedPath, onSelectPath, t }: {
   fields: { path: string; label: string; original: string; translated: string; group: string }[];
   selectedPath: string;
   onSelectPath: (path: string) => void;
   t: Record<string, string>;
-  isVi: boolean;
 }) {
   // Code-heavy fields first
   const codeFields = fields.filter(f => f.translated && ['regex', 'tavern_helper', 'lorebook'].includes(f.group));
