@@ -41,7 +41,10 @@ export interface ZodConstraints {
 /* ─── JSON Patch (RFC 6902) ─── */
 
 export interface JsonPatchOp {
-  op: 'add' | 'remove' | 'replace' | 'test' | 'move' | 'copy';
+  // 'delta'/'insert' là op MVU-riêng (guide MVU_ZOD mục 5.3), KHÔNG thuộc RFC 6902:
+  //   delta  = cộng/trừ giá trị số; insert = thêm key/đẩy phần tử mảng.
+  // fast-json-patch không hiểu 2 op này — applyPatchDryRun lọc chúng ra.
+  op: 'add' | 'remove' | 'replace' | 'test' | 'move' | 'copy' | 'delta' | 'insert';
   path: string;
   value?: unknown;
   from?: string;
