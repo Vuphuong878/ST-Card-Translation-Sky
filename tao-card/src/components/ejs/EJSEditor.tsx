@@ -14,6 +14,7 @@ import {
   generateGetvarCall, flattenSchemaForPanel,
   type ValidationResult,
 } from '../../lib/ejs/ejsParser';
+import { t as ui } from '../../i18n';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN EJS EDITOR
@@ -65,7 +66,7 @@ export function EJSEditor({ content, onChange, schema }: {
       {isEJS && (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
           <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-          <span className="text-xs font-medium text-blue-400">Chế độ: EJS @@preprocessing</span>
+          <span className="text-xs font-medium text-blue-400">{ui.eeMode}</span>
         </div>
       )}
 
@@ -85,7 +86,7 @@ export function EJSEditor({ content, onChange, schema }: {
               </button>
               <button onClick={() => setShowPanel(!showPanel)}
                 className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] hover:bg-muted transition-colors ml-auto">
-                <Variable className="w-3 h-3" /> {showPanel ? 'Ẩn' : 'Hiện'} Panel
+                <Variable className="w-3 h-3" /> {showPanel ? ui.eeHide : ui.eeShow} Panel
               </button>
             </div>
 

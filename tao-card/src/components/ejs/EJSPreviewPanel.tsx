@@ -14,6 +14,7 @@ import { parseEJS } from '../../lib/ejs/ejsParser';
 import type { MVUZODSchema, MVUZODField } from '../../types/mvuzod.types';
 
 import { EJS_SNIPPETS } from './ejsSnippets';
+import { t as ui, fmt } from '../../i18n';
 
 // ─── Mock Variable Manager ──────────────────────────────────────────────
 
@@ -72,7 +73,7 @@ function MockVariableManager({ variables, onChange }: {
           ))}
           <button onClick={() => onChange([...variables, { key: '', value: '' }])}
             className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors">
-            <Plus className="w-3 h-3" /> Thêm biến mock
+            <Plus className="w-3 h-3" /> {ui.epAddMockVar}
           </button>
         </div>
       )}
@@ -115,7 +116,7 @@ function MockWorldbookManager({ entries, onChange }: {
                     updated[i] = { ...updated[i], comment: e.target.value };
                     onChange(updated);
                   }}
-                  placeholder="Entry comment (dùng trong getwi())"
+                  placeholder={ui.epEntryCommentPh}
                   className="flex-1 min-w-0 px-2 py-1 text-[10px] font-mono rounded border border-border bg-background
                     focus:outline-none focus:ring-1 focus:ring-primary/30"
                 />
@@ -131,7 +132,7 @@ function MockWorldbookManager({ entries, onChange }: {
                   updated[i] = { ...updated[i], content: e.target.value };
                   onChange(updated);
                 }}
-                placeholder="Nội dung entry..."
+                placeholder={ui.epEntryContentPh}
                 rows={2}
                 className="w-full px-2 py-1 text-[10px] font-mono rounded border border-border bg-background
                   focus:outline-none focus:ring-1 focus:ring-primary/30 resize-y"
@@ -140,7 +141,7 @@ function MockWorldbookManager({ entries, onChange }: {
           ))}
           <button onClick={() => onChange([...entries, { comment: '', content: '' }])}
             className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors">
-            <Plus className="w-3 h-3" /> Thêm mock worldbook entry
+            <Plus className="w-3 h-3" /> {ui.epAddMockEntry}
           </button>
         </div>
       )}
@@ -275,7 +276,7 @@ export function EJSPreviewPanel({ content, schema }: {
         <div className="px-3 py-2 border-b border-border bg-muted/20 flex items-center gap-2">
           <Eye className="w-3 h-3 text-primary" />
           <span className="text-[10px] font-medium">
-            {viewMode === 'rendered' ? 'AI sẽ thấy:' : viewMode === 'raw' ? 'Code gốc:' : 'Token analysis:'}
+            {viewMode === 'rendered' ? ui.epAiWillSee : viewMode === 'raw' ? ui.epRawCode : ui.epTokenAnalysis}
           </span>
         </div>
 
@@ -335,7 +336,7 @@ function SnippetLibrary() {
         className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-medium hover:bg-muted/30 transition-colors">
         {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         <Bookmark className="w-3.5 h-3.5 text-primary" />
-        📚 Template Snippets ({EJS_SNIPPETS.length} mẫu)
+        {fmt(ui.epSnippets, { count: EJS_SNIPPETS.length })}
       </button>
 
       {expanded && (

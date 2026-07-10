@@ -9,6 +9,7 @@ import {
   Search, Eye, EyeOff, Star,
 } from 'lucide-react';
 import { EJS_ADVANCED_TEMPLATES, type EJSAdvancedTemplate } from './ejsSnippets';
+import { t as ui } from '../../i18n';
 
 interface EJSTemplateLibraryProps {
   onInsertCode: (code: string) => void;
@@ -17,12 +18,12 @@ interface EJSTemplateLibraryProps {
 type LibraryCategory = 'all' | 'flow' | 'ui' | 'mvu' | 'event' | 'advanced';
 
 const CATEGORIES: { id: LibraryCategory; label: string; emoji: string }[] = [
-  { id: 'all', label: 'Tất cả', emoji: '📚' },
+  { id: 'all', label: ui.etAll, emoji: '📚' },
   { id: 'flow', label: 'Control Flow', emoji: '🔀' },
   { id: 'ui', label: 'UI / Display', emoji: '🎨' },
   { id: 'mvu', label: 'MVU / State', emoji: '📊' },
   { id: 'event', label: 'Events', emoji: '⚡' },
-  { id: 'advanced', label: 'Nâng cao', emoji: '🔧' },
+  { id: 'advanced', label: ui.etAdvanced, emoji: '🔧' },
 ];
 
 export function EJSTemplateLibrary({ onInsertCode }: EJSTemplateLibraryProps) {
@@ -96,7 +97,7 @@ export function EJSTemplateLibrary({ onInsertCode }: EJSTemplateLibraryProps) {
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Tìm template..."
+          placeholder={ui.etSearchPh}
           className="w-full pl-6 pr-2 py-1.5 text-[10px] rounded-md border border-border bg-background
             focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/40"
         />
@@ -131,7 +132,7 @@ export function EJSTemplateLibrary({ onInsertCode }: EJSTemplateLibraryProps) {
               <button
                 onClick={() => toggleFavorite(template.id)}
                 className="shrink-0"
-                title={favorites.has(template.id) ? 'Bỏ yêu thích' : 'Yêu thích'}
+                title={favorites.has(template.id) ? ui.etUnfavorite : ui.etFavorite}
               >
                 <Star className={`w-3 h-3 ${
                   favorites.has(template.id) ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/30'
@@ -163,7 +164,7 @@ export function EJSTemplateLibrary({ onInsertCode }: EJSTemplateLibraryProps) {
                 <button
                   onClick={() => onInsertCode(template.code)}
                   className="p-1 rounded hover:bg-muted/30 transition-colors"
-                  title="Chèn vào Editor"
+                  title={ui.etInsert}
                 >
                   <Plus className="w-3 h-3 text-primary" />
                 </button>
@@ -194,7 +195,7 @@ export function EJSTemplateLibrary({ onInsertCode }: EJSTemplateLibraryProps) {
 
         {filteredTemplates.length === 0 && (
           <p className="text-[10px] text-muted-foreground/50 text-center py-4">
-            Không tìm thấy template phù hợp
+            {ui.etNoMatch}
           </p>
         )}
       </div>

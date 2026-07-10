@@ -35,6 +35,21 @@ import {
   type EntryAnalysis,
   type EjsStrategy,
 } from '../../prompts/ejsPrompt';
+import { t as ui, fmt } from '../../i18n';
+
+/**
+ * Nhãn hiển thị của 6 loại template. KHÔNG sửa `EJS_TEMPLATE_LABELS` trong prompts/
+ * — file đó là vùng prompt AI; ở đây chỉ thay phần người dùng nhìn thấy.
+ */
+const CAT_UI: Record<string, { label: string; desc: string }> = {
+  conditional_entry: { label: ui.egCatConditional, desc: ui.egCatConditionalDesc },
+  dynamic_content:   { label: ui.egCatDynamic, desc: ui.egCatDynamicDesc },
+  stat_reader:       { label: ui.egCatStatReader, desc: ui.egCatStatReaderDesc },
+  multi_stage:       { label: ui.egCatMultiStage, desc: ui.egCatMultiStageDesc },
+  variable_display:  { label: ui.egCatVarDisplay, desc: ui.egCatVarDisplayDesc },
+  custom:            { label: ui.egCatCustom, desc: ui.egCatCustomDesc },
+};
+
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -140,17 +155,17 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
     setError(null);
     setResult(null);
     setSavedEntryId(null);
-    setLoadingStatus('Đang chuẩn bị...');
+    setLoadingStatus(ui.egPreparing);
 
     try {
       const activeProfile = useSettingsStore.getState().getActiveProfile();
       const params = useSettingsStore.getState().generationParams;
 
       if (!activeProfile?.apiKey) {
-        throw new Error('Chưa cấu hình API AI. Vui lòng vào Settings để cấu hình API Key và Model.');
+        throw new Error(ui.egNoApi);
       }
 
-      setLoadingStatus(`Đang kết nối ${activeProfile.label}...`);
+      setLoadingStatus(fmt(ui.egConnecting, { label: activeProfile.label }));
 
       const userPrompt = buildEjsUserPrompt(
         category,
@@ -171,14 +186,14 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
         { role: 'user', content: userPrompt },
       ];
 
-      setLoadingStatus('Đang gửi yêu cầu tới AI...');
+      setLoadingStatus(ui.egSending);
 
       // Call AI with retry
       const MAX_RETRIES = 2;
 
       for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
         if (attempt > 1) {
-          setLoadingStatus(`Thử lại lần ${attempt}/${MAX_RETRIES + 1}...`);
+          setLoadingStatus(fmt(ui.egRetrying, { attempt, total: MAX_RETRIES + 1 }));
         }
 
         try {
@@ -191,7 +206,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
           while (isTruncated && callCount < maxCalls) {
             callCount++;
             if (callCount > 1) {
-              setLoadingStatus(`Token limit, yêu cầu viết tiếp (lượt ${callCount})...`);
+              setLoadingStatus(fmt(ui.egContinuing, { count: callCount }));
             }
 
             const response = await callAI({
@@ -220,7 +235,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
             }
           }
 
-          setLoadingStatus('Đang phân tích phản hồi...');
+          setLoadingStatus(ui.egParsing);
 
           const parsed = parseEjsResponse(fullText);
           setResult(parsed);
@@ -252,9 +267,9 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
 
             addEntry(newEntry);
             setSavedEntryId(newId);
-            setLoadingStatus(`Đã tạo entry #${newId} thành công!`);
+            setLoadingStatus(fmt(ui.egEntryCreated, { id: newId }));
           } else {
-            setLoadingStatus('AI đã sửa code. Nhấn "Chèn vào Editor" để áp dụng.');
+            setLoadingStatus(ui.egCodeFixed);
           }
 
           break; // Success
@@ -313,7 +328,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
               !iterationMode ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Sparkles className="w-3 h-3" /> Tạo mới
+            <Sparkles className="w-3 h-3" /> {ui.egCreate}
           </button>
           <button
             onClick={() => setIterationMode(true)}
@@ -321,7 +336,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
               iterationMode ? 'bg-amber-500/10 text-amber-400' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Pencil className="w-3 h-3" /> Sửa code
+            <Pencil className="w-3 h-3" /> {ui.egFixCode}
           </button>
         </div>
       )}
@@ -330,12 +345,12 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
       {iterationMode && (
         <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-2 space-y-1.5">
           <p className="text-[9px] text-amber-400 font-medium">
-            📝 Sẽ gửi code trong editor hiện tại cho AI sửa
+            {ui.egFixNote}
           </p>
           <textarea
             value={iterationFeedback}
             onChange={e => setIterationFeedback(e.target.value)}
-            placeholder="Mô tả cần sửa gì... VD: 'Thêm check null cho getvar', 'Sửa logic HP bar'"
+            placeholder={ui.egFixPh}
             rows={2}
             className="w-full px-2 py-1.5 text-[10px] rounded-md border border-amber-500/20 bg-background
               focus:outline-none focus:ring-1 focus:ring-amber-500/30 resize-y placeholder:text-muted-foreground/40"
@@ -346,7 +361,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
       {/* Template selector (hidden in iteration mode) */}
       {!iterationMode && (
         <div>
-          <label className="text-[10px] font-medium text-muted-foreground block mb-1">Loại template</label>
+          <label className="text-[10px] font-medium text-muted-foreground block mb-1">{ui.egTemplateType}</label>
           <div className="space-y-1">
             {catEntries.map(([key, val]) => (
               <button
@@ -361,10 +376,10 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
               >
                 <div className="flex items-center gap-1.5">
                   <span>{val.emoji}</span>
-                  <span className="font-medium">{val.label}</span>
+                  <span className="font-medium">{CAT_UI[key]?.label ?? val.label}</span>
                 </div>
                 {category === key && (
-                  <p className="text-[9px] text-muted-foreground mt-0.5 ml-5">{val.desc}</p>
+                  <p className="text-[9px] text-muted-foreground mt-0.5 ml-5">{CAT_UI[key]?.desc ?? val.desc}</p>
                 )}
               </button>
             ))}
@@ -377,7 +392,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
         <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-2.5 space-y-2">
           <div className="flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-purple-400" />
-            <span className="text-[10px] font-semibold text-purple-400">Phân tích Entries</span>
+            <span className="text-[10px] font-semibold text-purple-400">{ui.egEntryAnalysis}</span>
           </div>
           <div className="grid grid-cols-3 gap-1 text-center">
             <div className="rounded-md bg-background/50 p-1.5">
@@ -386,7 +401,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
             </div>
             <div className="rounded-md bg-background/50 p-1.5">
               <p className="text-[14px] font-bold text-foreground">{entryAnalysis.groups.length}</p>
-              <p className="text-[8px] text-muted-foreground">Nhóm</p>
+              <p className="text-[8px] text-muted-foreground">{ui.egGroups}</p>
             </div>
             <div className="rounded-md bg-background/50 p-1.5">
               <p className="text-[14px] font-bold text-foreground">{entryAnalysis.npcEntries.length}</p>
@@ -396,7 +411,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
 
           {/* Strategy selector */}
           <div>
-            <p className="text-[9px] text-muted-foreground mb-1">Strategy (đề xuất: {entryAnalysis.recommendedStrategy})</p>
+            <p className="text-[9px] text-muted-foreground mb-1">{fmt(ui.egStrategy, { name: entryAnalysis.recommendedStrategy })}</p>
             <div className="flex gap-1">
               <button
                 onClick={() => setStrategyOverride('setEntryEnabled')}
@@ -424,7 +439,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
           {/* Groups preview */}
           {entryAnalysis.groups.length > 0 && (
             <div className="space-y-0.5">
-              <p className="text-[9px] text-muted-foreground">Nhóm phát hiện:</p>
+              <p className="text-[9px] text-muted-foreground">{ui.egDetectedGroups}</p>
               {entryAnalysis.groups.slice(0, 5).map((g, i) => (
                 <div key={i} className="flex items-center gap-1 text-[9px]">
                   <span className="text-purple-400">📁</span>
@@ -433,14 +448,14 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                 </div>
               ))}
               {entryAnalysis.groups.length > 5 && (
-                <p className="text-[8px] text-muted-foreground">+{entryAnalysis.groups.length - 5} nhóm khác</p>
+                <p className="text-[8px] text-muted-foreground">{fmt(ui.egMoreGroups, { count: entryAnalysis.groups.length - 5 })}</p>
               )}
             </div>
           )}
 
           {entryAnalysis.suggestedControlVar && (
             <p className="text-[9px] text-muted-foreground">
-              🎯 Biến điều khiển: <code className="text-purple-400">{entryAnalysis.suggestedControlVar}</code>
+              {ui.egControlVar} <code className="text-purple-400">{entryAnalysis.suggestedControlVar}</code>
             </p>
           )}
         </div>
@@ -478,7 +493,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                 className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground"
               >
                 <ListFilter className="w-3 h-3" />
-                Chọn entries cụ thể
+                {ui.egPickEntries}
                 {selectedEntryIds.size > 0 && (
                   <span className="text-[8px] text-primary">({selectedEntryIds.size})</span>
                 )}
@@ -491,7 +506,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                         onClick={() => setSelectedEntryIds(new Set())}
                         className="w-full text-left px-2 py-1 text-[9px] text-muted-foreground hover:bg-muted/30 border-b border-border/50"
                       >
-                        ✖ Bỏ chọn tất cả
+                        {ui.egDeselectAll}
                       </button>
                       {nonEjsEntries.map(e => (
                         <label key={e.id} className="flex items-center gap-1.5 px-2 py-1 hover:bg-muted/20 cursor-pointer">
@@ -511,7 +526,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                       ))}
                     </>
                   ) : (
-                    <p className="text-[9px] text-muted-foreground/50 p-2">Không có entries</p>
+                    <p className="text-[9px] text-muted-foreground/50 p-2">{ui.egNoEntries}</p>
                   )}
                 </div>
               )}
@@ -525,7 +540,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                   className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground"
                 >
                   <Columns3 className="w-3 h-3" />
-                  Chọn schema fields
+                  {ui.egPickSchemaFields}
                   {selectedFieldPaths.size > 0 && (
                     <span className="text-[8px] text-primary">({selectedFieldPaths.size})</span>
                   )}
@@ -536,7 +551,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                       onClick={() => setSelectedFieldPaths(new Set())}
                       className="w-full text-left px-2 py-1 text-[9px] text-muted-foreground hover:bg-muted/30 border-b border-border/50"
                     >
-                      ✖ Bỏ chọn tất cả
+                      {ui.egDeselectAll}
                     </button>
                     {flatFields.map(f => (
                       <label
@@ -566,7 +581,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
       {!iterationMode && (
         <div>
           <label className="text-[10px] font-medium text-muted-foreground block mb-1">
-            Yêu cầu chi tiết {category !== 'custom' ? '(tuỳ chọn)' : '(bắt buộc)'}
+            {ui.egDetailReq} {category !== 'custom' ? ui.egOptional : ui.egRequired}
           </label>
           <textarea
             value={customInstructions}
@@ -574,10 +589,10 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
             disabled={generating}
             placeholder={
               category === 'conditional_entry'
-                ? 'VD: Bật entry "WB: Cổ đại" khi era = "Cổ đại"...'
+                ? ui.egPhEntry
                 : category === 'custom'
-                ? 'Mô tả EJS bạn muốn AI tạo...'
-                : 'Yêu cầu bổ sung...'
+                ? ui.egPhCustom
+                : ui.egPhExtra
             }
             rows={3}
             className="w-full px-2.5 py-1.5 text-[10px] rounded-lg border border-border bg-background
@@ -603,17 +618,17 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
         {generating ? (
           <>
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span>{loadingStatus || 'Đang xử lý...'}</span>
+            <span>{loadingStatus || ui.egWorking}</span>
           </>
         ) : iterationMode ? (
           <>
             <Pencil className="w-3.5 h-3.5" />
-            Sửa code bằng AI
+            {ui.egFixWithAi}
           </>
         ) : (
           <>
             <Sparkles className="w-3.5 h-3.5" />
-            Tạo EJS bằng AI
+            {ui.egCreateWithAi}
           </>
         )}
       </button>
@@ -640,7 +655,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                 {result.strategy === 'getwi' ? '🅱️ getwi()' : '🅰️ setEntryEnabled()'}
               </span>
               <span className="text-[9px] text-muted-foreground">
-                {result.entryActions.filter(a => a.action === 'disable').length} entries sẽ bị disable
+                {fmt(ui.egWillDisable, { count: result.entryActions.filter(a => a.action === 'disable').length })}
               </span>
             </div>
           )}
@@ -657,7 +672,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
             <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2 flex items-center gap-2">
               <BookPlus className="w-3.5 h-3.5 text-blue-400 shrink-0" />
               <p className="text-[10px] text-blue-400">
-                Đã tạo entry <strong>#{savedEntryId}</strong> — &quot;{result.entryComment}&quot;
+                {ui.egCreatedEntry} <strong>#{savedEntryId}</strong> — &quot;{result.entryComment}&quot;
               </p>
             </div>
           )}
@@ -667,7 +682,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
             <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-2 space-y-1.5">
               <p className="text-[10px] font-medium text-amber-400 flex items-center gap-1">
                 <Shield className="w-3 h-3" />
-                Entries cần disable ({result.entryActions.filter(a => a.action === 'disable').length})
+                {fmt(ui.egEntriesToDisable, { count: result.entryActions.filter(a => a.action === 'disable').length })}
               </p>
               <div className="max-h-32 overflow-y-auto scrollbar-thin space-y-0.5">
                 {result.entryActions.filter(a => a.action === 'disable').slice(0, 30).map((action, i) => (
@@ -680,7 +695,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                 ))}
                 {result.entryActions.filter(a => a.action === 'disable').length > 30 && (
                   <p className="text-[9px] text-muted-foreground">
-                    ... +{result.entryActions.filter(a => a.action === 'disable').length - 30} entries khác
+                    {fmt(ui.egMoreEntries, { count: result.entryActions.filter(a => a.action === 'disable').length - 30 })}
                   </p>
                 )}
               </div>
@@ -706,7 +721,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                     bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
                 >
                   <Zap className="w-3 h-3" />
-                  Áp dụng đầy đủ
+                  {ui.egApplyFull}
                 </button>
               </div>
             </div>
@@ -717,7 +732,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
             <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-2 flex items-center gap-2">
               <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
               <p className="text-[10px] text-green-400 flex-1">
-                Đã disable {undoSnapshot?.size ?? 0} entries
+                {fmt(ui.egDisabled, { count: undoSnapshot?.size ?? 0 })}
               </p>
               {undoSnapshot && (
                 <button
@@ -733,7 +748,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                     text-amber-400 hover:bg-amber-500/10 transition-colors"
                 >
                   <Undo2 className="w-3 h-3" />
-                  Hoàn tác
+                  {ui.egUndo}
                 </button>
               )}
             </div>
@@ -746,7 +761,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                 {result.entryComment}
               </span>
               <span className="text-[9px] text-muted-foreground">
-                {result.code.split('\n').length} dòng
+                {fmt(ui.egLines, { count: result.code.split('\n').length })}
               </span>
             </div>
             <pre className="px-2.5 py-2 text-[9px] font-mono leading-relaxed overflow-x-auto max-h-48 overflow-y-auto scrollbar-thin bg-background/50">
@@ -762,7 +777,7 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
             >
               <Plus className="w-3 h-3" />
-              Chèn vào Editor
+              {ui.egInsertEditor}
             </button>
             <button
               onClick={handleCopy}
@@ -770,13 +785,13 @@ export function EJSAIGenerator({ schema, onInsertCode, currentEditorCode }: EJSA
                 bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
               {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-              {copied ? 'Đã copy' : 'Copy'}
+              {copied ? ui.egCopied : ui.egCopy}
             </button>
             <button
               onClick={handleReset}
               className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[10px] font-medium
                 bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              title="Tạo lại"
+              title={ui.egRegenerate}
             >
               <RotateCcw className="w-3 h-3" />
             </button>

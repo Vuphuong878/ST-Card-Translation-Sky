@@ -13,6 +13,7 @@ import {
   analyzeScript, linkToSchema, findUnusedFields,
   type ScriptAnalysis, type LinkedAccess,
 } from '../../lib/jsAnalyzer/variableExtractor';
+import { t as ui, fmt } from '../../i18n';
 
 export function JSAnalyzerPanel({ code, schema }: {
   code: string;
@@ -47,27 +48,27 @@ export function JSAnalyzerPanel({ code, schema }: {
           <span className="text-xs font-semibold">JS Analyzer</span>
           {analysis && (
             <span className="text-[10px] text-muted-foreground">
-              {reads.length} đọc · {writes.length} ghi · {issues.length} vấn đề
+              {fmt(ui.jaSummary, { reads: reads.length, writes: writes.length, issues: issues.length })}
             </span>
           )}
         </div>
         <button onClick={handleAnalyze}
           className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-          <RefreshCw className="w-3 h-3" /> Phân tích
+          <RefreshCw className="w-3 h-3" /> {ui.jaAnalyse}
         </button>
       </div>
 
       {!analysis ? (
         <div className="px-4 py-6 text-center text-xs text-muted-foreground">
-          Bấm "Phân tích" để quét biến trong script
+          {ui.jaHint}
         </div>
       ) : (
         <div className="p-3 space-y-3">
           {/* Stats */}
           <div className="grid grid-cols-4 gap-2">
-            <MiniStat label="Đọc" value={reads.length} color="text-blue-400" />
-            <MiniStat label="Ghi" value={writes.length} color="text-emerald-400" />
-            <MiniStat label="Vấn đề" value={issues.length} color={issues.length > 0 ? 'text-destructive' : 'text-muted-foreground'} />
+            <MiniStat label={ui.jaRead} value={reads.length} color="text-blue-400" />
+            <MiniStat label={ui.jaWrite} value={writes.length} color="text-emerald-400" />
+            <MiniStat label={ui.jaIssues} value={issues.length} color={issues.length > 0 ? 'text-destructive' : 'text-muted-foreground'} />
             <MiniStat label="Imports" value={analysis.imports.length} color="text-purple-400" />
           </div>
 
@@ -85,7 +86,7 @@ export function JSAnalyzerPanel({ code, schema }: {
           {/* Linked accesses */}
           {linked.length > 0 && (
             <div className="space-y-1">
-              <p className="text-[10px] font-medium text-muted-foreground">Biến truy cập:</p>
+              <p className="text-[10px] font-medium text-muted-foreground">{ui.jaAccessedVars}</p>
               {linked.map((l, i) => (
                 <div key={i} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] ${
                   l.issue === 'missing_from_schema' ? 'bg-destructive/5 border border-destructive/20' :
@@ -124,7 +125,7 @@ export function JSAnalyzerPanel({ code, schema }: {
           {unusedFields.length > 0 && (
             <div className="space-y-1">
               <p className="text-[10px] font-medium text-muted-foreground">
-                📋 Schema fields không được dùng:
+                {ui.jaUnusedFields}
               </p>
               {unusedFields.slice(0, 8).map((f, i) => (
                 <p key={i} className="text-[10px] text-muted-foreground/60 pl-3 font-mono">
@@ -133,7 +134,7 @@ export function JSAnalyzerPanel({ code, schema }: {
               ))}
               {unusedFields.length > 8 && (
                 <p className="text-[9px] text-muted-foreground/40 pl-3">
-                  ... +{unusedFields.length - 8} fields khác
+                  {fmt(ui.jaMoreFields, { count: unusedFields.length - 8 })}
                 </p>
               )}
             </div>
