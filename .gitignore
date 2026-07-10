@@ -39,3 +39,7 @@ dev_data/*.json
 dev_data/message*.txt
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+# Secrets & test data — KHONG commit
+apiKey/
+cardTest/

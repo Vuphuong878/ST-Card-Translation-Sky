@@ -820,6 +820,13 @@ const ui = {
   acMvuAssistant: 'MVU-Zod design assistant',
   acAiThinking: 'The AI is thinking...',
   acMvuChatPh: 'Ask the AI to adjust the Schema/Rules...',
+
+  tcPresetLabel: 'Quick preset:',
+  tcPresetLight: '⚡ Light translate',
+  tcPresetFull: '📖 Full translate',
+  tcPresetLightHint: 'Only keys + regex + MVU variable names. Content stays in the original language — the AI reads it fine and still replies in your language. Much faster for heavy cards.',
+  tcPresetLightDone: 'Light-translate preset applied: keys + regex + MVU sync on, content off.',
+  tcPresetFullDone: 'Full-translate preset applied: every group on.',
 };
 
 export default ui;

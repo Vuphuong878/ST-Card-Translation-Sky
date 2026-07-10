@@ -2766,10 +2766,11 @@ export function useTranslation() {
         store.addLog('info', `🔒 Export exact consistency: fixed ${fixes.length} case/spelling variations: ${fixes.join(', ')}`);
       }
 
-      const enabledGroups = store.translationConfig.fieldGroups
-        .filter((g: FieldGroupConfig) => g.enabled)
-        .map((g: FieldGroupConfig) => g.id);
-      baseCard = syncMvuVariables(baseCard, fixes.length > 0 ? fixedDict : currentDict, enabledGroups);
+      // Chiến lược B đồng bộ tên biến trên TOÀN thẻ (schema, initvar, regex, lorebook,
+      // narrative) — KHÔNG giới hạn theo nhóm đang dịch. Nếu bó theo enabledGroups thì
+      // khi tắt dịch content lorebook (ví dụ chế độ "Dịch nhẹ"), tên biến trong content
+      // tiếng Trung không được đổi → lệch với schema/keys đã dịch. undefined = mọi nhóm.
+      baseCard = syncMvuVariables(baseCard, fixes.length > 0 ? fixedDict : currentDict, undefined);
     }
 
     // Now overlay AI translations on the MVU-synced card

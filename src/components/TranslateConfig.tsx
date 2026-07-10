@@ -497,6 +497,44 @@ export default function TranslateConfig() {
             {/* Field Groups */}
             <div>
               <label className="label" style={{ marginBottom: '8px' }}>{t.fieldsToTranslate}</label>
+
+              {/* Preset nhanh: Dịch nhẹ (chỉ keys+regex+MVU) / Dịch đầy đủ */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{ui.tcPresetLabel}</span>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  title={ui.tcPresetLightHint}
+                  onClick={() => {
+                    // Bật keys + regex; tắt content. Chiến lược B (đồng bộ tên biến MVU)
+                    // luôn chạy toàn thẻ khi export nên content tiếng gốc vẫn khớp schema đã dịch.
+                    const lightOn = new Set(['lorebook_keys', 'regex']);
+                    setTranslationConfig({
+                      fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({
+                        ...g, enabled: lightOn.has(g.id),
+                      })),
+                      enableMvuSync: true,
+                      exportKeyMode: 'merge',
+                    });
+                    addToast('success', ui.tcPresetLightDone);
+                  }}
+                >
+                  {ui.tcPresetLight}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => {
+                    setTranslationConfig({
+                      fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({ ...g, enabled: true })),
+                    });
+                    addToast('success', ui.tcPresetFullDone);
+                  }}
+                >
+                  {ui.tcPresetFull}
+                </button>
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {translationConfig.fieldGroups.map((group: FieldGroupConfig) => {
                   const labels = groupLabels[group.id];

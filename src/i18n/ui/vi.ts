@@ -832,6 +832,13 @@ const ui: UiKeys = {
   acMvuAssistant: 'Trợ lý Thiết kế MVU-Zod',
   acAiThinking: 'AI đang suy nghĩ...',
   acMvuChatPh: 'Yêu cầu AI điều chỉnh Schema/Rules...',
+
+  tcPresetLabel: 'Preset nhanh:',
+  tcPresetLight: '⚡ Dịch nhẹ',
+  tcPresetFull: '📖 Dịch đầy đủ',
+  tcPresetLightHint: 'Chỉ dịch keyword + regex + tên biến MVU. Content giữ nguyên ngôn ngữ gốc — AI vẫn đọc hiểu và trả lời tiếng của bạn. Nhanh hơn nhiều với card nặng.',
+  tcPresetLightDone: 'Đã áp dụng preset Dịch nhẹ: bật keys + regex + đồng bộ MVU, tắt content.',
+  tcPresetFullDone: 'Đã áp dụng preset Dịch đầy đủ: bật mọi nhóm.',
 };
 
 export default ui;
