@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
 import type { LogFilter, LogEntry, LogPhase } from '../types/card';
 import ActiveCallsPanel from './ActiveCallsPanel';
 import {
@@ -42,6 +42,7 @@ function MiniStat({ icon, value, label, color }: { icon: React.ReactNode; value:
  *  Ticks every second while translating/paused; freezes when done/cancelled. */
 function ElapsedTime({ color = 'var(--text-secondary)' }: { color?: string }) {
   const { startTime, phase } = useStore();
+  const ui = useUi();
   const [, tick] = useState(0);
   useEffect(() => {
     if (phase !== 'translating' && phase !== 'paused') return;
@@ -58,8 +59,8 @@ function ElapsedTime({ color = 'var(--text-secondary)' }: { color?: string }) {
   const label = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }} title="Thời gian đã dịch (từ lúc bắt đầu)">
-      <Timer size={12} /> Đã chạy: {label}
+    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }} title={ui.tpElapsedTitle}>
+      <Timer size={12} /> {ui.tpElapsed}{label}
     </span>
   );
 }
@@ -113,11 +114,12 @@ function LogFilterBar() {
   );
 }
 
-const PHASE_META: Record<LogPhase, { label: string }> = {
-  prepare: { label: '🔧 Chuẩn bị' },
-  translate: { label: '🌐 Dịch' },
-  verify: { label: '🔍 Kiểm tra' },
-  other: { label: '· Nhật ký' },
+/** Nhãn nhóm log: giữ ở module scope nên chỉ lưu KEY, tra `ui` lúc render. */
+const PHASE_LABEL_KEY: Record<LogPhase, 'tpPhasePrepare' | 'tpPhaseTranslate' | 'tpPhaseVerify' | 'tpPhaseOther'> = {
+  prepare: 'tpPhasePrepare',
+  translate: 'tpPhaseTranslate',
+  verify: 'tpPhaseVerify',
+  other: 'tpPhaseOther',
 };
 
 function LevelTag({ level }: { level: LogEntry['level'] }) {
@@ -144,6 +146,7 @@ function LogRow({ log }: { log: LogEntry }) {
 
 function LogPanel({ logEndRef }: { logEndRef: React.RefObject<HTMLDivElement | null> }) {
   const { logs, logFilter } = useStore();
+  const ui = useUi();
   const [collapsed, setCollapsed] = useState<Set<LogPhase>>(() => new Set());
   if (logs.length === 0) return null;
 
@@ -205,10 +208,10 @@ function LogPanel({ logEndRef }: { logEndRef: React.RefObject<HTMLDivElement | n
                       borderRadius: 'var(--radius-sm)',
                       position: 'sticky', top: 0,
                     }}
-                    title={isCol ? 'Mở nhóm' : 'Thu gọn nhóm'}
+                    title={isCol ? ui.tpExpandGroup : ui.tpCollapseGroup}
                   >
                     <span style={{ width: 10 }}>{isCol ? '▸' : '▾'}</span>
-                    <span>{PHASE_META[g.phase].label}</span>
+                    <span>{ui[PHASE_LABEL_KEY[g.phase]]}</span>
                     <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({g.logs.length})</span>
                   </div>
                   {!isCol && g.logs.map((log) => <LogRow key={log.id} log={log} />)}
@@ -229,6 +232,7 @@ function LogPanel({ logEndRef }: { logEndRef: React.RefObject<HTMLDivElement | n
 
 function ModModePanel() {
   const { fields, phase, logs, startTime, translationConfig } = useStore();
+  const ui = useUi();
   const { applyModToAllFields, continueMod, retryAllErrors, cancelTranslation, pauseTranslation, resumeTranslation, generateModLorebook } = useTranslation();
   const t = useT();
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -423,7 +427,7 @@ function ModModePanel() {
               }}
             >
               <Play size={16} />
-              Mod tiếp
+              {ui.tpModContinue}
             </button>
             <button
               className="btn btn-secondary"
@@ -569,6 +573,7 @@ function ModModePanel() {
 
 function TranslationPanel() {
   const { fields, phase, logs, startTime, translationConfig, preprocessProgress } = useStore();
+  const ui = useUi();
   const { startTranslation, continueTranslation, pauseTranslation, resumeTranslation, cancelTranslation, retryAllErrors, prepareFields } = useTranslation();
   const t = useT();
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -650,7 +655,7 @@ function TranslationPanel() {
             />
           </div>
           <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Đang chuẩn bị trước khi dịch từng trường — bước này gọi AI theo lô (mỗi lô 25 mục).
+            {ui.tpPreprocessHint}
           </div>
         </div>
       )}
@@ -713,9 +718,9 @@ function TranslationPanel() {
           <button
             className="btn btn-secondary"
             onClick={() => prepareFields(false)}
-            title="Liệt kê tất cả trường trước khi dịch — để bạn BỎ TICK những trường muốn tự dịch tay (không gọi API)"
+            title={ui.tpListFieldsTitle}
           >
-            <FileText size={14} /> Xem/chọn trường (bỏ dịch)
+            <FileText size={14} /> {ui.tpListFields}
           </button>
         )}
         {(isCancelled || isDone) && (
@@ -755,7 +760,7 @@ function TranslationPanel() {
       {isIdle && totalFields > 0 && (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '14px', padding: '8px 10px', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 'var(--radius-sm)' }}>
           <Ban size={13} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
-          <span>Muốn tự dịch tay trường nào? <b>Bỏ tick</b> ô của trường đó ở bảng <b>Field Editor</b> bên dưới (hoặc bấm nút ⊘) rồi bấm Bắt đầu — trường đó sẽ KHÔNG gọi API, bạn gõ bản dịch thẳng vào ô của nó.</span>
+          <span>{ui.tpManualHint1} <b>{ui.tpManualHint2}</b> {ui.tpManualHint3} <b>Field Editor</b> {ui.tpManualHint4}</span>
         </div>
       )}
 

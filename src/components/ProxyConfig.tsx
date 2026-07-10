@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import { testConnection, getModelSuggestions, getDefaultProxyUrl, fetchModelsFromProxy } from '../utils/apiClient';
 import ProviderPoolConfig from './ProviderPoolConfig';
 import type { AIProvider } from '../types/card';
@@ -30,6 +31,7 @@ const PROVIDERS: { value: AIProvider; label: string }[] = [
 export default function ProxyConfig() {
   const { proxy, setProxy, connectionStatus, setConnectionStatus, scannedModels, setScannedModels, addToast, locale, resetProxy } = useStore();
   const t = useT();
+  const ui = useUi();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testMessage, setTestMessage] = useState('');
@@ -58,15 +60,9 @@ export default function ProxyConfig() {
     try {
       const models = await fetchModelsFromProxy(proxy);
       setScannedModels(models);
-      const successMsg = locale === 'vi'
-        ? `Đã tải thành công ${models.length} mô hình từ proxy!`
-        : `Successfully loaded ${models.length} models from proxy!`;
-      addToast('success', successMsg);
+      addToast('success', fmt(ui.pcScanOk, { count: models.length }));
     } catch (err: any) {
-      const errorMsg = locale === 'vi'
-        ? `Lỗi khi quét mô hình: ${err.message || String(err)}`
-        : `Failed to scan models: ${err.message || String(err)}`;
-      addToast('error', errorMsg);
+      addToast('error', fmt(ui.pcScanFail, { msg: err.message || String(err) }));
     } finally {
       setScanning(false);
     }
@@ -148,7 +144,7 @@ export default function ProxyConfig() {
                   </span>
                 )}
                 <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 400 }}>
-                  mỗi dòng hoặc dấu phẩy 1 key — tự xoay vòng khi bị 429
+                  {ui.pcKeyHint}
                 </span>
               </label>
               <textarea
@@ -159,7 +155,7 @@ export default function ProxyConfig() {
                   const keys = e.target.value.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
                   setProxy({ apiKey: keys[0] || '', apiKeys: keys.slice(1) });
                 }}
-                placeholder={'sk-...\nsk-... (key thứ 2, 3… để chạy nhiều luồng)'}
+                placeholder={ui.pcKeyPh}
                 style={{ fontSize: '0.75rem', resize: 'vertical' }}
               />
             </div>
@@ -249,29 +245,29 @@ export default function ProxyConfig() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Layers size={13} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', flex: 1 }}>
-              RPM model chính <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 400 }}>(× số key = số luồng)</span>
+              {ui.pcPrimaryRpm} <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 400 }}>{ui.pcPrimaryRpmHint}</span>
             </span>
             <input
               className="input" type="number" min={1} max={1000}
               value={proxy.primaryModelRpm ?? 5}
               onChange={(e) => setProxy({ primaryModelRpm: Math.max(1, parseInt(e.target.value) || 5) })}
               style={{ width: '72px', padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
-              title="Số request/phút cho model chính (nhân với số API key)"
+              title={ui.pcPrimaryRpmTitle}
             />
           </div>
 
           {/* Toggle model phụ (checkbox gọn như provider) */}
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
             <input type="checkbox" checked={!!proxy.enableSecondaryModel} onChange={(e) => setProxy({ enableSecondaryModel: e.target.checked })} />
-            <span style={{ fontWeight: 600 }}>Model phụ</span>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>tràn khi model chính hết RPM</span>
+            <span style={{ fontWeight: 600 }}>{ui.pcSecondary}</span>
+            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>{ui.pcSecondaryHint}</span>
           </label>
 
           {/* Model phụ + RPM phụ + Ngưỡng — 1 hàng grid như provider */}
           {proxy.enableSecondaryModel && (
             <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 74px 90px', gap: '8px', alignItems: 'end' }}>
               <div style={{ position: 'relative' }}>
-                <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>Model phụ</label>
+                <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>{ui.pcSecondaryModel}</label>
                 <input
                   className="input input-mono"
                   value={proxy.secondaryModel ?? ''}
@@ -298,17 +294,17 @@ export default function ProxyConfig() {
                 )}
               </div>
               <div>
-                <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>RPM phụ</label>
+                <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>{ui.pcSecondaryRpm}</label>
                 <input
                   className="input" type="number" min={1} max={1000}
                   value={proxy.secondaryModelRpm ?? 17}
                   onChange={(e) => setProxy({ secondaryModelRpm: Math.max(1, parseInt(e.target.value) || 17) })}
                   style={{ padding: '3px 6px', fontSize: '0.8rem', textAlign: 'center' }}
-                  title="Số request/phút cho model phụ (× số key)"
+                  title={ui.pcSecondaryRpmTitle}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }} title="Entry ngắn hơn ngưỡng SỐ KÝ TỰ → dùng model phụ cho nhanh (0 = tắt)">Ngưỡng ký tự</label>
+                <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }} title={ui.pcThresholdTitle}>{ui.pcThreshold}</label>
                 <input
                   className="input" type="number" min={0} max={100000}
                   value={proxy.secondaryModelThreshold ?? 0}
