@@ -6,6 +6,8 @@
  * (trong bộ nhớ) → Xuất JSON/PNG. Hoàn toàn tách biệt với phiên dịch chính (không đụng store card).
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import {
   X, Upload, Save, Download, Trash2, ChevronDown, ChevronRight,
   Search, AlertTriangle, FileJson, Image as ImageIcon, Columns3,
@@ -24,10 +26,11 @@ export default function CompareCardsPanelDefault(props: Props) {
 interface Props { onClose: () => void; }
 
 type SlotId = 'raw' | 'translated' | 'final';
-const SLOT_ORDER: { id: SlotId; name: string; color: string }[] = [
-  { id: 'raw', name: 'Card Raw', color: '#9ca3af' },
-  { id: 'translated', name: 'Card Đã Dịch', color: 'var(--accent-primary)' },
-  { id: 'final', name: 'Card Final', color: '#22c55e' },
+/** Tên cột ở module scope nên chỉ giữ KEY, tra `ui` lúc render. */
+const SLOT_ORDER: { id: SlotId; nameKey: 'ccSlotRaw' | 'ccSlotTranslated' | 'ccSlotFinal'; color: string }[] = [
+  { id: 'raw', nameKey: 'ccSlotRaw', color: '#9ca3af' },
+  { id: 'translated', nameKey: 'ccSlotTranslated', color: 'var(--accent-primary)' },
+  { id: 'final', nameKey: 'ccSlotFinal', color: '#22c55e' },
 ];
 
 interface Slot {
@@ -51,6 +54,7 @@ function triggerDownload(href: string, filename: string, revoke = false) {
 
 export function CompareCardsPanel({ onClose }: Props) {
   const addToast = useStore((s) => s.addToast);
+  const ui = useUi();
   const [slots, setSlots] = useState<Record<SlotId, Slot>>({
     raw: emptySlot(), translated: emptySlot(), final: emptySlot(),
   });
@@ -71,7 +75,8 @@ export function CompareCardsPanel({ onClose }: Props) {
       const fields = extractTranslatableFields(parsed.card, ALL_GROUP_IDS);
       const valueByPath = new Map(fields.map((f) => [f.path, f.original]));
       patchSlot(id, { parsed, fields, valueByPath, edits: {} });
-      addToast('success', `Đã nạp ${SLOT_ORDER.find((s) => s.id === id)?.name}: ${fields.length} mục`);
+      const slotDef = SLOT_ORDER.find((s) => s.id === id);
+      addToast('success', fmt(ui.ccToastLoaded, { name: slotDef ? ui[slotDef.nameKey] : '', count: fields.length }));
     } catch (e) {
       addToast('error', e instanceof Error ? e.message : String(e));
     }
@@ -79,7 +84,7 @@ export function CompareCardsPanel({ onClose }: Props) {
 
   const removeSlot = useCallback((id: SlotId) => {
     const dirty = Object.keys(slots[id].edits).length;
-    if (dirty > 0 && !window.confirm(`Còn ${dirty} ô chưa lưu ở cột này. Gỡ card vẫn tiếp tục?`)) return;
+    if (dirty > 0 && !window.confirm(fmt(ui.ccConfirmRemove, { count: dirty }))) return;
     patchSlot(id, { ...emptySlot() });
     setMerge(null);
   }, [slots, patchSlot]);
@@ -114,7 +119,7 @@ export function CompareCardsPanel({ onClose }: Props) {
       }
       return { ...prev, [id]: { ...slot, valueByPath, edits: {} } };
     });
-    addToast('success', 'Đã lưu tất cả chỉnh sửa của cột.');
+    addToast('success', ui.ccToastSavedAll);
   }, [addToast]);
 
   // Áp mọi edit còn lại thẳng vào card object (đồng bộ, cho export) rồi dọn state.
@@ -145,7 +150,7 @@ export function CompareCardsPanel({ onClose }: Props) {
       triggerDownload(dataUrl, `${stem(slot.parsed.fileName)}.png`);
       saveAll(id);
     } catch (e) {
-      addToast('error', `Xuất PNG lỗi: ${e instanceof Error ? e.message : String(e)}`);
+      addToast('error', fmt(ui.ccToastPngErr, { msg: e instanceof Error ? e.message : String(e) }));
     }
   }, [slots, flushEdits, saveAll, addToast]);
 
@@ -157,16 +162,14 @@ export function CompareCardsPanel({ onClose }: Props) {
     const plan = planMerge(slots.raw.valueByPath, slots.translated.valueByPath, slots.final.valueByPath);
     setMerge(plan);
     setDiffOnly(false);
-    addToast('success', `Gộp: tái dùng ${plan.counts.reused} · cần dịch ${plan.counts.changed}.`);
+    addToast('success', fmt(ui.ccToastMerged, { reused: plan.counts.reused, changed: plan.counts.changed }));
   }, [allThree, slots, addToast]);
 
   // Đưa Card Final sang Dịch Card: reused = "đã dịch" (khoá), phần mới = "chờ dịch".
   const sendToTranslate = useCallback(() => {
     const finalSlot = slots.final;
     if (!finalSlot.parsed || !merge) return;
-    if (!window.confirm(
-      `Đưa Card Final sang Dịch Card?\n\n• ${merge.counts.reused} mục TÁI DÙNG bản dịch cũ → đánh dấu ĐÃ DỊCH (bỏ qua khi dịch).\n• ${merge.counts.changed} mục mới/đổi → CHỜ DỊCH.\n\nThao tác này thay card đang mở ở màn Dịch Card.`,
-    )) return;
+    if (!window.confirm(fmt(ui.ccConfirmSend, { reused: merge.counts.reused, changed: merge.counts.changed }))) return;
     const st = useStore.getState();
     st.setCard(finalSlot.parsed.card, finalSlot.parsed.fileName, finalSlot.parsed.dataUrl, 'card', null);
     const enabled = st.translationConfig.fieldGroups.filter((g) => g.enabled).map((g) => g.id);
@@ -175,7 +178,7 @@ export function CompareCardsPanel({ onClose }: Props) {
       ? { ...f, translated: merge.reused.get(f.path)!, status: 'done' as const, error: undefined }
       : f);
     st.setFields(mergedFields);
-    addToast('success', `Đã đưa sang Dịch Card — chỉ còn ${merge.counts.changed} mục cần dịch. Bấm "Dịch" để chạy.`);
+    addToast('success', fmt(ui.ccToastSent, { count: merge.counts.changed }));
     onClose();
   }, [slots, merge, addToast, onClose]);
 
@@ -186,7 +189,7 @@ export function CompareCardsPanel({ onClose }: Props) {
     for (const [p, v] of merge.reused) setNestedValue(finalSlot.parsed.card as unknown as Record<string, unknown>, p, v);
     const blob = new Blob([JSON.stringify(finalSlot.parsed.card, null, 2)], { type: 'application/json' });
     triggerDownload(URL.createObjectURL(blob), `${stem(finalSlot.parsed.fileName)}_final.json`, true);
-    addToast('success', `Đã xuất Final: ${merge.counts.reused} mục dịch sẵn, ${merge.counts.changed} mục còn nguyên ngữ.`);
+    addToast('success', fmt(ui.ccToastExported, { reused: merge.counts.reused, changed: merge.counts.changed }));
   }, [slots, merge, addToast]);
 
   // ─── Dữ liệu hiển thị ───
@@ -220,7 +223,7 @@ export function CompareCardsPanel({ onClose }: Props) {
 
   const totalDirty = SLOT_ORDER.reduce((n, s) => n + Object.keys(slots[s.id].edits).length, 0);
   const handleClose = () => {
-    if (totalDirty > 0 && !window.confirm(`Còn ${totalDirty} ô chưa lưu (sẽ mất khi đóng). Đóng?`)) return;
+    if (totalDirty > 0 && !window.confirm(fmt(ui.ccConfirmClose, { count: totalDirty }))) return;
     onClose();
   };
 
@@ -231,26 +234,26 @@ export function CompareCardsPanel({ onClose }: Props) {
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 18px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-secondary)' }}>
         <Columns3 size={18} color="var(--accent-primary)" />
-        <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>So Sánh Card</span>
-        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>3 phiên bản cạnh nhau · sửa & xuất từng entry</span>
+        <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{ui.ccTitle}</span>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ui.ccSubtitle}</span>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ position: 'relative' }}>
             <Search size={13} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm entry…"
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={ui.ccSearchPh}
               style={{ padding: '5px 8px 5px 26px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-primary)', width: '150px' }} />
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
             <input type="checkbox" checked={diffOnly} onChange={(e) => setDiffOnly(e.target.checked)} />
-            Chỉ hiện khác nhau
+            {ui.ccDiffOnly}
           </label>
           {totalDirty > 0 && (
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: 'var(--accent-warning)' }}>
-              <AlertTriangle size={13} /> {totalDirty} ô chưa lưu
+              <AlertTriangle size={13} /> {fmt(ui.ccUnsavedCount, { count: totalDirty })}
             </span>
           )}
           <button onClick={handleClose} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.75rem' }}>
-            <X size={14} /> Đóng
+            <X size={14} /> {ui.ccClose}
           </button>
         </div>
       </div>
@@ -261,34 +264,34 @@ export function CompareCardsPanel({ onClose }: Props) {
           {!merge ? (
             <>
               <button onClick={runMerge} disabled={!allThree}
-                title={allThree ? 'So Card Raw (gốc cũ) vs Card Final (gốc mới): entry KHÔNG đổi → tái dùng bản dịch cũ; entry mới/đổi → để dịch.' : 'Cần nạp đủ 3 card: Raw + Đã Dịch + Final'}
+                title={allThree ? ui.ccMergeTitleOk : ui.ccMergeTitleNeed}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: 'var(--radius-sm)', border: 'none', background: allThree ? '#38bdf8' : 'var(--bg-elevated)', color: allThree ? '#04263a' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.78rem', cursor: allThree ? 'pointer' : 'default' }}>
-                🔀 Gộp thông minh{allThree ? '' : ' (cần đủ 3 card)'}
+                {ui.ccMergeBtn}{allThree ? '' : ui.ccMergeBtnNeed}
               </button>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                Tái dùng bản dịch cũ cho entry không đổi, chỉ chừa phần tác giả vừa update để dịch → nhanh & đỡ vỡ regex.
+                {ui.ccMergeHint}
               </span>
             </>
           ) : (
             <>
               <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700 }}>
-                <span style={{ color: '#22c55e' }}>♻ Tái dùng {merge.counts.reused}</span>
+                <span style={{ color: '#22c55e' }}>{fmt(ui.ccMergeReused, { count: merge.counts.reused })}</span>
                 <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>·</span>
-                <span style={{ color: 'var(--accent-warning)' }}>✏️ Cần dịch {merge.counts.changed}</span>
-                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>/ {merge.counts.total} mục · (xem trước ở cột Card Final)</span>
+                <span style={{ color: 'var(--accent-warning)' }}>{fmt(ui.ccMergeChanged, { count: merge.counts.changed })}</span>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{fmt(ui.ccMergeTotal, { count: merge.counts.total })}</span>
               </span>
               <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button onClick={sendToTranslate}
                   style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--accent-primary)', color: '#fff', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
-                  ➡️ Đưa sang Dịch Card (dịch {merge.counts.changed} mục mới)
+                  {fmt(ui.ccSendBtn, { count: merge.counts.changed })}
                 </button>
                 <button onClick={exportFinalMerged}
                   style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '0.75rem', cursor: 'pointer' }}>
-                  ⬇️ Xuất Final
+                  {ui.ccExportFinal}
                 </button>
                 <button onClick={() => setMerge(null)}
                   style={{ padding: '7px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer' }}>
-                  Huỷ gộp
+                  {ui.ccCancelMerge}
                 </button>
               </div>
             </>
@@ -310,11 +313,11 @@ export function CompareCardsPanel({ onClose }: Props) {
       <div style={{ flex: 1, overflow: 'auto' }}>
         {loadedSlots.length === 0 ? (
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '20px' }}>
-            Nạp ít nhất 1 card ở các cột trên để bắt đầu so sánh.<br />
-            <span style={{ fontSize: '0.72rem' }}>Kéo-thả hoặc bấm để chọn file .json / .png cho từng cột (Raw / Đã Dịch / Final).</span>
+            {ui.ccEmpty1}<br />
+            <span style={{ fontSize: '0.72rem' }}>{ui.ccEmpty2}</span>
           </div>
         ) : visibleGroups.length === 0 ? (
-          <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Không có entry nào khớp bộ lọc.</div>
+          <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>{ui.ccNoMatch}</div>
         ) : (
           visibleGroups.map((g) => {
             const isCollapsed = collapsed.has(g.group);
@@ -366,11 +369,12 @@ export function CompareCardsPanel({ onClose }: Props) {
 
 // ─── Column header with import + actions ───
 function SlotHeader({ slotDef, slot, onImport, onRemove, onSaveAll, onExportJson, onExportPng }: {
-  slotDef: { id: SlotId; name: string; color: string };
+  slotDef: { id: SlotId; nameKey: 'ccSlotRaw' | 'ccSlotTranslated' | 'ccSlotFinal'; color: string };
   slot: Slot;
   onImport: (f: File) => void; onRemove: () => void;
   onSaveAll: () => void; onExportJson: () => void; onExportPng: () => void;
 }) {
+  const ui = useUi();
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
   const dirty = Object.keys(slot.edits).length;
@@ -384,8 +388,8 @@ function SlotHeader({ slotDef, slot, onImport, onRemove, onSaveAll, onExportJson
         onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files?.[0]; if (f) onImport(f); }}
         style={{ margin: '8px', padding: '14px 10px', border: `1.5px dashed ${drag ? slotDef.color : 'var(--border-default)'}`, borderRadius: 'var(--radius-md)', textAlign: 'center', cursor: 'pointer', background: drag ? 'rgba(124,106,240,0.06)' : 'transparent' }}>
         <Upload size={16} color={slotDef.color} />
-        <div style={{ fontWeight: 700, fontSize: '0.76rem', marginTop: '4px', color: slotDef.color }}>{slotDef.name}</div>
-        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Kéo-thả / bấm chọn .json / .png</div>
+        <div style={{ fontWeight: 700, fontSize: '0.76rem', marginTop: '4px', color: slotDef.color }}>{ui[slotDef.nameKey]}</div>
+        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>{ui.ccDropHint}</div>
         <input ref={inputRef} type="file" accept=".json,.png" style={{ display: 'none' }}
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f); e.currentTarget.value = ''; }} />
       </div>
@@ -396,26 +400,26 @@ function SlotHeader({ slotDef, slot, onImport, onRemove, onSaveAll, onExportJson
     <div style={{ padding: '8px 10px', borderLeft: '1px solid var(--border-subtle)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: slotDef.color, flexShrink: 0 }} />
-        <span style={{ fontWeight: 700, fontSize: '0.76rem', color: slotDef.color }}>{slotDef.name}</span>
-        <button onClick={onRemove} title="Gỡ card" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}>
+        <span style={{ fontWeight: 700, fontSize: '0.76rem', color: slotDef.color }}>{ui[slotDef.nameKey]}</span>
+        <button onClick={onRemove} title={ui.ccRemoveCard} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}>
           <Trash2 size={13} />
         </button>
       </div>
       <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', margin: '2px 0 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
         title={slot.parsed.fileName}>
-        {slot.parsed.fileName}{dirty > 0 ? ` · ${dirty} chưa lưu` : ''}
+        {slot.parsed.fileName}{dirty > 0 ? fmt(ui.ccDirtySuffix, { count: dirty }) : ''}
       </div>
       <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-        <button onClick={onSaveAll} disabled={dirty === 0} title="Lưu mọi chỉnh sửa của cột này vào card"
+        <button onClick={onSaveAll} disabled={dirty === 0} title={ui.ccSaveAllTitle}
           style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '3px 7px', fontSize: '0.63rem', borderRadius: 'var(--radius-sm)', border: 'none', background: dirty > 0 ? 'var(--accent-primary)' : 'var(--bg-elevated)', color: dirty > 0 ? '#fff' : 'var(--text-muted)', cursor: dirty > 0 ? 'pointer' : 'default' }}>
-          <Save size={11} /> Lưu tất cả
+          <Save size={11} /> {ui.ccSaveAll}
         </button>
-        <button onClick={onExportJson} title="Xuất card này ra JSON"
+        <button onClick={onExportJson} title={ui.ccExportJsonTitle}
           style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '3px 7px', fontSize: '0.63rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer' }}>
           <FileJson size={11} /> JSON
         </button>
         {slot.parsed.isPng && (
-          <button onClick={onExportPng} title="Xuất card này ra PNG (giữ ảnh gốc)"
+          <button onClick={onExportPng} title={ui.ccExportPngTitle}
             style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '3px 7px', fontSize: '0.63rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer' }}>
             <ImageIcon size={11} /> PNG
           </button>
@@ -431,11 +435,12 @@ function CompareCell({ loaded, present, value, dirty, readOnly, mergeTag, onChan
   readOnly?: boolean; mergeTag?: 'reused' | 'changed';
   onChange: (v: string) => void; onSave: () => void;
 }) {
+  const ui = useUi();
   if (!loaded) {
-    return <div style={{ padding: '8px 12px', fontSize: '0.66rem', color: 'var(--text-muted)', fontStyle: 'italic', borderLeft: '1px solid var(--border-subtle)' }}>(chưa nạp card)</div>;
+    return <div style={{ padding: '8px 12px', fontSize: '0.66rem', color: 'var(--text-muted)', fontStyle: 'italic', borderLeft: '1px solid var(--border-subtle)' }}>{ui.ccNoCard}</div>;
   }
   if (!present) {
-    return <div style={{ padding: '8px 12px', fontSize: '0.66rem', color: 'var(--text-muted)', fontStyle: 'italic', borderLeft: '1px solid var(--border-subtle)', background: mergeTag === 'changed' ? 'rgba(240,196,106,0.05)' : 'transparent' }}>(không có mục này)</div>;
+    return <div style={{ padding: '8px 12px', fontSize: '0.66rem', color: 'var(--text-muted)', fontStyle: 'italic', borderLeft: '1px solid var(--border-subtle)', background: mergeTag === 'changed' ? 'rgba(240,196,106,0.05)' : 'transparent' }}>{ui.ccNoEntry}</div>;
   }
   const bg = mergeTag === 'reused' ? 'rgba(34,197,94,0.07)'
     : mergeTag === 'changed' ? 'rgba(240,196,106,0.08)'
@@ -447,7 +452,7 @@ function CompareCell({ loaded, present, value, dirty, readOnly, mergeTag, onChan
     <div style={{ padding: '6px 8px', borderLeft: '1px solid var(--border-subtle)', position: 'relative', background: bg }}>
       {mergeTag && (
         <div style={{ fontSize: '0.6rem', fontWeight: 700, marginBottom: '3px', color: mergeTag === 'reused' ? '#16a34a' : 'var(--accent-warning)' }}>
-          {mergeTag === 'reused' ? '♻ tái dùng bản dịch cũ' : '✏️ mới/đổi — cần dịch'}
+          {mergeTag === 'reused' ? ui.ccTagReused : ui.ccTagChanged}
         </div>
       )}
       <textarea
@@ -467,11 +472,11 @@ function CompareCell({ loaded, present, value, dirty, readOnly, mergeTag, onChan
       {dirty && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.6rem', color: 'var(--accent-warning)' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-warning)' }} /> chưa lưu
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-warning)' }} /> {ui.ccUnsavedDot}
           </span>
-          <button onClick={onSave} title="Lưu vào card (Ctrl+Enter)"
+          <button onClick={onSave} title={ui.ccSaveTitle}
             style={{ display: 'flex', alignItems: 'center', gap: '3px', marginLeft: 'auto', padding: '2px 8px', fontSize: '0.6rem', borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--accent-success, #22c55e)', color: '#fff', cursor: 'pointer' }}>
-            <Save size={10} /> Lưu
+            <Save size={10} /> {ui.ccSave}
           </button>
         </div>
       )}

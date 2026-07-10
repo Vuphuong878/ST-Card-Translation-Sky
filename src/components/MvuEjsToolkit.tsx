@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, Sparkles, AlertTriangle, Info, Copy, Code, Sliders, Play } from 'lucide-react';
 import { extractZodSchemas } from '../utils/zodSchemaEngine';
+import { useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 
 interface SchemaField {
   name: string;
@@ -27,6 +29,7 @@ export default function MvuEjsToolkit({
   updateCard: (card: any) => void; 
   addToast: (level: 'success' | 'error' | 'info', msg: string) => void; 
 }) {
+  const ui = useUi();
   const [activeSubTab, setActiveSubTab] = useState<'designer' | 'statusbar' | 'multistage'>('designer');
 
   // --- Designer State ---
@@ -137,7 +140,7 @@ export default function MvuEjsToolkit({
   const handleInjectSchema = () => {
     if (!card) return;
     if (fields.some(f => !f.name.trim())) {
-      addToast('error', 'Tên trường không được để trống.');
+      addToast('error', ui.mtToastNameEmpty);
       return;
     }
     const compiledCode = compileZodSchema(fields);
@@ -184,7 +187,7 @@ export default function MvuEjsToolkit({
     }
 
     updateCard(newCard);
-    addToast('success', 'Đã tích hợp MVU Zod Schema thành công!');
+    addToast('success', ui.mtToastSchemaOk);
   };
 
   // --- Status Bar State ---
@@ -212,7 +215,7 @@ export default function MvuEjsToolkit({
     if (!card) return;
     const activeFields = fields.filter(f => selectedFields[f.name]);
     if (activeFields.length === 0) {
-      addToast('error', 'Hãy chọn ít nhất 1 trường chỉ số để hiển thị.');
+      addToast('error', ui.mtToastPickStat);
       return;
     }
 
@@ -262,7 +265,7 @@ export default function MvuEjsToolkit({
     }
 
     updateCard(newCard);
-    addToast('success', 'Đã chèn Thanh Trạng Thái vào Lorebook thành công!');
+    addToast('success', ui.mtToastStatusBarOk);
   };
 
   // --- MultiStage State ---
@@ -294,7 +297,7 @@ export default function MvuEjsToolkit({
   const handleInjectMultiStage = () => {
     if (!card) return;
     if (stagesList.length === 0) {
-      addToast('error', 'Hãy thêm ít nhất một giai đoạn.');
+      addToast('error', ui.mtToastNeedStage);
       return;
     }
 
@@ -368,7 +371,7 @@ export default function MvuEjsToolkit({
     });
 
     updateCard(newCard);
-    addToast('success', `Đã tự tạo 1 Controller và ${sortedStages.length} entry giai đoạn thành công!`);
+    addToast('success', fmt(ui.mtToastStagesOk, { count: sortedStages.length }));
   };
 
   return (
@@ -406,7 +409,7 @@ export default function MvuEjsToolkit({
             fontWeight: activeSubTab === 'multistage' ? 600 : 400, cursor: 'pointer'
           }}
         >
-          Đa Giai Đoạn
+          {ui.mtTabMultistage}
         </button>
       </div>
 
@@ -417,7 +420,7 @@ export default function MvuEjsToolkit({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ padding: '8px 10px', background: 'rgba(99,102,241,0.06)', borderRadius: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '6px' }}>
               <Info size={16} style={{ flexShrink: 0, color: 'var(--accent-primary)', marginTop: '1px' }} />
-              <span>Thiết kế lược đồ MVU Zod 4. Hệ thống sẽ tự ép kiểu, xử lý an toàn trị số và đưa vào TavernHelper.</span>
+              <span>{ui.mtSchemaInfo}</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -426,7 +429,7 @@ export default function MvuEjsToolkit({
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <input
                       type="text"
-                      placeholder="Tên trường (VD: hp)"
+                      placeholder={ui.mtFieldNamePh}
                       value={f.name}
                       onChange={e => updateFieldProp(i, 'name', e.target.value)}
                       style={{ flex: 1, padding: '5px 8px', fontSize: '0.75rem', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-primary)', fontFamily: 'monospace' }}
@@ -436,11 +439,11 @@ export default function MvuEjsToolkit({
                       onChange={e => updateFieldProp(i, 'type', e.target.value as any)}
                       style={{ padding: '5px', fontSize: '0.75rem', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-primary)' }}
                     >
-                      <option value="number">Số (Number)</option>
-                      <option value="string">Chữ (String)</option>
-                      <option value="boolean">Bật/Tắt (Boolean)</option>
-                      <option value="enum">Lựa chọn (Enum)</option>
-                      <option value="record">Túi đồ (Record)</option>
+                      <option value="number">{ui.mtTypeNumber}</option>
+                      <option value="string">{ui.mtTypeString}</option>
+                      <option value="boolean">{ui.mtTypeBoolean}</option>
+                      <option value="enum">{ui.mtTypeEnum}</option>
+                      <option value="record">{ui.mtTypeRecord}</option>
                     </select>
                     <button
                       onClick={() => removeField(i)}
@@ -453,14 +456,14 @@ export default function MvuEjsToolkit({
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <input
                       type="text"
-                      placeholder="Mặc định (VD: 100)"
+                      placeholder={ui.mtDefaultPh}
                       value={f.defaultValue}
                       onChange={e => updateFieldProp(i, 'defaultValue', e.target.value)}
                       style={{ flex: 1, padding: '4px 6px', fontSize: '0.72rem', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-primary)' }}
                     />
                     <input
                       type="text"
-                      placeholder="Chú thích biến"
+                      placeholder={ui.mtDescPh}
                       value={f.description}
                       onChange={e => updateFieldProp(i, 'description', e.target.value)}
                       style={{ flex: 2, padding: '4px 6px', fontSize: '0.72rem', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-primary)' }}
@@ -469,7 +472,7 @@ export default function MvuEjsToolkit({
 
                   {f.type === 'number' && (
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Giới hạn trị số:</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{ui.mtNumLimits}</span>
                       <input
                         type="number"
                         placeholder="Min"
@@ -491,7 +494,7 @@ export default function MvuEjsToolkit({
                   {f.type === 'enum' && (
                     <input
                       type="text"
-                      placeholder="Các giá trị (Cách nhau bằng dấu phẩy, VD: Xa lạ, Quen thuộc)"
+                      placeholder={ui.mtEnumPh}
                       value={f.enumValues}
                       onChange={e => updateFieldProp(i, 'enumValues', e.target.value)}
                       style={{ padding: '4px 6px', fontSize: '0.72rem', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-primary)' }}
@@ -510,7 +513,7 @@ export default function MvuEjsToolkit({
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
-                <Plus size={14} /> Thêm Biến Mới
+                <Plus size={14} /> {ui.mtAddField}
               </button>
               <button
                 onClick={handleInjectSchema}
@@ -520,7 +523,7 @@ export default function MvuEjsToolkit({
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
-                <Check size={14} /> Tích Hợp Schema
+                <Check size={14} /> {ui.mtInjectSchema}
               </button>
             </div>
           </div>
@@ -531,12 +534,12 @@ export default function MvuEjsToolkit({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ padding: '8px 10px', background: 'rgba(234,179,8,0.06)', borderRadius: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '6px' }}>
               <Info size={16} style={{ flexShrink: 0, color: 'var(--accent-warning)', marginTop: '1px' }} />
-              <span>Thiết kế thanh hiển thị chỉ số trực quan ở cuối tin nhắn. Sử dụng hộp iframe chống xung đột CSS.</span>
+              <span>{ui.mtStatusInfo}</span>
             </div>
 
             {fields.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                Vui lòng định nghĩa hoặc tải schema ở tab Thiết Kế trước.
+                {ui.mtNeedSchema}
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -555,7 +558,7 @@ export default function MvuEjsToolkit({
 
                     <input
                       type="text"
-                      placeholder="Nhãn hiển thị (VD: HP)"
+                      placeholder={ui.mtLabelPh}
                       value={fieldLabels[f.name] || ''}
                       onChange={e => setFieldLabels({ ...fieldLabels, [f.name]: e.target.value })}
                       style={{ width: '100px', padding: '3px 6px', fontSize: '0.72rem', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-primary)' }}
@@ -578,7 +581,7 @@ export default function MvuEjsToolkit({
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '6px'
                   }}
                 >
-                  <Sparkles size={14} /> Chèn Status Bar Vào Lorebook
+                  <Sparkles size={14} /> {ui.mtInsertStatusBar}
                 </button>
               </div>
             )}
@@ -590,12 +593,12 @@ export default function MvuEjsToolkit({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ padding: '8px 10px', background: 'rgba(168,85,247,0.06)', borderRadius: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '6px' }}>
               <Info size={16} style={{ flexShrink: 0, color: 'var(--accent-secondary)', marginTop: '1px' }} />
-              <span>Tạo bộ chuyển trạng thái nhân vật tự động. Một entry Controller sẽ điều phối nạp các entry Giai đoạn dựa trên mốc chỉ số.</span>
+              <span>{ui.mtStageInfo}</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>Chỉ số điều khiển (Ví dụ: quan_he.hao_cam)</label>
+                <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>{ui.mtControlStat}</label>
                 <input
                   type="text"
                   value={controllerVar}
@@ -605,13 +608,13 @@ export default function MvuEjsToolkit({
               </div>
 
               <div style={{ marginTop: '6px' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500, marginBottom: '6px' }}>Danh sách các giai đoạn nhân vật</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500, marginBottom: '6px' }}>{ui.mtStageList}</div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
                   {stagesList.map((stage, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--border-default)', borderRadius: '6px', padding: '6px 10px' }}>
                       <div style={{ flex: 1, fontSize: '0.75rem', fontWeight: 600 }}>{stage.label}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Mốc: {stage.threshold}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ui.mtStageThreshold}{stage.threshold}</div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stage.entryName}</div>
                       <button
                         onClick={() => removeStage(idx)}
@@ -626,14 +629,14 @@ export default function MvuEjsToolkit({
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'var(--bg-secondary)', padding: '8px', border: '1px dashed var(--border-default)', borderRadius: '6px' }}>
                   <input
                     type="text"
-                    placeholder="Tên giai đoạn"
+                    placeholder={ui.mtStageNamePh}
                     value={newStageLabel}
                     onChange={e => setNewStageLabel(e.target.value)}
                     style={{ flex: 2, padding: '4px 6px', fontSize: '0.72rem', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-primary)' }}
                   />
                   <input
                     type="number"
-                    placeholder="Mốc"
+                    placeholder={ui.mtStageThresholdPh}
                     value={newStageThreshold}
                     onChange={e => setNewStageThreshold(e.target.value)}
                     style={{ flex: 1, width: '60px', padding: '4px 6px', fontSize: '0.72rem', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-primary)' }}
@@ -645,7 +648,7 @@ export default function MvuEjsToolkit({
                       color: 'white', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer'
                     }}
                   >
-                    Thêm
+                    {ui.mtAddStage}
                   </button>
                 </div>
               </div>
@@ -658,7 +661,7 @@ export default function MvuEjsToolkit({
                   display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '6px'
                 }}
               >
-                <Code size={14} /> Khởi Tạo Đa Giai Đoạn Vào Lorebook
+                <Code size={14} /> {ui.mtInitStages}
               </button>
             </div>
           </div>
