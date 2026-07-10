@@ -641,6 +641,74 @@ const t = {
   egCatVarDisplayDesc: 'Print the stat table for the AI to read, as structured text',
   egCatCustom: 'Describe it yourself',
   egCatCustomDesc: 'Write a free-form description and the AI will produce matching EJS',
+
+  // ─── CopilotDrawer: che do (chi hien thi) ───
+  cwGenesis: '🌱 Genesis',
+  cwEvolution: '🔄 Evolution',
+  cwDocExtract: '📄 Document extraction',
+  cwDiscussion: '💬 Discussion',
+  cwMvuzod: '🛠 MVUZOD',
+  cwRegex: '🧩 Regex Lab',
+
+  // ─── CopilotPanel: nhan action ───
+  cpActCreateEntry: 'Add an entry',
+  cpActUpdateEntry: 'Edit an entry',
+  cpActDeleteEntry: 'Delete an entry',
+  cpActUpdateField: 'Edit a field',
+  cpActAddRegex: 'Add a regex',
+  cpActUpdateRegex: 'Edit a regex',
+  cpActDeleteRegex: 'Delete a regex',
+  cpActFetchWiki: 'Fetch the wiki',
+  cpActReadDoc: 'Read a chunk',
+  cpActCreateScript: 'Create a script',
+  cpActGameUi: 'Create a game UI',
+  cpApply: 'Apply',
+  cpSkip: 'Skip',
+
+  // ─── CopilotPanel: khung chat ───
+  cpClearHistory: 'Clear the history',
+  cpMode: 'Mode:',
+  cpAutoApply: 'Apply automatically',
+  cpNoProfile: 'No profile configured',
+  cpReady: 'AI Copilot is ready',
+  cpReady2: 'Pick a mode, then type your request in Vietnamese (the Copilot answers in Vietnamese)',
+  cpYou: 'You',
+  cpThought: '💭 The AI is thinking',
+  cpAttach: 'Attach an image or a file',
+  cpInputPh: 'Type your request... (Enter to send)',
+  cpInputNoProfile: 'Configure a proxy profile first...',
+  // Nhãn nút gợi ý (câu gửi cho AI vẫn giữ tiếng Việt)
+  cpQaOpeningForm: 'Create an Opening Form for the card',
+  cpQaStatusBar: 'Create a Status Bar that shows the variables',
+  cpQaGameScreen: 'Create a Game Screen layout',
+  cpQaExportProject: 'Export the Tavern Helper project',
+  cpQaLoreToSchema: 'Analyse the Lorebook → schema',
+  cpQaInitVar: 'Create the InitVar entries',
+  cpQaVarList: 'Create the variable list for the AI',
+  cpQaWorldbook: 'Create an RPG worldbook',
+  cpQaNpc: 'Create NPC characters',
+  cpQaRegexDialogue: 'Create a regex that formats dialogue',
+  cpQaRegexCleanup: 'Create a regex that cleans up the AI output',
+  cpQaSuggest: 'A quick suggestion',
+
+  // ─── WikiCollectorPanel ───
+  wcBadUrl: 'That URL is not valid',
+  wcScrapeError: 'Something went wrong while scraping the navigation.',
+  wcUrlPh: 'Type the main wiki link (e.g. genshin-impact.fandom.com)',
+  wcBrowse: 'Browse the menu',
+  wcAnalysing: 'Analysing the wiki structure...',
+  wcEnterUrl: 'Type a wiki URL to browse its categories',
+  wcMetaFilter: 'Meta filter (exclude)',
+  wcScrape: 'Scrape {count} pages',
+
+  // ─── CopilotPanel: mo ta 7 che do ───
+  cpDescGenesis: 'Build a new structure from scratch',
+  cpDescEvolution: 'Expand the entries you already have',
+  cpDescDocExtract: 'Extract from a document',
+  cpDescDiscussion: 'Just talk it through',
+  cpDescMvuzod: 'Manage variables & schema',
+  cpDescRegex: 'Write or fix regex scripts',
+  cpDescGameDev: 'Build game UI components',
 };
 
 export default t;

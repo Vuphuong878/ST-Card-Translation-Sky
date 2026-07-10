@@ -17,6 +17,18 @@ import type { ChatAttachment } from '../../types/aiAgent.types';
 import { runCopilotLoop, executeAction, type CopilotContext } from '../../lib/ai/agentLoop';
 import type { ChatMessage } from '../../types';
 import { DiffViewer } from '../DiffViewer';
+import { t as ui } from '../../i18n';
+
+/** Mô tả 7 chế độ Copilot. Giữ nguyên MODE_LABELS trong lib/ai/copilotTypes.ts. */
+const MODE_DESC: Record<string, string> = {
+  genesis: ui.cpDescGenesis,
+  evolution: ui.cpDescEvolution,
+  document_extraction: ui.cpDescDocExtract,
+  discussion: ui.cpDescDiscussion,
+  mvuzod: ui.cpDescMvuzod,
+  regex: ui.cpDescRegex,
+  game_dev: ui.cpDescGameDev,
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ACTION CARD COMPONENT
@@ -28,18 +40,18 @@ function ActionCard({ action, onApply, onSkip }: {
   onSkip: () => void;
 }) {
   const labels: Record<string, { icon: string; label: string; color: string }> = {
-    create_entry: { icon: '➕', label: 'Thêm entry', color: 'text-emerald-400' },
-    update_entry: { icon: '✏️', label: 'Sửa entry', color: 'text-blue-400' },
-    delete_entry: { icon: '🗑️', label: 'Xoá entry', color: 'text-destructive' },
-    update_field: { icon: '✏️', label: 'Sửa field', color: 'text-blue-400' },
-    add_regex_script: { icon: '➕', label: 'Thêm regex', color: 'text-emerald-400' },
-    update_regex_script: { icon: '✏️', label: 'Sửa regex', color: 'text-blue-400' },
-    delete_regex_script: { icon: '🗑️', label: 'Xoá regex', color: 'text-destructive' },
-    fetch_fandom_data: { icon: '🌐', label: 'Tải wiki', color: 'text-primary' },
-    read_document: { icon: '📄', label: 'Đọc chunk', color: 'text-primary' },
+    create_entry: { icon: '➕', label: ui.cpActCreateEntry, color: 'text-emerald-400' },
+    update_entry: { icon: '✏️', label: ui.cpActUpdateEntry, color: 'text-blue-400' },
+    delete_entry: { icon: '🗑️', label: ui.cpActDeleteEntry, color: 'text-destructive' },
+    update_field: { icon: '✏️', label: ui.cpActUpdateField, color: 'text-blue-400' },
+    add_regex_script: { icon: '➕', label: ui.cpActAddRegex, color: 'text-emerald-400' },
+    update_regex_script: { icon: '✏️', label: ui.cpActUpdateRegex, color: 'text-blue-400' },
+    delete_regex_script: { icon: '🗑️', label: ui.cpActDeleteRegex, color: 'text-destructive' },
+    fetch_fandom_data: { icon: '🌐', label: ui.cpActFetchWiki, color: 'text-primary' },
+    read_document: { icon: '📄', label: ui.cpActReadDoc, color: 'text-primary' },
     set_variable: { icon: '⚙️', label: 'Set variable', color: 'text-amber-400' },
-    create_tavern_script: { icon: '📜', label: 'Tạo script', color: 'text-violet-400' },
-    generate_game_ui: { icon: '🎮', label: 'Tạo game UI', color: 'text-cyan-400' },
+    create_tavern_script: { icon: '📜', label: ui.cpActCreateScript, color: 'text-violet-400' },
+    generate_game_ui: { icon: '🎮', label: ui.cpActGameUi, color: 'text-cyan-400' },
   };
 
   const info = labels[action.type] ?? { icon: '❓', label: action.type, color: 'text-muted-foreground' };
@@ -85,11 +97,11 @@ function ActionCard({ action, onApply, onSkip }: {
       <div className="flex gap-1.5">
         <button onClick={onApply}
           className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary/10 text-primary text-xs hover:bg-primary/20 transition-colors">
-          <Check className="w-3 h-3" /> Áp dụng
+          <Check className="w-3 h-3" /> {ui.cpApply}
         </button>
         <button onClick={onSkip}
           className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted text-muted-foreground text-xs hover:bg-muted/80 transition-colors">
-          <X className="w-3 h-3" /> Bỏ qua
+          <X className="w-3 h-3" /> {ui.cpSkip}
         </button>
       </div>
     </div>
@@ -319,7 +331,7 @@ export function CopilotPanel() {
             className={`p-1.5 rounded-md transition-colors ${isGhostMode ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}>
             <Ghost className="w-4 h-4" />
           </button>
-          <button onClick={handleClear} title="Xoá lịch sử"
+          <button onClick={handleClear} title={ui.cpClearHistory}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
             <Trash2 className="w-4 h-4" />
           </button>
@@ -333,13 +345,13 @@ export function CopilotPanel() {
       {/* Mode selector */}
       <div className={`shrink-0 px-4 py-2 border-b ${isGhostMode ? 'bg-transparent border-border/30' : 'bg-muted/20 border-border'}`}>
         <div className="flex items-center gap-2">
-          <label className="text-[10px] text-muted-foreground font-medium">Chế độ:</label>
+          <label className="text-[10px] text-muted-foreground font-medium">{ui.cpMode}</label>
           <div className="relative flex-1">
             <select value={mode} onChange={e => setMode(e.target.value as WorldbuildingMode)}
               disabled={isRunning}
               className={`w-full text-xs px-2 py-1.5 rounded-md border appearance-none pr-6 cursor-pointer ${isGhostMode ? 'bg-background/50 border-border/50' : 'bg-background border-border'}`}>
               {Object.entries(MODE_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v.icon} {v.label} — {v.description}</option>
+                <option key={k} value={k}>{v.icon} {v.label} — {MODE_DESC[k] ?? v.description}</option>
               ))}
             </select>
             <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
@@ -349,11 +361,11 @@ export function CopilotPanel() {
           <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
             <input type="checkbox" checked={autoApply} onChange={e => setAutoApply(e.target.checked)}
               className="settings-checkbox" disabled={isRunning} />
-            Tự động áp dụng
+            {ui.cpAutoApply}
           </label>
           {!activeProfile && (
             <span className="text-[10px] text-destructive flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" /> Chưa cấu hình Profile
+              <AlertTriangle className="w-3 h-3" /> {ui.cpNoProfile}
             </span>
           )}
         </div>
@@ -364,41 +376,41 @@ export function CopilotPanel() {
         {messages.length === 0 && (
           <div className="text-center text-sm text-muted-foreground mt-8">
             <Bot className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
-            <p className="font-medium">AI Copilot sẵn sàng</p>
-            <p className="text-xs mt-1">Chọn chế độ và nhập yêu cầu bằng tiếng Việt</p>
+            <p className="font-medium">{ui.cpReady}</p>
+            <p className="text-xs mt-1">{ui.cpReady2}</p>
 
             {/* Quick actions based on mode */}
             <div className="mt-4 space-y-1.5 text-left max-w-[280px] mx-auto">
               {mode === 'game_dev' && (
                 <>
-                  <QuickAction emoji="🎮" text="Tạo Opening Form cho card" onClick={() => { setInput('Tạo Opening Form thu thập thông tin người chơi'); }} />
-                  <QuickAction emoji="📊" text="Tạo Status Bar hiển thị biến" onClick={() => { setInput('Tạo Status Bar hiển thị các biến game từ schema'); }} />
-                  <QuickAction emoji="🖥️" text="Tạo Game Screen layout" onClick={() => { setInput('Tạo layout Game Screen với options và narrative'); }} />
-                  <QuickAction emoji="📦" text="Export project Tavern Helper" onClick={() => { setInput('Export project hoàn chỉnh cho jsdelivr CDN'); }} />
+                  <QuickAction emoji="🎮" text={ui.cpQaOpeningForm} onClick={() => { setInput('Tạo Opening Form thu thập thông tin người chơi'); }} />
+                  <QuickAction emoji="📊" text={ui.cpQaStatusBar} onClick={() => { setInput('Tạo Status Bar hiển thị các biến game từ schema'); }} />
+                  <QuickAction emoji="🖥️" text={ui.cpQaGameScreen} onClick={() => { setInput('Tạo layout Game Screen với options và narrative'); }} />
+                  <QuickAction emoji="📦" text={ui.cpQaExportProject} onClick={() => { setInput('Export project hoàn chỉnh cho jsdelivr CDN'); }} />
                 </>
               )}
               {mode === 'mvuzod' && (
                 <>
-                  <QuickAction emoji="🔧" text="Phân tích Lorebook → Schema" onClick={() => { setInput('Phân tích Lorebook hiện có và đề xuất MVUZOD schema'); }} />
-                  <QuickAction emoji="📝" text="Tạo InitVar entries" onClick={() => { setInput('Tạo bảng biến khởi tạo từ schema'); }} />
-                  <QuickAction emoji="⚡" text="Tạo Variable List cho AI" onClick={() => { setInput('Tạo danh sách biến hiển thị cho AI đọc'); }} />
+                  <QuickAction emoji="🔧" text={ui.cpQaLoreToSchema} onClick={() => { setInput('Phân tích Lorebook hiện có và đề xuất MVUZOD schema'); }} />
+                  <QuickAction emoji="📝" text={ui.cpQaInitVar} onClick={() => { setInput('Tạo bảng biến khởi tạo từ schema'); }} />
+                  <QuickAction emoji="⚡" text={ui.cpQaVarList} onClick={() => { setInput('Tạo danh sách biến hiển thị cho AI đọc'); }} />
                 </>
               )}
               {mode === 'genesis' && (
                 <>
-                  <QuickAction emoji="🌍" text="Tạo worldbook RPG" onClick={() => { setInput('Tạo worldbook cho RPG game với thế giới fantasy'); }} />
-                  <QuickAction emoji="👤" text="Tạo nhân vật NPC" onClick={() => { setInput('Tạo 5 NPC entries với personality và background'); }} />
+                  <QuickAction emoji="🌍" text={ui.cpQaWorldbook} onClick={() => { setInput('Tạo worldbook cho RPG game với thế giới fantasy'); }} />
+                  <QuickAction emoji="👤" text={ui.cpQaNpc} onClick={() => { setInput('Tạo 5 NPC entries với personality và background'); }} />
                 </>
               )}
               {mode === 'regex' && (
                 <>
-                  <QuickAction emoji="🎭" text="Tạo regex format đối thoại" onClick={() => { setInput('Tạo regex script format đối thoại nhân vật'); }} />
-                  <QuickAction emoji="🧹" text="Tạo regex cleanup AI output" onClick={() => { setInput('Tạo regex script cleanup AI output (OOC, emoji, etc)'); }} />
+                  <QuickAction emoji="🎭" text={ui.cpQaRegexDialogue} onClick={() => { setInput('Tạo regex script format đối thoại nhân vật'); }} />
+                  <QuickAction emoji="🧹" text={ui.cpQaRegexCleanup} onClick={() => { setInput('Tạo regex script cleanup AI output (OOC, emoji, etc)'); }} />
                 </>
               )}
               {(mode === 'discussion' || mode === 'evolution' || mode === 'document_extraction') && (
                 <>
-                  <QuickAction emoji="💡" text="Gợi ý nhanh" onClick={() => { setInput('Xem card hiện tại và đề xuất cải thiện'); }} />
+                  <QuickAction emoji="💡" text={ui.cpQaSuggest} onClick={() => { setInput('Xem card hiện tại và đề xuất cải thiện'); }} />
                 </>
               )}
             </div>
@@ -409,7 +421,7 @@ export function CopilotPanel() {
           <div key={i} className="flex flex-col gap-1">
             <div className={`flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
               {msg.role === 'user' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
-              <span>{msg.role === 'user' ? 'Bạn' : 'Copilot'}</span>
+              <span>{msg.role === 'user' ? ui.cpYou : 'Copilot'}</span>
             </div>
             <div className={`rounded-xl px-3 py-2 text-sm leading-relaxed ${
               msg.role === 'user' ? 'bg-primary text-primary-foreground ml-8' :
@@ -437,7 +449,7 @@ export function CopilotPanel() {
         {thought && (
           <details className="rounded-lg bg-muted/30 border border-border">
             <summary className="px-3 py-1.5 text-xs text-muted-foreground cursor-pointer">
-              💭 Suy nghĩ AI
+              {ui.cpThought}
             </summary>
             <div className="px-3 py-2 text-xs text-muted-foreground border-t border-border">
               {thought}
@@ -503,7 +515,7 @@ export function CopilotPanel() {
           <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple accept="image/*,.txt,.md,.json,.csv" className="hidden" />
           <button onClick={() => fileInputRef.current?.click()}
             disabled={isRunning || !activeProfile}
-            title="Đính kèm Ảnh hoặc File"
+            title={ui.cpAttach}
             className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50
               ${isGhostMode ? 'bg-background/50 hover:bg-background/80 text-muted-foreground' : 'bg-muted hover:bg-muted/80 text-muted-foreground'}
             `}>
@@ -514,7 +526,7 @@ export function CopilotPanel() {
             onKeyDown={handleKeyDown}
             rows={1}
             disabled={isRunning || !activeProfile}
-            placeholder={activeProfile ? 'Nhập yêu cầu... (Enter gửi)' : 'Cấu hình proxy profile trước...'}
+            placeholder={activeProfile ? ui.cpInputPh : ui.cpInputNoProfile}
             className={`flex-1 min-h-[38px] max-h-24 px-3 py-2 rounded-xl border text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50
               ${isGhostMode ? 'bg-background/50 border-border/50 backdrop-blur-md' : 'bg-background border-border'}
             `}

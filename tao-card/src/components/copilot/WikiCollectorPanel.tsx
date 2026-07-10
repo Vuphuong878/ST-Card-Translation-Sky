@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { parseWikiUrl, fetchWikiNavigation, fetchFandomLocalNavigation, type WikiMenuItem, META_FILTERS, titleMatchesMeta, extractNavigationFromJsonInHtml, parseHtmlToMenuTree, fetchHtmlWithProxyRotation } from '../../lib/ai/wikiCrawlerEngine';
 import { Search, Loader2, Play, CheckSquare, Square, ChevronRight, ChevronDown, ListTree, Filter } from 'lucide-react';
 import { useToastStore } from '../../store/toastStore';
+import { t as ui, fmt } from '../../i18n';
 
 export function WikiCollectorPanel() {
   const [url, setUrl] = useState('');
@@ -19,7 +20,7 @@ export function WikiCollectorPanel() {
     
     try {
       const parsed = parseWikiUrl(url);
-      if (!parsed.domain) throw new Error('URL không hợp lệ');
+      if (!parsed.domain) throw new Error(ui.wcBadUrl);
 
       let tree: WikiMenuItem[] = [];
       // Attempt to fetch menu
@@ -53,7 +54,7 @@ export function WikiCollectorPanel() {
       
     } catch (error) {
       console.error(error);
-      useToastStore.getState().error('Lỗi khi cào dữ liệu navigation.');
+      useToastStore.getState().error(ui.wcScrapeError);
     } finally {
       setLoading(false);
     }
@@ -147,13 +148,13 @@ export function WikiCollectorPanel() {
             type="text"
             value={url}
             onChange={e => setUrl(e.target.value)}
-            placeholder="Nhập link Wiki chính (vd: genshin-impact.fandom.com)"
+            placeholder={ui.wcUrlPh}
             className="flex-1 bg-slate-900 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             onKeyDown={e => e.key === 'Enter' && handleCrawlNav()}
           />
           <button onClick={handleCrawlNav} disabled={loading || !url} className="shrink-0 gap-2 flex items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1.5 rounded">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-            Duyệt Menu
+            {ui.wcBrowse}
           </button>
         </div>
       </div>
@@ -166,7 +167,7 @@ export function WikiCollectorPanel() {
             renderTree(menuTree)
           ) : (
             <div className="h-full flex items-center justify-center text-gray-500 text-sm">
-              {loading ? 'Đang phân tích cấu trúc wiki...' : 'Nhập URL Wiki để duyệt danh mục'}
+              {loading ? ui.wcAnalysing : ui.wcEnterUrl}
             </div>
           )}
         </div>
@@ -176,7 +177,7 @@ export function WikiCollectorPanel() {
           <div>
             <h4 className="font-medium text-sm text-gray-300 mb-2 flex items-center gap-2">
               <Filter size={14} />
-              Bộ lọc Meta (Loại bỏ)
+              {ui.wcMetaFilter}
             </h4>
             <div className="space-y-1">
               {META_FILTERS.map(f => (
@@ -202,7 +203,7 @@ export function WikiCollectorPanel() {
               disabled={selectedUrls.size === 0}
             >
               <Play size={16} />
-              Cào {selectedUrls.size} trang
+              {fmt(ui.wcScrape, { count: selectedUrls.size })}
             </button>
           </div>
         </div>

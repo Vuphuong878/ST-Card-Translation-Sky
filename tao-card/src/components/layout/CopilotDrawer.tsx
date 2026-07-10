@@ -5,9 +5,22 @@
 
 import { MessageSquare, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useChatStore } from '../../store/chatStore';
-import { WORLDBUILDING_MODE_LABELS } from '../../types';
+
 import { cn } from '../../lib/utils';
 import { t as ui } from '../../i18n';
+
+/**
+ * Nhãn hiển thị của 6 chế độ. Không sửa `WORLDBUILDING_MODE_LABELS` trong
+ * types/aiAgent.types.ts — key ở đó là hợp đồng dữ liệu.
+ */
+const MODE_UI: Record<string, string> = {
+  genesis: ui.cwGenesis,
+  evolution: ui.cwEvolution,
+  document_extraction: ui.cwDocExtract,
+  discussion: ui.cwDiscussion,
+  mvuzod: ui.cwMvuzod,
+  regex: ui.cwRegex,
+};
 
 interface CopilotDrawerProps {
   open: boolean;
@@ -61,7 +74,7 @@ export function CopilotDrawer({ open, onToggle }: CopilotDrawerProps) {
             onChange={(e) => setMode(e.target.value as typeof mode)}
             className="w-full text-xs bg-secondary text-secondary-foreground rounded-md px-2 py-1.5 border border-border focus:outline-none focus:ring-1 focus:ring-ring"
           >
-            {(Object.entries(WORLDBUILDING_MODE_LABELS) as [typeof mode, string][]).map(([key, label]) => (
+            {(Object.entries(MODE_UI) as [typeof mode, string][]).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
             ))}
           </select>

@@ -642,6 +642,74 @@ const t: CardUiKeys = {
   egCatVarDisplayDesc: 'Xuất bảng stat cho AI đọc, dạng structured text',
   egCatCustom: 'Tự mô tả yêu cầu',
   egCatCustomDesc: 'Nhập mô tả tự do, AI sẽ sinh EJS phù hợp',
+
+  // ─── CopilotDrawer: che do (chi hien thi) ───
+  cwGenesis: '🌱 Khởi Tạo',
+  cwEvolution: '🔄 Mở Rộng',
+  cwDocExtract: '📄 Trích Xuất Tài Liệu',
+  cwDiscussion: '💬 Thảo Luận',
+  cwMvuzod: '🛠 MVUZOD',
+  cwRegex: '🧩 Regex Lab',
+
+  // ─── CopilotPanel: nhan action ───
+  cpActCreateEntry: 'Thêm entry',
+  cpActUpdateEntry: 'Sửa entry',
+  cpActDeleteEntry: 'Xoá entry',
+  cpActUpdateField: 'Sửa field',
+  cpActAddRegex: 'Thêm regex',
+  cpActUpdateRegex: 'Sửa regex',
+  cpActDeleteRegex: 'Xoá regex',
+  cpActFetchWiki: 'Tải wiki',
+  cpActReadDoc: 'Đọc chunk',
+  cpActCreateScript: 'Tạo script',
+  cpActGameUi: 'Tạo game UI',
+  cpApply: 'Áp dụng',
+  cpSkip: 'Bỏ qua',
+
+  // ─── CopilotPanel: khung chat ───
+  cpClearHistory: 'Xoá lịch sử',
+  cpMode: 'Chế độ:',
+  cpAutoApply: 'Tự động áp dụng',
+  cpNoProfile: 'Chưa cấu hình Profile',
+  cpReady: 'AI Copilot sẵn sàng',
+  cpReady2: 'Chọn chế độ và nhập yêu cầu bằng tiếng Việt',
+  cpYou: 'Bạn',
+  cpThought: '💭 Suy nghĩ AI',
+  cpAttach: 'Đính kèm Ảnh hoặc File',
+  cpInputPh: 'Nhập yêu cầu... (Enter gửi)',
+  cpInputNoProfile: 'Cấu hình proxy profile trước...',
+  // Nhãn nút gợi ý (câu gửi cho AI vẫn giữ tiếng Việt)
+  cpQaOpeningForm: 'Tạo Opening Form cho card',
+  cpQaStatusBar: 'Tạo Status Bar hiển thị biến',
+  cpQaGameScreen: 'Tạo Game Screen layout',
+  cpQaExportProject: 'Export project Tavern Helper',
+  cpQaLoreToSchema: 'Phân tích Lorebook → Schema',
+  cpQaInitVar: 'Tạo InitVar entries',
+  cpQaVarList: 'Tạo Variable List cho AI',
+  cpQaWorldbook: 'Tạo worldbook RPG',
+  cpQaNpc: 'Tạo nhân vật NPC',
+  cpQaRegexDialogue: 'Tạo regex format đối thoại',
+  cpQaRegexCleanup: 'Tạo regex cleanup AI output',
+  cpQaSuggest: 'Gợi ý nhanh',
+
+  // ─── WikiCollectorPanel ───
+  wcBadUrl: 'URL không hợp lệ',
+  wcScrapeError: 'Lỗi khi cào dữ liệu navigation.',
+  wcUrlPh: 'Nhập link Wiki chính (vd: genshin-impact.fandom.com)',
+  wcBrowse: 'Duyệt Menu',
+  wcAnalysing: 'Đang phân tích cấu trúc wiki...',
+  wcEnterUrl: 'Nhập URL Wiki để duyệt danh mục',
+  wcMetaFilter: 'Bộ lọc Meta (Loại bỏ)',
+  wcScrape: 'Cào {count} trang',
+
+  // ─── CopilotPanel: mo ta 7 che do ───
+  cpDescGenesis: 'Tạo cấu trúc mới từ đầu',
+  cpDescEvolution: 'Mở rộng entries hiện có',
+  cpDescDocExtract: 'Trích xuất từ tài liệu',
+  cpDescDiscussion: 'Trò chuyện tự do',
+  cpDescMvuzod: 'Quản lý biến & schema',
+  cpDescRegex: 'Tạo/sửa regex scripts',
+  cpDescGameDev: 'Tạo game UI components',
 };
 
 export default t;

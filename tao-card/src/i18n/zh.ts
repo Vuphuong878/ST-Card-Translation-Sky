@@ -640,6 +640,74 @@ const t: CardUiKeys = {
   egCatVarDisplayDesc: '把 stat 表格以结构化文本输出，供 AI 阅读',
   egCatCustom: '自己描述需求',
   egCatCustomDesc: '自由描述，AI 会生成合适的 EJS',
+
+  // ─── CopilotDrawer: che do (chi hien thi) ───
+  cwGenesis: '🌱 初创',
+  cwEvolution: '🔄 扩展',
+  cwDocExtract: '📄 文档提取',
+  cwDiscussion: '💬 讨论',
+  cwMvuzod: '🛠 MVUZOD',
+  cwRegex: '🧩 Regex Lab',
+
+  // ─── CopilotPanel: nhan action ───
+  cpActCreateEntry: '添加条目',
+  cpActUpdateEntry: '修改条目',
+  cpActDeleteEntry: '删除条目',
+  cpActUpdateField: '修改字段',
+  cpActAddRegex: '添加 regex',
+  cpActUpdateRegex: '修改 regex',
+  cpActDeleteRegex: '删除 regex',
+  cpActFetchWiki: '抓取 wiki',
+  cpActReadDoc: '读取分块',
+  cpActCreateScript: '生成脚本',
+  cpActGameUi: '生成游戏 UI',
+  cpApply: '应用',
+  cpSkip: '跳过',
+
+  // ─── CopilotPanel: khung chat ───
+  cpClearHistory: '清空历史',
+  cpMode: '模式：',
+  cpAutoApply: '自动应用',
+  cpNoProfile: '还没有配置 Profile',
+  cpReady: 'AI Copilot 准备好了',
+  cpReady2: '选好模式，然后用越南语输入需求（Copilot 目前只用越南语回答）',
+  cpYou: '你',
+  cpThought: '💭 AI 的思考',
+  cpAttach: '附加图片或文件',
+  cpInputPh: '输入需求……（Enter 发送）',
+  cpInputNoProfile: '请先配置 proxy profile……',
+  // Nhãn nút gợi ý (câu gửi cho AI vẫn giữ tiếng Việt)
+  cpQaOpeningForm: '为卡片生成 Opening Form',
+  cpQaStatusBar: '生成显示变量的 Status Bar',
+  cpQaGameScreen: '生成 Game Screen 布局',
+  cpQaExportProject: '导出 Tavern Helper 项目',
+  cpQaLoreToSchema: '分析 Lorebook → schema',
+  cpQaInitVar: '生成 InitVar 条目',
+  cpQaVarList: '为 AI 生成变量列表',
+  cpQaWorldbook: '生成 RPG worldbook',
+  cpQaNpc: '生成 NPC 角色',
+  cpQaRegexDialogue: '生成格式化对话的 regex',
+  cpQaRegexCleanup: '生成清理 AI 输出的 regex',
+  cpQaSuggest: '快速建议',
+
+  // ─── WikiCollectorPanel ───
+  wcBadUrl: 'URL 不合法',
+  wcScrapeError: '抓取 navigation 数据时出错。',
+  wcUrlPh: '输入 wiki 主链接（例：genshin-impact.fandom.com）',
+  wcBrowse: '浏览菜单',
+  wcAnalysing: '正在分析 wiki 结构……',
+  wcEnterUrl: '输入 wiki 网址来浏览分类',
+  wcMetaFilter: 'Meta 过滤（排除）',
+  wcScrape: '抓取 {count} 个页面',
+
+  // ─── CopilotPanel: mo ta 7 che do ───
+  cpDescGenesis: '从零搭建新结构',
+  cpDescEvolution: '扩展已有的条目',
+  cpDescDocExtract: '从文档里提取',
+  cpDescDiscussion: '自由聊聊',
+  cpDescMvuzod: '管理变量与 schema',
+  cpDescRegex: '生成或修改 regex 脚本',
+  cpDescGameDev: '生成游戏 UI 组件',
 };
 
 export default t;
