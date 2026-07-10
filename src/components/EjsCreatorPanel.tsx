@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
+import type { UiKeys } from '../i18n';
 import Editor from '@monaco-editor/react';
 import { X, Copy, Save, Plus, Book, Sparkles, Upload, FileJson, ArrowRight, AlertTriangle, Check, Send, RotateCcw, PenTool, Cpu, Trash2 } from 'lucide-react';
 import type { CharacterBookEntry } from '../types/card';
@@ -139,7 +141,7 @@ interface ChatMessage {
 }
 
 // Hàm kiểm tra lỗi EJS tĩnh nâng cao để bắt lỗi MVU / EJS phổ biến
-function validateEjsCode(code: string): string[] {
+function validateEjsCode(code: string, ui: UiKeys): string[] {
   const warnings: string[] = [];
   if (!code) return warnings;
 
@@ -147,14 +149,14 @@ function validateEjsCode(code: string): string[] {
   const opens = (code.match(/<%/g) || []).length;
   const closes = (code.match(/%>/g) || []).length;
   if (opens !== closes) {
-    warnings.push(`Không khớp thẻ EJS. Tìm thấy ${opens} thẻ mở (<%) và ${closes} thẻ đóng (%>).`);
+    warnings.push(fmt(ui.ecWarnTagMismatch, { opens, closes }));
   }
 
   // 2. Kiểm tra thẻ script
   const scriptOpens = (code.match(/<script[\s>]/gi) || []).length;
   const scriptCloses = (code.match(/<\/script>/gi) || []).length;
   if (scriptOpens !== scriptCloses) {
-    warnings.push(`Không khớp thẻ HTML <script>. Mở: ${scriptOpens}, Đóng: ${scriptCloses}.`);
+    warnings.push(fmt(ui.ecWarnScriptMismatch, { opens: scriptOpens, closes: scriptCloses }));
   }
 
   // 3. Kiểm tra ngoặc nhọn lồng nhau trong EJS block
@@ -163,7 +165,7 @@ function validateEjsCode(code: string): string[] {
     const oBraces = (block.match(/\{/g) || []).length;
     const cBraces = (block.match(/\}/g) || []).length;
     if (oBraces !== cBraces) {
-      warnings.push(`Block EJS thứ ${index + 1} có thể bị lệch ngoặc nhọn { }. Mở: ${oBraces}, Đóng: ${cBraces}.`);
+      warnings.push(fmt(ui.ecWarnBraces, { index: index + 1, opens: oBraces, closes: cBraces }));
     }
   });
 
@@ -175,7 +177,7 @@ function validateEjsCode(code: string): string[] {
     if (line === '') continue;
     if (line.startsWith('@@')) {
       if (foundContent) {
-        warnings.push(`Dòng ${i + 1}: Decorator '${line}' phải đặt ở đầu tiên của nội dung entry (không đặt sau chữ thường hay mã HTML/EJS).`);
+        warnings.push(fmt(ui.ecWarnDecorator, { line: i + 1, deco: line }));
       }
     } else {
       foundContent = true;
@@ -188,7 +190,7 @@ function validateEjsCode(code: string): string[] {
   while ((match = getvarRegex.exec(code)) !== null) {
     const path = match[1];
     if (!path.startsWith('stat_data.') && !path.startsWith('variables.') && !path.startsWith('global.') && !path.startsWith('temp.') && !path.includes('::')) {
-      warnings.push(`Cảnh báo: Hàm getvar/setvar gọi biến '${path}' không có tiền tố (khuyến nghị dùng 'stat_data.${path}' hoặc 'variables.${path}' để tránh lỗi).`);
+      warnings.push(fmt(ui.ecWarnVarPrefix, { path }));
     }
   }
 
@@ -200,7 +202,7 @@ function validateEjsCode(code: string): string[] {
       const varName = vMatch[1];
       const typeofCheck = new RegExp(`typeof\\s+${varName}\\s*===\\s*['"]undefined['"]`, 'i');
       if (!typeofCheck.test(block)) {
-        warnings.push(`Block EJS thứ ${index + 1}: Nên kiểm tra 'typeof ${varName} === "undefined"' trước khi khai báo 'var ${varName}' để tránh xung đột phạm vi biến toàn cục.`);
+        warnings.push(fmt(ui.ecWarnTypeof, { index: index + 1, name: varName }));
       }
     }
   });
@@ -210,7 +212,7 @@ function validateEjsCode(code: string): string[] {
   asyncFuncs.forEach(func => {
     const regex = new RegExp(`(?<!await\\s+)${func}\\s*\\(`, 'g');
     if (regex.test(code)) {
-      warnings.push(`Cảnh báo: Hàm bất đồng bộ '${func}' đang được gọi mà không có từ khóa 'await' phía trước. Điều này có thể gây lỗi bất ngờ trong SillyTavern.`);
+      warnings.push(fmt(ui.ecWarnAwait, { func }));
     }
   });
 
@@ -254,12 +256,13 @@ function GeneratedEntriesPreview({
   onMerge: (entries: GeneratedEntry[]) => void;
   onCopy: (code: string) => void;
 }) {
+  const ui = useUi();
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-primary)' }}>Phát hiện {entries.length} entries:</span>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-primary)' }}>{fmt(ui.ecDetectedEntries, { count: entries.length })}</span>
         <button
           onClick={() => onMerge(entries)}
           style={{
@@ -268,7 +271,7 @@ function GeneratedEntriesPreview({
             color: 'white', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 600
           }}
         >
-          <Check size={12} /> Gộp vào Card
+          <Check size={12} /> {ui.ecMergeIntoCard}
         </button>
       </div>
       {entries.map((e, gIdx) => {
@@ -280,7 +283,7 @@ function GeneratedEntriesPreview({
               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-primary)' }}
             >
               <span>{e.name}</span>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{isExpanded ? '▲ Thu gọn' : '▼ Xem code'}</span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{isExpanded ? ui.ecCollapse : ui.ecViewCode}</span>
             </div>
             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>Keys: {e.keys && e.keys.length > 0 ? e.keys.join(', ') : '*'}</div>
             
@@ -315,7 +318,8 @@ function GeneratedEntriesPreview({
 
 export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
   const t = useT();
-  const { card, updateCard, addToast, proxy, locale, translationConfig, setTranslationConfig } = useStore();
+  const { card, updateCard, addToast, proxy, translationConfig, setTranslationConfig } = useStore();
+  const ui = useUi();
   
   const entries = card?.data?.character_book?.entries || [];
   
@@ -350,7 +354,7 @@ export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
 
   const handleAddSnippet = () => {
     if (!newSnipTitle.trim() || !newSnipCode.trim()) {
-      addToast('error', 'Tiêu đề và mã code không được bỏ trống.');
+      addToast('error', ui.ecToastSnipEmpty);
       return;
     }
     const newSnip = {
@@ -363,14 +367,14 @@ export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
     setNewSnipDesc('');
     setNewSnipCode('');
     setIsAddingSnippet(false);
-    addToast('success', 'Đã thêm phần cẩm nang mới!');
+    addToast('success', ui.ecToastSnipAdded);
   };
 
   const handleDeleteSnippet = (index: number) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa phần cẩm nang này không?')) {
+    if (window.confirm(ui.ecConfirmSnipDelete)) {
       const next = snippets.filter((_, i) => i !== index);
       setSnippets(next);
-      addToast('success', 'Đã xóa phần cẩm nang.');
+      addToast('success', ui.ecToastSnipDeleted);
     }
   };
 
@@ -441,7 +445,7 @@ export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
   }, []);
 
   // Linter warnings
-  const warnings = validateEjsCode(content);
+  const warnings = validateEjsCode(content, ui);
 
   useEffect(() => {
     if (selectedEntryId === 'new') {
@@ -465,7 +469,7 @@ export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
 
   const handleCopySnippet = (code: string) => {
     navigator.clipboard.writeText(code);
-    addToast('success', 'Đã copy đoạn mã EJS!');
+    addToast('success', ui.ecToastCopied);
   };
 
   const handleSave = () => {
@@ -488,7 +492,7 @@ export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
         insertion_order: 50,
       };
       targetEntries.push(newEntry);
-      addToast('success', 'Đã tạo mới Lorebook Entry!');
+      addToast('success', ui.ecToastEntryCreated);
       updateCard(newCard);
       setSelectedEntryId(newEntry.id!);
     } else {
@@ -498,7 +502,7 @@ export default function EjsCreatorPanel({ onClose }: { onClose: () => void }) {
         targetEntries[idx].content = content;
         targetEntries[idx].name = name;
         targetEntries[idx].comment = name;
-        addToast('success', 'Đã cập nhật Lorebook Entry!');
+        addToast('success', ui.ecToastEntryUpdated);
         updateCard(newCard);
       }
     }
@@ -702,7 +706,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
       }
 
       if (isJson) {
-        assistantContent += `Tôi đã thiết kế xong một hệ thống gồm ${parsedEntries.length} entries. Bạn có thể xem thử bên dưới và gộp chúng vào Card.`;
+        assistantContent += fmt(ui.ecAssistantDesigned, { count: parsedEntries.length });
         setChatMessages(prev => [
           ...prev,
           {
@@ -711,7 +715,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
             generatedEntries: parsedEntries
           }
         ]);
-        addToast('success', `Đã tạo ${parsedEntries.length} entries thành công!`);
+        addToast('success', fmt(ui.ecToastEntriesCreated, { count: parsedEntries.length }));
       } else {
         let rawCode = cleanResult;
         if (rawCode.startsWith('```')) {
@@ -725,14 +729,14 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
             content: assistantContent
           }
         ]);
-        addToast('success', 'Đã tạo mã EJS thành công!');
+        addToast('success', ui.ecToastCodeCreated);
       }
     } catch (err: any) {
       setChatMessages(prev => [
         ...prev,
-        { role: 'assistant', content: `Lỗi: ${err.message || 'Không thể gọi được API AI. Vui lòng kiểm tra lại proxy và API Key.'}` }
+        { role: 'assistant', content: ui.ecErrPrefix + (err.message || ui.ecErrApi) }
       ]);
-      addToast('error', err.message || 'Lỗi khi gọi AI');
+      addToast('error', err.message || ui.ecErrCallAi);
     } finally {
       setIsGenerating(false);
     }
@@ -765,7 +769,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
     });
     
     updateCard(newCard);
-    addToast('success', `Đã gộp thành công ${gEntries.length} entries vào Card!`);
+    addToast('success', fmt(ui.ecToastMerged, { count: gEntries.length }));
     setSelectedEntryId(maxId); // Chuyển sang entry vừa được add cuối cùng
   };
 
@@ -784,7 +788,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
 
   const handleResetChat = () => {
     setChatMessages([
-      { role: 'system', content: 'Chào bạn! Tôi là Trợ Lý AI chuyên biệt về EJS SillyTavern. Bạn có thể sử dụng các lựa chọn hệ thống bên trên để bắt đầu nhanh hoặc chat trực tiếp để yêu cầu viết/sửa code.' }
+      { role: 'system', content: ui.ecChatSeed }
     ]);
   };
 
@@ -821,12 +825,12 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
           });
           
           updateCard(newCard);
-          addToast('success', `Đã gộp thành công ${newEntries.length} entries vào thẻ hiện tại!`);
+          addToast('success', fmt(ui.ecToastMergedFile, { count: newEntries.length }));
         } else {
-          addToast('error', 'Không tìm thấy entries hợp lệ trong file này.');
+          addToast('error', ui.ecToastNoEntries);
         }
       } catch (err) {
-        addToast('error', 'Lỗi đọc file JSON.');
+        addToast('error', ui.ecToastBadJson);
       }
     };
     reader.readAsText(file);
@@ -858,7 +862,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
               padding: '6px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
               borderRadius: '4px', cursor: 'pointer', color: 'var(--text-primary)'
             }}>
-            <Upload size={16} /> Nhập Lorebook (.json)
+            <Upload size={16} /> {ui.ecImportLorebook}
           </button>
 
           <button onClick={onClose} style={{
@@ -887,7 +891,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                 color: activeTab === 'reference' ? 'var(--text-primary)' : 'var(--text-muted)',
                 fontWeight: activeTab === 'reference' ? 600 : 400, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', fontSize: '0.78rem'
               }}>
-              <FileJson size={14} /> Cẩm Nang
+              <FileJson size={14} /> {ui.ecTabReference}
             </button>
             <button
               onClick={() => setActiveTab('ai')}
@@ -897,7 +901,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                 color: activeTab === 'ai' ? 'var(--accent-primary)' : 'var(--text-muted)',
                 fontWeight: activeTab === 'ai' ? 600 : 400, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', fontSize: '0.78rem'
               }}>
-              <Sparkles size={14} /> Trợ Lý AI
+              <Sparkles size={14} /> {ui.ecTabAi}
             </button>
             <button
               onClick={() => setActiveTab('toolkit')}
@@ -907,7 +911,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                 color: activeTab === 'toolkit' ? 'var(--accent-primary)' : 'var(--text-muted)',
                 fontWeight: activeTab === 'toolkit' ? 600 : 400, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', fontSize: '0.78rem'
               }}>
-              <Cpu size={14} /> Công cụ MVU
+              <Cpu size={14} /> {ui.ecTabToolkit}
             </button>
           </div>
 
@@ -917,7 +921,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-                    Cú pháp thường dùng của <strong>ST-Prompt-Template</strong>.
+                    {ui.ecReferenceHint1} <strong>ST-Prompt-Template</strong>{ui.ecReferenceHint2}
                   </p>
                   <button
                     onClick={() => setIsAddingSnippet(!isAddingSnippet)}
@@ -927,7 +931,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                       fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer'
                     }}
                   >
-                    <Plus size={14} /> Thêm phần mới
+                    <Plus size={14} /> {ui.ecAddSection}
                   </button>
                 </div>
 
@@ -936,29 +940,29 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                     background: 'var(--bg-secondary)', border: '1px dashed var(--accent-primary)',
                     borderRadius: '8px', padding: '12px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '10px'
                   }}>
-                    <h4 style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-primary)' }}>Thêm Cẩm Nang Mới</h4>
+                    <h4 style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-primary)' }}>{ui.ecAddSectionTitle}</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Tiêu đề *</label>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{ui.ecSnipTitle}</label>
                       <input
                         type="text"
-                        placeholder="VD: Kiểm tra quan hệ"
+                        placeholder={ui.ecSnipTitlePh}
                         value={newSnipTitle}
                         onChange={e => setNewSnipTitle(e.target.value)}
                         style={{ padding: '6px', fontSize: '0.75rem', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-primary)' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Mô tả ngắn</label>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{ui.ecSnipDesc}</label>
                       <input
                         type="text"
-                        placeholder="VD: Cú pháp kiểm tra hảo cảm và tình trạng"
+                        placeholder={ui.ecSnipDescPh}
                         value={newSnipDesc}
                         onChange={e => setNewSnipDesc(e.target.value)}
                         style={{ padding: '6px', fontSize: '0.75rem', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-primary)' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Mã code *</label>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{ui.ecSnipCode}</label>
                       <textarea
                         placeholder="VD: <%_ if (getvar('stat_data.hp') <= 0) { _%> ..."
                         value={newSnipCode}
@@ -971,13 +975,13 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                         onClick={() => setIsAddingSnippet(false)}
                         style={{ padding: '5px 10px', fontSize: '0.72rem', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '4px', color: 'var(--text-primary)', cursor: 'pointer' }}
                       >
-                        Hủy
+                        {ui.ecSnipCancel}
                       </button>
                       <button
                         onClick={handleAddSnippet}
                         style={{ padding: '5px 10px', fontSize: '0.72rem', background: 'var(--accent-primary)', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 600, cursor: 'pointer' }}
                       >
-                        Lưu lại
+                        {ui.ecSnipSave}
                       </button>
                     </div>
                   </div>
@@ -991,13 +995,13 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{snip.desc}</div>
                       </div>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <button onClick={() => handleCopySnippet(snip.code)} title="Sao chép mã" style={{
+                        <button onClick={() => handleCopySnippet(snip.code)} title={ui.ecCopyCode} style={{
                           background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '4px',
                           padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)'
                         }}>
                           <Copy size={14} />
                         </button>
-                        <button onClick={() => handleDeleteSnippet(i)} title="Xóa phần này" style={{
+                        <button onClick={() => handleDeleteSnippet(i)} title={ui.ecDeleteSection} style={{
                           background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '4px',
                           padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--accent-danger)'
                         }}>
@@ -1025,13 +1029,13 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                       border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '0.8rem'
                     }}
                   >
-                    <option value="general">Hệ thống tự do</option>
-                    <option value="combat">⚔️ Hệ thống Chiến Đấu</option>
-                    <option value="survival">🏕️ Hệ thống Sinh Tồn</option>
-                    <option value="relationship">❤️ Hệ thống Hảo Cảm</option>
-                    <option value="npc_router">🗺️ Bộ Quét NPC & Địa Điểm</option>
+                    <option value="general">{ui.ecSysFree}</option>
+                    <option value="combat">{ui.ecSysCombat}</option>
+                    <option value="survival">{ui.ecSysSurvival}</option>
+                    <option value="relationship">{ui.ecSysRelationship}</option>
+                    <option value="npc_router">{ui.ecSysNpcRouter}</option>
                   </select>
-                  <button onClick={handleResetChat} title="Đặt lại cuộc trò chuyện" style={{
+                  <button onClick={handleResetChat} title={ui.ecResetChat} style={{
                     padding: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
                     borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)'
                   }}>
@@ -1069,13 +1073,13 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                           {/* Nút tác vụ nhanh chèn code cho tin nhắn đơn lẻ */}
                           {!isUser && !isSystem && !msg.generatedEntries && (
                             <button
-                              onClick={() => { setContent(prev => prev + '\n' + msg.content); addToast('success', 'Đã chèn vào cuối Editor!'); }}
+                              onClick={() => { setContent(prev => prev + '\n' + msg.content); addToast('success', ui.ecToastInserted); }}
                               style={{
                                 marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px',
                                 background: 'var(--bg-secondary)', border: '1px solid var(--accent-primary)', borderRadius: '4px',
                                 color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600
                               }}>
-                              <ArrowRight size={14} /> Chèn vào Editor
+                              <ArrowRight size={14} /> {ui.ecInsertToEditor}
                             </button>
                           )}
 
@@ -1103,13 +1107,11 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                       onChange={(e) => setTranslationConfig({ enableEjsThinking: e.target.checked })}
                     />
                     <span style={{ color: translationConfig.enableEjsThinking ? 'var(--accent-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, fontSize: '0.75rem' }}>
-                      🧠 {locale === 'vi' ? 'Bật Chế Độ Thinking Cho EJS' : 'Enable EJS Thinking Mode'}
+                      🧠 {ui.ecThinking}
                     </span>
                   </label>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>
-                    {locale === 'vi' 
-                      ? 'AI sẽ lập luận sâu 4 bước trước khi sinh code.' 
-                      : 'AI will perform 4-step deep reasoning before writing code.'}
+                    {ui.ecThinkingDesc}
                   </span>
                 </div>
 
@@ -1124,7 +1126,7 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
                         handleSendChat();
                       }
                     }}
-                    placeholder="Nhập yêu cầu để sinh hoặc sửa code EJS..."
+                    placeholder={ui.ecChatPh}
                     style={{
                       flex: 1, height: '50px', padding: '8px', borderRadius: '6px',
                       background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
@@ -1157,13 +1159,13 @@ If you return a single EJS block, do NOT wrap it in a JSON array, just return th
           {/* Toolbar */}
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: '12px', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Chọn Entry:</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ui.ecPickEntry}</span>
               <select 
                 value={selectedEntryId} 
                 onChange={(e) => setSelectedEntryId(e.target.value === 'new' ? 'new' : Number(e.target.value))}
                 style={{ padding: '6px', borderRadius: '4px', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', minWidth: '200px' }}
               >
-                <option value="new">-- ✨ Tạo Entry Mới --</option>
+                <option value="new">{ui.ecNewEntry}</option>
                 {entries.map((e, idx) => (
                   <option key={e.id || idx} value={e.id || idx}>
                     [{e.id || idx}] {e.name || e.comment || 'Unnamed'}
