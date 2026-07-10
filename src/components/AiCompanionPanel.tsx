@@ -2359,7 +2359,7 @@ function SandboxTab({
             style={{ marginTop: '4px' }}
             onClick={() => setSandboxInput(SAMPLE_TEXT)}
           >
-            <RotateCcw size={10} /> Reset mẫu
+            <RotateCcw size={10} /> {ui.acResetSample}
           </button>
         </div>
 
@@ -2371,7 +2371,7 @@ function SandboxTab({
               className="input input-mono"
               value={sandboxFind}
               onChange={e => setSandboxFind(e.target.value)}
-              placeholder='/pattern/flags hoặc raw pattern'
+              placeholder={ui.acPatternPh}
             />
           </div>
           <div>
@@ -2405,7 +2405,7 @@ function SandboxTab({
                 onClick={() => setIsFullscreen(true)}
                 title={ui.acExpandFullscreen}
               >
-                <Maximize size={10} /> Phóng to
+                <Maximize size={10} /> {ui.acZoomIn}
               </button>
             </div>
             <div className="tabs" style={{ padding: '2px' }}>
@@ -2489,7 +2489,7 @@ function SandboxTab({
             borderBottom: '1px solid var(--border-subtle)',
             paddingBottom: '12px',
           }}>
-            <span className="text-sm font-bold text-slate-200">Sandbox Preview - Kích Thước Lớn</span>
+            <span className="text-sm font-bold text-slate-200">{ui.acSandboxLarge}</span>
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => setIsFullscreen(false)}
@@ -2570,13 +2570,14 @@ function PresetsTab({
   handleAddPreset: () => void;
   handleDeletePreset: (id: string) => void;
 }) {
+  const ui = useUi();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       {/* Preview chain */}
       <div>
-        <label className="label">Preview — tất cả preset áp dụng lên text mẫu</label>
+        <label className="label">{ui.acPresetPreview}</label>
         <div
           className="st-preview"
           dangerouslySetInnerHTML={{ __html: previewWithPresets }}
@@ -2615,7 +2616,7 @@ function PresetsTab({
             className="btn btn-secondary btn-xs"
             onClick={() => setShowNewPreset(!showNewPreset)}
           >
-            {showNewPreset ? 'Hủy' : '+ Thêm preset'}
+            {showNewPreset ? ui.acPresetCancel : ui.acPresetAdd}
           </button>
         </div>
 
@@ -2631,7 +2632,7 @@ function PresetsTab({
               className="input"
               value={newPresetName}
               onChange={e => setNewPresetName(e.target.value)}
-              placeholder="Tên preset"
+              placeholder={ui.acPresetNamePh}
             />
             <input
               className="input input-mono"
@@ -2649,10 +2650,10 @@ function PresetsTab({
               className="input"
               value={newPresetDesc}
               onChange={e => setNewPresetDesc(e.target.value)}
-              placeholder="Mô tả (tùy chọn)"
+              placeholder={ui.acPresetDescPh}
             />
             <button className="btn btn-primary btn-sm" onClick={handleAddPreset}>
-              <Check size={12} /> Lưu preset
+              <Check size={12} /> {ui.acPresetSave}
             </button>
           </div>
         )}
@@ -2662,7 +2663,7 @@ function PresetsTab({
             textAlign: 'center', padding: '20px',
             color: 'var(--text-muted)', fontSize: '0.75rem',
           }}>
-            Chưa có custom preset. Nhấn "Thêm preset" để tạo mới.
+            {ui.acNoPreset}
           </div>
         ) : (
           customPresets.map((p: any) => (
@@ -2823,7 +2824,7 @@ function MvuZodTab() {
   const [mvuMessages, setMvuMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Xin chào! Tôi là Trợ lý AI chuyên trách MVU-Zod. Tôi đã đọc bối cảnh nhân vật này. Bạn có thể nhờ tôi thiết kế cấu trúc Schema, định nghĩa các biến số Initvar hoặc viết các quy tắc cập nhật Rules phù hợp. \n\nKhi tôi đưa ra các đoạn mã trong khung phản hồi, bạn có thể click nút **"Áp dụng vào Editor"** để tự động nạp đoạn mã đó vào form bên trái!'
+      content: ui.acMvuSeed
     }
   ]);
   const [isChatLoading, setIsChatLoading] = useState(false);
@@ -2873,7 +2874,7 @@ function MvuZodTab() {
 
       setMvuAttachedFiles(prev => [...prev, ...loaded]);
     } catch (err: any) {
-      setMvuUploadError(err.message || 'Lỗi khi đọc file đính kèm.');
+      setMvuUploadError(err.message || ui.acAttachErr);
     } finally {
       if (mvuFileInputRef.current) mvuFileInputRef.current.value = '';
     }
@@ -3014,7 +3015,7 @@ function MvuZodTab() {
     return (
       <div className="text-center py-12 text-slate-500">
         <AlertTriangle className="mx-auto mb-4 text-amber-500" size={32} />
-        Vui lòng tải một thẻ nhân vật lên ứng dụng trước để thực hiện chuyển đổi MVU-Zod.
+        {ui.acMvuNeedCard}
       </div>
     );
   }
@@ -3022,7 +3023,7 @@ function MvuZodTab() {
   const handleGenerateSchema = async () => {
     setLoading(true);
     setError('');
-    setProgressMsg('Đang phân tích bối cảnh thẻ...');
+    setProgressMsg(ui.acMvuAnalysing);
     try {
       const cardContent = `Tên: ${card.data?.name || 'Không rõ'}
 Mô tả: ${card.data?.description || ''}
@@ -3030,7 +3031,7 @@ Tính cách: ${card.data?.personality || ''}
 Bối cảnh: ${card.data?.scenario || ''}
 Tin nhắn đầu: ${card.data?.first_mes || ''}`;
 
-      setProgressMsg('Đang gọi AI sinh Zod Schema...');
+      setProgressMsg(ui.acMvuGenSchema);
       const rawSchemaJson = await generateWithContinuation(
         proxy,
         MVU_SCHEMA_GENERATION_PROMPT,
@@ -3047,7 +3048,7 @@ Tin nhắn đầu: ${card.data?.first_mes || ''}`;
       setStep(1); // remain in step 1 but show results
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Lỗi sinh Schema từ AI.');
+      setError(err.message || ui.acMvuErrSchema);
     } finally {
       setLoading(false);
       setProgressMsg('');
@@ -3056,12 +3057,12 @@ Tin nhắn đầu: ${card.data?.first_mes || ''}`;
 
   const handleGenerateRules = async () => {
     if (!zodSchema.trim()) {
-      setError('Cần có Zod Schema trước khi tạo rules.');
+      setError(ui.acMvuNeedSchema);
       return;
     }
     setLoading(true);
     setError('');
-    setProgressMsg('Đang gọi AI sinh <Variable_rules>...');
+    setProgressMsg(ui.acMvuGenRules);
     try {
       const cardContent = `Tên: ${card.data?.name || 'Không rõ'}
 Mô tả: ${card.data?.description || ''}
@@ -3079,7 +3080,7 @@ Tin nhắn đầu: ${card.data?.first_mes || ''}`;
       setStep(2); // remain in step 2 but show rules
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Lỗi sinh Rules từ AI.');
+      setError(err.message || ui.acMvuErrRules);
     } finally {
       setLoading(false);
       setProgressMsg('');
@@ -3192,11 +3193,11 @@ Tin nhắn đầu: ${card.data?.first_mes || ''}`;
       }
       setFields(updatedFields);
 
-      addToast('success', 'Đã tích hợp các thành phần MVU-Zod vào Card thành công!');
+      addToast('success', ui.acMvuIntegrated);
       setStep(7); // Go to step 7 (Success)
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Lỗi khi tích hợp vào card.');
+      setError(err.message || ui.acMvuErrIntegrate);
     }
   };
 
@@ -3313,7 +3314,7 @@ QUY TẮC BẮT BUỘC:
       setMvuMessages([...nextMessages, { role: 'assistant', content: response }]);
     } catch (err: any) {
       console.error(err);
-      setMvuMessages([...nextMessages, { role: 'assistant', content: `Lỗi: ${err.message || 'Không thể gọi AI.'}` }]);
+      setMvuMessages([...nextMessages, { role: 'assistant', content: ui.acErrPrefix + (err.message || ui.acMvuErrCall) }]);
     } finally {
       setIsChatLoading(false);
     }
@@ -3329,7 +3330,7 @@ QUY TẮC BẮT BUỘC:
           const lang = match[1] || 'text';
           const code = match[2];
           
-          let typeLabel = 'Mã nguồn';
+          let typeLabel = ui.acCodeLabel;
           let applyType: 'schema' | 'initvar' | 'rules' | null = null;
           
           const lowerLang = lang.toLowerCase();
@@ -3369,7 +3370,7 @@ QUY TẮC BẮT BUỘC:
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(code);
-                      addToast('success', 'Đã sao chép mã nguồn!');
+                      addToast('success', ui.acCopiedCode);
                     }}
                     style={{
                       background: 'none',
@@ -3380,20 +3381,20 @@ QUY TẮC BẮT BUỘC:
                       padding: '2px 4px',
                     }}
                   >
-                    Sao chép
+                    {ui.acCopy}
                   </button>
                   {applyType && (
                     <button
                       onClick={() => {
                         if (applyType === 'schema') {
                           setZodSchema(code.trim());
-                          addToast('success', 'Đã áp dụng mã vào ô Zod Schema!');
+                          addToast('success', ui.acAppliedSchema);
                         } else if (applyType === 'initvar') {
                           setInitvar(code.trim());
-                          addToast('success', 'Đã áp dụng mã vào ô Initvar!');
+                          addToast('success', ui.acAppliedInitvar);
                         } else if (applyType === 'rules') {
                           setRules(code.trim());
-                          addToast('success', 'Đã áp dụng mã vào ô Variable Rules!');
+                          addToast('success', ui.acAppliedRules);
                         }
                       }}
                       style={{
@@ -3406,7 +3407,7 @@ QUY TẮC BẮT BUỘC:
                         padding: '2px 4px',
                       }}
                     >
-                      Áp dụng vào Editor
+                      {ui.acApplyToEditor}
                     </button>
                   )}
                 </div>
@@ -3461,8 +3462,8 @@ QUY TẮC BẮT BUỘC:
             { num: 3, label: 'Lorebook' },
             { num: 4, label: 'Regex' },
             { num: 5, label: 'Helper' },
-            { num: 6, label: 'Xem trước' },
-            { num: 7, label: 'Hoàn thành' },
+            { num: 6, label: ui.acStepPreview },
+            { num: 7, label: ui.acStepDone },
           ].map((s, idx, arr) => (
             <React.Fragment key={s.num}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
@@ -3537,8 +3538,8 @@ QUY TẮC BẮT BUỘC:
               fontSize: '0.75rem',
               color: 'var(--text-secondary)',
             }}>
-              <strong>Bước 1: Thiết kế Lược đồ Schema & Biến Khởi tạo.</strong><br/>
-              Hệ thống sẽ phân tích thông tin nhân vật để tự động đề xuất cấu trúc Zod Schema và các biến trạng thái khởi tạo tương ứng. Bạn có thể chỉnh sửa kết quả trực tiếp bên dưới hoặc chat với AI bên phải để tinh chỉnh cấu trúc.
+              <strong>{ui.acStep1Title}</strong><br/>
+              {ui.acStep1Desc}
             </div>
 
             {!zodSchema && !loading ? (
@@ -3547,7 +3548,7 @@ QUY TẮC BẮT BUỘC:
                   onClick={handleGenerateSchema}
                   className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-6 py-2.5 font-bold text-xs flex items-center gap-2 shadow-md mx-auto active:scale-95 transition-all"
                 >
-                  <Sparkles size={14} /> Phân tích & Sinh Schema tự động
+                  <Sparkles size={14} /> {ui.acStep1Btn}
                 </button>
               </div>
             ) : null}
@@ -3582,7 +3583,7 @@ QUY TẮC BẮT BUỘC:
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label className="label" style={{ fontWeight: 600 }}>Initvar JSON (Giá trị khởi tạo ban đầu):</label>
+                    <label className="label" style={{ fontWeight: 600 }}>{ui.acInitvarLabel}</label>
                     <textarea
                       value={initvar}
                       onChange={e => setInitvar(e.target.value)}
@@ -3608,13 +3609,13 @@ QUY TẮC BẮT BUỘC:
                     className="btn btn-secondary btn-sm"
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <RefreshCw size={12} /> Làm mới Schema
+                    <RefreshCw size={12} /> {ui.acRefreshSchema}
                   </button>
 
                   <button
                     onClick={() => {
                       if (!zodSchema.trim() || !initvar.trim()) {
-                        setError('Cần có đầy đủ Zod Schema và Initvar trước khi sang bước 2.');
+                        setError(ui.acNeedSchemaInitvar);
                         return;
                       }
                       setError('');
@@ -3622,7 +3623,7 @@ QUY TẮC BẮT BUỘC:
                     }}
                     className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 font-bold text-xs flex items-center gap-1 shadow-md active:scale-95 transition-all"
                   >
-                    Tiếp tục bước 2 <ArrowRight size={14} />
+                    {ui.acNextStep2} <ArrowRight size={14} />
                   </button>
                 </div>
               </>
@@ -3641,8 +3642,8 @@ QUY TẮC BẮT BUỘC:
               fontSize: '0.75rem',
               color: 'var(--text-secondary)',
             }}>
-              <strong>Bước 2: Viết Quy tắc Cập nhật Biến (Variable Rules).</strong><br/>
-              Khối XML này hướng dẫn AI cách suy luận logic, điều chỉnh thuộc tính nhân vật và cập nhật trị số biến theo hệ quả hành động.
+              <strong>{ui.acStep2Title}</strong><br/>
+              {ui.acStep2Desc}
             </div>
 
             {!rules && !loading ? (
@@ -3651,7 +3652,7 @@ QUY TẮC BẮT BUỘC:
                   onClick={handleGenerateRules}
                   className="bg-purple-600 hover:bg-purple-500 text-white rounded-lg px-6 py-2.5 font-bold text-xs flex items-center gap-2 shadow-md mx-auto active:scale-95 transition-all"
                 >
-                  <Sparkles size={14} /> Sinh Luật (Variable Rules) bằng AI
+                  <Sparkles size={14} /> {ui.acStep2Btn}
                 </button>
               </div>
             ) : null}
@@ -3691,21 +3692,21 @@ QUY TẮC BẮT BUỘC:
                       onClick={() => setStep(1)}
                       className="btn btn-ghost btn-sm"
                     >
-                      Quay lại
+                      {ui.acBack}
                     </button>
                     <button
                       onClick={handleGenerateRules}
                       className="btn btn-secondary btn-sm"
                       style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <RefreshCw size={12} /> Làm mới Rules
+                      <RefreshCw size={12} /> {ui.acRefreshRules}
                     </button>
                   </div>
 
                   <button
                     onClick={() => {
                       if (!rules.trim()) {
-                        setError('Quy tắc cập nhật không được bỏ trống.');
+                        setError(ui.acNeedRules);
                         return;
                       }
                       setError('');
@@ -3713,7 +3714,7 @@ QUY TẮC BẮT BUỘC:
                     }}
                     className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 font-bold text-xs flex items-center gap-1 shadow-md active:scale-95 transition-all"
                   >
-                    Tiếp tục bước 3 <ArrowRight size={14} />
+                    {ui.acNextStep3} <ArrowRight size={14} />
                   </button>
                 </div>
               </>
@@ -3732,8 +3733,8 @@ QUY TẮC BẮT BUỘC:
               fontSize: '0.75rem',
               color: 'var(--text-secondary)',
             }}>
-              <strong>Bước 3: Xem và Chỉnh sửa Lorebook Entries đề xuất.</strong><br/>
-              Hệ thống sẽ thêm 4 entries mặc định vào character_book. Nhấp vào mỗi entry để tùy chỉnh chi tiết hoặc bật/tắt (checkbox).
+              <strong>{ui.acStep3Title}</strong><br/>
+              {ui.acStep3Desc}
             </div>
 
             <div className="flex flex-col gap-3">
@@ -3769,7 +3770,7 @@ QUY TẮC BẮT BUỘC:
                       <div className="p-3 border-t border-zinc-800 flex flex-col gap-3 bg-zinc-950/20">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-semibold text-slate-400">Keys (phân cách bằng dấu phẩy):</label>
+                            <label className="text-[10px] font-semibold text-slate-400">{ui.acKeysCsv}</label>
                             <input 
                               type="text" 
                               value={entry.keys.join(', ')}
@@ -3781,7 +3782,7 @@ QUY TẮC BẮT BUỘC:
                             />
                           </div>
                           <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-semibold text-slate-400">Mô tả / Comment:</label>
+                            <label className="text-[10px] font-semibold text-slate-400">{ui.acCommentField}</label>
                             <input 
                               type="text" 
                               value={entry.comment}
@@ -3794,7 +3795,7 @@ QUY TẮC BẮT BUỘC:
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-semibold text-slate-400">Vị trí (Position):</label>
+                            <label className="text-[10px] font-semibold text-slate-400">{ui.acPosition}</label>
                             <select
                               value={entry.position}
                               onChange={(e) => {
@@ -3809,7 +3810,7 @@ QUY TẮC BẮT BUỘC:
                             </select>
                           </div>
                           <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-semibold text-slate-400">Thứ tự chèn (Insertion Order):</label>
+                            <label className="text-[10px] font-semibold text-slate-400">{ui.acInsertionOrder}</label>
                             <input 
                               type="number" 
                               value={entry.insertion_order}
@@ -3821,7 +3822,7 @@ QUY TẮC BẮT BUỘC:
                           </div>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-semibold text-slate-400">Nội dung (Content):</label>
+                          <label className="text-[10px] font-semibold text-slate-400">{ui.acContentField}</label>
                           <textarea 
                             value={entry.content}
                             onChange={(e) => {
@@ -3843,7 +3844,7 @@ QUY TẮC BẮT BUỘC:
                 onClick={() => setStep(2)}
                 className="btn btn-ghost btn-sm"
               >
-                Quay lại
+                {ui.acBack}
               </button>
 
               <button
@@ -3853,7 +3854,7 @@ QUY TẮC BẮT BUỘC:
                 }}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 font-bold text-xs flex items-center gap-1 shadow-md active:scale-95 transition-all"
               >
-                Tiếp tục bước 4 <ArrowRight size={14} />
+                {ui.acNextStep4} <ArrowRight size={14} />
               </button>
             </div>
           </div>
@@ -3870,8 +3871,8 @@ QUY TẮC BẮT BUỘC:
               fontSize: '0.75rem',
               color: 'var(--text-secondary)',
             }}>
-              <strong>Bước 4: Xem và Chỉnh sửa Regex Scripts tiện ích.</strong><br/>
-              Hệ thống đề xuất 4 regex để xử lý hiển thị thẻ HTML và ẩn khung Update. Nhấp để chỉnh sửa Regex, replacement hoặc bật/tắt.
+              <strong>{ui.acStep4Title}</strong><br/>
+              {ui.acStep4Desc}
             </div>
 
             <div className="flex flex-col gap-3">
@@ -3908,7 +3909,7 @@ QUY TẮC BẮT BUỘC:
                       <div className="p-3 border-t border-zinc-800 flex flex-col gap-3 bg-zinc-950/20">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-semibold text-slate-400">Tên Regex Script:</label>
+                            <label className="text-[10px] font-semibold text-slate-400">{ui.acRegexNameField}</label>
                             <input 
                               type="text" 
                               value={script.scriptName}
@@ -3919,7 +3920,7 @@ QUY TẮC BẮT BUỘC:
                             />
                           </div>
                           <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-semibold text-slate-400">Tìm kiếm (Find Regex):</label>
+                            <label className="text-[10px] font-semibold text-slate-400">{ui.acFindRegexField}</label>
                             <input 
                               type="text" 
                               value={script.findRegex}
@@ -3931,7 +3932,7 @@ QUY TẮC BẮT BUỘC:
                           </div>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-semibold text-slate-400">Chuỗi thay thế (Replace String):</label>
+                          <label className="text-[10px] font-semibold text-slate-400">{ui.acReplaceField}</label>
                           <textarea 
                             value={script.replaceString}
                             onChange={(e) => {
@@ -3964,7 +3965,7 @@ QUY TẮC BẮT BUỘC:
                               }}
                               className="cursor-pointer"
                             />
-                            <label htmlFor={`runOnEdit-${index}`} className="text-[10px] font-semibold text-slate-400 cursor-pointer">Chạy khi sửa tin nhắn</label>
+                            <label htmlFor={`runOnEdit-${index}`} className="text-[10px] font-semibold text-slate-400 cursor-pointer">{ui.acRunOnEdit}</label>
                           </div>
                           <div className="flex items-center gap-2 mt-4 select-none cursor-pointer">
                             <input 
@@ -3976,7 +3977,7 @@ QUY TẮC BẮT BUỘC:
                               }}
                               className="cursor-pointer"
                             />
-                            <label htmlFor={`substituteRegex-${index}`} className="text-[10px] font-semibold text-slate-400 cursor-pointer">Thay thế Regex (Substitute)</label>
+                            <label htmlFor={`substituteRegex-${index}`} className="text-[10px] font-semibold text-slate-400 cursor-pointer">{ui.acSubstituteRegex}</label>
                           </div>
                         </div>
                       </div>
@@ -3991,7 +3992,7 @@ QUY TẮC BẮT BUỘC:
                 onClick={() => setStep(3)}
                 className="btn btn-ghost btn-sm"
               >
-                Quay lại
+                {ui.acBack}
               </button>
 
               <button
@@ -4001,7 +4002,7 @@ QUY TẮC BẮT BUỘC:
                 }}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 font-bold text-xs flex items-center gap-1 shadow-md active:scale-95 transition-all"
               >
-                Tiếp tục bước 5 <ArrowRight size={14} />
+                {ui.acNextStep5} <ArrowRight size={14} />
               </button>
             </div>
           </div>
@@ -4018,8 +4019,8 @@ QUY TẮC BẮT BUỘC:
               fontSize: '0.75rem',
               color: 'var(--text-secondary)',
             }}>
-              <strong>Bước 5: Xem và Chỉnh sửa TavernHelper Scripts đề xuất.</strong><br/>
-              Hệ thống sẽ thêm 2 scripts hỗ trợ: Runtime script `MVU` và Schema script `MVU Zod Schema`.
+              <strong>{ui.acStep5Title}</strong><br/>
+              {ui.acStep5Desc}
             </div>
 
             <div className="flex flex-col gap-3">
@@ -4055,7 +4056,7 @@ QUY TẮC BẮT BUỘC:
                       <div className="p-3 border-t border-zinc-800 flex flex-col gap-3 bg-zinc-950/20">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-semibold text-slate-400">Tên Script:</label>
+                            <label className="text-[10px] font-semibold text-slate-400">{ui.acThScriptName}</label>
                             <input 
                               type="text" 
                               value={script.name}
@@ -4066,7 +4067,7 @@ QUY TẮC BẮT BUỘC:
                             />
                           </div>
                           <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-semibold text-slate-400">Mô tả (Info):</label>
+                            <label className="text-[10px] font-semibold text-slate-400">{ui.acThDescField}</label>
                             <input 
                               type="text" 
                               value={script.info}
@@ -4078,7 +4079,7 @@ QUY TẮC BẮT BUỘC:
                           </div>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-semibold text-slate-400">Nội dung Script Content (JavaScript):</label>
+                          <label className="text-[10px] font-semibold text-slate-400">{ui.acThContentField}</label>
                           <textarea 
                             value={script.content}
                             onChange={(e) => {
@@ -4100,7 +4101,7 @@ QUY TẮC BẮT BUỘC:
                 onClick={() => setStep(4)}
                 className="btn btn-ghost btn-sm"
               >
-                Quay lại
+                {ui.acBack}
               </button>
 
               <button
@@ -4110,7 +4111,7 @@ QUY TẮC BẮT BUỘC:
                 }}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 font-bold text-xs flex items-center gap-1 shadow-md active:scale-95 transition-all"
               >
-                Tiếp tục bước 6 <ArrowRight size={14} />
+                {ui.acNextStep6} <ArrowRight size={14} />
               </button>
             </div>
           </div>
@@ -4127,8 +4128,8 @@ QUY TẮC BẮT BUỘC:
               fontSize: '0.75rem',
               color: 'var(--text-secondary)',
             }}>
-              <strong>Bước 6: Xem trước Tổng quan Tài nguyên Tích hợp.</strong><br/>
-              Xác nhận các tùy chọn cuối cùng trước khi tiến hành ghi vào Thẻ nhân vật.
+              <strong>{ui.acStep6Title}</strong><br/>
+              {ui.acStep6Desc}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -4142,14 +4143,14 @@ QUY TẮC BẮT BUỘC:
                   style={{ marginTop: '3px' }}
                 />
                 <div>
-                  <span className="font-semibold text-xs text-slate-200">Sửa đổi Tin Nhắn Đầu (first_mes)</span>
-                  <span className="text-[10px] text-slate-500 block mt-1">Tự động chèn tag {"`\\n\\n[khởi tạo]\\n\\n<StatusPlaceHolderImpl/>`"} để gọi hàm render trạng thái.</span>
+                  <span className="font-semibold text-xs text-slate-200">{ui.acEditFirstMes}</span>
+                  <span className="text-[10px] text-slate-500 block mt-1">{ui.acEditFirstMesDesc1} {"`\\n\\n[khởi tạo]\\n\\n<StatusPlaceHolderImpl/>`"} {ui.acEditFirstMesDesc2}</span>
                 </div>
               </label>
 
               {/* Summary of Lorebook Entries */}
               <div className="bg-zinc-900/40 p-3 rounded-lg border border-zinc-800 flex flex-col gap-2">
-                <span className="font-semibold text-xs text-slate-200 font-bold">Lorebook Entries sẽ được thêm ({lorebookEntries.filter(e => e.enabled).length})</span>
+                <span className="font-semibold text-xs text-slate-200 font-bold">{fmt(ui.acLbWillAdd, { count: lorebookEntries.filter(e => e.enabled).length })}</span>
                 <div className="flex flex-col gap-1.5 pl-2">
                   {lorebookEntries.map((e, idx) => (
                     <div key={idx} className="flex items-center justify-between text-[11px]">
@@ -4157,7 +4158,7 @@ QUY TẮC BẮT BUỘC:
                         {e.comment || `LB Entry ${idx + 1}`} ({e.keys.join(', ')})
                       </span>
                       <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-semibold ${e.enabled ? 'bg-emerald-950/40 text-emerald-400' : 'bg-zinc-950/40 text-zinc-500'}`}>
-                        {e.enabled ? 'Kích hoạt' : 'Bỏ qua'}
+                        {e.enabled ? ui.acEnabled : ui.acSkipped}
                       </span>
                     </div>
                   ))}
@@ -4166,7 +4167,7 @@ QUY TẮC BẮT BUỘC:
 
               {/* Summary of Regex Scripts */}
               <div className="bg-zinc-900/40 p-3 rounded-lg border border-zinc-800 flex flex-col gap-2">
-                <span className="font-semibold text-xs text-slate-200 font-bold">Regex Scripts sẽ được thêm ({regexScripts.filter(r => !r.disabled).length})</span>
+                <span className="font-semibold text-xs text-slate-200 font-bold">{fmt(ui.acRegexWillAdd, { count: regexScripts.filter(r => !r.disabled).length })}</span>
                 <div className="flex flex-col gap-1.5 pl-2">
                   {regexScripts.map((r, idx) => {
                     const isEnabled = !r.disabled;
@@ -4176,7 +4177,7 @@ QUY TẮC BẮT BUỘC:
                           {r.scriptName}
                         </span>
                         <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-semibold ${isEnabled ? 'bg-emerald-950/40 text-emerald-400' : 'bg-zinc-950/40 text-zinc-500'}`}>
-                          {isEnabled ? 'Kích hoạt' : 'Bỏ qua'}
+                          {isEnabled ? ui.acEnabled : ui.acSkipped}
                         </span>
                       </div>
                     );
@@ -4186,7 +4187,7 @@ QUY TẮC BẮT BUỘC:
 
               {/* Summary of TavernHelper Scripts */}
               <div className="bg-zinc-900/40 p-3 rounded-lg border border-zinc-800 flex flex-col gap-2">
-                <span className="font-semibold text-xs text-slate-200 font-bold">TavernHelper Scripts sẽ được thêm ({helperScripts.filter(s => s.enabled).length})</span>
+                <span className="font-semibold text-xs text-slate-200 font-bold">{fmt(ui.acThWillAdd, { count: helperScripts.filter(s => s.enabled).length })}</span>
                 <div className="flex flex-col gap-1.5 pl-2">
                   {helperScripts.map((s: any, idx) => (
                     <div key={idx} className="flex items-center justify-between text-[11px]">
@@ -4194,7 +4195,7 @@ QUY TẮC BẮT BUỘC:
                         {s.name} ({s.info})
                       </span>
                       <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-semibold ${s.enabled ? 'bg-emerald-950/40 text-emerald-400' : 'bg-zinc-950/40 text-zinc-500'}`}>
-                        {s.enabled ? 'Kích hoạt' : 'Bỏ qua'}
+                        {s.enabled ? ui.acEnabled : ui.acSkipped}
                       </span>
                     </div>
                   ))}
@@ -4208,14 +4209,14 @@ QUY TẮC BẮT BUỘC:
                 onClick={() => setStep(5)}
                 className="btn btn-ghost btn-sm"
               >
-                Quay lại
+                {ui.acBack}
               </button>
 
               <button
                 onClick={handleApplyConversion}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-5 py-2 font-bold text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
               >
-                <CheckCircle2 size={14} /> Hoàn tất & Tích hợp vào Card
+                <CheckCircle2 size={14} /> {ui.acFinishIntegrate}
               </button>
             </div>
           </div>
@@ -4247,9 +4248,9 @@ QUY TẮC BẮT BUỘC:
               <CheckCircle2 size={28} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Chuyển đổi MVU-Zod Hoàn Tất!</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>{ui.acMvuDoneTitle}</h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto', lineHeight: '1.5' }}>
-                Thẻ nhân vật của bạn đã được tiêm cấu trúc Schema, rules và các tiện ích regex. Bây giờ thẻ đã trở thành thẻ MVU-Zod hoạt động hoàn chỉnh! Các trường dữ liệu mới đã được nạp lại vào bảng điều khiển dịch.
+                {ui.acMvuDoneDesc}
               </p>
             </div>
             
@@ -4266,7 +4267,7 @@ QUY TẮC BẮT BUỘC:
               className="btn btn-secondary btn-sm"
               style={{ marginTop: '12px' }}
             >
-              Chuyển đổi Thẻ khác
+              {ui.acConvertAnother}
             </button>
           </div>
         )}
@@ -4295,7 +4296,7 @@ QUY TẮC BẮT BUỘC:
             gap: '8px',
           }}>
             <Sparkles size={14} className="text-indigo-400" />
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Trợ lý Thiết kế MVU-Zod</span>
+            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>{ui.acMvuAssistant}</span>
           </div>
 
           {/* Messages Window */}
@@ -4338,7 +4339,7 @@ QUY TẮC BẮT BUỘC:
                 gap: '6px',
               }}>
                 <Loader2 size={12} className="animate-spin text-indigo-400" />
-                <span>AI đang suy nghĩ...</span>
+                <span>{ui.acAiThinking}</span>
               </div>
             )}
             <div ref={mvuChatEndRef} />
@@ -4456,7 +4457,7 @@ QUY TẮC BẮT BUỘC:
               onClick={() => mvuFileInputRef.current?.click()}
               className="text-slate-400 hover:text-indigo-400 hover:bg-zinc-800/50 rounded-md p-1.5 transition-all flex items-center justify-center"
               style={{ width: '28px', height: '28px', border: '1px solid var(--border-default)', background: 'var(--bg-default)', cursor: 'pointer' }}
-              title="Đính kèm tệp/ảnh"
+              title={ui.acAttachFile}
             >
               <Upload size={12} />
             </button>
@@ -4470,7 +4471,7 @@ QUY TẮC BẮT BUỘC:
             />
             <input
               type="text"
-              placeholder="Yêu cầu AI điều chỉnh Schema/Rules..."
+              placeholder={ui.acMvuChatPh}
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleSendMvuChatMessage(); }}
