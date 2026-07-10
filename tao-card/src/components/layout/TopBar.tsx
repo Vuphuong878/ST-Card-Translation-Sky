@@ -20,6 +20,7 @@ import { ValidationDashboard } from '../common/ValidationDashboard';
 import { TemplateGallery } from '../templates/TemplateGallery';
 import { UserGuideModal } from '../common/UserGuideModal';
 import { db } from '../../lib/db/db';
+import { t as ui, fmt } from '../../i18n';
 
 interface TopBarProps {
   sidebarOpen: boolean;
@@ -28,9 +29,9 @@ interface TopBarProps {
 
 const FORMAT_LABELS: Record<ImportFormat, string> = {
   v3_card: 'Character Card V3',
-  v2_card: 'Character Card V2 (chuyển đổi)',
+  v2_card: ui.tbFormatV2,
   standalone_lorebook: 'Standalone Lorebook',
-  unknown: 'Không xác định',
+  unknown: ui.tbFormatUnknown,
 };
 
 export function TopBar({ onToggleSidebar }: TopBarProps) {
@@ -48,20 +49,20 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleAppUpdate = async (type: 'upgrade' | 'downgrade') => {
-    if (!confirm(type === 'upgrade' ? 'Bạn có muốn kéo (pull) phiên bản mới nhất từ GitHub?' : 'Bạn có muốn lùi (reset) về phiên bản trước đó 1 commit?')) return;
+    if (!confirm(type === 'upgrade' ? ui.tbConfirmPull : ui.tbConfirmReset)) return;
     
     setIsUpdating(true);
     try {
       const res = await fetch(`/api/app/${type}`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        useToastStore.getState().success('Thành công!\n\n' + data.message);
+        useToastStore.getState().success(ui.tbUpdateOk + data.message);
         window.location.reload();
       } else {
-        useToastStore.getState().error('Lỗi:\n\n' + data.error);
+        useToastStore.getState().error(ui.tbUpdateErr + data.error);
       }
     } catch (err) {
-      useToastStore.getState().error('Không thể kết nối đến server nội bộ. Vui lòng đảm bảo bạn đang chạy Vite server.\nLỗi: ' + (err instanceof Error ? err.message : String(err)));
+      useToastStore.getState().error(ui.tbNoServer + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsUpdating(false);
     }
@@ -129,10 +130,10 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
   };
 
   const formatSaveTime = () => {
-    if (isSaving) return '● Đang lưu...';
+    if (isSaving) return ui.tbSaving;
     if (!lastSavedAt) return '';
     const d = new Date(lastSavedAt);
-    return `● Đã lưu ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    return fmt(ui.tbSaved, { time: `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}` });
   };
 
   // ─── Import ─────────────────────────────────────────────────────────
@@ -152,7 +153,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
           const arrayBuffer = await file.arrayBuffer();
           const charaJsonStr = extractCharaFromPng(arrayBuffer);
           if (!charaJsonStr) {
-            throw new Error('Không tìm thấy dữ liệu character card trong file PNG này.');
+            throw new Error(ui.tbNoPngData);
           }
           json = JSON.parse(charaJsonStr) as Record<string, unknown>;
 
@@ -173,19 +174,19 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         }
 
         // Create snapshot before overwriting
-        await createSnapshot(`Trước import ${file.name}`);
+        await createSnapshot(fmt(ui.tbSnapshotBeforeImport, { name: file.name }));
 
         setCard(result.card);
 
         const warningText = result.warnings.length > 0 ? ` (${result.warnings.join('; ')})` : '';
         setImportToast({
           type: 'success',
-          message: `Import thành công: ${FORMAT_LABELS[result.format] || 'Character Card'}${warningText}`,
+          message: fmt(ui.tbImportOk, { format: FORMAT_LABELS[result.format] || 'Character Card', warnings: warningText }),
         });
       } catch (err) {
         setImportToast({
           type: 'error',
-          message: err instanceof Error ? err.message : 'Lỗi import không xác định.',
+          message: err instanceof Error ? err.message : ui.tbImportErr,
         });
       }
     };
@@ -238,7 +239,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
       setShowExport(false);
     } catch (err) {
       console.error(err);
-      useToastStore.getState().error(err instanceof Error ? err.message : 'Lỗi xuất file PNG.');
+      useToastStore.getState().error(err instanceof Error ? err.message : ui.tbExportPngErr);
     } finally {
       setShowExport(false);
     }
@@ -273,13 +274,13 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         {showProjectsDropdown && (
           <div className="absolute left-0 top-full mt-1 w-72 rounded-xl border border-border bg-card shadow-xl z-50 overflow-hidden">
             <div className="px-3 py-2 border-b border-border bg-muted/30">
-              <p className="text-xs font-medium text-muted-foreground">Quản lý dự án</p>
+              <p className="text-xs font-medium text-muted-foreground">{ui.tbProjectMgmt}</p>
             </div>
             
             {/* Rename section */}
             <div className="p-3 border-b border-border bg-muted/10">
               <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
-                Tên dự án hiện tại
+                {ui.tbCurrentProjectName}
               </label>
               <div className="flex gap-1.5">
                 <input
@@ -289,7 +290,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                   onBlur={handleRename}
                   onKeyDown={handleRenameKeyDown}
                   className="flex-1 px-2.5 py-1 text-xs rounded border border-border bg-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground"
-                  placeholder="Nhập tên dự án..."
+                  placeholder={ui.tbProjectNamePh}
                 />
               </div>
             </div>
@@ -297,7 +298,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
             {/* Project List */}
             <div className="max-h-60 overflow-y-auto scrollbar-thin p-1.5 flex flex-col gap-0.5">
               <span className="text-[10px] font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">
-                Chuyển dự án ({projects.length})
+                {fmt(ui.tbSwitchProject, { count: projects.length })}
               </span>
               {projects.map((p) => {
                 const isActive = p.id === currentProjectId;
@@ -334,7 +335,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
                 }}
                 className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
               >
-                <Plus className="w-3.5 h-3.5" /> Tạo dự án mới
+                <Plus className="w-3.5 h-3.5" /> {ui.tbCreateProject}
               </button>
             </div>
           </div>
@@ -377,20 +378,20 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         {showExport && (
           <div className="absolute right-0 top-full mt-1 w-64 rounded-xl border border-border bg-card shadow-xl z-50 overflow-hidden">
             <div className="px-3 py-2 border-b border-border bg-muted/30">
-              <p className="text-xs font-medium text-muted-foreground">Xuất file</p>
+              <p className="text-xs font-medium text-muted-foreground">{ui.tbExportFile}</p>
             </div>
             <div className="p-1.5">
               <ExportOption icon={Download} label="📦 Export Package (Wizard)"
-                desc="Wizard đầy đủ: inject MVUZOD + validate + export" onClick={() => { setShowExport(false); setShowExportWizard(true); }} />
+                desc={ui.tbExportWizardDesc} onClick={() => { setShowExport(false); setShowExportWizard(true); }} />
               <div className="h-px bg-border my-1" />
               <ExportOption icon={Image} label="Character Card PNG"
-                desc="Xuất ảnh PNG kèm dữ liệu nhân vật" onClick={handleExportPng} />
-              <ExportOption icon={FileJson} label="Card V3 (đầy đủ)"
-                desc="File .json hoàn chỉnh cho SillyTavern" onClick={handleExportV3} />
+                desc={ui.tbExportPngDesc} onClick={handleExportPng} />
+              <ExportOption icon={FileJson} label={ui.tbExportV3}
+                desc={ui.tbExportV3Desc} onClick={handleExportV3} />
               <ExportOption icon={BookOpen} label="Standalone Lorebook"
-                desc="Chỉ xuất lorebook entries" onClick={handleExportLorebook} />
-              <ExportOption icon={FileText} label="Nhân vật (không lorebook)"
-                desc="Card nhẹ, không có lorebook" onClick={handleExportCharOnly} />
+                desc={ui.tbExportLorebookDesc} onClick={handleExportLorebook} />
+              <ExportOption icon={FileText} label={ui.tbExportCharOnly}
+                desc={ui.tbExportCharOnlyDesc} onClick={handleExportCharOnly} />
             </div>
           </div>
         )}
@@ -399,7 +400,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
       {/* Undo */}
       <button onClick={() => undoToSnapshot()}
         className="p-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-        aria-label="Undo" title="Hoàn tác (Ctrl+Z)">
+        aria-label="Undo" title={ui.tbUndo}>
         <Undo2 className="w-4 h-4" />
       </button>
 
@@ -419,19 +420,19 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
 
       {/* Clear Cache */}
       <button onClick={async () => {
-        if (confirm('BẠN CÓ CHẮC CHẮN MUỐN XÓA TOÀN BỘ DỮ LIỆU?\n\nViệc này sẽ XÓA TẤT CẢ các dự án, nhân vật, lịch sử chat và thiết lập API. Không thể khôi phục!')) {
+        if (confirm(ui.tbConfirmWipe)) {
           localStorage.clear();
           sessionStorage.clear();
           try {
             await db.delete();
           } catch (e) {
-            console.error('Lỗi khi xóa db:', e);
+            console.error(ui.tbWipeErr, e);
           }
           window.location.reload();
         }
       }}
         className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
-        aria-label="Clear All Data" title="Xóa toàn bộ dữ liệu">
+        aria-label="Clear All Data" title={ui.tbWipeTitle}>
         <Eraser className="w-4 h-4" />
       </button>
 
@@ -439,12 +440,12 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
       <div className="flex items-center gap-1 border-l border-border pl-2 ml-1">
         <button onClick={() => handleAppUpdate('upgrade')} disabled={isUpdating}
           className="p-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-emerald-500 disabled:opacity-50"
-          aria-label="Cập nhật (GitHub)" title="Cập nhật (GitHub pull)">
+          aria-label="Update (GitHub)" title={ui.tbUpdateTitle}>
           <ArrowUp className="w-4 h-4" />
         </button>
         <button onClick={() => handleAppUpdate('downgrade')} disabled={isUpdating}
           className="p-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-rose-500 disabled:opacity-50"
-          aria-label="Hạ bản (GitHub)" title="Hạ bản 1 commit (GitHub reset)">
+          aria-label="Downgrade (GitHub)" title={ui.tbDowngradeTitle}>
           <ArrowDown className="w-4 h-4" />
         </button>
       </div>
@@ -452,7 +453,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
       {/* Hướng dẫn sử dụng */}
       <button onClick={() => setShowUserGuide(true)}
         className="p-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-primary"
-        aria-label="User Guide" title="Hướng dẫn sử dụng">
+        aria-label="User Guide" title={ui.tbGuideTitle}>
         <HelpCircle className="w-4 h-4" />
       </button>
 

@@ -7,6 +7,7 @@ import { MessageSquare, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useChatStore } from '../../store/chatStore';
 import { WORLDBUILDING_MODE_LABELS } from '../../types';
 import { cn } from '../../lib/utils';
+import { t as ui } from '../../i18n';
 
 interface CopilotDrawerProps {
   open: boolean;
@@ -27,7 +28,7 @@ export function CopilotDrawer({ open, onToggle }: CopilotDrawerProps) {
           'text-muted-foreground hover:text-foreground transition-colors',
           open && 'hidden'
         )}
-        title="Mở Copilot"
+        title={ui.cdOpen}
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -72,10 +73,10 @@ export function CopilotDrawer({ open, onToggle }: CopilotDrawerProps) {
             <div className="flex flex-col items-center justify-center h-full text-center">
               <MessageSquare className="w-8 h-8 text-muted-foreground/30 mb-3" />
               <p className="text-sm text-muted-foreground">
-                Chào bạn! Tôi là AI Copilot.
+                {ui.cdWelcome}
               </p>
               <p className="text-xs text-muted-foreground/60 mt-1">
-                Hỏi bất kỳ điều gì về card của bạn.
+                {ui.cdAsk}
               </p>
             </div>
           ) : (
@@ -104,13 +105,13 @@ export function CopilotDrawer({ open, onToggle }: CopilotDrawerProps) {
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="Nhập yêu cầu..."
+              placeholder={ui.cdInputPh}
               className="flex-1 text-xs bg-secondary text-secondary-foreground rounded-md px-3 py-2 border border-border focus:outline-none focus:ring-1 focus:ring-ring"
               disabled
             />
           </div>
           <p className="text-[10px] text-muted-foreground mt-1">
-            Cài đặt AI proxy trước khi sử dụng.
+            {ui.cdNeedProxy}
           </p>
         </div>
       </aside>

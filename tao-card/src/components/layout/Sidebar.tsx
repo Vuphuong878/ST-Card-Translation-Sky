@@ -11,21 +11,22 @@ import {
 } from 'lucide-react';
 import { useCardStore } from '../../store/cardStore';
 import { cn } from '../../lib/utils';
+import { t as ui } from '../../i18n';
 
 interface SidebarProps {
   open: boolean;
 }
 
 const NAV_ITEMS = [
-  { path: '/auto-creator', icon: Wand2, label: 'Auto Creator', emoji: '🪄' },
-  { path: '/story-to-card', icon: FileText, label: 'Tạo thẻ từ truyện', emoji: '📖' },
-  { path: '/settings', icon: Settings, label: 'Cài đặt', emoji: '⚙' },
-  { path: '/editor', icon: FileText, label: 'Card Editor', emoji: '📝' },
-  { path: '/lorebook', icon: BookOpen, label: 'Lorebook', emoji: '📚' },
-  { path: '/regex', icon: Puzzle, label: 'Regex Lab', emoji: '🧩' },
-  { path: '/mvuzod', icon: Wrench, label: 'MVUZOD', emoji: '🛠' },
-  { path: '/ejs-studio', icon: ScrollText, label: 'EJS Studio', emoji: '📜' },
-  { path: '/wiki', icon: BookOpen, label: 'Wiki Collector', emoji: '🕸️' },
+  { path: '/auto-creator', icon: Wand2, label: ui.navAutoCreator, emoji: '🪄' },
+  { path: '/story-to-card', icon: FileText, label: ui.navStoryToCard, emoji: '📖' },
+  { path: '/settings', icon: Settings, label: ui.navSettings, emoji: '⚙' },
+  { path: '/editor', icon: FileText, label: ui.navCardEditor, emoji: '📝' },
+  { path: '/lorebook', icon: BookOpen, label: ui.navLorebook, emoji: '📚' },
+  { path: '/regex', icon: Puzzle, label: ui.navRegexLab, emoji: '🧩' },
+  { path: '/mvuzod', icon: Wrench, label: ui.navMvuzod, emoji: '🛠' },
+  { path: '/ejs-studio', icon: ScrollText, label: ui.navEjsStudio, emoji: '📜' },
+  { path: '/wiki', icon: BookOpen, label: ui.navWiki, emoji: '🕸️' },
 ];
 
 export function Sidebar({ open }: SidebarProps) {
@@ -83,7 +84,7 @@ export function Sidebar({ open }: SidebarProps) {
             <button
               onClick={() => createNewProject()}
               className="p-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-              title="Tạo project mới"
+              title={ui.sbNewProject}
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -109,12 +110,12 @@ export function Sidebar({ open }: SidebarProps) {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (confirm('Bạn có chắc chắn muốn xóa dự án này?')) {
+                    if (confirm(ui.sbConfirmDelete)) {
                       deleteProject(p.id);
                     }
                   }}
                   className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-all"
-                  title="Xóa dự án"
+                  title={ui.sbDeleteProject}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -123,9 +124,9 @@ export function Sidebar({ open }: SidebarProps) {
 
             {projects.length === 0 && (
               <p className="text-[10px] text-muted-foreground px-2 py-4 text-center">
-                Chưa có project nào.
+                {ui.sbNoProject}
                 <br />
-                Nhấn + để tạo mới.
+                {ui.sbPressPlus}
               </p>
             )}
           </div>
@@ -137,7 +138,7 @@ export function Sidebar({ open }: SidebarProps) {
           <button
             onClick={() => createNewProject()}
             className="p-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground"
-            title="Tạo project mới"
+            title={ui.sbNewProject}
           >
             <Plus className="w-4 h-4" />
           </button>

@@ -5,6 +5,7 @@
 
 import { Component, type ReactNode } from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
+import { t as ui } from '../../i18n';
 
 interface Props {
   children: ReactNode;
@@ -41,9 +42,9 @@ export class ErrorBoundary extends Component<Props, State> {
             <AlertTriangle className="w-8 h-8 text-destructive" />
           </div>
           <div className="text-center">
-            <h2 className="text-sm font-semibold mb-1">Đã xảy ra lỗi</h2>
+            <h2 className="text-sm font-semibold mb-1">{ui.ebTitle}</h2>
             <p className="text-xs text-muted-foreground max-w-md">
-              {this.state.error?.message || 'Lỗi không xác định'}
+              {this.state.error?.message || ui.ebUnknown}
             </p>
           </div>
           <button
@@ -51,7 +52,7 @@ export class ErrorBoundary extends Component<Props, State> {
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium
               hover:bg-primary/90 transition-colors"
           >
-            <RotateCcw className="w-4 h-4" /> Thử lại
+            <RotateCcw className="w-4 h-4" /> {ui.ebRetry}
           </button>
         </div>
       );

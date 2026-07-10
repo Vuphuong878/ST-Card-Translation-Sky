@@ -11,6 +11,7 @@ import { CopilotDrawer } from './CopilotDrawer';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useCardStore } from '../../store/cardStore';
+import { t as ui } from '../../i18n';
 
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -56,7 +57,7 @@ export function AppShell() {
               <div className="flex items-center justify-center bg-background text-muted-foreground text-sm h-full w-full">
                 <div className="flex flex-col items-center gap-2">
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                  <span>Đang tải trang...</span>
+                  <span>{ui.loadingPage}</span>
                 </div>
               </div>
             }>

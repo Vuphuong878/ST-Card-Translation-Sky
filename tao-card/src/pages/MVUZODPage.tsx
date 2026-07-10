@@ -26,16 +26,17 @@ import { ScriptOutput } from '../components/mvuzod/ScriptOutput';
 import { GameUiStudio } from '../components/mvuzod/GameUiStudio';
 import { VariablePlayground } from '../components/mvuzod/VariablePlayground';
 import type { MVUZODSchema, MVUZODStudioTab } from '../types/mvuzod.types';
+import { t as ui } from '../i18n';
 
 const TABS: Array<{ id: MVUZODStudioTab; label: string; icon: typeof Wand2; description: string }> = [
-  { id: 'wizard', label: 'Schema', icon: Wand2, description: 'Tạo/chỉnh sửa Zod schema' },
-  { id: 'initvar', label: 'InitVar', icon: Database, description: 'Giá trị biến khởi tạo' },
-  { id: 'varlist', label: 'Biến số', icon: ListTree, description: 'Tạo entry hiển thị biến' },
-  { id: 'update', label: 'Update', icon: Sparkles, description: 'Tạo update rules + output format' },
+  { id: 'wizard', label: 'Schema', icon: Wand2, description: ui.mzTabSchemaDesc },
+  { id: 'initvar', label: 'InitVar', icon: Database, description: ui.mzTabInitvarDesc },
+  { id: 'varlist', label: ui.mzTabVarlist, icon: ListTree, description: ui.mzTabVarlistDesc },
+  { id: 'update', label: 'Update', icon: Sparkles, description: ui.mzTabUpdateDesc },
   { id: 'patch', label: 'Patch', icon: FlaskConical, description: 'Test JSON Patch operations' },
-  { id: 'script', label: 'Scripts', icon: FileCode, description: 'Preview scripts đầu ra' },
-  { id: 'game', label: 'Game UI', icon: Gamepad2, description: 'Preview giao diện game' },
-  { id: 'playground', label: 'Playground', icon: TestTube2, description: 'Test biến + JSON Patch' },
+  { id: 'script', label: 'Scripts', icon: FileCode, description: ui.mzTabScriptDesc },
+  { id: 'game', label: 'Game UI', icon: Gamepad2, description: ui.mzTabGameDesc },
+  { id: 'playground', label: 'Playground', icon: TestTube2, description: ui.mzTabPlaygroundDesc },
 ];
 
 export function MVUZODPage() {
@@ -92,7 +93,7 @@ export function MVUZODPage() {
               key={t.id}
               onClick={() => !isDisabled && setTab(t.id)}
               disabled={isDisabled}
-              title={isDisabled ? 'Cần tạo Schema trước' : t.description}
+              title={isDisabled ? ui.mzNeedSchema : t.description}
               className={`group relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
                 isActive
                   ? 'bg-primary/10 text-primary shadow-sm shadow-primary/5'

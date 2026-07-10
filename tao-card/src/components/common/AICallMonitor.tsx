@@ -1,6 +1,7 @@
 import { useSyncExternalStore, useEffect, useState } from 'react';
 import { CallMonitor } from '../../lib/ai/callMonitor';
 import { Activity, Cpu } from 'lucide-react';
+import { t as ui, fmt } from '../../i18n';
 
 /**
  * Floating live monitor of in-flight AI calls. Appears bottom-right whenever any AI
@@ -32,10 +33,10 @@ export default function AICallMonitor() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#38bdf8' }}>
           <Activity size={14} className="animate-spin" style={{ animationDuration: '2s' }} />
-          {calls.length} luồng AI đang chạy
+          {fmt(ui.amRunning, { count: calls.length })}
         </span>
         <span style={{ fontSize: 10, color: '#9b98ae' }}>
-          cao điểm {CallMonitor.getPeakConcurrency()} · ✓ {CallMonitor.getCompleted()}
+          {fmt(ui.amPeak, { peak: CallMonitor.getPeakConcurrency(), done: CallMonitor.getCompleted() })}
         </span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
