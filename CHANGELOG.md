@@ -2,6 +2,17 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.56.4 — Dịch Card đã dịch xong EN + 中文 (Đợt 4) 🌏
+> Tiếp nối v1.56.3. **Dịch Card** — công cụ chính, cũng là công cụ nặng nhất — giờ đổi ngôn ngữ theo nút VI/EN/中文 trên header.
+- **Toàn bộ 20 panel** đã có tiếng Anh & tiếng Trung: cấu hình dịch, bảng trường (Field Editor), tiến trình + nhật ký, xuất thẻ + sức khoẻ thẻ, cấu hình API/provider, Regex Manager, Kiểm tra lỗi (Verify), Chiến lược B (MVU) & C (EJS), So Sánh Card, EJS Creator, Trợ Lý AI và trình chuyển đổi MVU-Zod 7 bước.
+- **Bản Tiếng Việt giữ nguyên 100%.** Đã mở trình duyệt đối chiếu: nhãn tiếng Anh quen thuộc vẫn y hệt, chuỗi tiếng Việt vẫn đúng chỗ, 0 lỗi console.
+- **237 chỗ `isVi` biến mất khỏi mã nguồn.** Trước đây app có 237 chỗ viết `isVi ? 'tiếng Việt' : 'English'`, nhưng nhánh tiếng Việt **chưa bao giờ chạy** (mặc định là `en`). Giờ chúng thành key i18n thật — bản VI vẫn hiện đúng chuỗi tiếng Anh cũ, còn 中文 thì có bản dịch riêng.
+- **Sửa 1 bug thật gặp dọc đường:** ở panel Provider, dòng báo lỗi được tô đỏ bằng cách kiểm tra `chuỗi.startsWith('Lỗi')` — tức là dùng chữ hiển thị làm logic. Dịch sang tiếng Anh/Trung là mất luôn màu đỏ báo lỗi. Đã thay bằng cờ trạng thái riêng.
+- *An toàn:* **không đụng prompt AI**. Chừa nguyên các chuỗi vốn là **logic**, dịch vào là hỏng: `targetLanguage === 'Tiếng Việt'` (quyết định hậu tố file xuất), `keys` của Lorebook bị so khớp bằng `includes()`, tiền tố tên tài liệu RAG. Cũng chừa mọi **dữ liệu ghi thẳng vào thẻ của bạn**: tên/comment/nội dung entry Lorebook mặc định, tên & mô tả regex preset, template EJS, văn bản mẫu.
+- Các nhãn kỹ thuật của SillyTavern (`findRegex`, `replaceString`, `MarkdownOnly`, `Before`/`After`, `原Key`/`译Key`) giữ nguyên ở mọi ngôn ngữ.
+- *Kỹ thuật:* 12 commit nhỏ, mỗi commit tsc + 108 test + build xanh mới push. Key được **kiểm bằng TypeScript** (thiếu key ở `vi`/`zh` = lỗi biên dịch) + test key-parity và placeholder-parity.
+- **Tiếp theo:** Tạo Card (đợt lớn nhất) → Trích Card.
+
 ## v1.56.3 — Tạo Preset đã dịch xong EN + 中文 (Đợt 3) 🎛️
 > Tiếp nối v1.56.2. **Tạo Preset** giờ đổi ngôn ngữ theo nút VI/EN/中文 trên header của Hub.
 - **Toàn bộ giao diện Tạo Preset** đã có tiếng Anh & tiếng Trung: 4 bước (Tham số, Khối Prompts, Regex Scripts, Xuất bản JSON), bảng **Cài đặt** (API + Hành vi AI), và khung chat **ST Studio**.
