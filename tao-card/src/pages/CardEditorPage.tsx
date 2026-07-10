@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useCardStore } from '../store/cardStore';
 import StagePersonaButton from '../components/StagePersonaButton';
+import { t as ui, fmt } from '../i18n';
 
 // ─── Token estimator ────────────────────────────────────────────────────────
 const estimateTokens = (text: string) => Math.ceil((text || '').length / 4);
@@ -20,11 +21,11 @@ const MACROS = ['{{char}}', '{{user}}', '{{date}}', '{{time}}', '{{random}}', '{
 
 // ─── Tab definitions ────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'basic', label: 'Thông tin cơ bản', icon: FileText },
-  { id: 'personality', label: 'Tính cách & Bối cảnh', icon: User },
-  { id: 'dialogue', label: 'Hội thoại', icon: MessageSquare },
-  { id: 'system', label: 'Prompt hệ thống', icon: Terminal },
-  { id: 'advanced', label: 'Mở rộng', icon: Puzzle },
+  { id: 'basic', label: ui.ceTabBasic, icon: FileText },
+  { id: 'personality', label: ui.ceTabPersonality, icon: User },
+  { id: 'dialogue', label: ui.ceTabDialogue, icon: MessageSquare },
+  { id: 'system', label: ui.ceTabSystem, icon: Terminal },
+  { id: 'advanced', label: ui.ceTabAdvanced, icon: Puzzle },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -91,14 +92,14 @@ function TabBasic({ data, updateField }: TabProps) {
 
   return (
     <>
-      <SectionCard title="Nhân vật">
-        <FieldRow label="Tên nhân vật" required>
+      <SectionCard title={ui.ceCharacter}>
+        <FieldRow label={ui.ceCharName} required>
           <input type="text" value={data.name}
             onChange={e => updateField('data.name', e.target.value)}
-            className="settings-input" placeholder="Tên nhân vật" />
+            className="settings-input" placeholder={ui.ceCharName} />
         </FieldRow>
 
-        <FieldRow label="Ảnh đại diện (Avatar)">
+        <FieldRow label={ui.ceAvatar}>
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden shrink-0">
               {avatar && avatar !== 'none' ? (
@@ -128,31 +129,31 @@ function TabBasic({ data, updateField }: TabProps) {
                   }}
                   className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
                 >
-                  Chọn ảnh
+                  {ui.cePickImage}
                 </button>
                 {avatar && avatar !== 'none' && (
                   <button
                     onClick={() => updateField('avatar', 'none')}
                     className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
                   >
-                    Xóa ảnh
+                    {ui.ceRemoveImage}
                   </button>
                 )}
               </div>
               <p className="text-[10px] text-muted-foreground">
-                Hỗ trợ PNG, JPG, WEBP. Ảnh PNG sẽ được dùng để nhúng dữ liệu metadata khi xuất card dạng ảnh.
+                {ui.ceAvatarHint}
               </p>
             </div>
           </div>
         </FieldRow>
 
-        <FieldRow label="Người tạo">
+        <FieldRow label={ui.ceCreator}>
           <input type="text" value={data.creator}
             onChange={e => updateField('data.creator', e.target.value)}
-            className="settings-input" placeholder="Tên bạn / nickname" />
+            className="settings-input" placeholder={ui.ceCreatorPh} />
         </FieldRow>
 
-        <FieldRow label="Phiên bản">
+        <FieldRow label={ui.ceVersion}>
           <div className="flex items-center gap-2">
             <input type="text" value={data.character_version}
               onChange={e => updateField('data.character_version', e.target.value)}
@@ -168,7 +169,7 @@ function TabBasic({ data, updateField }: TabProps) {
                 }
               }}
               className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-white/10 rounded text-gray-400 hover:text-white transition-colors"
-              title="Nâng phiên bản (+1)"
+              title={ui.ceVersionUp}
             >
               <ChevronUp size={16} />
             </button>
@@ -182,7 +183,7 @@ function TabBasic({ data, updateField }: TabProps) {
                 }
               }}
               className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-white/10 rounded text-gray-400 hover:text-white transition-colors"
-              title="Hạ phiên bản (-1)"
+              title={ui.ceVersionDown}
             >
               <ChevronDown size={16} />
             </button>
@@ -195,7 +196,7 @@ function TabBasic({ data, updateField }: TabProps) {
               <input type="text" value={tagInput}
                 onChange={e => setTagInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                className="settings-input flex-1" placeholder="Nhập tag rồi Enter" />
+                className="settings-input flex-1" placeholder={ui.ceTagPh} />
               <button onClick={handleAddTag}
                 className="px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 border border-border text-sm transition-colors">
                 <Plus className="w-4 h-4" />
@@ -217,13 +218,13 @@ function TabBasic({ data, updateField }: TabProps) {
         </FieldRow>
       </SectionCard>
 
-      <SectionCard title="Ghi chú & Tuỳ chọn">
-        <FieldRow label="Ghi chú tác giả">
+      <SectionCard title={ui.ceNotesSection}>
+        <FieldRow label={ui.ceAuthorNotes}>
           <TextareaWithTokens value={data.creator_notes} rows={3}
-            onChange={v => updateField('data.creator_notes', v)} placeholder="Ghi chú cho người dùng khác..." />
+            onChange={v => updateField('data.creator_notes', v)} placeholder={ui.ceAuthorNotesPh} />
         </FieldRow>
 
-        <FieldRow label="Yêu thích">
+        <FieldRow label={ui.ceFavourite}>
           <button onClick={() => updateField('data.extensions.fav', !data.extensions.fav)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm ${
               data.extensions.fav
@@ -231,7 +232,7 @@ function TabBasic({ data, updateField }: TabProps) {
                 : 'border-border bg-background text-muted-foreground hover:text-foreground'
             }`}>
             {data.extensions.fav ? <Star className="w-4 h-4 fill-current" /> : <StarOff className="w-4 h-4" />}
-            {data.extensions.fav ? 'Đã đánh dấu ⭐' : 'Đánh dấu yêu thích'}
+            {data.extensions.fav ? ui.ceFavourited : ui.ceMarkFavourite}
           </button>
         </FieldRow>
 
@@ -240,7 +241,7 @@ function TabBasic({ data, updateField }: TabProps) {
             value={parseFloat(data.extensions.talkativeness) || 0.5}
             onChange={e => updateField('data.extensions.talkativeness', e.target.value)}
             className="settings-range w-full" />
-          <p className="text-[10px] text-muted-foreground mt-1">0 = ít nói · 0.5 = bình thường · 1 = nói nhiều (lưu dạng string)</p>
+          <p className="text-[10px] text-muted-foreground mt-1">{ui.ceTalkHint}</p>
         </FieldRow>
       </SectionCard>
     </>
@@ -254,7 +255,7 @@ function TabBasic({ data, updateField }: TabProps) {
 function TabPersonality({ data, updateField }: TabProps) {
   return (
     <>
-      <SectionCard title="Mô tả nhân vật (Description)">
+      <SectionCard title={ui.ceDescription}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
           <StagePersonaButton
             currentDescription={data.description}
@@ -263,19 +264,19 @@ function TabPersonality({ data, updateField }: TabProps) {
         </div>
         <TextareaWithMacros value={data.description} rows={12}
           onChange={v => updateField('data.description', v)}
-          placeholder="Mô tả chi tiết nhân vật: ngoại hình, tính cách, quá khứ, khả năng..." />
+          placeholder={ui.ceDescriptionPh} />
       </SectionCard>
 
-      <SectionCard title="Tính cách (Personality)">
+      <SectionCard title={ui.cePersonality}>
         <TextareaWithTokens value={data.personality} rows={6}
           onChange={v => updateField('data.personality', v)}
-          placeholder="Tính cách ngắn gọn: vui vẻ, thông minh, hơi lười biếng..." />
+          placeholder={ui.cePersonalityPh} />
       </SectionCard>
 
-      <SectionCard title="Bối cảnh (Scenario)">
+      <SectionCard title={ui.ceScenario}>
         <TextareaWithTokens value={data.scenario} rows={6}
           onChange={v => updateField('data.scenario', v)}
-          placeholder="Bối cảnh câu chuyện: thế giới, hoàn cảnh gặp gỡ..." />
+          placeholder={ui.ceScenarioPh} />
       </SectionCard>
     </>
   );
@@ -302,20 +303,20 @@ function TabDialogue({ data, updateField }: TabProps) {
 
   return (
     <>
-      <SectionCard title="Lời chào đầu tiên (First Message)">
+      <SectionCard title={ui.ceFirstMes}>
         <TextareaWithTokens value={data.first_mes} rows={10}
           onChange={v => updateField('data.first_mes', v)}
-          placeholder="Lời chào đầu tiên khi bắt đầu trò chuyện..." />
+          placeholder={ui.ceFirstMesPh} />
       </SectionCard>
 
-      <SectionCard title="Lời chào thay thế (Alternate Greetings)" action={
+      <SectionCard title={ui.ceAltGreetings} action={
         <button onClick={handleAddGreeting}
           className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors">
-          <Plus className="w-3.5 h-3.5" /> Thêm
+          <Plus className="w-3.5 h-3.5" /> {ui.ceAdd}
         </button>
       }>
         {data.alternate_greetings.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">Chưa có lời chào thay thế.</p>
+          <p className="text-xs text-muted-foreground text-center py-4">{ui.ceNoAltGreeting}</p>
         ) : (
           <div className="space-y-3">
             {data.alternate_greetings.map((g, i) => (
@@ -330,20 +331,20 @@ function TabDialogue({ data, updateField }: TabProps) {
                 </div>
                 <TextareaWithTokens value={g} rows={4}
                   onChange={v => handleUpdateGreeting(i, v)}
-                  placeholder={`Lời chào thay thế #${i + 1}`} />
+                  placeholder={fmt(ui.ceAltGreetingPh, { n: i + 1 })} />
               </div>
             ))}
           </div>
         )}
       </SectionCard>
 
-      <SectionCard title="Ví dụ hội thoại (Example Messages)">
+      <SectionCard title={ui.ceExampleMessages}>
         <div className="mb-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground">
-          Dùng <code className="px-1 py-0.5 bg-background rounded text-primary">&lt;START&gt;</code> để phân cách các đoạn hội thoại ví dụ.
+          {ui.ceExampleHint1} <code className="px-1 py-0.5 bg-background rounded text-primary">&lt;START&gt;</code> {ui.ceExampleHint2}
         </div>
         <TextareaWithTokens value={data.mes_example} rows={12}
           onChange={v => updateField('data.mes_example', v)}
-          placeholder={'<START>\n{{user}}: Xin chào!\n{{char}}: Chào bạn! Rất vui được gặp.\n<START>\n{{user}}: Kể tôi nghe về bạn đi.\n{{char}}: Tôi là...'} />
+          placeholder={ui.ceExamplePh} />
       </SectionCard>
     </>
   );
@@ -359,20 +360,20 @@ function TabSystem({ data, updateField }: TabProps) {
       <SectionCard title="System Prompt">
         <TextareaWithMacros value={data.system_prompt} rows={12}
           onChange={v => updateField('data.system_prompt', v)}
-          placeholder="System prompt gửi cho AI khi bắt đầu hội thoại..." />
+          placeholder={ui.ceSystemPromptPh} />
       </SectionCard>
 
       <SectionCard title="Post History Instructions (Author's Note)">
         <TextareaWithMacros value={data.post_history_instructions} rows={8}
           onChange={v => updateField('data.post_history_instructions', v)}
-          placeholder="Hướng dẫn bổ sung chèn vào sau lịch sử chat..." />
+          placeholder={ui.cePostHistoryPh} />
       </SectionCard>
 
       <SectionCard title="Depth Prompt">
-        <FieldRow label="Nội dung">
+        <FieldRow label={ui.ceDepthContent}>
           <TextareaWithTokens value={data.extensions.depth_prompt.prompt} rows={6}
             onChange={v => updateField('data.extensions.depth_prompt.prompt', v)}
-            placeholder="Prompt chèn ở độ sâu cụ thể trong context..." />
+            placeholder={ui.ceDepthPh} />
         </FieldRow>
 
         <div className="grid grid-cols-2 gap-4">
@@ -439,7 +440,7 @@ function TabAdvanced({ data, updateField }: TabProps) {
       <AccordionSection title={`TavernHelper Scripts (${scriptsCount})`}
         open={showScripts} onToggle={() => setShowScripts(!showScripts)}>
         {scriptsCount === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">Chưa có script nào.</p>
+          <p className="text-xs text-muted-foreground text-center py-4">{ui.ceNoScript}</p>
         ) : (
           <div className="space-y-2">
             {data.extensions.tavern_helper.scripts.map((s, i) => (
@@ -450,23 +451,23 @@ function TabAdvanced({ data, updateField }: TabProps) {
                 <button onClick={() => {
                   updateCard(c => { c.data.extensions.tavern_helper.scripts[i].enabled = !s.enabled; });
                 }} className="text-xs text-muted-foreground hover:text-foreground">
-                  {s.enabled ? 'Tắt' : 'Bật'}
+                  {s.enabled ? ui.ceOff : ui.ceOn}
                 </button>
               </div>
             ))}
           </div>
         )}
         <p className="text-xs text-muted-foreground mt-2">
-          Sửa chi tiết: mở tab <strong>EJS Studio</strong> từ sidebar.
+          {ui.ceEditDetail1} <strong>EJS Studio</strong> {ui.ceEditDetail2}
         </p>
       </AccordionSection>
 
       {/* Variables */}
-      <AccordionSection title="Biến toàn cục (tavern_helper.variables)"
+      <AccordionSection title={ui.ceGlobalVars}
         open={showVariables} onToggle={() => setShowVariables(!showVariables)}>
         <textarea value={variablesJson} rows={10} readOnly
           className="settings-input font-mono text-xs leading-relaxed" />
-        <p className="text-xs text-muted-foreground mt-1">Chỉnh sửa qua MVUZOD Studio hoặc Copilot.</p>
+        <p className="text-xs text-muted-foreground mt-1">{ui.ceEditViaMvuzod}</p>
       </AccordionSection>
 
       {/* MVUZOD Config */}
@@ -478,7 +479,7 @@ function TabAdvanced({ data, updateField }: TabProps) {
             · Mode: <span className="text-foreground">{data.extensions.mvuzod.validationMode}</span>
           </p>
           <p className="text-xs text-muted-foreground mt-2">
-            Mở <strong>MVUZOD Studio</strong> từ sidebar để chỉnh sửa schema.
+            {ui.ceOpenMvuzod1} <strong>MVUZOD Studio</strong> {ui.ceOpenMvuzod2}
           </p>
         </SectionCard>
       )}
@@ -582,7 +583,7 @@ function TextareaWithMacros({ value, onChange, rows, placeholder }: {
       <div className="flex items-center gap-1.5 flex-wrap">
         <button onClick={() => setShowMacros(!showMacros)}
           className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
-          <Copy className="w-3 h-3" /> Chèn macro
+          <Copy className="w-3 h-3" /> {ui.ceInsertMacro}
           {showMacros ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         </button>
         {showMacros && MACROS.map(m => (
