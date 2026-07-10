@@ -19,7 +19,7 @@ import {
   type WikiScrapeConfig, type WikiScrapeProgress, type FandomSearchItem,
 } from '../../lib/ai/wikiScraper';
 import {
-  getPreset, getStrategyLabel,
+  getPreset, getStrategyLabel, keywordHintUi,
   type EntryCategory, type CardType,
 } from '../../lib/worldbook/worldbookConfig';
 import { CompletionCriteriaPanel } from './CompletionCriteriaPanel';
@@ -445,7 +445,7 @@ export function WikiScraperPanel() {
                   {preset.defaults.scan_depth !== null && ` · scan=${preset.defaults.scan_depth}`}
                   {ui.wsRecursive}
                 </p>
-                <p className="text-[10px] text-muted-foreground/60">{ui.wsKeywords}{preset.keywordHint}</p>
+                <p className="text-[10px] text-muted-foreground/60">{ui.wsKeywords}{keywordHintUi(preset.keywordHint)}</p>
               </div>
             );
           })()}

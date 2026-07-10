@@ -3,6 +3,11 @@
  * Theo "Hướng dẫn worldbook" guide: chiến lược kích hoạt, vị trí, thứ tự, đệ quy
  */
 
+// ⚠️ `label`/`description` của ENTRY_CATEGORY_LABELS + preset đi vào PROMPT AI
+// (lib/ai/batchGenerator.ts nhét `catLabel.label` vào lệnh) → KHÔNG i18n hoá.
+// Chỉ `getStrategyLabel()` và `keywordHint` là chuỗi hiển thị thuần → dịch qua ui.
+import { t as ui } from '../../i18n';
+
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -406,10 +411,28 @@ export function getStrategyLabel(constant: boolean, selective: boolean): {
   color: string;
 } {
   if (constant) {
-    return { label: 'Đèn xanh dương — Thường trú', icon: '🔵', color: 'text-blue-400' };
+    return { label: ui.wbStratConstant, icon: '🔵', color: 'text-blue-400' };
   }
   if (selective) {
-    return { label: 'Đèn xanh lá — Kích hoạt bằng từ khóa', icon: '🟢', color: 'text-emerald-400' };
+    return { label: ui.wbStratSelective, icon: '🟢', color: 'text-emerald-400' };
   }
-  return { label: 'Không lọc — Luôn gửi', icon: '⚪', color: 'text-muted-foreground' };
+  return { label: ui.wbStratNone, icon: '⚪', color: 'text-muted-foreground' };
+}
+
+/** Bảng tra keywordHint (chuỗi VI gốc) → i18n. Dùng ở panel thay cho preset.keywordHint. */
+const KEYWORD_HINT_KEY: Record<string, keyof typeof ui> = {
+  'Entry thường trú → không cần từ khóa.': 'khResident',
+  'Entry thường trú (thẻ đơn) → không cần từ khóa.': 'khResidentSingle',
+  'Tên đầy đủ, biệt danh, ngoại hiệu, chức vụ. VD: "Vương Tĩnh,Cô giáo Vương,Giáo viên chủ nhiệm"': 'khNpc',
+  'Tên cảnh vật, địa danh, tên gọi khác, hành động. VD: "Thư viện,Thư viện trường,Mượn sách"': 'khScene',
+  'Tên nhân vật cần điều chỉnh. VD: "Lâm Tiểu Vũ,Tiểu Vũ"': 'khD0',
+  'Tên nhân vật + từ khóa NSFW.': 'khNsfw',
+  'Khai bạch không dùng keyword — chỉ là first message.': 'khOpening',
+  'Tên nhân vật + biệt danh + ngoại hiệu. VD: "Thu Minh Nguyệt,Minh Nguyệt,Nguyệt Nguyệt,Chị Thu"': 'khMnChar',
+};
+
+/** Nhãn keywordHint đã i18n. Fallback về chuỗi gốc nếu chưa map. */
+export function keywordHintUi(hint: string): string {
+  const k = KEYWORD_HINT_KEY[hint];
+  return k ? ui[k] : hint;
 }

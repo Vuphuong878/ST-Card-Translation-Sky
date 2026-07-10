@@ -17,7 +17,7 @@ import type { CompletionCriteria, VerificationReport } from '../../lib/completio
 import { DEFAULT_CRITERIA } from '../../lib/completionVerifier/criteria';
 import { runWithVerification } from '../../lib/completionVerifier/verifier';
 import {
-  getPreset, getStrategyLabel,
+  getPreset, getStrategyLabel, keywordHintUi,
   type EntryCategory, type CardType,
 } from '../../lib/worldbook/worldbookConfig';
 import { buildSchemaContextForBatch, getSchemaPreviewSummary } from '../../lib/mvuzod/schemaContextBuilder';
@@ -277,7 +277,7 @@ export function BatchGeneratorPanel() {
                   {preset.defaults.scan_depth !== null && ` · scan=${preset.defaults.scan_depth}`}
                   {ui.wsRecursive}
                 </p>
-                <p className="text-[10px] text-muted-foreground/60">{ui.wsKeywords}{preset.keywordHint}</p>
+                <p className="text-[10px] text-muted-foreground/60">{ui.wsKeywords}{keywordHintUi(preset.keywordHint)}</p>
               </div>
             );
           })()}
