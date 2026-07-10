@@ -2,6 +2,7 @@ import type { CharacterCard, ProxySettings, TranslationField } from '../types/ca
 import type { ZodFieldDef } from '../types/mvuZodTypes';
 import { extractPatchFieldNames } from './jsonPatchValidator';
 import { callProvider } from './apiClient';
+import { runWorkerPool } from './runWorkerPool';
 import { extractZodObjectBlocks, parseZodFields, extractOrderedStringPairs } from './zodSchemaEngine';
 
 /**
@@ -1868,6 +1869,8 @@ export async function aiTranslateMvuKeys(
   existingMappings?: Record<string, string>,
   customPrompt?: string,
   onProgress?: (done: number, total: number) => void,
+  /** Số lô chạy song song = computePoolConcurrency (Σ key×RPM mọi provider). Mặc định 1. */
+  concurrency: number = 1,
 ): Promise<Record<string, string>> {
   if (keys.length === 0) return {};
 
@@ -1943,8 +1946,10 @@ RESPOND in EXACT JSON format (no markdown): {"translations": {"original_key": "T
   onProgress?.(0, keysToTranslate.length);
   let translatedSoFar = 0;
 
-  for (const batch of batches) {
-    if (signal?.aborted) break;
+  // Xử lý 1 lô. Chạy SONG SONG qua runWorkerPool (mỗi call vẫn đi qua pickLane nên RPM
+  // an toàn) — trước đây for...await tuần tự khiến pha "Dịch tên biến MVU" chỉ dùng 1 lane.
+  const processBatch = async (batch: string[]): Promise<void> => {
+    if (signal?.aborted) return;
 
     let contextBlock = '';
     if (schemaContext && schemaContext.trim()) {
@@ -2080,7 +2085,16 @@ ${currentVarList}${retryHint}`;
     // Report progress after each batch completes (success or exhausted retries)
     translatedSoFar += batch.length;
     onProgress?.(Math.min(translatedSoFar, keysToTranslate.length), keysToTranslate.length);
-  } // end batch loop
+  }; // end processBatch
+
+  // Chạy các lô SONG SONG theo ngân sách pool. concurrency do caller truyền
+  // (computePoolConcurrency = Σ key×RPM mọi provider). pickLane trong callProvider lo RPM.
+  await runWorkerPool({
+    total: batches.length,
+    concurrency: Math.max(1, concurrency),
+    runOne: (i) => processBatch(batches[i]),
+    shouldStop: () => !!signal?.aborted,
+  });
 
   // ── POST-BATCH: Bảo toàn prefix chức năng "_" (readonly) / "$" (ẩn) ───────
   // Chạy TRƯỚC dedup để `类型`→`Loại` và `_类型`→`_Loại` được xem là hai bản

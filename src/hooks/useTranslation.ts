@@ -1567,6 +1567,7 @@ export function useTranslation() {
                   total,
                 });
               },
+              computePoolConcurrency(store.proxy),   // chạy các lô tên biến SONG SONG qua pool
             );
             store.setPreprocessProgress(null);
             
