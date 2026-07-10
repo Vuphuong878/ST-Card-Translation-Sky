@@ -10,6 +10,7 @@ import {
 import { useCardStore } from '../../store/cardStore';
 import { TFIDFIndex, type RAGSearchResult } from '../../lib/rag/tfidfIndexer';
 import { buildRAGContext } from '../../lib/rag/ragContextBuilder';
+import { t as ui } from '../../i18n';
 
 export function RAGDebugPanel() {
   const card = useCardStore(s => s.card);
@@ -105,7 +106,7 @@ export function RAGDebugPanel() {
             </div>
           ) : query && (
             <p className="text-xs text-muted-foreground text-center py-2">
-              Nhập query và nhấn Enter để test RAG search.
+              {ui.rdHint}
             </p>
           )}
         </div>

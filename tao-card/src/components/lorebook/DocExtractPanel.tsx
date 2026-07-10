@@ -17,6 +17,7 @@ import {
 } from '../../lib/worldbook/worldbookConfig';
 import { DEFAULT_STEPS } from '../../lib/ai/worldbuildingDefaults';
 import { safeSetItem } from '../../lib/safeStorage';
+import { t as ui, fmt } from '../../i18n';
 
 const POSITION_LABELS: Record<number, string> = {
   0: '↑ Before Char', 1: '↓ After Char', 2: '📝 Top AN',
@@ -71,7 +72,7 @@ export function DocExtractPanel() {
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.match(/\.(txt|md|text)$/i)) {
-      addLog('❌ Chỉ hỗ trợ file .txt, .md');
+      addLog(ui.deOnlyTxt);
       return;
     }
     const reader = new FileReader();
@@ -79,7 +80,7 @@ export function DocExtractPanel() {
       const text = reader.result as string;
       const chunks = splitDocument(text, { chunkSize });
       setFileInfo({ name: file.name, size: file.size, text, chunks: chunks.length });
-      addLog(`📂 Đã nạp "${file.name}" (${(file.size / 1024).toFixed(1)} KB, ~${chunks.length} chunks @ ${chunkSize.toLocaleString()} ký tự/chunk)`);
+      addLog(fmt(ui.deLoaded, { name: file.name, kb: (file.size / 1024).toFixed(1), chunks: chunks.length, size: chunkSize.toLocaleString() }));
     };
     reader.readAsText(file);
   }, [addLog, chunkSize]);
@@ -135,7 +136,7 @@ export function DocExtractPanel() {
         updateEntry: (id, patch) => useCardStore.getState().updateEntry(id, patch),
       });
     } catch (err) {
-      addLog(`💥 Lỗi: ${err instanceof Error ? err.message : String(err)}`);
+      addLog(fmt(ui.deError, { msg: err instanceof Error ? err.message : String(err) }));
     }
     setIsRunning(false);
   }, [fileInfo, activeProfile, instructions, useCardContext, defaultPosition, insertionOrderStart, card, settings.generationParams, addEntry, addLog, entryCategory, cardType, chunkSize]);
@@ -151,7 +152,7 @@ export function DocExtractPanel() {
           dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'
         }`}>
         <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Kéo-thả file <code>.txt</code> vào đây hoặc nhấn để chọn</p>
+        <p className="text-sm text-muted-foreground">{fmt(ui.deDropHint, { ext: '.txt' })}</p>
       </div>
 
       {/* File info */}
@@ -164,56 +165,56 @@ export function DocExtractPanel() {
               {(fileInfo.size / 1024).toFixed(1)} KB · ~{fileInfo.chunks} chunks
             </p>
           </div>
-          <button onClick={() => setFileInfo(null)} className="text-xs text-muted-foreground hover:text-foreground">Xóa</button>
+          <button onClick={() => setFileInfo(null)} className="text-xs text-muted-foreground hover:text-foreground">{ui.deRemove}</button>
         </div>
       )}
 
       {/* Instructions */}
       <div>
-        <label className="settings-label">Hướng dẫn thêm cho AI</label>
+        <label className="settings-label">{ui.deInstructions}</label>
         <textarea value={instructions} onChange={e => setInstructions(e.target.value)}
           rows={3} className="settings-input text-sm resize-y" disabled={isRunning}
-          placeholder="Ví dụ: Tập trung vào nhân vật và kỹ năng, bỏ qua đoạn quảng cáo..." />
+          placeholder={ui.deInstructionsPh} />
       </div>
 
       {/* Chunk size — số ký tự mỗi lần quét (mỗi chunk = 1 call API) */}
       <div>
-        <label className="settings-label">Kích thước chunk (ký tự mỗi lần quét = 1 call API)</label>
+        <label className="settings-label">{ui.deChunkSize}</label>
         <input type="number" value={chunkSize} min={2000} max={500000} step={5000}
           onChange={e => setChunkSize(Math.max(2000, Number(e.target.value) || 30000))}
           className="settings-input" disabled={isRunning} />
         <p className="text-xs text-muted-foreground mt-1">
-          Càng lớn → càng ÍT call API (nhanh/rẻ hơn) nhưng cần model có context lớn. 15.000 thường quá nhỏ; thử 30.000–60.000.
-          {fileInfo && <> Tài liệu hiện tại ≈ <b>{fileInfo.chunks}</b> chunk = <b>{fileInfo.chunks}</b> call/bước.</>}
+          {ui.deChunkHint}
+          {fileInfo && <>{ui.deChunkDoc}<b>{fileInfo.chunks}</b>{ui.deChunkDoc2}<b>{fileInfo.chunks}</b>{ui.deChunkDoc3}</>}
         </p>
       </div>
 
       <label className="flex items-center gap-2 text-sm cursor-pointer">
         <input type="checkbox" checked={useCardContext} onChange={e => setUseCardContext(e.target.checked)}
           className="settings-checkbox" disabled={isRunning} />
-        Dùng ngữ cảnh card hiện tại
+        {ui.deUseCardContext}
       </label>
 
       {/* Entry Category Selector */}
       <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="settings-label">Loại thẻ</label>
+            <label className="settings-label">{ui.deCardType}</label>
             <div className="flex gap-3">
               <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                 <input type="radio" name="de-cardType" checked={cardType === 'single'}
                   onChange={() => setCardType('single')} className="settings-checkbox" disabled={isRunning} />
-                Nhân vật đơn
+                {ui.deSingleChar}
               </label>
               <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                 <input type="radio" name="de-cardType" checked={cardType === 'multi'}
                   onChange={() => setCardType('multi')} className="settings-checkbox" disabled={isRunning} />
-                Nhiều NV
+                {ui.deMultiChar}
               </label>
             </div>
           </div>
           <div>
-            <label className="settings-label">Loại Entry sẽ tạo</label>
+            <label className="settings-label">{ui.deEntryCategory}</label>
             <select value={entryCategory} onChange={e => setEntryCategory(e.target.value as EntryCategory)}
               className="settings-input text-xs" disabled={isRunning}>
               {Object.entries(ENTRY_CATEGORY_LABELS).map(([key, { label, icon }]) => (
@@ -237,14 +238,14 @@ export function DocExtractPanel() {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="settings-label">Vị trí mặc định</label>
+          <label className="settings-label">{ui.deDefaultPosition}</label>
           <select value={defaultPosition} onChange={e => setDefaultPosition(Number(e.target.value) as 0|1|2|3|4|5|6|7)}
             className="settings-input" disabled={isRunning}>
             {Object.entries(POSITION_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         <div>
-          <label className="settings-label">Insertion Order bắt đầu</label>
+          <label className="settings-label">{ui.deInsertionOrder}</label>
           <input type="number" value={insertionOrderStart}
             onChange={e => setInsertionOrderStart(parseInt(e.target.value) || 100)}
             className="settings-input" min={0} disabled={isRunning} />
@@ -256,12 +257,12 @@ export function DocExtractPanel() {
         {!isRunning ? (
           <button onClick={handleStart} disabled={!fileInfo || !activeProfile}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
-            <Play className="w-4 h-4" /> Bắt đầu trích xuất
+            <Play className="w-4 h-4" /> {ui.deStart}
           </button>
         ) : (
           <button onClick={() => { stoppedRef.current = true; }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 text-destructive text-sm">
-            <Square className="w-4 h-4" /> Dừng
+            <Square className="w-4 h-4" /> {ui.deStop}
           </button>
         )}
       </div>
@@ -270,7 +271,7 @@ export function DocExtractPanel() {
       {activeProfile && (
         <div className="rounded-xl border border-border bg-card p-4 space-y-2">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Quy trình các bước trích xuất ({ (activeProfile.steps || DEFAULT_STEPS).filter(s => s.enabled).length } bước)
+            {fmt(ui.deSteps, { count: (activeProfile.steps || DEFAULT_STEPS).filter(s => s.enabled).length })}
           </h3>
           <div className="space-y-1.5 pt-1">
             {(activeProfile.steps || DEFAULT_STEPS).filter(s => s.enabled).map((step, idx) => {
@@ -308,18 +309,18 @@ export function DocExtractPanel() {
         <div className="rounded-xl border border-border bg-card p-4 space-y-2">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">
-              {progress.status === 'done' ? 'Đã hoàn thành' : `Đang xử lý bước ${progress.chunk}/${progress.totalChunks}`}
+              {progress.status === 'done' ? ui.deDone : fmt(ui.deProcessing, { chunk: progress.chunk, total: progress.totalChunks })}
             </span>
-            <span className="text-foreground font-medium">{progress.entriesCreated} entries được tạo</span>
+            <span className="text-foreground font-medium">{fmt(ui.deEntriesCreated, { count: progress.entriesCreated })}</span>
           </div>
           <div className="h-2 rounded-full bg-muted overflow-hidden">
             <div className="h-full rounded-full bg-primary transition-all duration-300"
               style={{ width: `${Math.round((progress.chunk / progress.totalChunks) * 100)}%` }} />
           </div>
           <div className="flex items-center gap-2 text-xs">
-            {progress.status === 'running' && <><Loader2 className="w-3 h-3 animate-spin text-primary" /> Đang chạy dệt bối cảnh...</>}
-            {progress.status === 'done' && <><Check className="w-3 h-3 text-emerald-400" /> Hoàn thành toàn bộ tiến trình dệt bối cảnh</>}
-            {progress.status === 'error' && <><AlertCircle className="w-3 h-3 text-destructive" /> Lỗi</>}
+            {progress.status === 'running' && <><Loader2 className="w-3 h-3 animate-spin text-primary" /> {ui.deRunning}</>}
+            {progress.status === 'done' && <><Check className="w-3 h-3 text-emerald-400" /> {ui.deAllDone}</>}
+            {progress.status === 'error' && <><AlertCircle className="w-3 h-3 text-destructive" /> {ui.deErrorShort}</>}
           </div>
         </div>
       )}

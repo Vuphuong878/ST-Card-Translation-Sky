@@ -22,6 +22,7 @@ import {
 } from '../../lib/worldbook/worldbookConfig';
 import { buildSchemaContextForBatch, getSchemaPreviewSummary } from '../../lib/mvuzod/schemaContextBuilder';
 import type { MVUZODSchema } from '../../types/mvuzod.types';
+import { t as ui, fmt } from '../../i18n';
 
 const POSITION_LABELS: Record<number, string> = {
   0: '↑ Before Char', 1: '↓ After Char', 2: '📝 Top AN',
@@ -46,13 +47,13 @@ export function BatchGeneratorPanel() {
   }
 
   const TABS: TabData[] = useMemo(() => [
-    { id: 'main_char', label: 'Nhân vật chính', icon: '👑', cardType: 'single', category: 'character_detail', placeholder: 'Ví dụ: Tạo một nam chính lạnh lùng, sử dụng kiếm thuật hệ băng, mang trong mình dòng máu ma tộc...' },
-    { id: 'multi_char', label: 'Nhân vật phụ (NPC)', icon: '👥', cardType: 'multi', category: 'npc', placeholder: 'Ví dụ: Tạo 5 thành viên của nhóm lính đánh thuê Hắc Vũ, bao gồm cung thủ, pháp sư, đấu sĩ...' },
-    { id: 'worldview', label: 'Thế giới quan', icon: '🌍', cardType: 'single', category: 'worldview', placeholder: 'Ví dụ: Mô tả thế giới tu tiên hiện đại, nơi linh khí khô kiệt và con người dùng máy móc để tu luyện...' },
-    { id: 'region', label: 'Địa lý & Khu vực', icon: '🗺', cardType: 'single', category: 'region_overview', placeholder: 'Ví dụ: Tạo các khu vực trong tông môn như Tàng Kinh Các, Dược Viên, Ngoại Môn, Nội Môn...' },
-    { id: 'scene', label: 'Cảnh vật & Sự kiện', icon: '🏞', cardType: 'single', category: 'scene', placeholder: 'Ví dụ: Sự kiện Đại hội Tỉ võ 10 năm một lần hoặc cảnh Thung lũng sương mù...' },
-    { id: 'secondary', label: 'Chỉ đạo AI (D0)', icon: '🎯', cardType: 'single', category: 'secondary_explanation', placeholder: 'Ví dụ: Căn dặn AI luôn viết văn phong kiếm hiệp cổ trang và tập trung mô tả nội tâm...' },
-    { id: 'custom', label: 'Tuỳ chỉnh tự do', icon: '⚙️', cardType: 'single', category: 'custom', placeholder: 'Nhập nội dung bất kỳ bạn muốn tạo...' },
+    { id: 'main_char', label: ui.tabMainChar, icon: '👑', cardType: 'single', category: 'character_detail', placeholder: ui.bgPhMainChar },
+    { id: 'multi_char', label: ui.tabNpc, icon: '👥', cardType: 'multi', category: 'npc', placeholder: ui.bgPhNpc },
+    { id: 'worldview', label: ui.tabWorldview, icon: '🌍', cardType: 'single', category: 'worldview', placeholder: ui.bgPhWorldview },
+    { id: 'region', label: ui.tabRegion, icon: '🗺', cardType: 'single', category: 'region_overview', placeholder: ui.bgPhRegion },
+    { id: 'scene', label: ui.tabScene, icon: '🏞', cardType: 'single', category: 'scene', placeholder: ui.bgPhScene },
+    { id: 'secondary', label: ui.tabDirective, icon: '🎯', cardType: 'single', category: 'secondary_explanation', placeholder: ui.bgPhDirective },
+    { id: 'custom', label: ui.tabCustom, icon: '⚙️', cardType: 'single', category: 'custom', placeholder: ui.bgPhCustom },
   ], []);
 
   const [activeTab, setActiveTab] = useState<TabKey>('main_char');
@@ -118,7 +119,7 @@ export function BatchGeneratorPanel() {
 
   const handleStart = useCallback(async (runAll: boolean) => {
     if (!activeProfile) {
-      addLog('❌ Chưa cấu hình proxy profile. Vào Settings để tạo.');
+      addLog(ui.wsNoProfile);
       return;
     }
 
@@ -127,7 +128,7 @@ export function BatchGeneratorPanel() {
       : [TABS.find(t => t.id === activeTab)!].filter(t => prompts[t.id].trim().length > 0);
 
     if (tabsToRun.length === 0) {
-      addLog('❌ Nhập chủ đề / yêu cầu nội dung vào tab trước khi chạy.');
+      addLog(ui.bgNeedPrompt);
       return;
     }
 
@@ -141,7 +142,7 @@ export function BatchGeneratorPanel() {
         
         const tab = tabsToRun[i];
         if (tabsToRun.length > 1) {
-          addLog(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🚀 Đang chạy tab: ${tab.label} (${i + 1}/${tabsToRun.length})...\n━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+          addLog(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n${fmt(ui.wsRunTab, { label: tab.label, i: i + 1, total: tabsToRun.length })}\n━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         }
         
         const config: BatchGenConfig = {
@@ -181,7 +182,7 @@ export function BatchGeneratorPanel() {
         // Run verification after batch if enabled
         if (criteria.enabled && !useBatchRunStore.getState().stopped) {
           setIsVerifying(true);
-          addLog(`\n🎯 Bắt đầu Completion Verification cho tab: ${tab.label}...`);
+          addLog(`\n${fmt(ui.wsStartVerify, { label: tab.label })}`);
           const report = await runWithVerification(config, criteria, {
             card: structuredClone(useCardStore.getState().card),
             profile: activeProfile,
@@ -196,7 +197,7 @@ export function BatchGeneratorPanel() {
         }
       }
     } catch (err) {
-      addLog(`💥 Lỗi nghiêm trọng: ${err instanceof Error ? err.message : String(err)}`);
+      addLog(fmt(ui.wsFatal, { msg: err instanceof Error ? err.message : String(err) }));
     }
     
     useBatchRunStore.getState().setIsRunning(false);
@@ -209,12 +210,12 @@ export function BatchGeneratorPanel() {
     const run = useBatchRunStore.getState();
     const next = !run.isPaused;
     run.setPaused(next);
-    addLog(next ? '⏸ Tạm dừng...' : '▶️ Tiếp tục...');
+    addLog(next ? ui.wsPause : ui.wsResume);
   }, [addLog]);
 
   const handleStop = useCallback(() => {
     useBatchRunStore.getState().setStopped(true);
-    addLog('⏹ Dừng hẳn...');
+    addLog(ui.wsStopping);
   }, [addLog]);
 
   // ─── Render ─────────────────────────────────────────────────────────
@@ -225,7 +226,7 @@ export function BatchGeneratorPanel() {
     <div className="space-y-5 p-5 max-w-2xl mx-auto">
       {/* Category Tabs */}
       <div className="flex flex-col gap-2">
-        <label className="settings-label text-sm mb-1">Loại nội dung muốn tạo (Chọn Tab & Nhập ý tưởng)</label>
+        <label className="settings-label text-sm mb-1">{ui.bgPickTab}</label>
         <div className="flex flex-wrap gap-2">
           {TABS.map(tab => (
             <button
@@ -274,9 +275,9 @@ export function BatchGeneratorPanel() {
                   pos={preset.defaults.position === 0 ? 'before_char' : preset.defaults.position === 1 ? 'after_char' : `@D${preset.defaults.depth}`}
                   {' · '}order={preset.defaults.insertion_order}
                   {preset.defaults.scan_depth !== null && ` · scan=${preset.defaults.scan_depth}`}
-                  {' · '}đệ quy=✅
+                  {ui.wsRecursive}
                 </p>
-                <p className="text-[10px] text-muted-foreground/60">Từ khóa: {preset.keywordHint}</p>
+                <p className="text-[10px] text-muted-foreground/60">{ui.wsKeywords}{preset.keywordHint}</p>
               </div>
             );
           })()}
@@ -288,12 +289,12 @@ export function BatchGeneratorPanel() {
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input type="checkbox" checked={useCardContext} onChange={e => setUseCardContext(e.target.checked)}
             className="settings-checkbox" disabled={isRunning} />
-          Dùng Description/Personality/Scenario làm ngữ cảnh
+          {ui.wsUseCardContext}
         </label>
         <label className="flex items-center gap-2 text-sm cursor-pointer text-blue-400">
           <input type="checkbox" checked={useWebSearch} onChange={e => setUseWebSearch(e.target.checked)}
             className="settings-checkbox" disabled={isRunning} />
-          🌐 Kích hoạt Tìm Kiếm Web Mỗi Lượt (SOTA Web Search)
+          {ui.wsWebSearch}
         </label>
 
         {/* Schema-aware toggle — only show when schema exists */}
@@ -307,15 +308,15 @@ export function BatchGeneratorPanel() {
               <input type="checkbox" checked={useSchemaContext} onChange={e => setUseSchemaContext(e.target.checked)}
                 className="settings-checkbox" disabled={isRunning} />
               <span className={`font-medium ${useSchemaContext ? 'text-emerald-400' : 'text-muted-foreground'}`}>
-                🧬 Sinh entries dựa theo Schema biến (MVUZOD)
+                {ui.bgSchemaMode}
               </span>
             </label>
             <p className={`text-[10px] ml-6 ${useSchemaContext ? 'text-emerald-400/70' : 'text-muted-foreground/60'}`}>
-              Schema hiện có: {schemaPreview.summary}
+              {ui.bgSchemaCurrent}{schemaPreview.summary}
             </p>
             {useSchemaContext && (
               <p className="text-[10px] ml-6 text-muted-foreground">
-                AI sẽ tạo entries có tham chiếu đến các biến trong schema (quan hệ, vật phẩm, trạng thái...)
+                {ui.bgSchemaHint}
               </p>
             )}
           </div>
@@ -325,7 +326,7 @@ export function BatchGeneratorPanel() {
       {/* Entries config */}
       <div className="grid grid-cols-4 gap-4">
         <div>
-          <label className="settings-label">Tổng số Entries</label>
+          <label className="settings-label">{ui.wsTotalEntries}</label>
           <input type="number" value={totalEntries} onChange={e => setTotalEntries(Math.max(1, parseInt(e.target.value) || 1))}
             className="settings-input" min={1} max={500} disabled={isRunning} />
         </div>
@@ -338,7 +339,7 @@ export function BatchGeneratorPanel() {
           <label className="settings-label">Tokens / Entry</label>
           <input type="number" value={tokensPerEntry} onChange={e => setTokensPerEntry(Math.max(0, parseInt(e.target.value) || 0))}
             className="settings-input" min={0} max={2000} disabled={isRunning}
-            title="Số token mục tiêu cho mỗi entry. 0 = không giới hạn." />
+            title={ui.bgTokensPerEntry} />
         </div>
         <div>
           <label className="settings-label">Batch song song (Pro ~5, Flash ~17)</label>
@@ -350,19 +351,19 @@ export function BatchGeneratorPanel() {
       {/* Token budget hint */}
       {tokensPerEntry > 0 && (
         <div className="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400/80">
-          📏 Mỗi entry sẽ có ≈ <span className="font-medium text-amber-400">{tokensPerEntry}</span> tokens
-          (<span className="font-medium">≈ {Math.round(tokensPerEntry * 3.5)}</span> ký tự)
-          {tokensPerEntry <= 100 && ' — ngắn gọn, dạng liệt kê'}
-          {tokensPerEntry > 100 && tokensPerEntry <= 300 && ' — vừa phải, đủ chi tiết'}
-          {tokensPerEntry > 300 && ' — chi tiết đầy đủ'}
+          {ui.bgTokensLine}<span className="font-medium text-amber-400">{tokensPerEntry}</span>{ui.bgTokensLine2}
+          <span className="font-medium">{Math.round(tokensPerEntry * 3.5)}</span>{ui.bgTokensLine3}
+          {tokensPerEntry <= 100 && ui.bgTokensShort}
+          {tokensPerEntry > 100 && tokensPerEntry <= 300 && ui.bgTokensMedium}
+          {tokensPerEntry > 300 && ui.bgTokensLong}
         </div>
       )}
 
       {/* Calculated batches */}
       <div className="px-3 py-2 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground">
-        → Sẽ thực hiện <span className="text-foreground font-medium">{totalBatches}</span> lượt gọi AI
+        {ui.wsWillCall}<span className="text-foreground font-medium">{totalBatches}</span>{ui.wsWillCall2}
         {concurrentBatches > 1 && (
-          <> (<span className="text-foreground font-medium">{totalRounds}</span> vòng × {concurrentBatches} song song)</>)}
+          <> (<span className="text-foreground font-medium">{totalRounds}</span>{ui.wsRounds}{concurrentBatches}{ui.wsRoundsParallel}</>)}
       </div>
 
       {/* AI Auto-Config Toggle */}
@@ -370,15 +371,15 @@ export function BatchGeneratorPanel() {
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input type="checkbox" checked={autoConfig} onChange={e => setAutoConfig(e.target.checked)}
             className="settings-checkbox" disabled={isRunning} />
-          <span className="font-medium text-violet-400">🤖 AI tự sắp xếp order & config cho từng entry</span>
+          <span className="font-medium text-violet-400">{ui.wsAutoConfig}</span>
         </label>
         {autoConfig && (
           <p className="text-[10px] text-muted-foreground ml-6">
-            AI sẽ tự quyết định <code className="px-1 py-0.5 rounded bg-muted">insertion_order</code>,{' '}
+            {ui.wsAutoConfigHint}<code className="px-1 py-0.5 rounded bg-muted">insertion_order</code>,{' '}
             <code className="px-1 py-0.5 rounded bg-muted">position</code>,{' '}
             <code className="px-1 py-0.5 rounded bg-muted">depth</code>,{' '}
             <code className="px-1 py-0.5 rounded bg-muted">constant/selective</code>{' '}
-            cho từng entry dựa trên nội dung. Worldview sẽ được gán order=1-3, NPC=100+, etc.
+            {ui.bgAutoConfigHint2}
           </p>
         )}
       </div>
@@ -388,7 +389,7 @@ export function BatchGeneratorPanel() {
         <>
           {/* Position */}
           <div>
-            <label className="settings-label">Vị trí mặc định</label>
+            <label className="settings-label">{ui.wsDefaultPosition}</label>
             <select value={defaultPosition} onChange={e => setDefaultPosition(Number(e.target.value) as 0|1|2|3|4|5|6|7)}
               className="settings-input" disabled={isRunning}>
               {Object.entries(POSITION_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -402,16 +403,16 @@ export function BatchGeneratorPanel() {
               <div className="flex gap-2">
                 <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                   <input type="radio" name="ioMode" checked={insertionOrderMode === 'same'} disabled={isRunning}
-                    onChange={() => setInsertionOrderMode('same')} className="settings-checkbox" /> Giữ nguyên
+                    onChange={() => setInsertionOrderMode('same')} className="settings-checkbox" /> {ui.wsKeepOrder}
                 </label>
                 <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                   <input type="radio" name="ioMode" checked={insertionOrderMode === 'increment'} disabled={isRunning}
-                    onChange={() => setInsertionOrderMode('increment')} className="settings-checkbox" /> Tăng dần
+                    onChange={() => setInsertionOrderMode('increment')} className="settings-checkbox" /> {ui.wsIncrementOrder}
                 </label>
               </div>
             </div>
             <div>
-              <label className="settings-label">Bắt đầu từ</label>
+              <label className="settings-label">{ui.wsStartFrom}</label>
               <input type="number" value={insertionOrderStart}
                 onChange={e => setInsertionOrderStart(parseInt(e.target.value) || 100)}
                 className="settings-input" min={0} disabled={isRunning} />
@@ -424,13 +425,13 @@ export function BatchGeneratorPanel() {
       <div className="rounded-xl border border-border overflow-hidden">
         <button onClick={() => setShowAdvanced(!showAdvanced)}
           className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors">
-          Tuỳ chọn nâng cao
+          {ui.wsAdvanced}
           {showAdvanced ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
         {showAdvanced && (
           <div className="px-4 pb-4 pt-3 border-t border-border space-y-3">
             <div>
-              <label className="settings-label">Model Override (để trống = dùng profile mặc định)</label>
+              <label className="settings-label">{ui.wsModelOverride}</label>
               <input type="text" value={modelOverride} onChange={e => setModelOverride(e.target.value)}
                 className="settings-input text-xs font-mono" placeholder="gpt-4o-mini" disabled={isRunning} />
             </div>
@@ -464,11 +465,11 @@ export function BatchGeneratorPanel() {
           <>
             <button onClick={() => handleStart(false)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/50 font-medium text-sm hover:bg-blue-600/30 transition-colors">
-              <Play className="w-4 h-4" /> Chạy Tab Hiện Tại
+              <Play className="w-4 h-4" /> {ui.wsRunCurrent}
             </button>
             <button onClick={() => handleStart(true)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors">
-              <Zap className="w-4 h-4" /> 🚀 Chạy Tất Cả Tab Đã Nhập
+              <Zap className="w-4 h-4" /> {ui.wsRunAll}
             </button>
           </>
         ) : (
@@ -476,11 +477,11 @@ export function BatchGeneratorPanel() {
             <button onClick={handlePause}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm hover:bg-muted transition-colors">
               {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-              {isPaused ? 'Tiếp tục' : 'Tạm dừng'}
+              {isPaused ? ui.wsResumeBtn : ui.wsPauseBtn}
             </button>
             <button onClick={handleStop}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 text-destructive text-sm hover:bg-destructive/20 transition-colors">
-              <Square className="w-4 h-4" /> Dừng hẳn
+              <Square className="w-4 h-4" /> {ui.wsStopBtn}
             </button>
           </>
         )}
@@ -502,11 +503,11 @@ export function BatchGeneratorPanel() {
               style={{ width: `${progressPercent}%` }} />
           </div>
           <div className="flex items-center gap-2 text-xs">
-            {progress.status === 'running' && <><Loader2 className="w-3 h-3 animate-spin text-primary" /> Đang chạy...</>}
-            {progress.status === 'paused' && <><Pause className="w-3 h-3 text-amber-400" /> Tạm dừng</>}
-            {progress.status === 'done' && <><Check className="w-3 h-3 text-emerald-400" /> Hoàn thành</>}
-            {progress.status === 'error' && <><AlertCircle className="w-3 h-3 text-destructive" /> Lỗi</>}
-            {progress.status === 'stopped' && <><Square className="w-3 h-3 text-muted-foreground" /> Đã dừng</>}
+            {progress.status === 'running' && <><Loader2 className="w-3 h-3 animate-spin text-primary" /> {ui.bgRunning}</>}
+            {progress.status === 'paused' && <><Pause className="w-3 h-3 text-amber-400" /> {ui.wsPaused}</>}
+            {progress.status === 'done' && <><Check className="w-3 h-3 text-emerald-400" /> {ui.wsDone}</>}
+            {progress.status === 'error' && <><AlertCircle className="w-3 h-3 text-destructive" /> {ui.wsError}</>}
+            {progress.status === 'stopped' && <><Square className="w-3 h-3 text-muted-foreground" /> {ui.wsStopped}</>}
           </div>
         </div>
       )}
@@ -517,8 +518,8 @@ export function BatchGeneratorPanel() {
           progress.status === 'done' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-muted border-border text-muted-foreground'
         }`}>
           {progress.status === 'done'
-            ? `✅ Hoàn thành! Đã tạo ${progress.created}/${progress.total} entries.`
-            : `⏹ Đã dừng. Tạo được ${progress.created}/${progress.total} entries.`}
+            ? fmt(ui.wsDoneMsg, { created: progress.created, total: progress.total })
+            : fmt(ui.wsStoppedMsg, { created: progress.created, total: progress.total })}
         </div>
       )}
 

@@ -9,6 +9,7 @@ import {
   CheckCircle, XCircle, Loader2,
 } from 'lucide-react';
 import type { CompletionCriteria, RequiredTopic, VerificationReport } from '../../lib/completionVerifier/criteria';
+import { t as ui } from '../../i18n';
 
 export function CompletionCriteriaPanel({
   criteria, onChange, report, isVerifying,
@@ -47,9 +48,9 @@ export function CompletionCriteriaPanel({
         className="w-full flex items-center justify-between px-4 py-3 bg-card/50 hover:bg-muted/30 transition-colors">
         <div className="flex items-center gap-2">
           <Target className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium">🎯 Tiêu chí hoàn thành</span>
+          <span className="text-sm font-medium">{ui.ccTitle}</span>
           {criteria.enabled && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">BẬT</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{ui.ccOn}</span>
           )}
         </div>
         {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
@@ -61,20 +62,20 @@ export function CompletionCriteriaPanel({
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={criteria.enabled} onChange={e => update('enabled', e.target.checked)}
               className="settings-checkbox" />
-            Bật Completion Verification
+            {ui.ccEnable}
           </label>
 
           {criteria.enabled && (
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="settings-label">Số entry tối thiểu</label>
+                  <label className="settings-label">{ui.ccMinEntries}</label>
                   <input type="number" value={criteria.minEntryCount ?? ''} min={1}
                     onChange={e => update('minEntryCount', parseInt(e.target.value) || undefined)}
                     className="settings-input" placeholder="10" />
                 </div>
                 <div>
-                  <label className="settings-label">Độ dài tối thiểu / entry (chars)</label>
+                  <label className="settings-label">{ui.ccMinLength}</label>
                   <input type="number" value={criteria.minContentLengthPerEntry ?? ''} min={10}
                     onChange={e => update('minContentLengthPerEntry', parseInt(e.target.value) || undefined)}
                     className="settings-input" placeholder="100" />
@@ -87,12 +88,12 @@ export function CompletionCriteriaPanel({
                   <label className="settings-label !mb-0">Topic Coverage</label>
                   <button onClick={addTopic}
                     className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors">
-                    <Plus className="w-3 h-3" /> Thêm topic
+                    <Plus className="w-3 h-3" /> {ui.ccAddTopic}
                   </button>
                 </div>
                 {(criteria.requiredTopics ?? []).map((topic, idx) => (
                   <div key={idx} className="flex gap-2 mb-2 items-start">
-                    <input type="text" value={topic.topic} placeholder="Tên topic"
+                    <input type="text" value={topic.topic} placeholder={ui.ccTopicPh}
                       onChange={e => updateTopic(idx, 'topic', e.target.value)}
                       className="settings-input flex-1 text-xs" />
                     <input type="text" value={topic.keywords.join(', ')} placeholder="keywords, ..."
@@ -115,14 +116,14 @@ export function CompletionCriteriaPanel({
                   <input type="checkbox" checked={criteria.coherenceCheck ?? false}
                     onChange={e => update('coherenceCheck', e.target.checked)}
                     className="settings-checkbox" />
-                  Kiểm tra Coherence bằng AI
-                  <span className="text-[10px] text-amber-400">(tốn thêm API call)</span>
+                  {ui.ccCoherence}
+                  <span className="text-[10px] text-amber-400">{ui.ccCoherenceCost}</span>
                 </label>
               </div>
 
               {/* Max loops */}
               <div>
-                <label className="settings-label">Số vòng lặp verify tối đa</label>
+                <label className="settings-label">{ui.ccMaxLoops}</label>
                 <input type="number" value={criteria.maxVerifyLoops ?? 3} min={1} max={10}
                   onChange={e => update('maxVerifyLoops', parseInt(e.target.value) || 3)}
                   className="settings-input w-20" />
@@ -135,7 +136,7 @@ export function CompletionCriteriaPanel({
             <div className="mt-3 rounded-lg border border-border bg-muted/20 p-3 space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 {isVerifying ? (
-                  <><Loader2 className="w-4 h-4 animate-spin text-primary" /> Đang verify...</>
+                  <><Loader2 className="w-4 h-4 animate-spin text-primary" /> {ui.ccVerifying}</>
                 ) : report?.passed ? (
                   <><CheckCircle className="w-4 h-4 text-emerald-400" /> <span className="text-emerald-400">PASS</span></>
                 ) : (

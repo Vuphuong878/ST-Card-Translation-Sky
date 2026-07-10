@@ -14,6 +14,7 @@ import {
   categorizeEntry, categorizeAllEntries,
   CATEGORY_LABELS, type AutoCategory,
 } from '../../lib/worldbook/lorebookCategorizer';
+import { t as ui, fmt } from '../../i18n';
 
 export function LorebookCategorizationPanel() {
   const entries = useCardStore(s => s.card.data.character_book?.entries ?? []);
@@ -70,11 +71,11 @@ export function LorebookCategorizationPanel() {
       <div className="rounded-xl border border-border bg-card p-4">
         <h3 className="text-xs font-semibold mb-3 flex items-center gap-1.5">
           <PieChart className="w-3.5 h-3.5 text-primary" />
-          Phân loại tự động
+          {ui.lcAutoCategory}
         </h3>
         <div className="flex flex-wrap gap-1.5">
           <CategoryChip
-            cat="all" label="Tất cả" count={categoryCounts['all'] ?? 0}
+            cat="all" label={ui.lcAll} count={categoryCounts['all'] ?? 0}
             isActive={filter === 'all'} onClick={() => setFilter('all')}
           />
           {(Object.entries(CATEGORY_LABELS) as Array<[AutoCategory, typeof CATEGORY_LABELS[AutoCategory]]>).map(([key, info]) => {
@@ -95,7 +96,7 @@ export function LorebookCategorizationPanel() {
         <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
           <input type="checkbox" checked={showIssuesOnly} onChange={e => setShowIssuesOnly(e.target.checked)}
             className="settings-checkbox w-3.5 h-3.5" />
-          Chỉ hiện entries có vấn đề
+          {ui.lcIssuesOnly}
         </label>
         <div className="flex-1" />
         <span className="text-[10px] text-muted-foreground">
@@ -163,7 +164,7 @@ export function LorebookCategorizationPanel() {
                   {result.suggestedKeywords.length > 0 && (
                     <div>
                       <span className="text-[9px] text-muted-foreground flex items-center gap-1 mb-1">
-                        <Lightbulb className="w-3 h-3 text-amber-400" /> Gợi ý thêm keys:
+                        <Lightbulb className="w-3 h-3 text-amber-400" /> {ui.lcSuggestKeys}
                       </span>
                       <div className="flex flex-wrap gap-1">
                         {result.suggestedKeywords.map((kw, i) => (
@@ -174,7 +175,7 @@ export function LorebookCategorizationPanel() {
                             }}
                             className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary
                               hover:bg-primary/20 transition-colors cursor-pointer"
-                            title={`Thêm "${kw}" vào keys`}>
+                            title={fmt(ui.lcAddKey, { kw })}>
                             + {kw}
                           </button>
                         ))}
@@ -215,7 +216,7 @@ export function LorebookCategorizationPanel() {
         <div className="rounded-xl border border-border bg-card p-4">
           <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5">
             <Tag className="w-3.5 h-3.5 text-violet-400" />
-            Keywords trùng lặp ({summary.duplicateKeywords.length})
+            {fmt(ui.lcDupKeywords, { count: summary.duplicateKeywords.length })}
           </h3>
           <div className="space-y-1 max-h-40 overflow-y-auto scrollbar-thin">
             {summary.duplicateKeywords.slice(0, 20).map((dup, i) => (

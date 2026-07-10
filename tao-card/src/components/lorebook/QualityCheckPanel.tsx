@@ -10,12 +10,13 @@ import {
 import { useCardStore } from '../../store/cardStore';
 import { runQualityCheck, type QualityReport, type QualityIssue, type QualityCategory } from '../../lib/validation/qualityChecker';
 import { cn } from '../../lib/utils';
+import { t as ui, fmt } from '../../i18n';
 
 const CATEGORY_META: Record<QualityCategory, { label: string; icon: React.ReactNode; color: string }> = {
-  bat_co: { label: 'Bát Cổ (八股)', icon: <AlertTriangle className="w-3.5 h-3.5" />, color: 'text-amber-500' },
+  bat_co: { label: ui.qcBatCo, icon: <AlertTriangle className="w-3.5 h-3.5" />, color: 'text-amber-500' },
   tag: { label: 'Tag Integrity', icon: <Tag className="w-3.5 h-3.5" />, color: 'text-blue-500' },
-  structure: { label: 'Cấu trúc', icon: <Palette className="w-3.5 h-3.5" />, color: 'text-purple-500' },
-  content: { label: 'Nội dung', icon: <FileCode2 className="w-3.5 h-3.5" />, color: 'text-emerald-500' },
+  structure: { label: ui.qcStructure, icon: <Palette className="w-3.5 h-3.5" />, color: 'text-purple-500' },
+  content: { label: ui.qcContent, icon: <FileCode2 className="w-3.5 h-3.5" />, color: 'text-emerald-500' },
   ejs: { label: 'EJS Code', icon: <FileCode2 className="w-3.5 h-3.5" />, color: 'text-cyan-500' },
 };
 
@@ -60,7 +61,7 @@ function IssueItem({ issue }: { issue: QualityIssue }) {
           <div className="font-medium">{issue.message}</div>
           {issue.entryComment && (
             <div className="text-muted-foreground mt-0.5">
-              Entry: {issue.entryComment} {issue.lineNumber ? `(dòng ${issue.lineNumber})` : ''}
+              {fmt(ui.qcEntryLine, { comment: issue.entryComment, line: issue.lineNumber ? fmt(ui.qcLine, { n: issue.lineNumber }) : '' })}
             </div>
           )}
         </div>
@@ -121,7 +122,7 @@ export function QualityCheckPanel() {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-primary" />
-          Kiểm tra chất lượng Minh Nguyệt
+          {ui.qcTitle}
         </h3>
         <button
           className={cn(
@@ -134,11 +135,11 @@ export function QualityCheckPanel() {
         >
           {isRunning ? (
             <span className="flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 animate-spin" /> Đang kiểm tra...
+              <Sparkles className="w-3 h-3 animate-spin" /> {ui.qcChecking}
             </span>
           ) : (
             <span className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3 h-3" /> Chạy kiểm tra
+              <ShieldCheck className="w-3 h-3" /> {ui.qcRun}
             </span>
           )}
         </button>
@@ -146,7 +147,7 @@ export function QualityCheckPanel() {
 
       {entries.length === 0 && (
         <div className="text-xs text-muted-foreground text-center py-6">
-          Chưa có entries. Tạo lorebook trước khi kiểm tra chất lượng.
+          {ui.qcNoEntries}
         </div>
       )}
 
@@ -165,17 +166,17 @@ export function QualityCheckPanel() {
             <div className="flex-1 text-xs">
               <div className="font-medium">{report.summary}</div>
               <div className="text-muted-foreground mt-0.5">
-                {report.totalEntries} entries đã kiểm tra
+                {fmt(ui.qcChecked, { count: report.totalEntries })}
               </div>
             </div>
           </div>
 
           {/* Individual Scores */}
           <div className="space-y-1.5 p-3 rounded-lg border bg-card">
-            <ScoreBar score={report.scores.batCo} label="Anti-bát-cổ" />
+            <ScoreBar score={report.scores.batCo} label={ui.qcScoreBatCo} />
             <ScoreBar score={report.scores.tagIntegrity} label="Tag" />
-            <ScoreBar score={report.scores.structureComplete} label="Cấu trúc" />
-            <ScoreBar score={report.scores.contentQuality} label="Nội dung" />
+            <ScoreBar score={report.scores.structureComplete} label={ui.qcScoreStructure} />
+            <ScoreBar score={report.scores.contentQuality} label={ui.qcScoreContent} />
           </div>
 
           {/* Category Filter */}
@@ -189,7 +190,7 @@ export function QualityCheckPanel() {
               )}
               onClick={() => setFilterCategory('all')}
             >
-              Tất cả ({report.issueCount})
+              {fmt(ui.qcAll, { count: report.issueCount })}
             </button>
             {(Object.keys(CATEGORY_META) as QualityCategory[]).map(cat => {
               const count = categoryCountMap[cat] ?? 0;
@@ -217,7 +218,7 @@ export function QualityCheckPanel() {
           <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
             {filteredIssues.length === 0 ? (
               <div className="text-center text-xs text-muted-foreground py-4">
-                ✅ Không có vấn đề nào{filterCategory !== 'all' ? ` trong danh mục "${CATEGORY_META[filterCategory]?.label}"` : ''}
+                {ui.qcNoIssues}{filterCategory !== 'all' ? fmt(ui.qcNoIssuesIn, { cat: CATEGORY_META[filterCategory]?.label ?? '' }) : ''}
               </div>
             ) : (
               filteredIssues.map(issue => (

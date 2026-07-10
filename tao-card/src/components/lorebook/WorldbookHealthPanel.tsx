@@ -8,6 +8,7 @@ import { ShieldCheck, ShieldAlert, ChevronDown, ChevronRight, Wrench, AlertTrian
 import { useCardStore } from '../../store/cardStore';
 import { checkWorldbookHealth, type HealthReport, type HealthWarning } from '../../lib/worldbook/worldbookHealthCheck';
 import type { CardType } from '../../lib/worldbook/worldbookConfig';
+import { t as ui, fmt } from '../../i18n';
 
 export function WorldbookHealthPanel() {
   const card = useCardStore(s => s.card);
@@ -64,17 +65,17 @@ export function WorldbookHealthPanel() {
           <span className="font-medium text-foreground">Health Check</span>
           {report.errors > 0 && (
             <span className="px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive text-[10px] font-medium">
-              {report.errors} lỗi
+              {fmt(ui.whErrors, { count: report.errors })}
             </span>
           )}
           {report.warnings > 0 && (
             <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] font-medium">
-              {report.warnings} cảnh báo
+              {fmt(ui.whWarnings, { count: report.warnings })}
             </span>
           )}
           {report.infos > 0 && (
             <span className="px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 text-[10px] font-medium">
-              {report.infos} gợi ý
+              {fmt(ui.whInfos, { count: report.infos })}
             </span>
           )}
           {!hasIssues && report.infos === 0 && (
@@ -88,16 +89,16 @@ export function WorldbookHealthPanel() {
         <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
           {/* Card type selector */}
           <div className="flex items-center gap-3 text-xs">
-            <span className="text-muted-foreground">Loại thẻ:</span>
+            <span className="text-muted-foreground">{ui.whCardType}</span>
             <label className="flex items-center gap-1.5 cursor-pointer">
               <input type="radio" name="hc-cardType" checked={cardType === 'single'}
                 onChange={() => setCardType('single')} className="settings-checkbox" />
-              Nhân vật đơn
+              {ui.whSingle}
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer">
               <input type="radio" name="hc-cardType" checked={cardType === 'multi'}
                 onChange={() => setCardType('multi')} className="settings-checkbox" />
-              Nhiều nhân vật
+              {ui.whMulti}
             </label>
           </div>
 
@@ -106,14 +107,14 @@ export function WorldbookHealthPanel() {
             <button onClick={handleFixAll}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
               <Wrench className="w-3.5 h-3.5" />
-              Auto-fix {fixableItems.length} vấn đề
+              {fmt(ui.whAutofix, { count: fixableItems.length })}
             </button>
           )}
 
           {/* Issues list */}
           {report.items.length === 0 ? (
             <div className="text-xs text-emerald-400/80 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5" /> Tất cả entries đều cấu hình đúng!
+              <ShieldCheck className="w-3.5 h-3.5" /> {ui.whAllGood}
             </div>
           ) : (
             <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin">
