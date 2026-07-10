@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { useTranslation } from '../hooks/useTranslation';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import { X, Regex, Languages, Save, Check, Loader2, Sparkles, RefreshCw, Copy, Trash2, StopCircle, CircleStop, Code2, Play, CheckCircle2, Search, Wrench } from 'lucide-react';
 import type { RegexScript } from '../types/card';
 import { aiRegexScan, aiRegexFixAll, aiRegexProcess } from '../utils/aiVerify';
@@ -197,7 +198,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
   const [regexAutoProgress, setRegexAutoProgress] = useState<RegexProcessProgress | null>(null);
   const regexAutoAbortRef = useRef<AbortController | null>(null);
 
-  const isVi = (t as any)._lang === 'vi';
+  const ui = useUi();
 
   const handleRegexScan = useCallback(async () => {
     setIsRegexScanning(true);
@@ -206,7 +207,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
     setRegexFixResults([]);
     regexAbortRef.current = new AbortController();
     try {
-      addLog('active', isVi ? '🔍 Đang quét regex scripts...' : '🔍 Scanning regex scripts...');
+      addLog('active', ui.rmScanning);
       const { issues, regexResults } = await aiRegexScan(
         fields, proxy, translationConfig.targetLanguage,
         translationConfig.mvuDictionary, translationConfig.sourceLanguage,
@@ -217,8 +218,8 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
       const errCount = issues.filter(i => i.severity === 'error').length;
       const warnCount = issues.filter(i => i.severity === 'warning').length;
       addLog(errCount > 0 ? 'error' : 'success',
-        isVi ? `Regex scan: ${errCount} lỗi, ${warnCount} cảnh báo` : `Regex scan: ${errCount} errors, ${warnCount} warnings`);
-      if (issues.length === 0) addToast('success', isVi ? '✅ Regex sạch!' : '✅ Regex clean!');
+        fmt(ui.rmScanResult, { err: errCount, warn: warnCount }));
+      if (issues.length === 0) addToast('success', ui.rmScanClean);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg !== 'The operation was aborted.' && msg !== 'AbortError') {
@@ -228,12 +229,12 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
       setIsRegexScanning(false);
       regexAbortRef.current = null;
     }
-  }, [fields, proxy, translationConfig, addLog, addToast, isVi]);
+  }, [fields, proxy, translationConfig, addLog, addToast, ui]);
 
   const handleCancelRegexScan = useCallback(() => {
     regexAbortRef.current?.abort();
-    addLog('warning', isVi ? '🛑 Regex scan đã hủy' : '🛑 Regex scan cancelled');
-  }, [addLog, isVi]);
+    addLog('warning', ui.rmScanCancelled);
+  }, [addLog, ui]);
 
   const handleRegexFix = useCallback(async () => {
     if (regexIssues.length === 0) return;
@@ -241,12 +242,12 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
     setRegexFixResults([]);
     regexAbortRef.current = new AbortController();
     try {
-      addLog('active', isVi ? `🔧 Đang sửa ${regexIssues.length} lỗi regex...` : `🔧 Fixing ${regexIssues.length} regex issues...`);
+      addLog('active', fmt(ui.rmFixing, { count: regexIssues.length }));
       const results = await aiRegexFixAll(
         regexIssues, fields, proxy, translationConfig.targetLanguage,
         translationConfig.mvuDictionary, translationConfig.sourceLanguage,
         ({ fixing, done, total, results: r }) => {
-          setRegexFixProgress(isVi ? `Sửa ${done}/${total}: ${fixing}` : `Fix ${done}/${total}: ${fixing}`);
+          setRegexFixProgress(fmt(ui.rmFixProgress, { done, total, name: fixing }));
           setRegexFixResults([...r]);
         },
         regexAbortRef.current.signal,
@@ -254,8 +255,8 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
       setRegexFixResults(results);
       const accepted = results.filter(r => r.success).length;
       const rejected = results.filter(r => !r.success).length;
-      const summary = (t as any).regexFixDone?.replace('{accepted}', String(accepted)).replace('{rejected}', String(rejected)) 
-                      || `Đã sửa ${accepted} / Thất bại ${rejected}`;
+      const summary = (t as any).regexFixDone?.replace('{accepted}', String(accepted)).replace('{rejected}', String(rejected))
+                      || fmt(ui.rmFixDoneFallback, { accepted, rejected });
       addLog(accepted > 0 ? 'success' : 'warning', `🔧 ${summary}`);
       addToast(accepted > 0 ? 'success' : 'info', summary);
     } catch (err) {
@@ -268,7 +269,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
       setRegexFixProgress('');
       regexAbortRef.current = null;
     }
-  }, [regexIssues, fields, proxy, translationConfig, addLog, addToast, isVi, t]);
+  }, [regexIssues, fields, proxy, translationConfig, addLog, addToast, ui, t]);
 
   // ─── Pipeline GỘP: Quét + Sửa (4 giai đoạn: plan → so sánh chunk → sửa → coverage) ───
   const handleRegexAuto = useCallback(async () => {
@@ -279,7 +280,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
     const abort = new AbortController();
     regexAutoAbortRef.current = abort;
     try {
-      addLog('active', '🔧 Quét & Sửa Regex (AI) — bắt đầu pipeline 4 giai đoạn...');
+      addLog('active', ui.rmAutoStart);
       const { issues, fixes } = await aiRegexProcess(
         fields, proxy, translationConfig.targetLanguage,
         translationConfig.mvuDictionary, translationConfig.sourceLanguage,
@@ -291,11 +292,11 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
       setRegexFixResults(fixes);
       const errCount = issues.filter(i => i.severity === 'error').length;
       const fixedCount = fixes.filter(f => f.success).length;
-      addLog('success', `✅ Regex: ${errCount} lỗi, đã sửa ${fixedCount} field.`);
-      addToast('success', `Regex: ${errCount} lỗi · sửa ${fixedCount} field`);
+      addLog('success', fmt(ui.rmAutoDone, { err: errCount, fixed: fixedCount }));
+      addToast('success', fmt(ui.rmAutoToast, { err: errCount, fixed: fixedCount }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (!abort.signal.aborted) addToast('error', `Quét & Sửa regex lỗi: ${msg}`);
+      if (!abort.signal.aborted) addToast('error', fmt(ui.rmAutoErr, { msg }));
     } finally {
       setIsRegexAuto(false);
       regexAutoAbortRef.current = null;
@@ -304,7 +305,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
 
   const handleCancelRegexAuto = useCallback(() => {
     regexAutoAbortRef.current?.abort();
-    addLog('warning', '🛑 Đã hủy Quét & Sửa Regex.');
+    addLog('warning', ui.rmAutoCancelled);
   }, [addLog]);
 
   // ─── Build field rows from store fields (reactive to translation progress) ───
@@ -340,11 +341,11 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
   const handleTranslateAll = async () => {
     const pendingRegexFields = fields.filter(f => f.group === 'regex' && f.status !== 'done');
     if (pendingRegexFields.length === 0) {
-      addToast('info', 'Không có trường regex nào cần dịch hoặc tất cả đã dịch xong');
+      addToast('info', ui.rmNothingToTranslate);
       return;
     }
 
-    addToast('info', `Bắt đầu dịch ${pendingRegexFields.length} trường regex...`);
+    addToast('info', fmt(ui.rmStartTranslate, { count: pendingRegexFields.length }));
     for (const f of pendingRegexFields) {
       try {
         await retranslateField(f.path);
@@ -358,11 +359,11 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
   const handleRetranslateAll = async () => {
     const allRegexFields = fields.filter(f => f.group === 'regex');
     if (allRegexFields.length === 0) {
-      addToast('info', 'Không có trường regex nào để dịch lại');
+      addToast('info', ui.rmNothingToRetranslate);
       return;
     }
 
-    addToast('info', `Dịch lại tất cả ${allRegexFields.length} trường regex...`);
+    addToast('info', fmt(ui.rmRetranslateAll, { count: allRegexFields.length }));
     for (const f of allRegexFields) {
       try {
         await retranslateField(f.path);
@@ -403,7 +404,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
     });
 
     updateCard(newCard);
-    addToast('success', `Đã áp dụng ${applied} bản dịch regex vào card`);
+    addToast('success', fmt(ui.rmApplied, { count: applied }));
   };
 
   // ─── Cancel translation ───
@@ -414,7 +415,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
   // ─── Cancel all in-flight regex translations ───
   const handleCancelAll = () => {
     cancelAllFieldTranslations();
-    addToast('info', 'Đã dừng tất cả các bản dịch đang chạy');
+    addToast('info', ui.rmStoppedAll);
   };
 
   // ─── Check if any regex fields are currently translating ───
@@ -422,7 +423,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
 
   // ─── Clear all regex cache ───
   const handleClearCache = async () => {
-    if (!confirm('Xác nhận xóa toàn bộ cache dịch thuật? Tất cả bản dịch regex sẽ được reset về trạng thái chưa dịch.')) return;
+    if (!confirm(ui.rmClearCacheConfirm)) return;
     
     // Reset only regex fields to pending
     const regexFields = fields.filter(f => f.group === 'regex');
@@ -434,7 +435,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
       });
     }
     
-    addToast('success', `Đã xóa cache ${regexFields.length} trường regex`);
+    addToast('success', fmt(ui.rmCacheCleared, { count: regexFields.length }));
   };
 
 
@@ -501,7 +502,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
               }}
             >
               <span>🔗</span>
-              <span>Dịch link ngoài</span>
+              <span>{ui.rmExternalLink}</span>
             </button>
             <div style={{ height: '1px', background: 'var(--border-subtle)', marginBottom: '8px' }} />
 
@@ -510,7 +511,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
                 padding: '20px 12px', textAlign: 'center',
                 color: 'var(--text-muted)', fontSize: '0.75rem',
               }}>
-                Card không có regex scripts
+                {ui.rmNoRegex}
               </div>
             ) : (
               scripts.map((script, idx) => (
@@ -555,8 +556,8 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
               display: 'flex',
               justifyContent: 'space-between',
             }}>
-              <span>{doneCount}/{totalCount} đã dịch</span>
-              {errorCount > 0 && <span style={{ color: 'var(--accent-danger)' }}>{errorCount} lỗi</span>}
+              <span>{fmt(ui.rmDoneCount, { done: doneCount, total: totalCount })}</span>
+              {errorCount > 0 && <span style={{ color: 'var(--accent-danger)' }}>{fmt(ui.rmErrCount, { count: errorCount })}</span>}
             </div>
           )}
 
@@ -569,11 +570,11 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
             gap: '8px',
           }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-              Kiểm tra lỗi Regex
+              {ui.rmCheckTitle}
             </div>
             {regexIssues.length > 0 && (
               <div style={{ fontSize: '0.7rem', color: 'var(--accent-warning)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span>⚠️ {regexIssues.length} lỗi/cảnh báo</span>
+                <span>{fmt(ui.rmIssueCount, { count: regexIssues.length })}</span>
               </div>
             )}
             
@@ -581,14 +582,14 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
             {!isRegexAuto ? (
               <button
                 onClick={handleRegexAuto}
-                title="Chạy pipeline: quét+lập plan → so sánh theo chunk (song song) → sửa lỗi → kiểm mốc"
+                title={ui.rmScanFixTitle}
                 style={{
                   padding: '8px', background: 'rgba(124,106,240,0.12)', border: '1px solid var(--accent-primary)',
                   borderRadius: 'var(--radius-sm)', color: 'var(--accent-primary)', fontSize: '0.78rem', fontWeight: 700,
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                 }}
               >
-                <Wrench size={13} /> Quét &amp; Sửa Regex (AI)
+                <Wrench size={13} /> {ui.rmScanFixBtn}
               </button>
             ) : (
               <button
@@ -599,7 +600,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                 }}
               >
-                <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Dừng
+                <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> {ui.rmStop}
               </button>
             )}
             {regexAutoProgress && (
@@ -611,7 +612,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
                   </div>
                 )}
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
-                  {regexAutoProgress.issues.filter(i => i.severity === 'error').length} lỗi · đã sửa {regexAutoProgress.fixes.filter(f => f.success).length} field
+                  {fmt(ui.rmAutoProgress, { err: regexAutoProgress.issues.filter(i => i.severity === 'error').length, fixed: regexAutoProgress.fixes.filter(f => f.success).length })}
                 </div>
               </div>
             )}
@@ -650,7 +651,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
               }}
             >
               <Sparkles size={12} style={{ flexShrink: 0 }} />
-              <span>Trợ lý AI</span>
+              <span>{ui.rmAiAssistant}</span>
             </button>
           </div>
         </div>
@@ -668,25 +669,25 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Languages size={14} style={{ color: 'var(--accent-primary)' }} />
-              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Dịch Regex</span>
+              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{ui.rmTranslateRegex}</span>
             </div>
 
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: '6px' }}>
               {isTranslating ? (
                 <button className="btn btn-danger btn-sm" onClick={handleCancel}>
-                  <X size={12} /> Hủy
+                  <X size={12} /> {ui.rmCancel}
                 </button>
               ) : (
                 <button className="btn btn-primary btn-sm" onClick={handleTranslateAll} disabled={scripts.length === 0}>
-                  <Languages size={12} /> Dịch tất cả
+                  <Languages size={12} /> {ui.rmTranslateAll}
                 </button>
               )}
               {anyTranslating && !isTranslating && (
                 <button
                   className="btn btn-danger btn-sm"
                   onClick={handleCancelAll}
-                  title="Dừng tất cả các bản dịch đang chạy"
+                  title={ui.rmStopAllTitle}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -694,27 +695,27 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
                     animation: 'pulse 2s ease-in-out infinite',
                   }}
                 >
-                  <CircleStop size={12} /> Dừng tất cả
+                  <CircleStop size={12} /> {ui.rmStopAll}
                 </button>
               )}
               {doneCount > 0 && !isTranslating && (
                 <button className="btn btn-secondary btn-sm" onClick={handleRetranslateAll}
-                  title="Dịch lại tất cả regex fields (kể cả đã dịch xong)"
+                  title={ui.rmRetranslateAllTitle}
                 >
-                  <RefreshCw size={12} /> Dịch lại tất cả
+                  <RefreshCw size={12} /> {ui.rmRetranslateAllBtn}
                 </button>
               )}
               {doneCount > 0 && !isTranslating && (
                 <button className="btn btn-secondary btn-sm" onClick={handleApplyToCard}>
-                  <Save size={12} /> Áp dụng vào Card
+                  <Save size={12} /> {ui.rmApplyToCard}
                 </button>
               )}
               {!isTranslating && totalCount > 0 && (
                 <button className="btn btn-secondary btn-sm" onClick={handleClearCache}
-                  title="Xóa toàn bộ cache dịch regex"
+                  title={ui.rmClearCacheTitle}
                   style={{ color: 'var(--accent-danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
                 >
-                  <Trash2 size={12} /> Xóa cache
+                  <Trash2 size={12} /> {ui.rmClearCache}
                 </button>
               )}
               <button
@@ -729,7 +730,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
                   gap: '4px',
                 }}
               >
-                <Sparkles size={12} /> Trợ lý AI
+                <Sparkles size={12} /> {ui.rmAiAssistant}
               </button>
             </div>
           </div>
@@ -748,7 +749,7 @@ export default function RegexManagerPanel({ onClose, isFullscreen }: { onClose: 
                 fontSize: '0.78rem',
                 textAlign: 'center',
               }}>
-                ⚠️ Nhóm trường "Regex Scripts" đang bị tắt trong Cấu hình dịch thuật. Vui lòng bật lên để dịch Regex.
+                {ui.rmGroupDisabled}
               </div>
             )}
             {selectedScriptIdx === -1 ? (
@@ -794,13 +795,14 @@ function FieldsTab({
   retranslateField: (path: string) => Promise<void>;
   cancelFieldTranslation: (path: string) => void;
 }) {
+  const ui = useUi();
   const [retranslatingPaths, setRetranslatingPaths] = useState<Set<string>>(new Set());
   const selectedScript = scripts[selectedScriptIdx];
   if (!selectedScript) {
     return (
       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
         <Regex size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
-        <div style={{ fontSize: '0.85rem' }}>Chọn một regex script từ sidebar</div>
+        <div style={{ fontSize: '0.85rem' }}>{ui.rmPickScript}</div>
       </div>
     );
   }
@@ -835,7 +837,7 @@ function FieldsTab({
           textAlign: 'center', padding: '30px',
           color: 'var(--text-muted)', fontSize: '0.8rem',
         }}>
-          Script này không có trường cần dịch (chỉ có findRegex pattern — không dịch)
+          {ui.rmNoField}
         </div>
       ) : (
         scriptRows.map((row, rIdx) => {
@@ -879,7 +881,7 @@ function FieldsTab({
                 {row.status === 'translating' ? (
                   <button
                     onClick={() => cancelFieldTranslation(row.path)}
-                    title="Dừng dịch trường này"
+                    title={ui.rmStopFieldTitle}
                     style={{
                       background: 'none',
                       border: '1px solid rgba(239, 68, 68, 0.4)',
@@ -894,7 +896,7 @@ function FieldsTab({
                       animation: 'pulse 2s ease-in-out infinite',
                     }}
                   >
-                    <StopCircle size={10} /> Dừng
+                    <StopCircle size={10} /> {ui.rmStop}
                   </button>
                 ) : (
                   <button
@@ -909,7 +911,7 @@ function FieldsTab({
                       }
                     }}
                     disabled={isTranslating}
-                    title="Dịch lại trường này"
+                    title={ui.rmRetranslateFieldTitle}
                     style={{
                       background: 'none',
                       border: '1px solid var(--border-subtle)',
@@ -927,7 +929,7 @@ function FieldsTab({
                     onMouseEnter={e => { if (!isTranslating) { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.color = 'var(--accent-primary)'; } }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                   >
-                    <RefreshCw size={10} /> Dịch lại
+                    <RefreshCw size={10} /> {ui.rmRetranslate}
                   </button>
                 )}
               </div>
@@ -947,7 +949,7 @@ function FieldsTab({
                   borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)',
                   margin: 0,
                 }}>
-                  {row.original || '(trống)'}
+                  {row.original || ui.rmEmpty}
                 </pre>
               </div>
 
@@ -971,20 +973,20 @@ function FieldsTab({
                     fontSize: '0.78rem', resize: 'vertical', outline: 'none',
                     transition: 'border-color 0.2s',
                   }}
-                  placeholder="Bản dịch sẽ xuất hiện ở đây..."
+                  placeholder={ui.rmTranslatedPh}
                 />
               </div>
 
               {/* HTML Preview for replaceString */}
               {row.fieldKey === 'replaceString' && (
                 <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Xem trước giao diện (Gốc & Dịch):</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{ui.rmPreviewLabel}</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div>
                       <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Original Preview:</div>
                       <iframe
                         title="Original Preview"
-                        srcDoc={renderSafeHtml((row.original || '').replace(/\$[0-9&]+/g, 'Nội dung mẫu'))}
+                        srcDoc={renderSafeHtml((row.original || '').replace(/\$[0-9&]+/g, ui.rmSampleContent))}
                         sandbox="allow-scripts"
                         style={{
                           width: '100%',
@@ -999,7 +1001,7 @@ function FieldsTab({
                       <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Translated Preview:</div>
                       <iframe
                         title="Translated Preview"
-                        srcDoc={renderSafeHtml((row.translated || row.original || '').replace(/\$[0-9&]+/g, 'Nội dung mẫu'))}
+                        srcDoc={renderSafeHtml((row.translated || row.original || '').replace(/\$[0-9&]+/g, ui.rmSampleContent))}
                         sandbox="allow-scripts"
                         style={{
                           width: '100%',
@@ -1060,6 +1062,7 @@ function CopyButton({ text }: { text: string }) {
    Surgical Prompt Section — inline in RegexManager header
    ════════════════════════════════════════════════════════════════════ */
 function SurgicalPromptSection() {
+  const ui = useUi();
   const { translationConfig, setTranslationConfig } = useStore();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -1091,7 +1094,7 @@ function SurgicalPromptSection() {
           display: 'inline-block',
           fontSize: '0.6rem',
         }}>▶</span>
-        ✏️ Chỉ dẫn dịch tuỳ chỉnh
+        {ui.rmCustomInstruction}
         {translationConfig.surgicalPrompt && (
           <span style={{
             fontSize: '0.58rem',
@@ -1100,7 +1103,7 @@ function SurgicalPromptSection() {
             borderRadius: 'var(--radius-sm)',
             color: 'var(--accent-primary)',
           }}>
-            Đang dùng
+            {ui.rmInUse}
           </span>
         )}
       </button>
@@ -1116,12 +1119,12 @@ function SurgicalPromptSection() {
               resize: 'vertical',
               fontFamily: 'monospace',
             }}
-            placeholder="VD: Dịch tiếng Việt tự nhiên, dễ hiểu. Không dùng Hán Việt. Dịch 武力 = Sức mạnh, 魅力 = Sức hút, 体能与力量 = Thể lực và sức mạnh..."
+            placeholder={ui.rmCustomInstructionPh}
             value={translationConfig.surgicalPrompt}
             onChange={(e) => setTranslationConfig({ surgicalPrompt: e.target.value })}
           />
           <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '3px', lineHeight: '1.3' }}>
-            💡 Chỉ dẫn này được thêm vào prompt dịch với ưu tiên cao nhất. Dùng để kiểm soát phong cách dịch.
+            {ui.rmCustomInstructionHint}
           </div>
         </div>
       )}
