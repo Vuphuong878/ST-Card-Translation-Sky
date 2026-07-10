@@ -32,6 +32,7 @@ import {
 import type { LorebookEntry, LorebookEntryExt } from '../types';
 import { DEFAULT_ENTRY_EXT } from '../types';
 import { runSemanticDeduplication } from '../lib/ai/deduplicator';
+import { t as ui, fmt } from '../i18n';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -45,10 +46,10 @@ const SELECTIVE_LOGIC_LABELS: Record<number, string> = {
 };
 
 const SORT_OPTIONS = [
-  { value: 'display_index', label: 'Thứ tự hiển thị' },
-  { value: 'comment', label: 'Tên (A-Z)' },
+  { value: 'display_index', label: ui.lbSortDisplay },
+  { value: 'comment', label: ui.lbSortName },
   { value: 'insertion_order', label: 'Insertion Order' },
-  { value: 'content_length', label: 'Độ dài content' },
+  { value: 'content_length', label: ui.lbSortLength },
 ] as const;
 
 type SortKey = (typeof SORT_OPTIONS)[number]['value'];
@@ -65,14 +66,14 @@ export function LorebookPage() {
       {/* Tab bar */}
       <div className="flex border-b border-border bg-card/50 px-2 shrink-0">
         {[
-          { id: 'entries' as const, label: 'Danh sách Entries', icon: BookOpen },
-          { id: 'batch' as const, label: 'AI Sinh theo Batch', icon: Zap },
-          { id: 'refiner' as const, label: 'AI Chỉnh Sửa', icon: Wand2 },
-          { id: 'doc' as const, label: 'Trích Xuất Tài Liệu', icon: FileText },
-          { id: 'wiki' as const, label: 'Cào Wiki', icon: Globe },
-          { id: 'analysis' as const, label: 'Phân tích', icon: Filter },
-          { id: 'quality' as const, label: 'Chất lượng MN', icon: Lock },
-          { id: 'tctrl' as const, label: 'Sinh EJS điều khiển', icon: Gauge },
+          { id: 'entries' as const, label: ui.lbTabEntries, icon: BookOpen },
+          { id: 'batch' as const, label: ui.lbTabBatch, icon: Zap },
+          { id: 'refiner' as const, label: ui.lbTabRefiner, icon: Wand2 },
+          { id: 'doc' as const, label: ui.lbTabDoc, icon: FileText },
+          { id: 'wiki' as const, label: ui.lbTabWiki, icon: Globe },
+          { id: 'analysis' as const, label: ui.lbTabAnalysis, icon: Filter },
+          { id: 'quality' as const, label: ui.lbTabQuality, icon: Lock },
+          { id: 'tctrl' as const, label: ui.lbTabTctrl, icon: Gauge },
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -125,16 +126,16 @@ function EntriesTab() {
     const params = useSettingsStore.getState().generationParams;
 
     if (!profile) {
-      useToastStore.getState().warning('Vui lòng chọn hoặc cấu hình Proxy Profile trước.');
+      useToastStore.getState().warning(ui.lbNeedProfile);
       return;
     }
     if (!profile.enableSecondaryModel || !profile.secondaryModel) {
-      useToastStore.getState().warning('Vui lòng kích hoạt và chọn Model phụ (Secondary Model) trong trang Cài đặt để sử dụng tính năng này.');
+      useToastStore.getState().warning(ui.lbNeedSecondary);
       return;
     }
 
     setDedupRunning(true);
-    setDedupLogs(['🚀 Bắt đầu quá trình quét trùng lặp ngữ nghĩa...']);
+    setDedupLogs([ui.lbDedupStart]);
 
     try {
       const logger = (msg: string) => {
@@ -149,12 +150,12 @@ function EntriesTab() {
             c.data.character_book.entries = result.mergedEntries;
           }
         });
-        logger(`🏁 Hoàn thành! Đã gộp và dọn dẹp ${result.deletedIds.length} entries trùng lặp.`);
+        logger(fmt(ui.lbDedupDone, { count: result.deletedIds.length }));
       } else {
-        logger(`🏁 Hoàn thành! Không phát hiện thay đổi nào.`);
+        logger(ui.lbDedupNoChange);
       }
     } catch (err) {
-      setDedupLogs(prev => [...prev, `❌ Lỗi hệ thống: ${err instanceof Error ? err.message : String(err)}`]);
+      setDedupLogs(prev => [...prev, fmt(ui.lbDedupErr, { msg: err instanceof Error ? err.message : String(err) })]);
     } finally {
       setDedupRunning(false);
     }
@@ -211,7 +212,7 @@ function EntriesTab() {
       id,
       keys: [],
       secondary_keys: [],
-      comment: `Entry mới #${id}`,
+      comment: fmt(ui.lbNewEntryName, { id }),
       content: '',
       constant: false,
       selective: true,
@@ -237,7 +238,7 @@ function EntriesTab() {
   }, [getNextEntryId, addEntry]);
 
   const handleDelete = useCallback((id: number, comment: string) => {
-    if (!confirm(`Xóa entry "${comment}"?`)) return;
+    if (!confirm(fmt(ui.lbConfirmDelete, { name: comment }))) return;
     deleteEntry(id);
     if (editingEntry?.id === id) setEditingEntry(null);
   }, [deleteEntry, editingEntry]);
@@ -274,11 +275,11 @@ function EntriesTab() {
             <div className="flex items-center gap-2">
               <button onClick={() => { setDedupLogs([]); setShowDedupPanel(true); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-sm font-medium hover:bg-muted/80 hover:text-foreground transition-colors text-muted-foreground">
-                <Layers className="w-4 h-4 text-primary" /> Dọn trùng ngữ nghĩa
+                <Layers className="w-4 h-4 text-primary" /> {ui.lbDedupBtn}
               </button>
               <button onClick={handleAddEntry}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-                <Plus className="w-4 h-4" /> Thêm Entry
+                <Plus className="w-4 h-4" /> {ui.lbAddEntry}
               </button>
             </div>
           </div>
@@ -289,7 +290,7 @@ function EntriesTab() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input type="text" value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Tìm theo tên, keys, nội dung..."
+                placeholder={ui.lbSearchPh}
                 className="settings-input pl-9 text-sm" />
             </div>
             <button onClick={() => setShowFilters(!showFilters)}
@@ -297,7 +298,7 @@ function EntriesTab() {
               <Filter className="w-4 h-4" />
             </button>
             <select value={sortBy} onChange={e => setSortBy(e.target.value as SortKey)}
-              className="settings-input w-auto text-xs" title="Sắp xếp">
+              className="settings-input w-auto text-xs" title={ui.lbSortTitle}>
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
@@ -307,19 +308,19 @@ function EntriesTab() {
             <div className="flex gap-3 mt-3 flex-wrap">
               <select value={filterPosition ?? ''} onChange={e => setFilterPosition(e.target.value ? Number(e.target.value) : null)}
                 className="settings-input w-auto text-xs">
-                <option value="">Mọi vị trí</option>
+                <option value="">{ui.lbAnyPosition}</option>
                 {Object.entries(POSITION_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
               <select value={filterEnabled === null ? '' : String(filterEnabled)}
                 onChange={e => setFilterEnabled(e.target.value === '' ? null : e.target.value === 'true')}
                 className="settings-input w-auto text-xs">
-                <option value="">Mọi trạng thái</option>
-                <option value="true">🟢 Bật</option>
-                <option value="false">🔴 Tắt</option>
+                <option value="">{ui.lbAnyStatus}</option>
+                <option value="true">{ui.lbOnFilter}</option>
+                <option value="false">{ui.lbOffFilter}</option>
               </select>
               {(filterPosition !== null || filterEnabled !== null) && (
                 <button onClick={() => { setFilterPosition(null); setFilterEnabled(null); }}
-                  className="text-xs text-muted-foreground hover:text-foreground">Xóa filter</button>
+                  className="text-xs text-muted-foreground hover:text-foreground">{ui.lbClearFilter}</button>
               )}
             </div>
           )}
@@ -327,9 +328,9 @@ function EntriesTab() {
           {/* Stats bar */}
           <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
             <span><Layers className="w-3 h-3 inline mr-1" />{entries.length} entries</span>
-            <span className="text-emerald-400/80">{enabledCount} bật</span>
+            <span className="text-emerald-400/80">{fmt(ui.lbEnabledCount, { count: enabledCount })}</span>
             <span>~{totalTokens.toLocaleString()} tokens</span>
-            {searchQuery && <span className="text-primary">{filteredEntries.length} kết quả</span>}
+            {searchQuery && <span className="text-primary">{fmt(ui.lbResultCount, { count: filteredEntries.length })}</span>}
           </div>
         </div>
 
@@ -338,10 +339,10 @@ function EntriesTab() {
           {filteredEntries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <BookOpen className="w-10 h-10 mb-3 opacity-30" />
-              <p className="text-sm">{entries.length === 0 ? 'Chưa có entry nào.' : 'Không tìm thấy entry.'}</p>
+              <p className="text-sm">{entries.length === 0 ? ui.lbNoEntry : ui.lbNoMatch}</p>
               {entries.length === 0 && (
                 <button onClick={handleAddEntry} className="mt-3 text-sm text-primary hover:text-primary/80">
-                  + Tạo entry đầu tiên
+                  {ui.lbCreateFirst}
                 </button>
               )}
             </div>
@@ -390,7 +391,7 @@ function EntriesTab() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
               <div className="flex items-center gap-2">
                 <Layers className="w-5 h-5 text-primary" />
-                <h3 className="font-semibold text-sm">Dọn Trùng Ngữ Nghĩa</h3>
+                <h3 className="font-semibold text-sm">{ui.lbDedupTitle}</h3>
               </div>
               <button onClick={() => { if (!dedupRunning) setShowDedupPanel(false); }}
                 disabled={dedupRunning}
@@ -401,7 +402,7 @@ function EntriesTab() {
 
             <div className="p-5 flex-1 overflow-y-auto space-y-4">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Tính năng này sử dụng **Model phụ (Secondary Model)** của Proxy đang hoạt động để phân tích ngữ nghĩa, tìm các mục Lorebook trùng lặp nội dung hoặc nhân vật và tự động gộp chúng lại với nhau (giữ lại từ khóa và tổng hợp chi tiết mô tả).
+                {ui.lbDedupDesc}
               </p>
 
               {dedupLogs.length > 0 && (
@@ -417,24 +418,24 @@ function EntriesTab() {
 
             <div className="px-5 py-3.5 border-t border-border bg-muted/10 flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                {dedupRunning ? '⏳ Đang phân tích...' : ''}
+                {dedupRunning ? ui.lbDedupAnalysing : ''}
               </span>
               <div className="flex gap-2">
                 {!dedupRunning ? (
                   <>
                     <button onClick={handleRunDeduplication}
                       className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
-                      Bắt đầu
+                      {ui.lbDedupStartBtn}
                     </button>
                     <button onClick={() => setShowDedupPanel(false)}
                       className="px-4 py-2 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                      Đóng
+                      {ui.lbClose}
                     </button>
                   </>
                 ) : (
                   <button disabled
                     className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-muted text-muted-foreground text-xs font-medium cursor-not-allowed">
-                    Đang xử lý...
+                    {ui.lbProcessing}
                   </button>
                 )}
               </div>
@@ -462,7 +463,7 @@ function EntryRow({ entry, isActive, onEdit, onToggle, onDuplicate, onDelete }: 
 
       {/* Toggle enabled */}
       <button onClick={e => { e.stopPropagation(); onToggle(); }}
-        className="shrink-0" title={entry.enabled ? 'Tắt' : 'Bật'}>
+        className="shrink-0" title={entry.enabled ? ui.lbToggleOff : ui.lbToggleOn}>
         {entry.enabled
           ? <ToggleRight className="w-5 h-5 text-emerald-400" />
           : <ToggleLeft className="w-5 h-5 text-muted-foreground/40" />}
@@ -497,10 +498,10 @@ function EntryRow({ entry, isActive, onEdit, onToggle, onDuplicate, onDelete }: 
 
       {/* Actions */}
       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <button onClick={e => { e.stopPropagation(); onDuplicate(); }} className="p-1 text-muted-foreground hover:text-foreground" title="Sao chép">
+        <button onClick={e => { e.stopPropagation(); onDuplicate(); }} className="p-1 text-muted-foreground hover:text-foreground" title={ui.lbDuplicate}>
           <Copy className="w-3.5 h-3.5" />
         </button>
-        <button onClick={e => { e.stopPropagation(); onDelete(); }} className="p-1 text-muted-foreground hover:text-destructive" title="Xóa">
+        <button onClick={e => { e.stopPropagation(); onDelete(); }} className="p-1 text-muted-foreground hover:text-destructive" title={ui.lbDelete}>
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -531,9 +532,9 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
   // Keyword validation warnings
   const keyWarnings = useMemo(() => {
     const warns: string[] = [];
-    if (entry.keys.some(k => k.includes('，'))) warns.push('⚠️ Phát hiện dấu phẩy full-width (，). Dùng dấu phẩy tiếng Anh (,).');
-    if (entry.keys.some(k => k.startsWith(' ') || k.endsWith(' '))) warns.push('⚠️ Keyword có khoảng trắng thừa.');
-    if (!entry.constant && entry.selective && entry.keys.length === 0) warns.push('❌ Entry xanh lá nhưng không có keyword — sẽ không bao giờ kích hoạt!');
+    if (entry.keys.some(k => k.includes('，'))) warns.push(ui.lbWarnFullWidthComma);
+    if (entry.keys.some(k => k.startsWith(' ') || k.endsWith(' '))) warns.push(ui.lbWarnTrimKey);
+    if (!entry.constant && entry.selective && entry.keys.length === 0) warns.push(ui.lbWarnGreenNoKey);
     return warns;
   }, [entry.keys, entry.constant, entry.selective]);
 
@@ -609,22 +610,22 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
         <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="settings-label text-[10px]">Loại thẻ</label>
+              <label className="settings-label text-[10px]">{ui.lbCardType}</label>
               <div className="flex gap-2">
                 <label className="flex items-center gap-1 text-[11px] cursor-pointer">
                   <input type="radio" name="ed-cardType" checked={cardType === 'single'}
                     onChange={() => setCardType('single')} className="settings-checkbox" />
-                  Nhân vật đơn
+                  {ui.lbSingleChar}
                 </label>
                 <label className="flex items-center gap-1 text-[11px] cursor-pointer">
                   <input type="radio" name="ed-cardType" checked={cardType === 'multi'}
                     onChange={() => setCardType('multi')} className="settings-checkbox" />
-                  Nhiều NV
+                  {ui.lbMultiChar}
                 </label>
               </div>
             </div>
             <div>
-              <label className="settings-label text-[10px]">Loại Entry</label>
+              <label className="settings-label text-[10px]">{ui.lbEntryType}</label>
               <select value={selectedCategory} onChange={e => handleCategoryChange(e.target.value as EntryCategory)}
                 className="settings-input text-xs py-1">
                 {Object.entries(ENTRY_CATEGORY_LABELS).map(([key, { label, icon }]) => (
@@ -642,16 +643,16 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
 
         {/* Comment */}
         <div>
-          <label className="settings-label">Tên Entry (Comment)</label>
+          <label className="settings-label">{ui.lbEntryName}</label>
           <input type="text" value={entry.comment} onChange={e => update({ comment: e.target.value })}
-            className="settings-input" placeholder="Tên/nhãn entry" />
+            className="settings-input" placeholder={ui.lbEntryNamePh} />
         </div>
 
         {/* Toggles row */}
         <div className="flex gap-4">
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={entry.enabled} onChange={e => update({ enabled: e.target.checked })}
-              className="settings-checkbox" /> Bật
+              className="settings-checkbox" /> {ui.lbEnabled}
           </label>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={entry.constant} onChange={e => update({ constant: e.target.checked })}
@@ -669,11 +670,11 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
 
         {/* Keys */}
         <div>
-          <label className="settings-label">Keys (từ khoá kích hoạt)</label>
+          <label className="settings-label">{ui.lbKeys}</label>
           <div className="flex gap-2 mb-2">
             <input type="text" value={keyInput} onChange={e => setKeyInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addKey('keys', keyInput, setKeyInput))}
-              className="settings-input flex-1 text-xs" placeholder="Nhập key rồi Enter (VD: Tên,Biệt danh,Chức vụ)" />
+              className="settings-input flex-1 text-xs" placeholder={ui.lbKeysPh} />
           </div>
           <div className="flex flex-wrap gap-1">
             {entry.keys.map((k, i) => (
@@ -726,18 +727,18 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
         {/* Content */}
         <div>
           <div className="flex justify-between mb-1.5">
-            <label className="settings-label mb-0">Nội dung (Content)</label>
+            <label className="settings-label mb-0">{ui.lbContent}</label>
             <span className="text-[10px] text-muted-foreground">~{tokens} tokens · {entry.content.length} chars</span>
           </div>
           <textarea value={entry.content} onChange={e => update({ content: e.target.value })}
             rows={12} className="settings-input font-mono text-xs leading-relaxed resize-y"
-            placeholder="Nội dung entry — viết ngôi thứ ba, đầy đủ, không lược bỏ..." />
+            placeholder={ui.lbContentPh} />
         </div>
 
         {/* Position + Order + Scan Depth */}
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="settings-label">Vị trí (Position)</label>
+            <label className="settings-label">{ui.lbPosition}</label>
             <select value={entry.extensions.position}
               onChange={e => updateExt({ position: Number(e.target.value) as LorebookEntryExt['position'] })}
               className="settings-input text-xs">
@@ -745,16 +746,16 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
             </select>
           </div>
           <div>
-            <label className="settings-label">Thứ tự ưu tiên</label>
+            <label className="settings-label">{ui.lbOrder}</label>
             <input type="number" value={entry.insertion_order}
               onChange={e => update({ insertion_order: parseInt(e.target.value) || 100 })}
               className="settings-input text-xs" min={0} />
           </div>
           <div>
-            <label className="settings-label">Khoảng quét</label>
+            <label className="settings-label">{ui.lbScanDepth}</label>
             <input type="number" value={entry.extensions.scan_depth ?? 2}
               onChange={e => updateExt({ scan_depth: parseInt(e.target.value) || 2 })}
-              className="settings-input text-xs" min={0} max={10} title="Scan depth — số tin nhắn gần nhất để quét keyword" />
+              className="settings-input text-xs" min={0} max={10} title={ui.lbScanDepthTitle} />
           </div>
         </div>
 
@@ -794,18 +795,18 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/30 border border-border/50">
           <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
           <span className="text-[11px] text-muted-foreground flex-1">
-            Đệ quy: <span className="text-emerald-400 font-medium">BẮT BUỘC bật cả hai</span>
-            <span className="text-muted-foreground/60 ml-1">(guide: "không cần nghĩ, cứ tick hết")</span>
+            {ui.lbRecursion1} <span className="text-emerald-400 font-medium">{ui.lbRecursion2}</span>
+            <span className="text-muted-foreground/60 ml-1">{ui.lbRecursion3}</span>
           </span>
           <label className="flex items-center gap-1 text-[10px] cursor-pointer">
             <input type="checkbox" checked={entry.extensions.prevent_recursion}
               onChange={e => updateExt({ prevent_recursion: e.target.checked })} className="settings-checkbox" />
-            Chống
+            {ui.lbPreventRecursion}
           </label>
           <label className="flex items-center gap-1 text-[10px] cursor-pointer">
             <input type="checkbox" checked={entry.extensions.exclude_recursion}
               onChange={e => updateExt({ exclude_recursion: e.target.checked })} className="settings-checkbox" />
-            Loại trừ
+            {ui.lbExcludeRecursion}
           </label>
         </div>
 
@@ -813,7 +814,7 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
         <div className="rounded-lg border border-border overflow-hidden">
           <button onClick={() => setShowAdvanced(!showAdvanced)}
             className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors">
-            Tuỳ chọn nâng cao
+            {ui.lbAdvanced}
             {showAdvanced ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
           {showAdvanced && (
@@ -821,7 +822,7 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
               {/* Probability & Budget */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="settings-label">Xác suất (%)</label>
+                  <label className="settings-label">{ui.lbProbability}</label>
                   <input type="number" value={entry.extensions.probability}
                     onChange={e => updateExt({ probability: parseInt(e.target.value) || 100 })}
                     className="settings-input text-xs" min={0} max={100} />
@@ -829,17 +830,17 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
                 <label className="flex items-center gap-2 text-xs cursor-pointer pt-5">
                   <input type="checkbox" checked={entry.extensions.ignore_budget}
                     onChange={e => updateExt({ ignore_budget: e.target.checked })} className="settings-checkbox" />
-                  Bỏ qua budget
+                  {ui.lbIgnoreBudget}
                 </label>
               </div>
 
               {/* Group & Timing */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="settings-label">Nhóm (Group)</label>
+                  <label className="settings-label">{ui.lbGroup}</label>
                   <input type="text" value={entry.extensions.group}
                     onChange={e => updateExt({ group: e.target.value })}
-                    className="settings-input text-xs" placeholder="Tên nhóm" />
+                    className="settings-input text-xs" placeholder={ui.lbGroupPh} />
                 </div>
                 <div>
                   <label className="settings-label">Group Weight</label>
@@ -874,7 +875,7 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <input type="checkbox" checked={entry.extensions.vectorized}
                   onChange={e => updateExt({ vectorized: e.target.checked })} className="settings-checkbox" />
-                Vectorized (ngữ nghĩa)
+                {ui.lbVectorized}
               </label>
             </div>
           )}
@@ -885,16 +886,16 @@ function EntryEditor({ entry, onChange, onSave, onCancel, onDelete }: {
       <div className="shrink-0 px-5 py-3 border-t border-border bg-muted/30 flex items-center gap-2">
         <button onClick={() => onSave(entry)}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-          <Check className="w-4 h-4" /> Lưu
+          <Check className="w-4 h-4" /> {ui.lbSave}
         </button>
         <button onClick={onCancel}
           className="px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-          Huỷ
+          {ui.lbCancel}
         </button>
         <div className="flex-1" />
         <button onClick={onDelete}
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors">
-          <Trash2 className="w-4 h-4" /> Xóa
+          <Trash2 className="w-4 h-4" /> {ui.lbDelete}
         </button>
       </div>
     </div>
