@@ -2,6 +2,14 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.56.2 — Mod Card đã dịch xong EN + 中文 (Đợt 2) 🛠️
+> Tiếp nối v1.56.0. **Mod Card** giờ đổi ngôn ngữ theo nút VI/EN/中文 trên header của Hub.
+- **Toàn bộ giao diện Mod Card** đã có tiếng Anh & tiếng Trung: màn chính, bảng Diff, tab Cài đặt, và 5 panel con (tải thẻ, Mod Rules, đổi biến MVU-Zod, Đào sâu 1 phần, Provider bổ sung).
+- **Bản Tiếng Việt giữ nguyên 100%** — đã đối chiếu ảnh chụp trước/sau, không lệch một chữ.
+- *An toàn:* **không đụng prompt AI**, và chừa nguyên các chuỗi vốn là "logic" — dịch vào là hỏng: mức đào sâu `nhẹ/vừa/sâu` (vừa lưu cấu hình vừa đi vào prompt), thông báo huỷ `"Người dùng đã dừng"` (bị so bằng regex ở chỗ khác), tên rule `"Yêu cầu tùy chỉnh của người dùng"` (nhồi vào prompt), và đoạn `[Đã sửa …]` (ngữ cảnh gửi cho AI).
+- *Kỹ thuật:* Mod Card chạy Next.js — ngôn ngữ được đọc ở **server** (`?lang=` do Hub truyền xuống) rồi bơm xuống cây client, nên **không lệch hydration, không nháy ngôn ngữ**. Đã kiểm bằng trình duyệt thật: VI/中文 đều đúng, 0 lỗi console. tsc + build sạch.
+- **Tiếp theo:** Tạo Preset → Dịch Card → Tạo Card → Trích Card.
+
 ## v1.56.0 — Nút đổi ngôn ngữ VI / EN / 中文 (Đợt 1: hạ tầng) 🌐
 > Thêm nút chuyển ngôn ngữ giao diện ở **góc trên bên phải** header. Bấm là **lưu + tải lại trang**, và chỉ nạp **đúng 1 bộ chuỗi** của ngôn ngữ đó → **app không nặng thêm**.
 - **⚠️ Chọn "VI" = giao diện GIỮ NGUYÊN 100% như trước.** Các nhãn tiếng Anh quen thuộc ("API Configuration", "Expert Mode"…) **không bị đổi**, đúng như đã hứa — user cũ không phải làm quen lại. (Kỹ thuật: có test tự động khoá điều này lại, ai sửa nhầm là hỏng test ngay.)

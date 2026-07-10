@@ -114,6 +114,66 @@ const en = {
   stageStopped: '⏹ Stopped as requested.',
   stageStopping: '⏹ Stopping…',
   stageError: 'Pipeline error.',
+
+  // ─── Dùng chung ───
+  errNoApiKey: 'No API Key configured in the Settings tab.',
+
+  // FileUploader
+  fuAlertBadJson: 'Failed to read the JSON file. It must be a Character Card V3 or a Lorebook file (with "entries").\n',
+  fuTitle: 'Load a character card OR a Lorebook (JSON)',
+  fuDesc: 'Character Card V3 → mod the whole card · Lorebook (with "entries") → mod & export the Lorebook only',
+
+  // ModRulesManager
+  mrAddRule: '+ Add Rule',
+  mrEmpty: 'No mod rules configured yet.',
+  mrEdit: 'Edit',
+  mrDelete: 'Delete',
+  mrEditTitle: 'Edit Rule',
+  mrName: 'Rule name',
+  mrNamePh: 'e.g. Change theme NTR → NTL',
+  mrOldTheme: 'Old theme',
+  mrNewTheme: 'New theme',
+  mrKeywords: 'Detection keywords (comma-separated)',
+  mrDetails: 'Change details',
+  mrCancel: 'Cancel',
+  mrSave: 'Save',
+
+  // VarRemapPanel
+  vrErrNoRequest: 'Enter a request to rename/redefine variables first.',
+  vrErrNoRemap: 'The AI proposed no variable changes (your request matched no variable, or the parse was empty). Try rephrasing.',
+  vrErrNoRow: 'No rows selected/changed.',
+  vrTitle: '🧬 Mod MVU-Zod variables',
+  vrDesc: 'Rename / redefine {count} schema variables as requested — applied consistently across schema, getvar, initvar and mvu_update. MVU runtime is untouched.',
+  vrPh: "e.g. Translate the stat variables (hp → sinh_lực, mp → linh_lực); redefine 'affection' as trust level instead of romance…",
+  vrAnalyzing: 'Analysing variables…',
+  vrAnalyze: '🔎 Analyse variables',
+  vrApply: '✅ Apply ({count})',
+  vrApplied: 'Applied to the card.',
+  vrColOld: 'Old variable',
+  vrColNew: 'New name',
+  vrColDesc: 'New meaning',
+  vrKeepPh: '(keep as is)',
+
+  // SubExpandPanel
+  seErrNoSection: 'Pick a section.',
+  seErrNoMarker: 'Name the part to deep-dive (e.g. <Appearance> or "Ngoại hình").',
+  seTitle: '🔬 Deep-dive one part',
+  seDesc: 'Expand exactly ONE part inside a section (e.g. the appearance block) and leave the rest untouched.',
+  seSelectSection: 'Pick a section',
+  seMarkerPh: 'Part to deep-dive — e.g. <Appearance>  or  "Ngoại hình"',
+  seRequestPh: 'Extra instructions (optional) — e.g. describe the outfit, scars and demeanour in detail…',
+  seRunning: 'Deep-diving…',
+  seRun: '🔬 Deep-dive',
+  seApply: '✅ Apply',
+  sePreview: 'Preview (editable before applying):',
+
+  // ExtraProvidersPanel
+  epTitle: '🔀 Extra providers (run in parallel)',
+  epDesc: 'Add backup providers → the engine round-robins calls with the main provider, running several at once. Use a comparable model to keep quality.',
+  epRemove: 'Remove',
+  epBaseUrlPh: 'Base URL (if proxy)',
+  epModelPh: 'Model (e.g. gemini-2.5-flash)',
+  epAdd: '+ Add provider',
 };
 
 export default en;

@@ -110,6 +110,66 @@ const vi: ModUiKeys = {
   stageStopped: '⏹ Đã dừng theo yêu cầu.',
   stageStopping: '⏹ Đang dừng…',
   stageError: 'Lỗi quy trình.',
+
+  // ─── Dùng chung ───
+  errNoApiKey: 'Chưa cấu hình API Key ở tab Cài đặt.',
+
+  // FileUploader
+  fuAlertBadJson: 'Lỗi đọc file JSON. Cần là Character Card V3 hoặc file Lorebook (có "entries").\n',
+  fuTitle: 'Tải thẻ nhân vật HOẶC Lorebook (JSON)',
+  fuDesc: 'Character Card V3 → mod cả thẻ · Lorebook (có "entries") → mod & xuất riêng Lorebook',
+
+  // ModRulesManager
+  mrAddRule: '+ Thêm Rule',
+  mrEmpty: 'Chưa có quy tắc mod nào được thiết lập.',
+  mrEdit: 'Sửa',
+  mrDelete: 'Xóa',
+  mrEditTitle: 'Chỉnh sửa Rule',
+  mrName: 'Tên quy tắc',
+  mrNamePh: 'VD: Đổi Theme NTR → NTL',
+  mrOldTheme: 'Theme cũ',
+  mrNewTheme: 'Theme mới',
+  mrKeywords: 'Từ khóa nhận biết (cách nhau dấu phẩy)',
+  mrDetails: 'Chi tiết thay đổi',
+  mrCancel: 'Hủy',
+  mrSave: 'Lưu',
+
+  // VarRemapPanel
+  vrErrNoRequest: 'Nhập yêu cầu đổi tên/nghĩa biến trước.',
+  vrErrNoRemap: 'AI không đề xuất đổi biến nào (yêu cầu không khớp biến, hoặc parse rỗng). Thử diễn đạt lại.',
+  vrErrNoRow: 'Không có dòng nào được chọn/đổi.',
+  vrTitle: '🧬 Mod biến MVU-Zod',
+  vrDesc: 'Đổi TÊN / NGHĨA của {count} biến trong schema theo yêu cầu — tự áp đồng bộ khắp schema, getvar, initvar, mvu_update. Runtime MVU không bị đụng.',
+  vrPh: "VD: Đổi các biến chỉ số sang tiếng Việt (hp → sinh_lực, mp → linh_lực); đổi nghĩa biến 'affection' thành mức độ tin tưởng thay vì tình cảm…",
+  vrAnalyzing: 'Đang phân tích biến…',
+  vrAnalyze: '🔎 Phân tích biến',
+  vrApply: '✅ Áp dụng ({count})',
+  vrApplied: 'Đã áp dụng vào thẻ.',
+  vrColOld: 'Biến cũ',
+  vrColNew: 'Tên mới',
+  vrColDesc: 'Nghĩa mới',
+  vrKeepPh: '(giữ nguyên)',
+
+  // SubExpandPanel
+  seErrNoSection: 'Chọn 1 section.',
+  seErrNoMarker: 'Nêu phần cần đào sâu (vd: <Appearance> hoặc "Ngoại hình").',
+  seTitle: '🔬 Đào sâu 1 phần',
+  seDesc: 'Mở rộng chi tiết đúng MỘT phần trong 1 section (vd block ngoại hình), giữ nguyên phần còn lại.',
+  seSelectSection: 'Chọn section',
+  seMarkerPh: 'Phần cần đào sâu — vd: <Appearance>  hoặc  "Ngoại hình"',
+  seRequestPh: 'Yêu cầu thêm (tuỳ chọn) — vd: tả kỹ trang phục, sẹo, khí chất…',
+  seRunning: 'Đang đào sâu…',
+  seRun: '🔬 Đào sâu',
+  seApply: '✅ Áp dụng',
+  sePreview: 'Xem trước (có thể sửa trước khi áp):',
+
+  // ExtraProvidersPanel
+  epTitle: '🔀 Provider bổ sung (chạy song song)',
+  epDesc: 'Thêm provider phụ → engine rải call round-robin với provider chính, chạy nhiều provider cùng lúc. Dùng model tốt tương đương để giữ chất lượng.',
+  epRemove: 'Xoá',
+  epBaseUrlPh: 'Base URL (nếu proxy)',
+  epModelPh: 'Model (vd gemini-2.5-flash)',
+  epAdd: '+ Thêm provider',
 };
 
 export default vi;

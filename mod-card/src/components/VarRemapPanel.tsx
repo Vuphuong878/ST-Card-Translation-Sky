@@ -5,6 +5,8 @@ import { CardV3 } from '@/types/card';
 import { LLMConfig } from '@/lib/llm';
 import { ModOrchestrator } from '@/lib/orchestrator';
 import { CardParser, VariableRemap } from '@/lib/parser';
+import { useT } from '@/i18n/I18nProvider';
+import { fmt } from '@/i18n';
 
 interface Row extends VariableRemap { include: boolean; }
 
@@ -18,6 +20,7 @@ export default function VarRemapPanel({ card, llmConfig, extraProviders = [], on
   extraProviders?: LLMConfig[];
   onApplied: (newCard: CardV3, count: number) => void;
 }) {
+  const t = useT();
   const [request, setRequest] = useState('');
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
@@ -27,12 +30,12 @@ export default function VarRemapPanel({ card, llmConfig, extraProviders = [], on
   const varCount = CardParser.extractVariables(card).length;
 
   const analyze = async () => {
-    if (!llmConfig.apiKey) { setError('Chưa cấu hình API Key ở tab Cài đặt.'); return; }
-    if (!request.trim()) { setError('Nhập yêu cầu đổi tên/nghĩa biến trước.'); return; }
+    if (!llmConfig.apiKey) { setError(t.errNoApiKey); return; }
+    if (!request.trim()) { setError(t.vrErrNoRequest); return; }
     setLoading(true); setError(''); setRows([]); setApplied(false);
     try {
       const remaps = await new ModOrchestrator(llmConfig, extraProviders).remapMvuVariables(card, request.trim());
-      if (remaps.length === 0) { setError('AI không đề xuất đổi biến nào (yêu cầu không khớp biến, hoặc parse rỗng). Thử diễn đạt lại.'); }
+      if (remaps.length === 0) { setError(t.vrErrNoRemap); }
       setRows(remaps.map(r => ({ ...r, include: true })));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -41,7 +44,7 @@ export default function VarRemapPanel({ card, llmConfig, extraProviders = [], on
 
   const apply = () => {
     const selected = rows.filter(r => r.include && r.oldKey && ((r.newKey && r.newKey !== r.oldKey) || r.newDescribe));
-    if (selected.length === 0) { setError('Không có dòng nào được chọn/đổi.'); return; }
+    if (selected.length === 0) { setError(t.vrErrNoRow); return; }
     const newCard = CardParser.applyVariableRemap(card, selected);
     onApplied(newCard, selected.length);
     setApplied(true);
@@ -51,29 +54,29 @@ export default function VarRemapPanel({ card, llmConfig, extraProviders = [], on
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-purple-300">
-      <h2 className="text-lg font-extrabold text-gray-950 mb-1">🧬 Mod biến MVU-Zod</h2>
+      <h2 className="text-lg font-extrabold text-gray-950 mb-1">{t.vrTitle}</h2>
       <p className="text-xs text-gray-700 font-semibold mb-2">
-        Đổi TÊN / NGHĨA của {varCount} biến trong schema theo yêu cầu — tự áp đồng bộ khắp schema, getvar, initvar, mvu_update. Runtime MVU không bị đụng.
+        {fmt(t.vrDesc, { count: varCount })}
       </p>
 
       <textarea
         value={request} onChange={e => setRequest(e.target.value)} rows={3}
-        placeholder="VD: Đổi các biến chỉ số sang tiếng Việt (hp → sinh_lực, mp → linh_lực); đổi nghĩa biến 'affection' thành mức độ tin tưởng thay vì tình cảm…"
+        placeholder={t.vrPh}
         className="w-full text-sm rounded-md border-2 border-gray-400 p-2 bg-gray-50 focus:bg-white focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-700 text-gray-950 font-medium"
       />
 
       <div className="flex items-center gap-2 mt-2">
         <button onClick={analyze} disabled={loading}
           className="px-3 py-1.5 rounded-md text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50">
-          {loading ? 'Đang phân tích biến…' : '🔎 Phân tích biến'}
+          {loading ? t.vrAnalyzing : t.vrAnalyze}
         </button>
         {rows.length > 0 && (
           <button onClick={apply}
             className="px-3 py-1.5 rounded-md text-sm font-bold text-white bg-green-600 hover:bg-green-700">
-            ✅ Áp dụng ({rows.filter(r => r.include).length})
+            {fmt(t.vrApply, { count: rows.filter(r => r.include).length })}
           </button>
         )}
-        {applied && <span className="text-xs text-green-700 font-bold">Đã áp dụng vào thẻ.</span>}
+        {applied && <span className="text-xs text-green-700 font-bold">{t.vrApplied}</span>}
       </div>
 
       {error && <p className="text-xs text-red-600 font-semibold mt-2">{error}</p>}
@@ -84,9 +87,9 @@ export default function VarRemapPanel({ card, llmConfig, extraProviders = [], on
             <thead className="bg-gray-100 text-gray-800 sticky top-0">
               <tr>
                 <th className="p-1.5 w-8"></th>
-                <th className="p-1.5 text-left">Biến cũ</th>
-                <th className="p-1.5 text-left">Tên mới</th>
-                <th className="p-1.5 text-left">Nghĩa mới</th>
+                <th className="p-1.5 text-left">{t.vrColOld}</th>
+                <th className="p-1.5 text-left">{t.vrColNew}</th>
+                <th className="p-1.5 text-left">{t.vrColDesc}</th>
               </tr>
             </thead>
             <tbody>
@@ -102,7 +105,7 @@ export default function VarRemapPanel({ card, llmConfig, extraProviders = [], on
                   </td>
                   <td className="p-1.5">
                     <input value={r.newDescribe || ''} onChange={e => setRow(i, { newDescribe: e.target.value })}
-                      placeholder="(giữ nguyên)"
+                      placeholder={t.vrKeepPh}
                       className="w-full px-1 py-0.5 border border-gray-300 rounded text-gray-800" />
                   </td>
                 </tr>

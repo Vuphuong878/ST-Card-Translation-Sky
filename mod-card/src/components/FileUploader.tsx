@@ -3,12 +3,14 @@
 import React, { ChangeEvent } from 'react';
 import { CardParser } from '../lib/parser';
 import { CardV3 } from '../types/card';
+import { useT } from '../i18n/I18nProvider';
 
 interface FileUploaderProps {
   onCardLoaded: (card: CardV3, rawJson?: string, isLorebook?: boolean) => void;
 }
 
 export default function FileUploader({ onCardLoaded }: FileUploaderProps) {
+  const t = useT();
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -20,7 +22,7 @@ export default function FileUploader({ onCardLoaded }: FileUploaderProps) {
         const { card, isLorebook } = CardParser.load(result);
         onCardLoaded(card, result, isLorebook);
       } catch (err) {
-        alert('Lỗi đọc file JSON. Cần là Character Card V3 hoặc file Lorebook (có "entries").\n' + (err as Error).message);
+        alert(t.fuAlertBadJson + (err as Error).message);
         console.error(err);
       }
     };
@@ -29,8 +31,8 @@ export default function FileUploader({ onCardLoaded }: FileUploaderProps) {
 
   return (
     <div className="p-8 border-2 border-dashed border-gray-400 rounded-lg text-center hover:bg-gray-100 transition-colors">
-      <h3 className="text-lg font-bold text-gray-950 mb-2">Tải thẻ nhân vật HOẶC Lorebook (JSON)</h3>
-      <p className="text-gray-800 font-semibold mb-4">Character Card V3 → mod cả thẻ · Lorebook (có "entries") → mod & xuất riêng Lorebook</p>
+      <h3 className="text-lg font-bold text-gray-950 mb-2">{t.fuTitle}</h3>
+      <p className="text-gray-800 font-semibold mb-4">{t.fuDesc}</p>
       <input
         type="file"
         accept=".json"

@@ -108,6 +108,66 @@ const zh: ModUiKeys = {
   stageStopped: '⏹ 已按要求停止。',
   stageStopping: '⏹ 正在停止…',
   stageError: '流程出错。',
+
+  // ─── 通用 ───
+  errNoApiKey: '尚未在「设置」标签页配置 API 密钥。',
+
+  // FileUploader
+  fuAlertBadJson: '读取 JSON 文件失败。必须是 Character Card V3 或世界书文件（含 "entries"）。\n',
+  fuTitle: '载入角色卡 或 世界书（JSON）',
+  fuDesc: 'Character Card V3 → 改写整张卡 · 世界书（含 "entries"）→ 改写并单独导出世界书',
+
+  // ModRulesManager
+  mrAddRule: '+ 添加 Rule',
+  mrEmpty: '尚未设置任何改写规则。',
+  mrEdit: '编辑',
+  mrDelete: '删除',
+  mrEditTitle: '编辑 Rule',
+  mrName: '规则名称',
+  mrNamePh: '例如：把主题 NTR 改成 NTL',
+  mrOldTheme: '旧主题',
+  mrNewTheme: '新主题',
+  mrKeywords: '识别关键词（用逗号分隔）',
+  mrDetails: '改动细节',
+  mrCancel: '取消',
+  mrSave: '保存',
+
+  // VarRemapPanel
+  vrErrNoRequest: '请先输入重命名 / 重新定义变量的请求。',
+  vrErrNoRemap: 'AI 没有提出任何变量改动（请求未匹配到变量，或解析为空）。请换个说法再试。',
+  vrErrNoRow: '没有选中 / 改动任何一行。',
+  vrTitle: '🧬 改写 MVU-Zod 变量',
+  vrDesc: '按请求重命名 / 重新定义 schema 中的 {count} 个变量 —— 会自动同步应用到 schema、getvar、initvar、mvu_update。MVU 运行时不受影响。',
+  vrPh: "例如：把数值变量翻译成越南语（hp → sinh_lực、mp → linh_lực）；把 'affection' 的含义改为信任度而非爱意……",
+  vrAnalyzing: '正在分析变量…',
+  vrAnalyze: '🔎 分析变量',
+  vrApply: '✅ 应用（{count}）',
+  vrApplied: '已应用到角色卡。',
+  vrColOld: '旧变量',
+  vrColNew: '新名称',
+  vrColDesc: '新含义',
+  vrKeepPh: '（保持不变）',
+
+  // SubExpandPanel
+  seErrNoSection: '请选择一个 section。',
+  seErrNoMarker: '请指明要深挖的部分（例如 <Appearance> 或「外貌」）。',
+  seTitle: '🔬 深挖一个部分',
+  seDesc: '只扩写某个 section 中的一个部分（例如外貌区块），其余内容保持不变。',
+  seSelectSection: '选择 section',
+  seMarkerPh: '要深挖的部分 —— 例如 <Appearance>  或  「外貌」',
+  seRequestPh: '附加要求（可选）—— 例如：细致描写服装、伤疤、气质……',
+  seRunning: '正在深挖…',
+  seRun: '🔬 深挖',
+  seApply: '✅ 应用',
+  sePreview: '预览（应用前可编辑）：',
+
+  // ExtraProvidersPanel
+  epTitle: '🔀 额外供应商（并行运行）',
+  epDesc: '添加备用供应商 → 引擎会与主供应商轮流分配请求，多个供应商同时跑。请使用水平相当的模型以保证质量。',
+  epRemove: '删除',
+  epBaseUrlPh: 'Base URL（若使用代理）',
+  epModelPh: '模型（例如 gemini-2.5-flash）',
+  epAdd: '+ 添加供应商',
 };
 
 export default zh;
