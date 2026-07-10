@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 
 import { useStore } from '../store';
-import { useT } from '../i18n/useLocale';
+import { useT, useUi } from '../i18n/useLocale';
+import { fmt } from '../i18n';
 import { TARGET_LANGUAGES, SOURCE_LANGUAGES, extractTranslatableFields } from '../utils/cardFields';
 import { getDefaultTranslationPrompt, getModelSuggestions } from '../utils/apiClient';
 import { aiExtractGlossaryTerms } from '../utils/mvuSync';
@@ -33,7 +34,8 @@ const getFieldBaseKey = (path: string) => {
 };
 
 export default function TranslateConfig() {
-  const { translationConfig, setTranslationConfig, toggleFieldGroup, card, locale, proxy, addToast, fields, deleteCurrentCardCache, deleteAllCaches, scannedModels, resetTranslationConfig } = useStore();
+  const { translationConfig, setTranslationConfig, toggleFieldGroup, card, proxy, addToast, fields, deleteCurrentCardCache, deleteAllCaches, scannedModels, resetTranslationConfig } = useStore();
+  const ui = useUi();
 
   const allAvailableFields = useMemo(() => {
     if (!card) return [];
@@ -51,10 +53,7 @@ export default function TranslateConfig() {
     });
     
     setTranslationConfig({ entryModelRouting: newEntryRouting });
-    addToast('success', locale === 'vi' 
-      ? `Đã áp dụng model cho tất cả các trường ${baseKey}` 
-      : `Applied model to all ${baseKey} fields`
-    );
+    addToast('success', fmt(ui.tcToastModelAll, { key: baseKey }));
   };
 
   const t = useT();
@@ -172,18 +171,12 @@ export default function TranslateConfig() {
       
       if (added > 0) {
         setTranslationConfig({ glossary: [...translationConfig.glossary, ...newEntries] });
-        addToast('success', locale === 'vi' 
-          ? `AI đã trích xuất thành công ${added} thuật ngữ mới.` 
-          : `AI successfully extracted ${added} new terms.`);
+        addToast('success', fmt(ui.tcToastGlossaryOk, { count: added }));
       } else {
-        addToast('info', locale === 'vi' 
-          ? 'Không tìm thấy thuật ngữ mới nào.' 
-          : 'No new terms found.');
+        addToast('info', ui.tcToastGlossaryNone);
       }
     } catch (err) {
-      addToast('error', locale === 'vi'
-        ? `Lỗi AI: ${err instanceof Error ? err.message : String(err)}`
-        : `AI Error: ${err instanceof Error ? err.message : String(err)}`);
+      addToast('error', fmt(ui.tcToastAiErr, { msg: err instanceof Error ? err.message : String(err) }));
     } finally {
       setIsAutoExtractingGlossary(false);
     }
@@ -231,7 +224,7 @@ export default function TranslateConfig() {
                   {t.modInstructions}
                   {modInstructionsDirty && (
                     <span style={{ fontSize: '0.6rem', padding: '1px 6px', background: 'rgba(255,180,0,0.15)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-warning)', fontWeight: 600 }}>
-                      {locale === 'vi' ? 'Chưa lưu' : 'Unsaved'}
+                      {ui.tcUnsaved}
                     </span>
                   )}
                   {modInstructionsSaved && !modInstructionsDirty && (
@@ -270,7 +263,7 @@ export default function TranslateConfig() {
               />
               {modInstructionsDirty && translationConfig.modInstructions?.trim() && (
                 <span style={{ fontSize: '0.6rem', color: 'var(--accent-warning)' }}>
-                  {locale === 'vi' ? '⚠ Lưu yêu cầu trước khi áp dụng' : '⚠ Save instructions before applying'}
+                  {ui.tcSaveBeforeApply}
                 </span>
               )}
 
@@ -302,12 +295,10 @@ export default function TranslateConfig() {
                 />
                 <div>
                   <span style={{ color: translationConfig.enableModThinking ? '#9b59b6' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 500 }}>
-                    🧠 {locale === 'vi' ? 'Bật Chế Độ Thinking Cho Mod' : 'Enable Mod Thinking Mode'}
+                    🧠 {ui.tcModThinking}
                   </span>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.6rem', display: 'block', marginTop: '2px' }}>
-                    {locale === 'vi' 
-                      ? 'AI sẽ suy nghĩ logic 5 bước (Kiểm kê biến, dịch chuyển ngữ nghĩa, an toàn EJS...) để tránh hỏng card.' 
-                      : 'AI will perform a 5-step logical reasoning (variable audit, semantic shift, EJS safety...) to avoid card break.'}
+                    {ui.tcModThinkingDesc}
                   </span>
                 </div>
               </label>
@@ -365,7 +356,7 @@ export default function TranslateConfig() {
             <label className="checkbox-wrapper" style={{ marginTop: '-4px' }}>
               <input type="checkbox" checked={translationConfig.enableJailbreak || false} onChange={(e) => setTranslationConfig({ enableJailbreak: e.target.checked })} />
               <span style={{ color: 'var(--accent-danger)', fontSize: '0.8rem', fontWeight: 500 }}>
-                {locale === 'vi' ? 'Bật Jailbreak (Phá màng lọc đạo đức, dùng cho card NSFW)' : 'Enable Jailbreak (Bypass safety filters for NSFW)'}
+                {ui.tcJailbreak}
               </span>
             </label>
 
@@ -373,7 +364,7 @@ export default function TranslateConfig() {
             <label className="checkbox-wrapper" style={{ marginTop: '-4px' }}>
               <input type="checkbox" checked={translationConfig.enableGomorrahNsfwRules || false} onChange={(e) => setTranslationConfig({ enableGomorrahNsfwRules: e.target.checked })} />
               <span style={{ color: 'rgba(200,100,200,0.8)', fontSize: '0.8rem', fontWeight: 500 }}>
-                {locale === 'vi' ? 'Quy tắc NSFW Gomorrah (Tối ưu content, loại bỏ lọc thừa)' : 'Gomorrah NSFW Rules (Content quality, remove excess filters)'}
+                {ui.tcGomorrah}
               </span>
             </label>
 
@@ -381,7 +372,7 @@ export default function TranslateConfig() {
             <label className="checkbox-wrapper" style={{ marginTop: '-4px' }}>
               <input type="checkbox" checked={translationConfig.enableObjectiveMode !== false} onChange={(e) => setTranslationConfig({ enableObjectiveMode: e.target.checked })} />
               <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                {locale === 'vi' ? 'Dịch Bạch Miêu (Sát nghĩa, không thêm thắt văn phong)' : 'Objective Mode (Literal translation, no embellishments)'}
+                {ui.tcObjective}
               </span>
             </label>
           </>
@@ -392,7 +383,7 @@ export default function TranslateConfig() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <label className="label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
               <BookOpen size={13} />
-              {locale === 'vi' ? 'Bảng thuật ngữ' : 'Glossary'}
+              {ui.tcGlossary}
               {translationConfig.glossary.filter(g => g.source.trim()).length > 0 && (
                 <span style={{
                   fontSize: '0.6rem', padding: '1px 5px',
@@ -428,9 +419,7 @@ export default function TranslateConfig() {
             </div>
           </div>
           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-            {locale === 'vi'
-              ? 'Thêm cặp thuật ngữ bắt buộc. AI sẽ dùng chính xác bản dịch này khi gặp từ gốc.'
-              : 'Add mandatory term pairs. The AI will use these exact translations when it encounters the source term.'}
+            {ui.tcGlossaryDesc}
           </div>
 
           {/* Glossary entries */}
@@ -439,7 +428,7 @@ export default function TranslateConfig() {
               <div key={idx} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                 <input
                   className="input"
-                  placeholder={locale === 'vi' ? 'Từ gốc' : 'Source term'}
+                  placeholder={ui.tcGlossarySrc}
                   value={entry.source}
                   onChange={(e) => updateGlossaryEntry(idx, 'source', e.target.value)}
                   style={{ flex: 1, fontSize: '0.78rem', padding: '4px 8px' }}
@@ -447,7 +436,7 @@ export default function TranslateConfig() {
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>→</span>
                 <input
                   className="input"
-                  placeholder={locale === 'vi' ? 'Bản dịch' : 'Translation'}
+                  placeholder={ui.tcGlossaryTgt}
                   value={entry.target}
                   onChange={(e) => updateGlossaryEntry(idx, 'target', e.target.value)}
                   style={{ flex: 1, fontSize: '0.78rem', padding: '4px 8px' }}
@@ -477,12 +466,12 @@ export default function TranslateConfig() {
               }}
             >
               <Plus size={12} />
-              {locale === 'vi' ? 'Thêm thuật ngữ' : 'Add Term'}
+              {ui.tcAddTerm}
             </button>
             <button
               onClick={autoExtractGlossary}
               disabled={isAutoExtractingGlossary || !card}
-              title={!card ? (locale === 'vi' ? 'Cần tải thẻ nhân vật trước' : 'Load a card first') : ''}
+              title={!card ? ui.tcNeedCard : ''}
               style={{
                 flex: 1, padding: '5px',
                 border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)',
@@ -494,9 +483,9 @@ export default function TranslateConfig() {
               }}
             >
               {isAutoExtractingGlossary ? (
-                <><Loader2 size={12} className="spin" /> {locale === 'vi' ? 'Đang quét...' : 'Extracting...'}</>
+                <><Loader2 size={12} className="spin" /> {ui.tcExtracting}</>
               ) : (
-                <><Bot size={12} /> {locale === 'vi' ? 'AI Quét Thuật Ngữ' : 'AI Extract Terms'}</>
+                <><Bot size={12} /> {ui.tcExtractTerms}</>
               )}
             </button>
           </div>
@@ -560,7 +549,7 @@ export default function TranslateConfig() {
 
                   {/* Group & Entry Routing */}
                   <div style={{ padding: '8px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)' }}>
-                    <label className="label" style={{ marginBottom: '12px', fontSize: '0.8rem', fontWeight: 600 }}>{t.groupModels || 'Model theo nhóm'}</label>
+                    <label className="label" style={{ marginBottom: '12px', fontSize: '0.8rem', fontWeight: 600 }}>{t.groupModels || ui.tcGroupModels}</label>
                     {translationConfig.fieldGroups.map(group => {
                       const labels = groupLabels[group.id];
                       const groupFields = allAvailableFields.filter(f => f.group === group.id);
@@ -574,7 +563,7 @@ export default function TranslateConfig() {
                                 onClick={() => setExpandedGroups(prev => ({ ...prev, [group.id]: !prev[group.id] }))}
                                 className="btn btn-ghost"
                                 style={{ padding: '2px 4px', minHeight: 'auto', height: 'auto', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}
-                                title={isExpanded ? "Thu gọn mục nhỏ" : "Hiển thị mục nhỏ"}
+                                title={isExpanded ? ui.tcCollapseSub : ui.tcExpandSub}
                               >
                                 <span style={{ 
                                   fontSize: '0.65rem', 
@@ -631,7 +620,7 @@ export default function TranslateConfig() {
                                       <button
                                         onClick={() => handleApplyToAllSimilar(translationConfig.entryModelRouting[field.path] || '', field.path, group.id)}
                                         className="btn btn-secondary tooltip"
-                                        data-tooltip={locale === 'vi' ? `Áp dụng cho tất cả ${lastKey}` : `Apply to all ${lastKey}`}
+                                        data-tooltip={fmt(ui.tcApplyAllTooltip, { key: lastKey })}
                                         style={{ padding: '3px 6px', height: '24px', minHeight: 'auto', display: 'flex', alignItems: 'center', borderColor: 'var(--border-strong)', color: 'var(--text-secondary)' }}
                                       >
                                         <Zap size={10} />
@@ -702,7 +691,7 @@ export default function TranslateConfig() {
                 </div>
                 {translationConfig.lorebookStrategy === 'batch' && (
                   <div style={{ marginTop: '8px', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                    Dịch <b>từng mục song song</b> ở mức tối đa (số luồng = tổng RPM của mọi key × provider). Mỗi mục là 1 request riêng → không bị AI trộn/ghi đè giữa các mục. Không cần chỉnh tay.
+                    {ui.tcBatchHint1} <b>{ui.tcBatchHint2}</b> {ui.tcBatchHint3}
                   </div>
                 )}
               </div>
@@ -719,7 +708,7 @@ export default function TranslateConfig() {
                       background: 'rgba(255,180,0,0.15)', borderRadius: 'var(--radius-sm)',
                       color: 'var(--accent-warning)', fontWeight: 600,
                     }}>
-                      {locale === 'vi' ? 'Chưa lưu' : 'Unsaved'}
+                      {ui.tcUnsaved}
                     </span>
                   )}
                   {schemaSaved && !schemaDirty && (
@@ -729,7 +718,7 @@ export default function TranslateConfig() {
                       color: '#50c878', fontWeight: 600,
                       display: 'flex', alignItems: 'center', gap: '3px',
                     }}>
-                      <CheckCircle size={10} /> {locale === 'vi' ? 'Đã lưu!' : 'Saved!'}
+                      <CheckCircle size={10} /> {ui.tcSaved}
                     </span>
                   )}
                 </label>
@@ -773,7 +762,7 @@ export default function TranslateConfig() {
                       opacity: schemaDirty ? 1 : 0.5,
                     }}
                   >
-                    <Save size={11} /> {locale === 'vi' ? 'Lưu' : 'Save'}
+                    <Save size={11} /> {ui.tcSave}
                   </button>
                 </div>
               </div>
@@ -784,8 +773,8 @@ export default function TranslateConfig() {
                   resize: 'vertical',
                   borderColor: schemaDirty ? 'var(--accent-warning)' : undefined,
                 }}
-                placeholder={translationConfig.enableMvuConversion 
-                  ? "Nếu bạn dán Zod Schema vào đây, hệ thống sẽ dùng luôn Schema này để biến thẻ thành MVU-Zod (Bỏ qua bước AI tự sinh)."
+                placeholder={translationConfig.enableMvuConversion
+                  ? ui.tcSchemaMvuPh
                   : (t.customSchemaDesc || "Optional: Provide a JSON schema, MVU rules, or Zod format. The AI will strictly follow this structure.")}
                 value={schemaDraft}
                 onChange={(e) => setSchemaDraft(e.target.value)}
@@ -797,14 +786,14 @@ export default function TranslateConfig() {
             <div>
               <label className="label" style={{ marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {isModMode ? (locale === 'vi' ? 'Prompt Hệ Thống Bổ Sung (Mod)' : 'Additional System Prompt (Mod)') : (locale === 'vi' ? 'Prompt Dịch Tuỳ Chỉnh' : 'Custom Translation Prompt')}
+                  {isModMode ? ui.tcPromptMod : ui.tcPromptCustom}
                   {promptDirty && (
                     <span style={{
                       fontSize: '0.6rem', padding: '1px 6px',
                       background: 'rgba(255,180,0,0.15)', borderRadius: 'var(--radius-sm)',
                       color: 'var(--accent-warning)', fontWeight: 600,
                     }}>
-                      {locale === 'vi' ? 'Chưa lưu' : 'Unsaved'}
+                      {ui.tcUnsaved}
                     </span>
                   )}
                   {promptSaved && !promptDirty && (
@@ -815,7 +804,7 @@ export default function TranslateConfig() {
                       display: 'flex', alignItems: 'center', gap: '3px',
                       animation: 'fadeIn 0.2s',
                     }}>
-                      <CheckCircle size={10} /> {locale === 'vi' ? 'Đã lưu!' : 'Saved!'}
+                      <CheckCircle size={10} /> {ui.tcSaved}
                     </span>
                   )}
                 </span>
@@ -824,7 +813,7 @@ export default function TranslateConfig() {
                     <span 
                       style={{ fontSize: '0.7rem', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                       onClick={resetPrompt}
-                      title={locale === 'vi' ? 'Khôi phục prompt mặc định' : 'Reset to default prompt'}
+                      title={ui.tcResetPromptTitle}
                     >
                       <RotateCcw size={10} /> Reset
                     </span>
@@ -843,7 +832,7 @@ export default function TranslateConfig() {
                       opacity: promptDirty ? 1 : 0.5,
                     }}
                   >
-                    <Save size={11} /> {locale === 'vi' ? 'Lưu' : 'Save'}
+                    <Save size={11} /> {ui.tcSave}
                   </button>
                 </div>
               </label>
@@ -854,15 +843,13 @@ export default function TranslateConfig() {
                   resize: 'vertical', whiteSpace: 'pre-wrap',
                   borderColor: promptDirty ? 'var(--accent-warning)' : undefined,
                 }}
-                placeholder={locale === 'vi' ? 'Để trống để dùng prompt mặc định...' : 'Leave empty to use the default prompt...'}
+                placeholder={ui.tcPromptPh}
                 value={promptDraft || defaultPrompt}
                 onChange={(e) => setPromptDraft(e.target.value === defaultPrompt ? '' : e.target.value)}
                 onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); savePrompt(); } }}
               />
               <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.4' }}>
-                {locale === 'vi'
-                  ? 'Tùy chỉnh prompt dịch. Nhấn Save (hoặc Ctrl+S) để áp dụng. Prompt được lưu tự động vào bộ nhớ trình duyệt.'
-                  : 'Customize the translation prompt. Press Save (or Ctrl+S) to apply. The prompt is persisted in browser storage.'}
+                {ui.tcPromptDesc}
               </div>
             </div>
 
@@ -870,7 +857,7 @@ export default function TranslateConfig() {
             {!isModMode && (
             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
               <label className="label" style={{ marginBottom: '6px' }}>
-                {locale === 'vi' ? 'Kích thước chia nhỏ (Chunk Size)' : 'Chunk Size Limit'}
+                {ui.tcChunkSize}
               </label>
               <input
                 className="input"
@@ -880,19 +867,17 @@ export default function TranslateConfig() {
                 step={1000}
                 value={translationConfig.chunkSize || 0}
                 onChange={(e) => setTranslationConfig({ chunkSize: parseInt(e.target.value) || 0 })}
-                placeholder={locale === 'vi' ? '0 = Tự động (50k mỗi chunk)' : '0 = Auto (50k per chunk)'}
+                placeholder={ui.tcChunkSizePh}
                 style={{ width: '100%' }}
               />
               <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.4' }}>
-                {locale === 'vi' 
-                  ? 'Ghi đè giới hạn cắt đoạn mặc định. Đặt 0 để tự động tính dựa trên Max Tokens của proxy. Dùng cho Regex/MVU lớn để tránh cắt ngang cấu trúc code.' 
-                  : 'Override default chunking threshold. Set to 0 to auto-calculate based on proxy Max Tokens. Use large chunks for Regex/MVU to prevent breaking code structure.'}
+                {ui.tcChunkSizeDesc}
               </div>
 
               {/* Parallel Chunks */}
               <div style={{ marginTop: '10px' }}>
                 <label className="label" style={{ marginBottom: '6px' }}>
-                  {locale === 'vi' ? '⚡ Dịch song song (Parallel Chunks)' : '⚡ Parallel Chunks'}
+                  {ui.tcParallelChunks}
                 </label>
                 <input
                   className="input"
@@ -904,9 +889,7 @@ export default function TranslateConfig() {
                   style={{ width: '100%' }}
                 />
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.4' }}>
-                  {locale === 'vi' 
-                    ? '1 = tuần tự (mặc định, tốt cho văn bản cần nhất quán). 2-5 = dịch nhiều chunk cùng lúc, nhanh gấp bội cho card Regex lớn. ⚠️ Mỗi chunk chạy song song sẽ không có context từ chunk trước.' 
-                    : '1 = sequential (default, best for narrative consistency). 2-5 = translate multiple chunks simultaneously, much faster for large Regex cards. ⚠️ Parallel chunks lack context from previous chunks.'}
+                  {ui.tcParallelChunksDesc}
                 </div>
               </div>
 
@@ -918,12 +901,10 @@ export default function TranslateConfig() {
                     checked={translationConfig.enableChunkVerification || false}
                     onChange={(e) => setTranslationConfig({ enableChunkVerification: e.target.checked })}
                   />
-                  <span>{locale === 'vi' ? '🔍 AI xác minh chunk (so sánh gốc ↔ dịch)' : '🔍 AI Chunk Verification (compare original ↔ translated)'}</span>
+                  <span>{ui.tcChunkVerify}</span>
                 </label>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.4' }}>
-                  {locale === 'vi' 
-                    ? 'Sau mỗi chunk dịch xong, AI sẽ so sánh bản gốc với bản dịch để phát hiện: code bị hỏng (backticks, brackets), nội dung bị thiếu/cắt, và cấu trúc bị sai lệch. Tự động sửa lỗi nếu phát hiện. ⚠️ Tốn thêm 1 API call/chunk.' 
-                    : 'After each chunk is translated, AI verifies structural integrity by comparing original vs translated: detects broken code (backticks, brackets), missing content, and structural corruption. Auto-repairs if issues found. ⚠️ Costs 1 extra API call per chunk.'}
+                  {ui.tcChunkVerifyDesc}
                 </div>
               </div>
             </div>
@@ -939,12 +920,10 @@ export default function TranslateConfig() {
                 />
                 <div>
                   <span style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    🧠 {locale === 'vi' ? 'Cross-field Context RAG v2 (TF-IDF)' : 'Cross-field Context RAG v2 (TF-IDF)'}
+                    🧠 {ui.tcRag}
                   </span>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', display: 'block', marginTop: '2px' }}>
-                    {locale === 'vi'
-                      ? 'TF-IDF + Tiered Retrieval: kéo context thông minh từ field đã dịch, ưu tiên cấu trúc (schema/biến MVU), fuzzy glossary matching.'
-                      : 'TF-IDF + Tiered Retrieval: smart context from translated fields, structural priority (schema/MVU vars), fuzzy glossary matching.'}
+                    {ui.tcRagDesc}
                   </span>
                 </div>
               </label>
@@ -954,7 +933,7 @@ export default function TranslateConfig() {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <div style={{ flex: 1 }}>
                       <label className="label" style={{ fontSize: '0.7rem' }}>
-                        {locale === 'vi' ? 'Số field context tối đa' : 'Max context fields'}
+                        {ui.tcRagMaxFields}
                       </label>
                       <input
                         className="input"
@@ -968,7 +947,7 @@ export default function TranslateConfig() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <label className="label" style={{ fontSize: '0.7rem' }}>
-                        {locale === 'vi' ? 'Max ký tự context' : 'Max context chars'}
+                        {ui.tcRagMaxChars}
                       </label>
                       <input
                         className="input"
@@ -983,9 +962,7 @@ export default function TranslateConfig() {
                     </div>
                   </div>
                   <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
-                    {locale === 'vi'
-                      ? '💡 Budget tự động theo loại field (narrative: 3K, code: 6-8K). Đặt giá trị ở đây để ghi đè auto. 0 = tự động. Gemini 2.5 Pro: 1M tokens → 20K chars ≈ 2% budget.'
-                      : '💡 Budget auto-scales by field type (narrative: 3K, code: 6-8K). Set a value here to override auto. 0 = auto. Gemini 2.5 Pro: 1M tokens → 20K chars ≈ 2% budget.'}
+                    {ui.tcRagBudget}
                   </div>
                 </div>
               )}
@@ -1001,12 +978,10 @@ export default function TranslateConfig() {
                 />
                 <div>
                   <span style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    💾 {locale === 'vi' ? 'Translation Memory (Cross-session)' : 'Translation Memory (Cross-session)'}
+                    💾 {ui.tcTm}
                   </span>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', display: 'block', marginTop: '2px' }}>
-                    {locale === 'vi'
-                      ? 'Lưu bản dịch vào bộ nhớ vĩnh viễn. Khi dịch card mới, AI sẽ tham khảo bản dịch cũ tương tự để nhất quán. Tự động xóa sạch khi load card mới.'
-                      : 'Persist translations to permanent memory. When translating new cards, AI references similar past translations for consistency. Auto-clears on card load.'}
+                    {ui.tcTmDesc}
                   </span>
                 </div>
               </label>
@@ -1023,12 +998,10 @@ export default function TranslateConfig() {
                 />
                 <div>
                   <span style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    ✂️ {locale === 'vi' ? 'Surgical CJK Translation' : 'Surgical CJK Translation'}
+                    ✂️ {ui.tcSurgical}
                   </span>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', display: 'block', marginTop: '2px' }}>
-                    {locale === 'vi'
-                      ? 'Dịch an toàn cho các field có chứa code (EJS/Regex). Chỉ bóc tách chữ CJK để dịch, giữ nguyên 100% cấu trúc code.'
-                      : 'Safe translation for code-heavy fields (EJS/Regex). Extracts only CJK strings for translation, preserving 100% of code structure.'}
+                    {ui.tcSurgicalDesc}
                   </span>
                 </div>
               </label>
@@ -1040,7 +1013,7 @@ export default function TranslateConfig() {
             {!isModMode && (
             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
               <label className="label" style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                🛡️ {locale === 'vi' ? 'Bảo vệ CSS khỏi CJK' : 'CSS CJK Protection'}
+                🛡️ {ui.tcCssCjk}
               </label>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button
@@ -1054,7 +1027,7 @@ export default function TranslateConfig() {
                     cursor: 'pointer', transition: 'all 0.15s',
                   }}
                 >
-                  {locale === 'vi' ? '🔒 Giữ nguyên (Preserve)' : '🔒 Preserve'}
+                  {ui.tcCssPreserve}
                 </button>
                 <button
                   onClick={() => setTranslationConfig({ cssCjkHandling: 'translate' })}
@@ -1067,13 +1040,11 @@ export default function TranslateConfig() {
                     cursor: 'pointer', transition: 'all 0.15s',
                   }}
                 >
-                  {locale === 'vi' ? '📝 Dịch (Translate)' : '📝 Translate'}
+                  {ui.tcCssTranslate}
                 </button>
               </div>
               <div style={{ fontSize: '0.63rem', color: 'var(--text-muted)', marginTop: '5px', lineHeight: '1.4' }}>
-                {locale === 'vi'
-                  ? 'Xử lý ký tự Hán/CJK đơn lẻ trong CSS values (VD: drop-shadow(商 10px ...)). "Giữ nguyên" = mã hoá ẩn đi để không bị dịch, "Dịch" = cho phép AI dịch các ký tự này và chuyển khoảng trắng thành gạch dưới đối với Object Key JS.'
-                  : 'How to handle lone CJK chars inside CSS values (e.g. drop-shadow(商 10px ...)). "Preserve" = hide from AI to keep as-is, "Translate" = let AI translate them and replace spaces with underscores for JS Object Keys.'}
+                {ui.tcCssCjkDesc}
               </div>
             </div>
             )}
@@ -1095,34 +1066,34 @@ export default function TranslateConfig() {
         {/* ═══ Cache Management ═══ */}
         <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px', marginTop: '4px' }}>
           <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px', fontWeight: 600 }}>
-            💾 {locale === 'vi' ? 'Quản lý Cache Dịch' : 'Translation Cache'}
+            💾 {ui.tcCacheTitle}
           </label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {card && (
               <button
                 className="btn btn-secondary btn-sm"
                 onClick={async () => {
-                  if (confirm(locale === 'vi' ? 'Bạn có chắc chắn muốn đặt lại thẻ này và xóa cache dịch của nó không? Hành động này không thể hoàn tác.' : 'Are you sure you want to reset this card and delete its translation cache? This cannot be undone.')) {
+                  if (confirm(ui.tcCacheResetConfirm)) {
                     await deleteCurrentCardCache();
-                    addToast('success', locale === 'vi' ? 'Đã xóa thành công cache dịch của thẻ này' : 'Translation cache cleared successfully');
+                    addToast('success', ui.tcCacheResetOk);
                   }
                 }}
                 style={{ width: '100%', fontSize: '0.75rem', borderColor: 'var(--accent-warning)', color: 'var(--accent-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
               >
-                <RotateCcw size={12} /> {locale === 'vi' ? 'Đặt lại thẻ & Xóa cache thẻ này' : 'Reset card & Clear this cache'}
+                <RotateCcw size={12} /> {ui.tcCacheResetBtn}
               </button>
             )}
             <button
               className="btn btn-secondary btn-sm"
               onClick={async () => {
-                if (confirm(locale === 'vi' ? 'Bạn có chắc chắn muốn xóa toàn bộ cache dịch của tất cả các thẻ không? Hành động này không thể hoàn tác.' : 'Are you sure you want to delete all translation caches for all cards? This cannot be undone.')) {
+                if (confirm(ui.tcCacheAllConfirm)) {
                   await deleteAllCaches();
-                  addToast('success', locale === 'vi' ? 'Đã xóa thành công toàn bộ cache dịch' : 'All translation caches cleared successfully');
+                  addToast('success', ui.tcCacheAllOk);
                 }
               }}
               style={{ width: '100%', fontSize: '0.75rem', borderColor: 'var(--accent-danger)', color: 'var(--accent-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
             >
-              <Trash2 size={12} /> {locale === 'vi' ? 'Xóa toàn bộ cache dịch' : 'Clear all translation caches'}
+              <Trash2 size={12} /> {ui.tcCacheAllBtn}
             </button>
           </div>
         </div>
@@ -1130,7 +1101,7 @@ export default function TranslateConfig() {
         {/* ─── Settings Management ─── */}
         <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px', marginTop: '4px' }}>
           <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px', fontWeight: 600 }}>
-            ⚙️ {locale === 'vi' ? 'Quản lý Cài đặt' : 'Settings Management'}
+            ⚙️ {ui.tcSettingsMgmt}
           </label>
           <button
             className="btn btn-secondary btn-sm"
