@@ -14,6 +14,7 @@ const ui: UiKeys = {
   railPreset: '创建预设',
   railModCard: '改卡',
   railCrawler: '网页爬虫',
+  railTemplateTranslator: '变量翻译',
   railExtract: '提取卡',
 
   // Toolbar

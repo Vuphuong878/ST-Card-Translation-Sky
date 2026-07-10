@@ -11,7 +11,8 @@ const apps = [
   { name: 'Tạo Card (5174)', dir: path.join(rootDir, 'tao-card') },
   { name: 'Tạo Preset (5175)', dir: path.join(rootDir, 'preset-tool') },
   { name: 'Mod Card (5176)', dir: path.join(rootDir, 'mod-card') },
-  { name: 'Crawler (5177)', dir: path.join(rootDir, 'crawler') }
+  { name: 'Crawler (5177)', dir: path.join(rootDir, 'crawler') },
+  { name: 'Translator (5178)', dir: path.join(rootDir, 'template-translator') }
 ];
 
 const children = [];
@@ -45,7 +46,7 @@ process.on('exit', () => cleanup('exit'));
 try {
   console.log('[Launcher] Freeing ports...');
   const freePortsScript = path.join(rootDir, 'scripts', 'free-ports.ps1');
-  execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${freePortsScript}" 5173 5174 5175 5176 5177`, { stdio: 'inherit' });
+  execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${freePortsScript}" 5173 5174 5175 5176 5177 5178`, { stdio: 'inherit' });
 } catch (e) {
   console.error('[Launcher] Warning: failed to free ports automatically.');
 }

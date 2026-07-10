@@ -72,6 +72,16 @@ export const FLOWS: FlowDef[] = [
     color: '#6366f1',
   },
   {
+    id: 'template-translator',
+    label: 'Dịch Biến',
+    labelKey: 'railTemplateTranslator',
+    emoji: '🔠',
+    kind: 'iframe',
+    // template-translator (Next.js) on fixed port 5178.
+    url: (import.meta as any).env?.VITE_TRANSLATOR_TOOL_URL || 'http://localhost:5178',
+    color: '#0d9488',
+  },
+  {
     id: 'novalcard',
     label: 'Trích Card',
     labelKey: 'railExtract',

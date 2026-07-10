@@ -7,12 +7,12 @@ echo    SILLYTAVERN MULTI TOOLS  -  Launcher
 echo ==========================================================
 echo.
 
-REM -- Don port 5173-5177 truoc khi chay --
-REM 4 tool con chay bang `cmd /k` trong cua so rieng nen dong cua so launcher KHONG giet
+REM -- Don port 5173-5178 truoc khi chay --
+REM 5 tool con chay bang `cmd /k` trong cua so rieng nen dong cua so launcher KHONG giet
 REM chung. Lan chay sau vite bao "Port 5173 is already in use" va chet han (strictPort).
-REM Script chi giet tien trinh node dang giu dung 5 port nay; gap tien trinh khac thi dung lai.
-echo [Launcher] Don port 5173-5177...
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\free-ports.ps1" 5173 5174 5175 5176 5177
+REM Script chi giet tien trinh node dang giu dung 6 port nay; gap tien trinh khac thi dung lai.
+echo [Launcher] Don port 5173-5178...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\free-ports.ps1" 5173 5174 5175 5176 5177 5178
 if errorlevel 1 (
     echo.
     echo [Launcher] Khong giai phong duoc port. Xem thong bao ben tren roi chay lai.
@@ -26,6 +26,7 @@ call :launch_tool "tao-card"    "Tao Card 5174"
 call :launch_tool "preset-tool" "Tao Preset 5175"
 call :launch_tool "mod-card"    "Mod Card 5176"
 call :launch_tool "crawler"     "Crawler 5177"
+call :launch_tool "template-translator" "Translator 5178"
 
 REM -- Hub / tool Dich (this folder) - opens browser at http://localhost:5173 --
 echo.
@@ -40,7 +41,7 @@ call npm run dev
 REM -- Hub da dung: dong luon 3 tool con de lan sau khong ket port --
 echo.
 echo [Launcher] Dong cac tool con...
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\free-ports.ps1" 5174 5175 5176 5177
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\free-ports.ps1" 5174 5175 5176 5177 5178
 
 echo.
 echo (Da dung.) Nhan phim bat ky de dong.

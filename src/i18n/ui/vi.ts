@@ -18,6 +18,7 @@ const ui: UiKeys = {
   railPreset: 'Tạo Preset',
   railModCard: 'Mod Card',
   railCrawler: 'Web Crawler',
+  railTemplateTranslator: 'Dịch Biến',
   railExtract: 'Trích Card',
 
   // Toolbar của iframe tool
