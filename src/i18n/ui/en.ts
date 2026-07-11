@@ -9,6 +9,7 @@ const ui = {
   // ─── Hub shell ───
   langLabel: 'Language',
   hubMadeBy: '✦ Made by',
+  hubReportBug: 'Report a bug',
 
   // Rail (thanh chuyển 5 công cụ)
   railTranslate: 'Translate Card',

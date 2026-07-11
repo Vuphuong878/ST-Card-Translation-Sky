@@ -11,6 +11,7 @@ const ui: UiKeys = {
   // ─── Hub shell ───
   langLabel: 'Ngôn ngữ',
   hubMadeBy: '✦ Kết hợp của',
+  hubReportBug: 'Báo lỗi',
 
   // Rail (thanh chuyển 5 công cụ) — nguyên văn từ flows.ts
   railTranslate: 'Dịch Card',

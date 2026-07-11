@@ -2,6 +2,10 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.62.0 — Nút "🐞 Báo lỗi" trên header 🐞
+- Thêm nút **"Báo lỗi"** (viền đỏ) ở **header trên cùng bên phải**, cạnh nút đổi ngôn ngữ. Bấm → mở **file Excel báo lỗi (OneDrive)** ở tab mới để mọi người cùng ghi bug.
+- Có i18n: **Báo lỗi / Report a bug / 报告错误**. Link nằm ở hằng `BUG_REPORT_URL` trong `AppHub.tsx` (dễ đổi sau này).
+
 ## v1.61.0 — Sửa nốt 2 báo oan còn lại ở Kiểm tra lỗi dịch 🧯
 > Sau khi sửa Template Literal (1.60), chạy Verify live lại thì thấy panel còn 2 loại báo oan **cùng họ** — flag thứ không cần dịch / không phải lỗi. Sửa nốt cho panel đáng tin.
 - **"còn tiếng Trung" đếm cả dấu ngoặc 【】《》 là "chữ Hán":** hàm `countCJK` gộp cả dải dấu câu CJK (`U+3000–303F`) và fullwidth (`U+FF00–FFEF`) → dấu ngoặc `【】` giữ nguyên (đúng) bị đếm là "chữ chưa dịch", báo "36 CJK còn lại" / "2 CJK còn lại". Nay **chỉ đếm CHỮ thật** (ideograph Hán + kana Nhật + hangul Hàn), bỏ dấu câu/fullwidth.

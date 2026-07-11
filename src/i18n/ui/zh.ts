@@ -7,6 +7,7 @@ const ui: UiKeys = {
   // ─── Hub shell ───
   langLabel: '语言',
   hubMadeBy: '✦ 出品',
+  hubReportBug: '报告错误',
 
   // Rail (5 个工具)
   railTranslate: '翻译卡',

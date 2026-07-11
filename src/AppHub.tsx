@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import App from './App';
 import { FLOWS, type FlowDef } from './flows';
-import { RotateCw, ExternalLink } from 'lucide-react';
+import { RotateCw, ExternalLink, Bug } from 'lucide-react';
 import HubUpdateButton from './components/HubUpdateButton';
 import { APP_VERSION } from './version';
 import { useUi } from './i18n/useLocale';
@@ -9,6 +9,9 @@ import { getUiLang, setUiLang, UI_LANGS } from './i18n';
 
 const RAIL_WIDTH = 78;
 const LS_KEY = 'hub-active-flow';
+
+/** Link file Excel để mọi người báo lỗi (mở tab mới khi bấm nút "Báo lỗi" ở header). */
+const BUG_REPORT_URL = 'https://onedrive.live.com/:x:/g/personal/9d827193364b0865/IQChejAgqiJJR5jbZcOTvFzuARJ72g4PVNDz_XNopPwkQ38?rtime=EXxXpf_e3kg&redeem=aHR0cHM6Ly8xZHJ2Lm1zL3gvYy85ZDgyNzE5MzM2NGIwODY1L0lRQ2hlakFncWlKSlI1amJaY09UdkZ6dUFSSjcyZzRQVk5Eel9YTm9wUHdrUTM4P2U9QUY0ZUQx';
 
 /** Gắn ?lang= vào URL tool con để iframe mở đúng ngôn ngữ đang chọn. */
 const withLang = (u: string): string => {
@@ -195,6 +198,26 @@ function GlobalHeader({ activeFlow }: { activeFlow?: FlowDef }) {
             <span>{ui[activeFlow.labelKey]}</span>
           </div>
         )}
+        {/* Nút Báo lỗi → mở file Excel (OneDrive) ở tab mới cho mọi người ghi bug */}
+        <a
+          href={BUG_REPORT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={ui.hubReportBug}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '5px 11px', borderRadius: 8, textDecoration: 'none',
+            fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap',
+            color: '#ffb4a6',
+            background: 'rgba(255,90,70,0.12)',
+            border: '1px solid rgba(255,90,70,0.35)',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,90,70,0.22)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,90,70,0.12)'; }}
+        >
+          <Bug size={15} strokeWidth={2.4} />
+          <span>{ui.hubReportBug}</span>
+        </a>
         <LangSwitcher />
       </div>
     </header>
