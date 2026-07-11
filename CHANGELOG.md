@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.58.0 — Sửa bug #1: field "DONE" nhưng vẫn tiếng Trung 🛑
+> Từ báo lỗi #1 (user tải thẻ về, dịch ra vẫn còn nguyên đoạn tiếng Trung). Đã lấy thẻ gốc + thẻ đã dịch trong báo lỗi, trích nội dung 2 bên ra so, và tìm ra gốc rễ.
+- **Gốc rễ:** khi dịch, AI đôi lúc **trả lại nguyên văn tiếng Trung** (echo) — hay gặp khi nội dung khó/bị model từ chối, hoặc **model phụ (flash)** trả lại y nguyên input. Field lúc đó dài **xấp xỉ nguồn** (tỉ lệ ~100%, đúng như badge "DONE 104%" trong ảnh báo lỗi) nên **lọt hết** các bộ kiểm độ dài và bị đánh dấu **DONE dù chưa dịch**. Bộ gác chữ Hán cũ **chỉ soi field schema** (initvar/tavern_helper…), **không soi** content/lorebook/mở đầu/mô tả — nên chúng lọt lưới.
+- **Sửa:** thêm **"Bộ gác chữ Hán sót"** cho mọi field văn bản thường. Bản dịch tốt zh→vi gần như **0% chữ Hán** (chỉ vài danh từ riêng ≈ vài %); nếu bản dịch **còn > 35% số chữ Hán của nguồn** → coi là **chưa dịch** → **tự thử lại** (tới hết số lần retry); vẫn còn thì **đánh dấu LỖI (đỏ)** thay vì DONE giả, để bạn thấy & dịch lại đúng chỗ đó.
+- **Không bắt nhầm:** bỏ qua danh từ riêng giữ lại (vài %), key Lorebook merge (cố ý giữ key gốc + thêm key dịch), field code (regex/tavern_helper — chữ Hán trong code/URL là hợp lệ, đã có bộ gác riêng), và chữ Hán trong URL/đường dẫn import. Đã đối chiếu trên chính thẻ trong báo lỗi: **0 field tốt bị bắt nhầm**, chỉ đúng ca echo bị chặn.
+- *Kỹ thuật:* logic tách ra `detectResidualCjk()` (thuần, test được) + 7 test hồi quy lấy fixture từ thẻ báo lỗi thật. tsc + **125 test** + build xanh.
+
 ## v1.56.4 — Dịch Card đã dịch xong EN + 中文 (Đợt 4) 🌏
 > Tiếp nối v1.56.3. **Dịch Card** — công cụ chính, cũng là công cụ nặng nhất — giờ đổi ngôn ngữ theo nút VI/EN/中文 trên header.
 - **Toàn bộ 20 panel** đã có tiếng Anh & tiếng Trung: cấu hình dịch, bảng trường (Field Editor), tiến trình + nhật ký, xuất thẻ + sức khoẻ thẻ, cấu hình API/provider, Regex Manager, Kiểm tra lỗi (Verify), Chiến lược B (MVU) & C (EJS), So Sánh Card, EJS Creator, Trợ Lý AI và trình chuyển đổi MVU-Zod 7 bước.

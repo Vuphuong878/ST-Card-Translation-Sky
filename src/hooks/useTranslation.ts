@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError, ApiError, setExtraProviders, resetProviderPool, computePoolConcurrency } from '../utils/apiClient';
 import { extractTranslatableFields, applyTranslationsToCard, autoTranslateLorebookTriggerKeys, injectNewLorebookEntries } from '../utils/cardFields';
 import { syncMvuVariables, postProcessRegexHtml, normalizeSmartQuotesInCode, fixNestedQuoteBracketPaths, fixBrokenLodashPaths, fixDotNotationPaths, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency, enforceVariableCasing, fixZodSyntaxErrors, validateDictionaryConflicts, aiResolveMvuConflicts } from '../utils/mvuSync';
-import { shouldSkipTranslation, detectLanguage } from '../utils/langDetect';
+import { shouldSkipTranslation, detectLanguage, detectResidualCjk } from '../utils/langDetect';
 import { clearRAGCache } from '../utils/ragContext';
 import { storeTranslation, lookupTranslationMemory } from '../utils/translationMemory';
 import { findReusableTwin } from '../utils/translationReuse';
@@ -755,6 +755,47 @@ export function useTranslation() {
           }
           store.updateField(field.path, { status: 'error', error: 'Schema translation failed (Chinese characters remaining)' });
           store.addLog('error', `Chinese characters remaining in Schema for ${field.label} after retries.`);
+          return 'error';
+        }
+      }
+
+      // ═══ RESIDUAL-CJK GUARD (mọi trường VĂN BẢN thường) ═══
+      // Bug thực tế (bugNeedFix/1): AI đôi khi TRẢ LẠI NGUYÊN VĂN nguồn (echo) khi gặp refusal /
+      // nội dung khó / bị model phụ (flash) trả input y nguyên. Field khi đó dài ≈ nguồn (ratio
+      // ~100%) nên LỌT hết các guard độ dài phía trên và bị đánh dấu 'done' DÙ VẪN LÀ tiếng Trung
+      // (đúng triệu chứng "DONE 104%" mà content vẫn Hán). Guard schema-critical ở trên KHÔNG bao
+      // trường content/lorebook/messages/core… nên chúng lọt lưới. Ở đây chặn theo TỶ LỆ chữ Hán
+      // SỐNG SÓT: bản dịch tốt zh→vi hầu như 0% Hán (chỉ vài danh từ riêng ≈ vài %); nếu >35% số
+      // Hán của nguồn còn nguyên ⇒ gần như chắc chắn CHƯA DỊCH (echo) hoặc dịch dở nửa chừng ⇒ retry;
+      // hết retry ⇒ 'error' để field hiện ĐỎ, KHÔNG phải DONE giả (user thấy & dịch lại đúng chỗ).
+      // KHÔNG áp cho: target CJK (đang dịch SANG Trung/Nhật), lorebook_keys (merge mode CỐ Ý giữ key
+      // gốc + thêm key dịch), regex/tavern_helper (CJK trong code/URL hợp lệ; đã có guard riêng ở trên).
+      if (
+        isTargetNonCJK &&
+        !isSchemaCritical &&
+        field.group !== 'lorebook_keys' &&
+        field.group !== 'regex' &&
+        field.group !== 'tavern_helper'
+      ) {
+        const { suspect, origCjk, transCjk, survival } = detectResidualCjk(field.original, translated);
+        if (suspect) {
+          if (freshRetries() < (store.proxy.maxRetries || 3)) {
+            store.updateField(field.path, { retries: freshRetries() + 1 });
+            store.addLog('retry',
+              `⚠️ Nghi CHƯA DỊCH: còn ${(survival * 100).toFixed(0)}% chữ Hán ` +
+              `(${transCjk}/${origCjk}) ở ${field.label}. AI có thể trả lại nguyên văn. Thử lại…`
+            );
+            await new Promise((r) => setTimeout(r, store.proxy.retryDelay || 1000));
+            return 'retry';
+          }
+          store.updateField(field.path, {
+            status: 'error',
+            error: `Chưa dịch: còn ${transCjk}/${origCjk} chữ Hán (${(survival * 100).toFixed(0)}%) sau ${store.proxy.maxRetries || 3} lần thử`,
+          });
+          store.addLog('error',
+            `❌ ${field.label} vẫn còn ${(survival * 100).toFixed(0)}% tiếng Trung sau retry — ` +
+            `đánh dấu LỖI (không phải DONE giả).`
+          );
           return 'error';
         }
       }

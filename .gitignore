@@ -43,3 +43,4 @@ tsconfig.tsbuildinfo
 # Secrets & test data — KHONG commit
 apiKey/
 cardTest/
+bugNeedFix/
