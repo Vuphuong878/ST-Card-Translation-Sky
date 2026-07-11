@@ -188,6 +188,7 @@ export function BatchGeneratorPanel() {
             profile: activeProfile,
             generationParams: settings.generationParams,
             get stopped() { return useBatchRunStore.getState().stopped; },
+            get signal() { return useBatchRunStore.getState().abort?.signal; },
             log: addLog,
             onReport: setVerifyReport,
             appendEntry: (entry) => { addEntry(entry); },

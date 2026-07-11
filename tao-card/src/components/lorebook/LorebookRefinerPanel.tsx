@@ -83,6 +83,8 @@ export function LorebookRefinerPanel() {
   const [actions, setActions] = useState<RefinerAction[]>([]);
   const [report, setReport] = useState<RefinerReport | null>(null);
   const ctxRef = useRef<{ paused: boolean; stopped: boolean }>({ paused: false, stopped: false });
+  // AbortController hủy call AI đang bay khi Dừng hẳn (stopped chỉ chặn call kế tiếp).
+  const abortRef = useRef<AbortController | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   // ─── Preview state ──────────────────────────────────────────────────
@@ -161,6 +163,7 @@ export function LorebookRefinerPanel() {
     setActions([]);
     setReport(null);
     ctxRef.current = { paused: false, stopped: false };
+    abortRef.current = new AbortController();
 
     // Create snapshot before
     await createSnapshot('Before AI Refiner');
@@ -174,6 +177,7 @@ export function LorebookRefinerPanel() {
         schemaContext: mvuzodSchema ? buildSchemaContextForBatch(mvuzodSchema) : undefined,
         get paused() { return ctxRef.current.paused; },
         get stopped() { return ctxRef.current.stopped; },
+        signal: abortRef.current.signal,
         log: addLog,
         onProgress: setProgress,
         onActionsReady: (allActions) => {
@@ -222,6 +226,7 @@ export function LorebookRefinerPanel() {
 
   const handleStop = useCallback(() => {
     ctxRef.current.stopped = true;
+    abortRef.current?.abort('stopped');
     addLog(ui.lrStopping);
   }, [addLog]);
 

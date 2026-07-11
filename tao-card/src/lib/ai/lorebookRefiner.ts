@@ -30,6 +30,8 @@ export interface RefinerContext {
   // Control
   paused: boolean;
   stopped: boolean;
+  /** Hủy call AI đang bay khi bấm Dừng hẳn (stopped chỉ chặn call KẾ TIẾP). */
+  signal?: AbortSignal;
 
   // Callbacks
   log: (message: string) => void;
@@ -291,7 +293,7 @@ async function runAIAnalysis(
         if (ctx.stopped) return [];
         try {
           ctx.log(`📡 Batch ${task.batchIndex + 1}/${totalBatches} — gọi AI${attempt > 0 ? ` (thử lại ${attempt})` : ''}...`);
-          const raw = await callAI({ profile, params: ctx.generationParams, messages: task.messages });
+          const raw = await callAI({ profile, params: ctx.generationParams, messages: task.messages, signal: ctx.signal });
           const parsed = tryExtractRefinerActions(raw.text);
           if (!parsed || parsed.length === 0) {
             ctx.log(`⚠️ Batch ${task.batchIndex + 1} — AI không trả về actions hợp lệ, thử lại...`);

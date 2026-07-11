@@ -52,6 +52,8 @@ export function DocExtractPanel() {
   const [progress, setProgress] = useState<DocExtractProgress | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const stoppedRef = useRef(false);
+  // AbortController hủy call AI đang bay khi Dừng (stopped chỉ chặn call kế tiếp).
+  const abortRef = useRef<AbortController | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [logs]);
@@ -111,6 +113,7 @@ export function DocExtractPanel() {
     setLogs([]);
     setProgress(null);
     stoppedRef.current = false;
+    abortRef.current = new AbortController();
 
     const chunks = splitDocument(fileInfo.text, { chunkSize });
     const config: DocExtractConfig = {
@@ -129,6 +132,7 @@ export function DocExtractPanel() {
         profile: activeProfile,
         generationParams: settings.generationParams,
         get stopped() { return stoppedRef.current; },
+        signal: abortRef.current.signal,
         log: addLog,
         onProgress: setProgress,
         appendEntry: (entry) => addEntry(entry),
@@ -260,7 +264,7 @@ export function DocExtractPanel() {
             <Play className="w-4 h-4" /> {ui.deStart}
           </button>
         ) : (
-          <button onClick={() => { stoppedRef.current = true; }}
+          <button onClick={() => { stoppedRef.current = true; abortRef.current?.abort('stopped'); }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 text-destructive text-sm">
             <Square className="w-4 h-4" /> {ui.deStop}
           </button>

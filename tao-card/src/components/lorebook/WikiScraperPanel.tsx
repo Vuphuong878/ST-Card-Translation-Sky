@@ -103,6 +103,8 @@ export function WikiScraperPanel() {
   const [progress, setProgress] = useState<WikiScrapeProgress | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const ctxRef = useRef<{ paused: boolean; stopped: boolean }>({ paused: false, stopped: false });
+  // AbortController hủy call AI đang bay khi Dừng hẳn (stopped chỉ chặn call kế tiếp).
+  const abortRef = useRef<AbortController | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [logs]);
@@ -170,6 +172,7 @@ export function WikiScraperPanel() {
     setProgress(null);
     setLogs([]);
     ctxRef.current = { paused: false, stopped: false };
+    abortRef.current = new AbortController();
 
     try {
       // Resolve wiki URL for subject mode
@@ -226,6 +229,7 @@ export function WikiScraperPanel() {
           generationParams: settings.generationParams,
           get paused() { return ctxRef.current.paused; },
           get stopped() { return ctxRef.current.stopped; },
+          signal: abortRef.current.signal,
           log: addLog,
           onProgress: setProgress,
           appendEntry: (entry) => { addEntry(entry); },
@@ -260,6 +264,7 @@ export function WikiScraperPanel() {
             profile: activeProfile,
             generationParams: settings.generationParams,
             get stopped() { return ctxRef.current.stopped; },
+            signal: abortRef.current.signal,
             log: addLog,
             onReport: setVerifyReport,
             appendEntry: (entry) => { addEntry(entry); },
@@ -289,6 +294,7 @@ export function WikiScraperPanel() {
 
   const handleStop = useCallback(() => {
     ctxRef.current.stopped = true;
+    abortRef.current?.abort('stopped');
     addLog(ui.wsStopping);
   }, [addLog]);
 

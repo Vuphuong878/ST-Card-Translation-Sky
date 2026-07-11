@@ -92,6 +92,7 @@ async function runCoherenceCheck(
   entries: LorebookEntry[],
   profile: ProxyProfile,
   params: GenerationParams,
+  signal?: AbortSignal,
 ): Promise<number> {
   if (entries.length < 3) return 1.0;
 
@@ -124,7 +125,7 @@ CHỈ trả về MỘT SỐ THỰC từ 0.0 đến 1.0, KHÔNG giải thích.`,
   ];
 
   try {
-    const raw = await callAI({ profile, params, messages });
+    const raw = await callAI({ profile, params, messages, signal });
     const score = parseFloat(raw.text.trim());
     if (!isNaN(score) && score >= 0 && score <= 1) return score;
     return 0.7; // Fallback
@@ -142,6 +143,8 @@ export interface VerificationContext {
   profile: ProxyProfile;
   generationParams: GenerationParams;
   stopped: boolean;
+  /** Hủy call AI đang bay khi bấm Dừng hẳn. */
+  signal?: AbortSignal;
   log: (msg: string) => void;
   onReport: (report: VerificationReport) => void;
   appendEntry: (entry: LorebookEntry) => void;
@@ -172,7 +175,7 @@ export async function runWithVerification(
     // Coherence check (optional, extra API call)
     if (criteria.coherenceCheck) {
       ctx.log('🧠 Kiểm tra Coherence bằng AI...');
-      const score = await runCoherenceCheck(entries, ctx.profile, ctx.generationParams);
+      const score = await runCoherenceCheck(entries, ctx.profile, ctx.generationParams, ctx.signal);
       const threshold = criteria.coherenceThreshold ?? 0.7;
       checks.push({
         criteria: 'coherence',
@@ -225,6 +228,7 @@ export async function runWithVerification(
       generationParams: ctx.generationParams,
       paused: false,
       get stopped() { return ctx.stopped; },
+      get signal() { return ctx.signal; },
       log: ctx.log,
       onProgress: () => {},
       appendEntry: (entry) => {
