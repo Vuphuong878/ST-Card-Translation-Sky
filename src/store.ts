@@ -497,7 +497,9 @@ export const useStore = create<AppState>((set) => ({
     targetLanguage: LS.get('st-translator-target-lang', 'Tiếng Việt'),
     translationPrompt: LS.get('st-translator-custom-prompt', ''),
     mode: LS.get('st-translator-translation-mode', 'field') as any,
-    lorebookStrategy: LS.get('st-translator-lorebook-strategy', 'single') as any,
+    // (Audit đợt 1) Mặc định 'batch': đa luồng + gộp call — 'single' cũ làm user mới dịch 74 entry
+    // lorebook TUẦN TỰ từng cái (chậm kinh khủng). User đã tự chọn thì LS giữ nguyên lựa chọn.
+    lorebookStrategy: LS.get('st-translator-lorebook-strategy', 'batch') as any,
     skipAlreadyTranslated: LS.get('st-translator-skip-already-translated', true),
     lightSkipContent: LS.get('st-translator-light-skip-content', false),
     smartBatchPacking: LS.get('st-translator-smart-batch-packing', false),
@@ -652,6 +654,10 @@ export const useStore = create<AppState>((set) => ({
       }
       if ('skipAlreadyTranslated' in partial) {
         LS.set('st-translator-skip-already-translated', next.skipAlreadyTranslated);
+      }
+      // (Fix audit đợt 1) lightSkipContent cần handler RIÊNG: trước đây chỉ được lưu khi partial có
+      // skipAlreadyTranslated — preset "Dịch nhẹ" set lightSkipContent một mình ⇒ F5 là MẤT cờ.
+      if ('lightSkipContent' in partial) {
         LS.set('st-translator-light-skip-content', next.lightSkipContent);
       }
       if ('smartBatchPacking' in partial) {

@@ -6,8 +6,8 @@ import { fmt } from '../i18n';
 import { TARGET_LANGUAGES, SOURCE_LANGUAGES, extractTranslatableFields } from '../utils/cardFields';
 import { getDefaultTranslationPrompt, getModelSuggestions } from '../utils/apiClient';
 import { aiExtractGlossaryTerms } from '../utils/mvuSync';
-import type { TranslationMode, LorebookStrategy, FieldGroupConfig, FieldGroup, GlossaryEntry } from '../types/card';
-import { Languages, Settings2, FileJson, BookOpen, Plus, Trash2, Download, Upload, Bot, Loader2, Save, RotateCcw, CheckCircle, Zap } from 'lucide-react';
+import type { LorebookStrategy, FieldGroupConfig, FieldGroup, GlossaryEntry } from '../types/card';
+import { Languages, FileJson, BookOpen, Plus, Trash2, Download, Upload, Bot, Loader2, Save, RotateCcw, CheckCircle, Zap } from 'lucide-react';
 import MvuSyncPanel from './MvuSyncPanel';
 import EjsSyncPanel from './EjsSyncPanel';
 
@@ -517,6 +517,7 @@ export default function TranslateConfig() {
                       })),
                       enableMvuSync: true,
                       exportKeyMode: 'merge',
+                      lorebookStrategy: 'batch', // đa luồng + gộp call (nhất quán mọi preset)
                       lightSkipContent: true,
                       // Dịch nhẹ dịch REGEX (code) → ép Dịch phẫu thuật để chỉ trích chuỗi CJK,
                       // giữ 100% cấu trúc JS/HTML (mặc định surgical TẮT → dễ vỡ regex nếu quên bật).
@@ -546,6 +547,7 @@ export default function TranslateConfig() {
                     setTranslationConfig({
                       fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({ ...g, enabled: true })),
                       lightSkipContent: false,
+                      lorebookStrategy: 'batch', // đa luồng + gộp call (nhất quán mọi preset)
                     });
                     // Gỡ ignore mà "Dịch nhẹ" đã đặt cho content, để dịch lại đầy đủ.
                     setFields(fields.map(f => f.status === 'ignored' ? { ...f, status: 'pending' as const } : f));
@@ -720,33 +722,8 @@ export default function TranslateConfig() {
               )}
             </div>
 
-            {/* Translation Mode — only in translate mode */}
-            {!isModMode && (
-            <div>
-              <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-                <Settings2 size={12} />
-                {t.translationMode}
-              </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <RadioOption
-                  name="mode"
-                  value="field"
-                  checked={translationConfig.mode === 'field'}
-                  onChange={() => setTranslationConfig({ mode: 'field' as TranslationMode })}
-                  label={t.fieldByField}
-                  desc={t.fieldByFieldDesc}
-                />
-                <RadioOption
-                  name="mode"
-                  value="batch"
-                  checked={translationConfig.mode === 'batch'}
-                  onChange={() => setTranslationConfig({ mode: 'batch' as TranslationMode })}
-                  label={t.batchMode}
-                  desc={t.batchModeDesc}
-                />
-              </div>
-            </div>
-            )}
+            {/* (Audit đợt 1) Đã GỠ radio "Translation Mode (Field/Batch)": knob CHẾT — không code nào
+                đọc translationConfig.mode; batch thật do "Chiến lược Lorebook" bên dưới quyết định. */}
 
             {/* Lorebook Strategy — only in translate mode */}
             {!isModMode && translationConfig.fieldGroups.find((g: FieldGroupConfig) => g.id === 'lorebook')?.enabled && (
@@ -955,24 +932,8 @@ export default function TranslateConfig() {
                 {ui.tcChunkSizeDesc}
               </div>
 
-              {/* Parallel Chunks */}
-              <div style={{ marginTop: '10px' }}>
-                <label className="label" style={{ marginBottom: '6px' }}>
-                  {ui.tcParallelChunks}
-                </label>
-                <input
-                  className="input"
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={translationConfig.parallelChunks || 1}
-                  onChange={(e) => setTranslationConfig({ parallelChunks: Math.max(1, Math.min(10, parseInt(e.target.value) || 1)) })}
-                  style={{ width: '100%' }}
-                />
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.4' }}>
-                  {ui.tcParallelChunksDesc}
-                </div>
-              </div>
+              {/* (Audit đợt 1) Đã GỠ ô "Số chunk song song" (parallelChunks): knob CHẾT — engine luôn
+                  dùng computePoolConcurrency(pool) (tổng ngân sách RPM mọi provider), chỉnh gì cũng bị lờ. */}
 
               {/* AI Chunk Verification */}
               <div style={{ marginTop: '10px' }}>

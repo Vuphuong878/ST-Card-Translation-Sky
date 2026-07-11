@@ -2,6 +2,15 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.67.0 — Audit đợt 1: dọn nút chết + đa luồng triệt để 🧹⚡
+> Đợt 1 của cuộc tổng rà soát code Dịch Card (mục tiêu: dễ dùng, ít setup, nhanh nhất có thể).
+- **Gỡ 2 nút CHẾT** khỏi giao diện (chỉnh không có tác dụng, gây hiểu lầm):
+  - Radio **"Translation Mode: Field-by-field / Batch"** — không một dòng code nào đọc nó; chế độ hàng loạt thật do "Chiến lược Lorebook" quyết định.
+  - Ô **"Số chunk song song"** — engine luôn tự tính theo tổng ngân sách RPM của pool, chỉnh gì cũng bị lờ.
+- **Chiến lược Lorebook "Từng entry riêng" giờ chạy ĐA LUỒNG:** trước đây chọn chế độ này là 74 entry dịch **tuần tự từng cái** (rất chậm). Nay các entry độc lập chạy **song song qua pool** — mỗi entry vẫn 1 call riêng với prompt y hệt ⇒ **chất lượng không đổi, chỉ nhanh hơn nhiều lần**. Entry MVU-critical (initvar/controller/mvu_logic) vẫn dịch tuần tự để giữ đồng bộ tên biến; thứ tự giữa nhóm keys ↔ content giữ nguyên.
+- **Mặc định mới = "Hàng loạt":** người dùng mới (chưa từng chỉnh) mặc định dùng chiến lược Hàng loạt (đa luồng + gộp call — nhanh nhất); ai đã tự chọn thì giữ nguyên lựa chọn. Preset **⚡ Dịch nhẹ** và **📖 Dịch đầy đủ** giờ cũng chốt Hàng loạt như 🚀 Siêu tốc.
+- **Fix:** bấm preset Dịch nhẹ rồi **F5 bị mất** cờ "bỏ content to" (thiếu handler lưu localStorage riêng) → giờ giữ đúng qua reload.
+
 ## v1.66.0 — Chunk thích ứng theo số lane + panel hiện "▶ đang chạy" 📊⚡
 ### ⚡ Chunk thích ứng theo số lane (tận dụng provider rảnh khi dịch field lớn)
 - **Trước:** 1 field lớn (vd 148 KB) chia cố định ~10 phần → dù pool có 72 lane thì cũng chỉ dùng được ~10 lane, 62 lane ngồi không suốt lúc dịch field đó.

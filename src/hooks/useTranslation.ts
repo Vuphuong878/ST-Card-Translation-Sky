@@ -2299,6 +2299,65 @@ export function useTranslation() {
         continue;
       }
 
+      // ─── (Audit đợt 1) Chiến lược 'single' + lorebook: ĐA LUỒNG thay vì tuần tự ───
+      // Trước đây strategy 'single' dịch 74 entry lorebook TỪNG CÁI MỘT (chậm kinh khủng) — trong khi
+      // các entry độc lập nhau. Nay gom dải entry LIỀN NHAU cùng nhóm (lorebook / lorebook_keys),
+      // KHÔNG phải MVU-critical (initvar/controller/mvu_logic vẫn tuần tự để giữ đồng bộ biến), rồi
+      // chạy SONG SONG qua pool — mỗi entry vẫn 1 call riêng, prompt y hệt ⇒ chất lượng không đổi,
+      // chỉ nhanh hơn. Chỉ gom dải CÙNG NHÓM liền kề nên thứ tự giữa các nhóm (keys ↔ content) giữ nguyên.
+      if (
+        !isBatchLorebook &&
+        lorebookGroups.includes(field.group) &&
+        !isMvuCriticalField(field)
+      ) {
+        const waveGroup = field.group;
+        const waveIdx: number[] = [];
+        let j = i;
+        while (j < fields.length && fields[j].group === waveGroup && !isMvuCriticalField(fields[j])) {
+          const st = fields[j].status;
+          if (st === 'pending' || st === 'error') waveIdx.push(j);
+          j++;
+        }
+        if (waveIdx.length >= 2) {
+          const waveConc = computePoolConcurrency(store.proxy);
+          store.addLog('info', `⚡ ${waveIdx.length} mục ${waveGroup} độc lập → dịch SONG SONG qua pool (ngân sách ${waveConc} luồng)`);
+          let savedWv = 0; const saveEveryWv = Math.max(4, Math.floor(waveConc / 2));
+          const wvPool = await runWorkerPool({
+            total: waveIdx.length,
+            concurrency: waveConc,
+            runOne: async (k) => {
+              const fi = waveIdx[k];
+              const fresh = useStore.getState().fields.find(x => x.path === fields[fi].path) || fields[fi];
+              let r = await translateSingleField(fresh, fi, fields);
+              let guard = 0;
+              while (r === 'retry' && guard++ < 8) {
+                if (checkAbort()) throw new Error('Cancelled');
+                if (await waitForPause()) throw new Error('Cancelled');
+                const again = useStore.getState().fields.find(x => x.path === fields[fi].path) || fresh;
+                r = await translateSingleField(again, fi, useStore.getState().fields);
+              }
+              if (r === 'retry') {
+                store.updateField(fields[fi].path, { status: 'error', error: 'Vượt số lần thử lại — bỏ qua để dịch tiếp' });
+              }
+            },
+            shouldStop: () => !!checkAbort(),
+            waitIfPaused: waitForPause,
+            onSettled: () => { if (++savedWv % saveEveryWv === 0) store.saveTranslationCache(); },
+            betweenMs: store.proxy.requestDelay,
+          });
+          store.saveTranslationCache();
+          if (wvPool.cancelled) {
+            runningRef.current = false;
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
+            store.addLog('warning', '⏹ Đã dừng dịch.');
+            return;
+          }
+          i = j; // nhảy qua cả dải đã xử lý
+          continue;
+        }
+        // dải chỉ 0-1 mục cần dịch → rơi xuống single mode như cũ
+      }
+
       // ─── Single field mode ───
       try {
         let result = await translateSingleField(field, i, fields);
