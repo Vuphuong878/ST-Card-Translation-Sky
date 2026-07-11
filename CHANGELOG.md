@@ -2,6 +2,11 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.64.2 — Hết giật màn hình xuống mỗi khi dịch xong 1 entry 🧷
+- **Bug:** đang dịch, cứ xong 1 entry là **view bị kéo xuống** khung log (khó theo dõi Card Preview / Field Editor / chỗ khác).
+- **Nguyên nhân:** hộp log tự cuộn bằng `scrollIntoView()` — lệnh này khiến trình duyệt cuộn **cả trang** để đưa hộp log vào tầm nhìn, mỗi khi thêm 1 dòng log (mỗi entry xong).
+- **Sửa:** hộp log giờ **chỉ tự cuộn bên trong khung của nó** (đặt `scrollTop`, không đụng scroll trang), và **chỉ dính đáy khi bạn đang ở cuối log** — cuộn lên đọc lịch sử hoặc nhìn chỗ khác thì trang **đứng yên**, không giật nữa.
+
 ## v1.64.1 — Sửa nút "Re-translate All" không dịch lại từ đầu 🔁
 - **Bug:** bấm Cancel rồi **Re-translate All** → vẫn dịch tiếp từ chỗ cũ (vd 88/123). Nguyên nhân: nút chỉ gọi lại Start, mà app **giữ field đã dịch** (thiết kế resume) + **cache tiến trình trên đĩa tự khôi phục** ⇒ hoá ra là "Continue" trá hình.
 - **Sửa:** bấm nút giờ sẽ **hỏi xác nhận** rồi **xoá sạch** bản dịch cũ của thẻ (cả cache trên đĩa + từ điển biến MVU) và dịch lại **từ đầu thật sự** (0/N).

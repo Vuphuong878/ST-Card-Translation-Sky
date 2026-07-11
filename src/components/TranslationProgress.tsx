@@ -144,10 +144,22 @@ function LogRow({ log }: { log: LogEntry }) {
   );
 }
 
-function LogPanel({ logEndRef }: { logEndRef: React.RefObject<HTMLDivElement | null> }) {
+function LogPanel() {
   const { logs, logFilter } = useStore();
   const ui = useUi();
   const [collapsed, setCollapsed] = useState<Set<LogPhase>>(() => new Set());
+  const boxRef = useRef<HTMLDivElement>(null);
+  const stickRef = useRef(true); // có đang "dính đáy" không (user đang xem dòng mới nhất)
+
+  // (Sửa) Auto-cuộn CHỈ TRONG hộp log — KHÔNG đụng scroll trang. Trước đây dùng
+  // logEndRef.scrollIntoView() nên trình duyệt kéo CẢ TRANG xuống để lộ hộp log mỗi khi
+  // dịch xong 1 entry (thêm 1 dòng log) → view giật xuống Field Editor. Nay chỉ set
+  // scrollTop của hộp, và chỉ khi user đang ở gần đáy (cuộn lên đọc lịch sử thì không giật).
+  useEffect(() => {
+    const el = boxRef.current;
+    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
+  }, [logs.length, logFilter]);
+
   if (logs.length === 0) return null;
 
   const filteredLogs = logs.filter((log) => logFilter === 'all' || log.level === logFilter);
@@ -176,7 +188,15 @@ function LogPanel({ logEndRef }: { logEndRef: React.RefObject<HTMLDivElement | n
   return (
     <div>
       <LogFilterBar />
-      <div className="log-panel">
+      <div
+        className="log-panel"
+        ref={boxRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          // "dính đáy" nếu còn cách đáy < 40px; user cuộn lên đọc → tạm ngừng auto-cuộn.
+          stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        }}
+      >
         {isTruncated && (
           <div style={{
             fontSize: '0.68rem',
@@ -219,8 +239,6 @@ function LogPanel({ logEndRef }: { logEndRef: React.RefObject<HTMLDivElement | n
               );
             })
           : visibleLogs.map((log) => <LogRow key={log.id} log={log} />)}
-
-        <div ref={logEndRef} />
       </div>
     </div>
   );
@@ -235,13 +253,8 @@ function ModModePanel() {
   const ui = useUi();
   const { applyModToAllFields, continueMod, retryAllErrors, cancelTranslation, pauseTranslation, resumeTranslation, generateModLorebook } = useTranslation();
   const t = useT();
-  const logEndRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCount, setGeneratedCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs.length]);
 
   const totalFields = fields.length;
   const doneFields = fields.filter((f) => f.status === 'done').length;
@@ -562,7 +575,7 @@ function ModModePanel() {
       )}
 
       {/* Logs */}
-      <LogPanel logEndRef={logEndRef} />
+      <LogPanel />
     </div>
   );
 }
@@ -576,11 +589,6 @@ function TranslationPanel() {
   const ui = useUi();
   const { startTranslation, continueTranslation, pauseTranslation, resumeTranslation, cancelTranslation, retryAllErrors, prepareFields } = useTranslation();
   const t = useT();
-  const logEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs.length]);
 
   const totalFields = fields.length;
   const doneFields = fields.filter((f) => f.status === 'done').length;
@@ -779,7 +787,7 @@ function TranslationPanel() {
       )}
 
       {/* Logs */}
-      <LogPanel logEndRef={logEndRef} />
+      <LogPanel />
     </div>
   );
 }
