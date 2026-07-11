@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.61.0 — Sửa nốt 2 báo oan còn lại ở Kiểm tra lỗi dịch 🧯
+> Sau khi sửa Template Literal (1.60), chạy Verify live lại thì thấy panel còn 2 loại báo oan **cùng họ** — flag thứ không cần dịch / không phải lỗi. Sửa nốt cho panel đáng tin.
+- **"còn tiếng Trung" đếm cả dấu ngoặc 【】《》 là "chữ Hán":** hàm `countCJK` gộp cả dải dấu câu CJK (`U+3000–303F`) và fullwidth (`U+FF00–FFEF`) → dấu ngoặc `【】` giữ nguyên (đúng) bị đếm là "chữ chưa dịch", báo "36 CJK còn lại" / "2 CJK còn lại". Nay **chỉ đếm CHỮ thật** (ideograph Hán + kana Nhật + hangul Hàn), bỏ dấu câu/fullwidth.
+- **"Code structure corrupted" so ngoặc `{ }` với 0:** `replaceString`/template literal là **đoạn fragment**, độ sâu ngoặc vốn có thể lệch (bản gốc `开局` đã lệch -1 do `${...}` nội suy). Check cũ ép "phải = 0" → báo oan. Nay **so với độ sâu ngoặc của BẢN GỐC**, chỉ báo khi bản dịch lệch **khác** gốc.
+- *Kiểm chứng live:* chạy lại nút **Verify** trên chính card báo lỗi → **6 issue giảm còn 1** (5 báo oan biến mất; còn đúng 1 chênh lệch ngoặc `[]` thật ở 1 entry — verify làm đúng việc).
+- *Kỹ thuật:* export `countCJK` + 4 test hồi quy (`【】`→0, `开局`→2, kana/hangul đếm đúng). tsc + **138 test** + build xanh.
+
 ## v1.60.0 — Sửa bug #2: Kiểm tra lỗi dịch báo oan "Template Literal" 🧯
 > Từ báo lỗi #2: panel **Kiểm tra lỗi dịch** ở mục template literal báo lỗi loạn — "không so cái đã dịch mà đi so chỗ chẳng liên quan", và báo cả cho thứ không cần dịch.
 - **Gốc rễ:** bộ kiểm cũ dùng regex `${[^}]+}` **không parse được `${}` lồng nhau** (template literal HTML phức tạp) nên trích cụt; rồi **ghép cặp đoán mò** — lấy *bất kỳ* `${...}` nào ở bản dịch không trùng gốc và tuyên bố "gốc `${bodyStateStr…}` đã dịch thành `${enemies[k]['Loại']…}`" dù hai cái chẳng liên quan. Nó cũng không phân biệt **chuỗi literal** (`'怪物'`→`'Quái Vật'` là ĐÚNG) với **biến MVU đổi tên có chủ đích** (`类型`→`Loại`), nên báo "chưa dịch / dịch sai" oan cho hàng loạt thứ đúng.

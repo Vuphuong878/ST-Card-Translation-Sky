@@ -320,9 +320,12 @@ export interface FieldIssue extends VerifyIssue {
   category: 'residual_source' | 'html_broken' | 'bracket_mismatch' | 'macro_damaged' | 'json_broken' | 'mvu_inconsistent' | 'length_anomaly' | 'empty_translation' | 'regex_broken' | 'code_splice' | 'structural_truncation' | 'css_class_sync' | 'function_signature' | 'template_literal_content' | 'key_collision';
 }
 
-/** Count CJK characters in text */
-function countCJK(text: string): number {
-  return (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef]/g) || []).length;
+/** \u0110\u1ebfm CH\u1eee ngu\u1ed3n ch\u01b0a d\u1ecbch: ch\u1ec9 ideograph H\u00e1n + kana Nh\u1eadt + hangul H\u00e0n.
+ * (S\u1eeda bug #2) B\u1ea3n c\u0169 \u0111\u1ebfm c\u1ea3 d\u1ea3i d\u1ea5u c\u00e2u CJK `\u3000-\u303f` (\u3001\u3002\u300a\u300b\u300c\u300d\u3010\u3011\u2026) v\u00e0 fullwidth
+ * `\uff00-\uffef` \u2192 check "c\u00f2n ti\u1ebfng Trung" b\u00e1o OAN cho \u3010\u3011/d\u1ea5u c\u00e2u gi\u1eef nguy\u00ean (kh\u00f4ng ph\u1ea3i ch\u1eef ch\u01b0a
+ * d\u1ecbch). Nay ch\u1ec9 \u0111\u1ebfm K\u00dd T\u1ef0 V\u0102N B\u1ea2N th\u1eadt; th\u00eam kana/hangul cho card ngu\u1ed3n Nh\u1eadt/H\u00e0n. */
+export function countCJK(text: string): number {
+  return (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g) || []).length;
 }
 
 /** Count HTML and EJS tags */
@@ -983,19 +986,24 @@ export function verifyFields(
       const totalFuncOpens = funcKeywords + arrowFuncs;
       
       if (totalFuncOpens > 0) {
-        let braceDepth = 0;
-        for (const ch of currentAutoFix) {
-          if (ch === '{') braceDepth++;
-          else if (ch === '}') braceDepth--;
-        }
-        if (braceDepth !== 0) {
+        // (Sửa bug #2) So ĐỘ SÂU NGOẶC với GỐC, KHÔNG phải với 0. replaceString/template fragment
+        // vốn có thể lệch ngoặc (do ${...} nội suy, hoặc dấu } nằm trong chuỗi/regex) — gốc lệch -1
+        // thì bản dịch giữ -1 là ĐÚNG, không phải "vỡ code". Chỉ báo khi bản dịch lệch KHÁC gốc.
+        const braceDepthOf = (s: string): number => {
+          let d = 0;
+          for (const ch of s) { if (ch === '{') d++; else if (ch === '}') d--; }
+          return d;
+        };
+        const braceDepth = braceDepthOf(currentAutoFix);
+        const origBraceDepth = braceDepthOf(orig);
+        if (braceDepth !== origBraceDepth) {
           issues.push({
             id: crypto.randomUUID(), fieldPath: field.path,
             severity: 'error', category: 'code_splice',
             location: field.label,
-            description: `Code structure corrupted: ${totalFuncOpens} function(s) detected but brace depth is ${braceDepth} (should be 0). Translation may have broken a function body.`,
-            original: `Functions: ${totalFuncOpens}, expected braceDepth: 0`,
-            current: `braceDepth: ${braceDepth}`,
+            description: `Cấu trúc ngoặc { } lệch so với gốc: gốc cân bằng ${origBraceDepth}, bản dịch ${braceDepth}. Bản dịch có thể làm vỡ thân hàm.`,
+            original: `braceDepth gốc: ${origBraceDepth}`,
+            current: `braceDepth dịch: ${braceDepth}`,
             suggestion: 'The translation has mismatched curly braces { }. Check that function bodies are intact.',
             autoFixable: false,
           });

@@ -3,7 +3,29 @@ import {
   extractBalancedInterpolations,
   isPureCodeInterpolation,
   findMissingCodeInterpolations,
+  countCJK,
 } from '../aiVerify';
+
+// Bug #2 (họ hàng): check "còn tiếng Trung" đếm cả dấu ngoặc 【】《》 (fullwidth punctuation) là
+// "chữ Hán" → báo oan cho 【】 giữ nguyên. countCJK phải CHỈ đếm CHỮ thật (ideograph/kana/hangul).
+describe('countCJK — chỉ đếm CHỮ, bỏ dấu câu CJK (sửa báo oan)', () => {
+  it('đếm đúng ideograph Hán', () => {
+    expect(countCJK('光之战姬')).toBe(4);
+  });
+  it('KHÔNG đếm dấu ngoặc/dấu câu fullwidth 【】《》。、', () => {
+    expect(countCJK('【】《》。、！？')).toBe(0);           // toàn dấu → 0
+    expect(countCJK('【开局自定义中】')).toBe(6);           // 开局自定义中 = 6 Hán, 【】 bỏ
+    expect(countCJK('【Đang tùy chỉnh khai cuộc】')).toBe(0); // đã dịch, chỉ còn 【】 → 0 (hết báo oan)
+  });
+  it('đếm kana (Nhật) + hangul (Hàn)', () => {
+    expect(countCJK('ひらがな')).toBe(4);   // hiragana
+    expect(countCJK('カタカナ')).toBe(4);   // katakana
+    expect(countCJK('한국어')).toBe(3);     // hangul
+  });
+  it('văn bản Latin thuần → 0', () => {
+    expect(countCJK('Xin chào thế giới!')).toBe(0);
+  });
+});
 
 // Bug #2 (bugNeedFix/2): panel Verify báo lỗi "Template Literal" LOẠN — ghép `${A}` gốc với `${B}`
 // bản dịch bất kỳ (không liên quan), và báo lỗi cho thứ ĐÚNG (chuỗi literal dịch, biến MVU đổi tên).
