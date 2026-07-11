@@ -2,6 +2,7 @@ import type { CharacterCard, ProxySettings, TranslationField } from '../types/ca
 import type { ZodFieldDef } from '../types/mvuZodTypes';
 import { extractPatchFieldNames } from './jsonPatchValidator';
 import { callProvider } from './apiClient';
+import { runWorkerPool } from './runWorkerPool';
 import { extractZodObjectBlocks, parseZodFields, extractOrderedStringPairs } from './zodSchemaEngine';
 
 /**
@@ -1842,6 +1843,21 @@ function generateCjkHint(key: string): string | null {
  * Quy tắc: Tên biến dịch phải dùng underscore thay space, giữ format code-friendly.
  * VD: "好感度" → "Do_Hao_Cam", "攻击力" → "Suc_Tan_Cong"
  */
+/**
+ * Bảo toàn prefix chức năng của biến MVU (guide MVU_ZOD mvu-11):
+ *   `_` = readonly (AI thấy, không sửa), `$` = ẩn (AI không thấy).
+ * Nếu bản dịch của một key có prefix nhưng chính bản dịch lại mất ký tự đó
+ * (AI dịch `_类型` → `Loại`), gắn lại để MVU không mất ngữ nghĩa. Sửa tại chỗ.
+ */
+export function restoreVariablePrefixes(dict: Record<string, string>): void {
+  for (const k of Object.keys(dict)) {
+    const marker = k.startsWith('_') ? '_' : k.startsWith('$') ? '$' : '';
+    if (marker && dict[k] && !dict[k].startsWith(marker)) {
+      dict[k] = marker + dict[k];
+    }
+  }
+}
+
 export async function aiTranslateMvuKeys(
   keys: string[],
   targetLang: string,
@@ -1853,6 +1869,8 @@ export async function aiTranslateMvuKeys(
   existingMappings?: Record<string, string>,
   customPrompt?: string,
   onProgress?: (done: number, total: number) => void,
+  /** Số lô chạy song song = computePoolConcurrency (Σ key×RPM mọi provider). Mặc định 1. */
+  concurrency: number = 1,
 ): Promise<Record<string, string>> {
   if (keys.length === 0) return {};
 
@@ -1908,7 +1926,12 @@ STRICT RULES:
    Every DIFFERENT source key MUST produce a DIFFERENT translated name. If two source keys have different Chinese characters, their translations MUST be different strings.
    FORBIDDEN: 武力 → "Võ Lực" AND 魅力 → "Võ Lực" (WRONG! Same translation for different keys!)
    CORRECT:   武力 → "Võ Lực" AND 魅力 → "Sức Hút" (Different translations for different keys)
-   If you produce duplicate translations for different source keys, the card's variable system will CRASH because two different variables will share the same name.${modBlock}${customPromptBlock}
+   If you produce duplicate translations for different source keys, the card's variable system will CRASH because two different variables will share the same name.
+13. MVU PREFIX MARKERS — PRESERVE A LEADING "_" OR "$" EXACTLY:
+   A variable name may start with "_" (readonly: AI sees but cannot update) or "$" (hidden: AI does not see).
+   These single leading characters are FUNCTIONAL markers, not part of the name. If a key starts with one,
+   KEEP that exact character at the front of your translation and translate only the rest.
+   Examples: "_类型" → "_Loại" (NOT "Loại"), "$开局类型" → "$Loại Mở Đầu". Never add a "_"/"$" that wasn't there.${modBlock}${customPromptBlock}
 
 RESPOND in EXACT JSON format (no markdown): {"translations": {"original_key": "Translated Key", ...}}`;
 
@@ -1923,8 +1946,10 @@ RESPOND in EXACT JSON format (no markdown): {"translations": {"original_key": "T
   onProgress?.(0, keysToTranslate.length);
   let translatedSoFar = 0;
 
-  for (const batch of batches) {
-    if (signal?.aborted) break;
+  // Xử lý 1 lô. Chạy SONG SONG qua runWorkerPool (mỗi call vẫn đi qua pickLane nên RPM
+  // an toàn) — trước đây for...await tuần tự khiến pha "Dịch tên biến MVU" chỉ dùng 1 lane.
+  const processBatch = async (batch: string[]): Promise<void> => {
+    if (signal?.aborted) return;
 
     let contextBlock = '';
     if (schemaContext && schemaContext.trim()) {
@@ -2060,7 +2085,29 @@ ${currentVarList}${retryHint}`;
     // Report progress after each batch completes (success or exhausted retries)
     translatedSoFar += batch.length;
     onProgress?.(Math.min(translatedSoFar, keysToTranslate.length), keysToTranslate.length);
-  } // end batch loop
+  }; // end processBatch
+
+  // ── SEED COVARIANCE: lô ĐẦU chạy một mình để "định chuẩn" quy ước đặt tên
+  // (Mức X / Độ X, Title Case…). Các lô SAU chạy SONG SONG và đọc kết quả lô đầu
+  // qua covarianceBlock (allConstraints gộp `result` tại lúc chạy) → giữ nhất quán
+  // gần bằng bản tuần tự mà chỉ trả giá 1 call chờ. pickLane trong callProvider lo RPM.
+  if (batches.length > 0) {
+    await processBatch(batches[0]);
+  }
+  if (batches.length > 1) {
+    const rest = batches.slice(1);
+    await runWorkerPool({
+      total: rest.length,
+      concurrency: Math.max(1, concurrency),
+      runOne: (i) => processBatch(rest[i]),
+      shouldStop: () => !!signal?.aborted,
+    });
+  }
+
+  // ── POST-BATCH: Bảo toàn prefix chức năng "_" (readonly) / "$" (ẩn) ───────
+  // Chạy TRƯỚC dedup để `类型`→`Loại` và `_类型`→`_Loại` được xem là hai bản
+  // dịch KHÁC nhau (không báo trùng giả).
+  restoreVariablePrefixes(result);
 
   // ── POST-BATCH: Auto-dedup conflicting translations ──────────────────────
   // Detect cases where different source keys got the SAME translated name

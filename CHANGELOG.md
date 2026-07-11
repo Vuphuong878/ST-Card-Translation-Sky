@@ -2,6 +2,115 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.69.0 — Audit đợt 3: khử code trùng lặp 🧬
+> Dọn nợ kỹ thuật — **không đổi hành vi dịch**, để về sau sửa 1 chỗ là mọi nơi hưởng, không còn cảnh "fix nơi này quên nơi kia".
+- **Gom hàm đếm/lọc CJK về 1 file** (`utils/cjk.ts`): trước đây `stripUrlsForCjkCheck` (bỏ URL trước khi đếm chữ Hán sót) bị **đúp 3 nơi** và regex đếm CJK đúp 2 nơi. Tiện thể bắt được **typo ở 1 bản đúp** khiến không bỏ được đường dẫn tương đối `./x` — đúng minh chứng vì sao code đúp nguy hiểm.
+- **Gom logic chia lô lorebook về 1 hàm** (`utils/batchSplit.ts`) dùng chung cho pipeline **Dịch** và **Mod**: trước đây đúp nguyên khối ~200 dòng ở 2 nơi và bản Mod đã lệch (thiếu các cải tiến mới). Hai pipeline giờ chỉ khác nhau ở tham số truyền vào (Dịch: tách theo model + isolate entry dài + smart-packing; Mod: đếm theo bản đã mod).
+- `useTranslation.ts` gọn đi ~120 dòng. **+14 test mới** khoá hành vi (154 test tổng) — mọi test cũ pass nguyên vẹn.
+
+## v1.68.0 — Audit đợt 2: giao diện phân tầng Cơ bản / Nâng cao 🎛️
+> Mục tiêu: người mới chỉ cần **API key → bấm 1 preset → Start**; dân chuyên vẫn còn đủ đồ chơi trong "Nâng cao".
+- **3 nút preset lên ĐẦU:** ⚡ Dịch nhẹ / 📖 Dịch đầy đủ / 🚀 Dịch siêu tốc giờ nằm **trên cùng mục Cấu hình dịch** trong khung nổi bật (trước đây chìm giữa sidebar, thứ quan trọng nhất lại khó thấy nhất).
+- **Nút "⚙ Cài đặt nâng cao":** toàn bộ setting chuyên sâu — Model Routing, Custom Schema, Custom System Prompt, Chunk Size + AI Chunk Verification, RAG, Translation Memory, Dịch phẫu thuật, CSS CJK, Chiến lược B (MVU) / C (EJS) — được **gấp lại, mặc định đóng** (nhớ trạng thái mở/đóng). Preset đã tự lo các cờ quan trọng nên người dùng thường không cần mở.
+- **Phần API gọn hơn:** CORS Proxy + Expert Mode dời vào mục **Advanced Settings** có sẵn (chung chỗ với sampler/timeout). Tầng cơ bản của API chỉ còn: provider, Base URL, key, model, RPM, model phụ, provider bổ sung, Test Connection.
+- Tầng cơ bản sau dọn dẹp: **API → Preset → Ngôn ngữ/nhóm trường → Chiến lược Lorebook → Start.** Không đổi bất kỳ hành vi dịch nào — chỉ sắp xếp lại giao diện.
+
+## v1.67.0 — Audit đợt 1: dọn nút chết + đa luồng triệt để 🧹⚡
+> Đợt 1 của cuộc tổng rà soát code Dịch Card (mục tiêu: dễ dùng, ít setup, nhanh nhất có thể).
+- **Gỡ 2 nút CHẾT** khỏi giao diện (chỉnh không có tác dụng, gây hiểu lầm):
+  - Radio **"Translation Mode: Field-by-field / Batch"** — không một dòng code nào đọc nó; chế độ hàng loạt thật do "Chiến lược Lorebook" quyết định.
+  - Ô **"Số chunk song song"** — engine luôn tự tính theo tổng ngân sách RPM của pool, chỉnh gì cũng bị lờ.
+- **Chiến lược Lorebook "Từng entry riêng" giờ chạy ĐA LUỒNG:** trước đây chọn chế độ này là 74 entry dịch **tuần tự từng cái** (rất chậm). Nay các entry độc lập chạy **song song qua pool** — mỗi entry vẫn 1 call riêng với prompt y hệt ⇒ **chất lượng không đổi, chỉ nhanh hơn nhiều lần**. Entry MVU-critical (initvar/controller/mvu_logic) vẫn dịch tuần tự để giữ đồng bộ tên biến; thứ tự giữa nhóm keys ↔ content giữ nguyên.
+- **Mặc định mới = "Hàng loạt":** người dùng mới (chưa từng chỉnh) mặc định dùng chiến lược Hàng loạt (đa luồng + gộp call — nhanh nhất); ai đã tự chọn thì giữ nguyên lựa chọn. Preset **⚡ Dịch nhẹ** và **📖 Dịch đầy đủ** giờ cũng chốt Hàng loạt như 🚀 Siêu tốc.
+- **Fix:** bấm preset Dịch nhẹ rồi **F5 bị mất** cờ "bỏ content to" (thiếu handler lưu localStorage riêng) → giờ giữ đúng qua reload.
+
+## v1.66.0 — Chunk thích ứng theo số lane + panel hiện "▶ đang chạy" 📊⚡
+### ⚡ Chunk thích ứng theo số lane (tận dụng provider rảnh khi dịch field lớn)
+- **Trước:** 1 field lớn (vd 148 KB) chia cố định ~10 phần → dù pool có 72 lane thì cũng chỉ dùng được ~10 lane, 62 lane ngồi không suốt lúc dịch field đó.
+- **Nay:** field **văn bản** rất lớn tự chia **nhỏ hơn** (tới **sàn 8.000 ký tự/phần**) khi pool còn dư lane → phủ nhiều lane hơn, dịch song song **nhanh hơn nhiều**. Chỉ chia thêm khi *số lane > số phần mặc định*; **không** áp cho regex/TavernHelper (chia nhỏ code dễ vỡ cấu trúc); giữ nguyên nếu bạn tự đặt "Ngưỡng ký tự".
+- Kết hợp với HEDGE (1.65): field lớn vừa dùng nhiều lane hơn, vừa được cứu tail-latency.
+
+### 📊 Panel luồng: hiện số call ĐANG CHẠY ("▶ N")
+- **Vấn đề:** thanh RPM đo theo **cửa sổ 60 giây tính từ lúc BẮT ĐẦU** call. Call chạy >60s rơi khỏi cửa sổ → lane hiện **0/17** dù **vẫn đang chạy** → trông như rảnh rỗi, khó biết bận hay không.
+- **Sửa:** mỗi lane giờ hiện **"▶ N"** = số call **đang chạy** ngay lúc đó (xanh khi >0, xám khi 0), kèm **RPM nhỏ** bên cạnh. Nhìn ▶ là biết ngay lane bận hay rảnh, không bị RPM đánh lừa nữa. Thanh tiến trình cũng chạy theo số call đang chạy.
+
+## v1.65.0 — HEDGE: chunk chậm không còn "kéo lê" cả field ⚡🎯
+- **Vấn đề (bạn hỏi):** dịch 1 field lớn chia ~15 chunk song song, có 3 chunk kẹt **400s+** trên 1 provider, còn các provider khác **đứng đợi** không chạy. Vì sao? Cả 15 chunk đã phát hết (12 xong + 3 kẹt), **không còn việc để giao** cho provider rảnh, mà chunk đang kẹt thì **không được chạy lại** trên lane khác → cả field phải chờ chunk chậm nhất (timeout 1 chunk có thể tới ~25 phút).
+- **Sửa — HEDGE (bản dự phòng, "the tail at scale"):** khi 1 chunk chạy **> 150 giây** (nghi lane/proxy nghẽn), hệ thống tự **bắn thêm 1 bản trên lane KHÁC** (pickLane né lane đang lỗi/nghẽn ⇒ rơi vào provider đang **rảnh**), rồi **lấy bản nào xong trước, huỷ bản kia**. Chunk kẹt 400s giờ được "cứu" bởi provider rảnh trong ~1-2 phút thay vì chờ mãi.
+- **Tiết kiệm:** chỉ hedge **1 lần/chunk** và **chỉ khi vượt ngưỡng 150s** ⇒ chunk bình thường (xong trong ~40-100s) **không** tốn call kép.
+- Kết hợp sẵn với: retry→flash (1.59) + đèn đỏ/nghỉ 15s cho lane lỗi (1.64) → provider rảnh luôn được tận dụng.
+
+## v1.64.4 — Sửa TIẾP nút "Re-translate All" (bản 1.64.1 vẫn hỏng) 🔁
+- **Triệu chứng:** bấm Re-translate All → hiện *"All fields are already translated or skipped"* và báo hoàn thành, **không** dịch lại từ đầu (vẫn 88/88).
+- **Gốc rễ (mới):** bản 1.64.1 đã xoá bản dịch trong store, nhưng hàm dịch lại đọc `store.fields` từ **bản chụp React cũ** (stale closure) — chưa kịp cập nhật ⇒ vẫn thấy toàn field `done` rồi **gộp lại** ⇒ 0 field cần dịch ⇒ báo "đã dịch hết".
+- **Sửa:** thêm chế độ **freshStart** — khi Re-translate All, bước chuẩn bị **BỎ QUA hẳn** danh sách field cũ, **trích lại từ thẻ** (mọi field `pending`) và dịch từ **0/N**. Không còn phụ thuộc bản chụp cũ.
+
+## v1.64.3 — Ô Gốc và ô Dịch trong Field Editor cao bằng nhau 📐
+- **Bug:** mỗi hàng, ô **ORIGINAL** và ô **TRANSLATED** cao–thấp lệch nhau → nhìn rối. Nguyên nhân: ô Gốc là `<div>` (cao theo nội dung, cap 120px), ô Dịch là `<textarea rows>` (cao theo số dòng gốc, tới ~172px) — hai công thức khác nhau.
+- **Sửa:** cả hai ô giờ dùng **chung một chiều cao** (2–8 dòng × 20px) nên **luôn thẳng hàng, cao bằng nhau**. Vẫn kéo giãn tay được nếu muốn xem dài hơn. Đã đo kiểm live: mọi hàng (kể cả nội dung nhiều dòng) ô Gốc = ô Dịch từng pixel.
+
+## v1.64.2 — Hết giật màn hình xuống mỗi khi dịch xong 1 entry 🧷
+- **Bug:** đang dịch, cứ xong 1 entry là **view bị kéo xuống** khung log (khó theo dõi Card Preview / Field Editor / chỗ khác).
+- **Nguyên nhân:** hộp log tự cuộn bằng `scrollIntoView()` — lệnh này khiến trình duyệt cuộn **cả trang** để đưa hộp log vào tầm nhìn, mỗi khi thêm 1 dòng log (mỗi entry xong).
+- **Sửa:** hộp log giờ **chỉ tự cuộn bên trong khung của nó** (đặt `scrollTop`, không đụng scroll trang), và **chỉ dính đáy khi bạn đang ở cuối log** — cuộn lên đọc lịch sử hoặc nhìn chỗ khác thì trang **đứng yên**, không giật nữa.
+
+## v1.64.1 — Sửa nút "Re-translate All" không dịch lại từ đầu 🔁
+- **Bug:** bấm Cancel rồi **Re-translate All** → vẫn dịch tiếp từ chỗ cũ (vd 88/123). Nguyên nhân: nút chỉ gọi lại Start, mà app **giữ field đã dịch** (thiết kế resume) + **cache tiến trình trên đĩa tự khôi phục** ⇒ hoá ra là "Continue" trá hình.
+- **Sửa:** bấm nút giờ sẽ **hỏi xác nhận** rồi **xoá sạch** bản dịch cũ của thẻ (cả cache trên đĩa + từ điển biến MVU) và dịch lại **từ đầu thật sự** (0/N).
+- Muốn dịch tiếp chỗ dở thì dùng nút **Continue Translation** như cũ.
+
+## v1.64.0 — Nút "🚀 Dịch siêu tốc" + đèn đỏ lane lỗi 🚀🔴
+### 🚀 Dịch siêu tốc (nút thứ 3 cạnh Dịch nhẹ / Dịch đầy đủ)
+- **Gom entry thông minh (bin-packing):** entry **NGẮN** được dồn chung **1 call API** (tối đa **12 entry & 10.000 ký tự/lô**, sắp giảm dần rồi nhét First-Fit) và **đi model PHỤ (flash)** — flash RPM cao gấp mấy lần pro và dư sức dịch entry ngắn. Entry **DÀI (>8K ký tự)** để **riêng 1 call, đi model CHÍNH (pro)** — nội dung khó cần chất lượng.
+- Kết quả: card nhiều entry ngắn giảm **hàng chục lần số call**; pro rảnh lo phần khó, flash gánh số lượng — đúng sở trường từng model (khớp combo 3.1-pro + 3-flash của bạn). Các lô vẫn chạy **đa luồng** qua pool như cũ.
+- An toàn: nhóm schema MVU (`initvar`/`controller`/`mvu_logic`) vẫn dịch **1-1** như cũ; ngưỡng 10K ký tự/lô để bản dịch (giãn ~3×) không vượt trần output của model.
+- Bấm nút là tự bật: mọi nhóm + chế độ hàng loạt lorebook + gom thông minh + đồng bộ MVU. (Có i18n VI/EN/中文.)
+
+### 🔴 Đèn đỏ lane lỗi (API dùng chung nghẽn ngoài RPM)
+- Call **fail** (429/5xx/timeout/mạng) → lane (provider+model) đó tự **nghỉ 15 giây** — call tiếp theo tự dồn sang lane khác, không đập tiếp vào proxy đang nghẽn; call **thành công** thì tự reset.
+- Panel luồng hiện huy hiệu **"⚠ lỗi ×N"** ngay trên hàng lane; **fail ≥5 lần liên tiếp → tên model tô ĐỎ đậm** để bạn biết lane đó đang chết dù RPM chưa chạm trần.
+- *Kỹ thuật:* +6 test bin-packing (146 test tổng). tsc + build xanh.
+
+## v1.63.0 — Sửa bug #3: dịch tới TavernHelper rồi "nằm im" 🧊
+> Từ báo lỗi #3: card `Tuhu_V2.2` — "dịch tới một số mục rồi nằm im, không dịch tiếp".
+- **Gốc rễ:** script TavernHelper `ERA变量框架1.4.11` nặng **148 KB** (6748 chữ Hán), bị chia ~10 chunk. Bộ gác schema cũ kiểm **"còn BẤT KỲ 1 chữ Hán → dịch lại CẢ field"**. Vì JS chứa nhiều chữ Hán trong string data/comment mà AI giữ lại hợp lệ, bộ gác **luôn fail → re-dịch cả 148 KB tới 3 lần** = mất 30–45 phút cho **một** field (xử lý tuần tự nên nghẽn cả bản dịch) → nhìn như "treo", rồi báo *"Schema translation failed (Chinese characters remaining)"*.
+- **Sửa:** bộ gác TavernHelper nay dùng **tỷ lệ chữ Hán sống sót** (dùng chung `detectResidualCjk` với bug #1) — **chỉ dịch lại khi CHƯA DỊCH thật** (>35% chữ Hán còn nguyên = echo / dở nửa chừng), bỏ qua vài chữ Hán còn sót trong code/data. Không còn re-dịch phí cả 148 KB.
+- **Lưới an toàn:** vòng dịch từng field nay **giới hạn số lần thử lại** — dù có tình huống bất ngờ, 1 field cũng **không thể kẹt vô hạn** làm treo cả bản dịch (luôn đi tiếp field kế).
+- Guard `initvar`/`controller` vẫn giữ nghiêm nhưng **thôi đếm nhầm dấu ngoặc 【】/fullwidth** là "chữ Hán" (cùng lớp bug #2).
+- *Kỹ thuật:* +2 test hồi quy (script JS giữ vài chữ Hán → không re-dịch; echo → dịch lại). tsc + **140 test** + build xanh.
+
+## v1.62.0 — Nút "🐞 Báo lỗi" trên header 🐞
+- Thêm nút **"Báo lỗi"** (viền đỏ) ở **header trên cùng bên phải**, cạnh nút đổi ngôn ngữ. Bấm → mở **file Excel báo lỗi (OneDrive)** ở tab mới để mọi người cùng ghi bug.
+- Có i18n: **Báo lỗi / Report a bug / 报告错误**. Link nằm ở hằng `BUG_REPORT_URL` trong `AppHub.tsx` (dễ đổi sau này).
+
+## v1.61.0 — Sửa nốt 2 báo oan còn lại ở Kiểm tra lỗi dịch 🧯
+> Sau khi sửa Template Literal (1.60), chạy Verify live lại thì thấy panel còn 2 loại báo oan **cùng họ** — flag thứ không cần dịch / không phải lỗi. Sửa nốt cho panel đáng tin.
+- **"còn tiếng Trung" đếm cả dấu ngoặc 【】《》 là "chữ Hán":** hàm `countCJK` gộp cả dải dấu câu CJK (`U+3000–303F`) và fullwidth (`U+FF00–FFEF`) → dấu ngoặc `【】` giữ nguyên (đúng) bị đếm là "chữ chưa dịch", báo "36 CJK còn lại" / "2 CJK còn lại". Nay **chỉ đếm CHỮ thật** (ideograph Hán + kana Nhật + hangul Hàn), bỏ dấu câu/fullwidth.
+- **"Code structure corrupted" so ngoặc `{ }` với 0:** `replaceString`/template literal là **đoạn fragment**, độ sâu ngoặc vốn có thể lệch (bản gốc `开局` đã lệch -1 do `${...}` nội suy). Check cũ ép "phải = 0" → báo oan. Nay **so với độ sâu ngoặc của BẢN GỐC**, chỉ báo khi bản dịch lệch **khác** gốc.
+- *Kiểm chứng live:* chạy lại nút **Verify** trên chính card báo lỗi → **6 issue giảm còn 1** (5 báo oan biến mất; còn đúng 1 chênh lệch ngoặc `[]` thật ở 1 entry — verify làm đúng việc).
+- *Kỹ thuật:* export `countCJK` + 4 test hồi quy (`【】`→0, `开局`→2, kana/hangul đếm đúng). tsc + **138 test** + build xanh.
+
+## v1.60.0 — Sửa bug #2: Kiểm tra lỗi dịch báo oan "Template Literal" 🧯
+> Từ báo lỗi #2: panel **Kiểm tra lỗi dịch** ở mục template literal báo lỗi loạn — "không so cái đã dịch mà đi so chỗ chẳng liên quan", và báo cả cho thứ không cần dịch.
+- **Gốc rễ:** bộ kiểm cũ dùng regex `${[^}]+}` **không parse được `${}` lồng nhau** (template literal HTML phức tạp) nên trích cụt; rồi **ghép cặp đoán mò** — lấy *bất kỳ* `${...}` nào ở bản dịch không trùng gốc và tuyên bố "gốc `${bodyStateStr…}` đã dịch thành `${enemies[k]['Loại']…}`" dù hai cái chẳng liên quan. Nó cũng không phân biệt **chuỗi literal** (`'怪物'`→`'Quái Vật'` là ĐÚNG) với **biến MVU đổi tên có chủ đích** (`类型`→`Loại`), nên báo "chưa dịch / dịch sai" oan cho hàng loạt thứ đúng.
+- **Sửa:** trích `${...}` **cân bằng ngoặc** (chịu được lồng nhau), và **chỉ soi biến JS THUẦN** (định danh/thuộc tính/index/gọi rỗng — không literal, không ternary, không HTML, không chữ Hán). Chỉ khi một biến thuần ở gốc **mất hẳn** khỏi bản dịch mới cảnh báo (warning). Bỏ hoàn toàn kiểu ghép cặp đoán mò.
+- *Kết quả:* các ca trong ảnh báo lỗi (`'怪物'`→`'Quái Vật'`, `enemies[k].类型`→`['Loại']`, `_.get(edata, '基础信息…')`→`'Thông tin cơ bản…'`) **không còn bị báo lỗi**; biến JS bị xoá thật vẫn bắt được.
+- *Kỹ thuật:* tách logic ra 3 hàm thuần (`extractBalancedInterpolations`, `isPureCodeInterpolation`, `findMissingCodeInterpolations`) + 9 test hồi quy lấy đúng fixture từ ảnh báo lỗi. tsc + **134 test** + build xanh.
+
+## v1.59.0 — Tăng tốc: retry đẩy xuống model phụ (flash) ⚡
+> Từ quan sát live khi dịch card MVU nặng: model chính (pro) RPM thấp (vd 3/phút) + là model *thinking* nên mỗi call chậm; các entry `initvar`/`controller` phải thử lại nhiều lần trên đúng lane pro chậm đó, trong khi **RPM của model phụ (flash) ngồi không** (0/17). 1 card 83 field mất ~40 phút.
+- **Sửa:** mỗi lần **thử lại** 1 field (bộ gác chữ Hán bắt còn tiếng Trung, kết quả rỗng/ngắn, hoặc lỗi mạng/timeout) nay **tự chọn lane model phụ (flash)** thay vì xếp hàng lại lane pro. Lượt **đầu tiên vẫn dùng pro** để giữ chất lượng; chỉ phần *retry* mới xuống flash.
+- **Lợi:** (a) tận dụng phần RPM flash đang rảnh (flash thường 5–6× RPM của pro), (b) chừa lane pro cho lượt đầu của các field khác → giảm nghẽn ở đuôi. Không tăng tổng RPM (vẫn qua rate-limit từng model), chỉ hết "chờ phí".
+- *An toàn:* nếu provider không bật model phụ → giữ nguyên pro (no-op). Bộ rate-limit vẫn đếm theo thời điểm bắt đầu nên call chồng nhau đúng trần/phút. tsc + 125 test + build xanh.
+- *Đòn config bổ sung (không cần cập nhật):* đặt **"Ngưỡng ký tự"** > 0 để entry ngắn/vừa đi flash ngay từ lượt đầu — nhanh hơn nữa nếu bạn chấp nhận flash cho phần văn xuôi.
+
+## v1.58.0 — Sửa bug #1: field "DONE" nhưng vẫn tiếng Trung 🛑
+> Từ báo lỗi #1 (user tải thẻ về, dịch ra vẫn còn nguyên đoạn tiếng Trung). Đã lấy thẻ gốc + thẻ đã dịch trong báo lỗi, trích nội dung 2 bên ra so, và tìm ra gốc rễ.
+- **Gốc rễ:** khi dịch, AI đôi lúc **trả lại nguyên văn tiếng Trung** (echo) — hay gặp khi nội dung khó/bị model từ chối, hoặc **model phụ (flash)** trả lại y nguyên input. Field lúc đó dài **xấp xỉ nguồn** (tỉ lệ ~100%, đúng như badge "DONE 104%" trong ảnh báo lỗi) nên **lọt hết** các bộ kiểm độ dài và bị đánh dấu **DONE dù chưa dịch**. Bộ gác chữ Hán cũ **chỉ soi field schema** (initvar/tavern_helper…), **không soi** content/lorebook/mở đầu/mô tả — nên chúng lọt lưới.
+- **Sửa:** thêm **"Bộ gác chữ Hán sót"** cho mọi field văn bản thường. Bản dịch tốt zh→vi gần như **0% chữ Hán** (chỉ vài danh từ riêng ≈ vài %); nếu bản dịch **còn > 35% số chữ Hán của nguồn** → coi là **chưa dịch** → **tự thử lại** (tới hết số lần retry); vẫn còn thì **đánh dấu LỖI (đỏ)** thay vì DONE giả, để bạn thấy & dịch lại đúng chỗ đó.
+- **Không bắt nhầm:** bỏ qua danh từ riêng giữ lại (vài %), key Lorebook merge (cố ý giữ key gốc + thêm key dịch), field code (regex/tavern_helper — chữ Hán trong code/URL là hợp lệ, đã có bộ gác riêng), và chữ Hán trong URL/đường dẫn import. Đã đối chiếu trên chính thẻ trong báo lỗi: **0 field tốt bị bắt nhầm**, chỉ đúng ca echo bị chặn.
+- *Kỹ thuật:* logic tách ra `detectResidualCjk()` (thuần, test được) + 7 test hồi quy lấy fixture từ thẻ báo lỗi thật. tsc + **125 test** + build xanh.
+
 ## v1.56.4 — Dịch Card đã dịch xong EN + 中文 (Đợt 4) 🌏
 > Tiếp nối v1.56.3. **Dịch Card** — công cụ chính, cũng là công cụ nặng nhất — giờ đổi ngôn ngữ theo nút VI/EN/中文 trên header.
 - **Toàn bộ 20 panel** đã có tiếng Anh & tiếng Trung: cấu hình dịch, bảng trường (Field Editor), tiến trình + nhật ký, xuất thẻ + sức khoẻ thẻ, cấu hình API/provider, Regex Manager, Kiểm tra lỗi (Verify), Chiến lược B (MVU) & C (EJS), So Sánh Card, EJS Creator, Trợ Lý AI và trình chuyển đổi MVU-Zod 7 bước.

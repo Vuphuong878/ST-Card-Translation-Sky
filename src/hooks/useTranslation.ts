@@ -1,9 +1,11 @@
+import { splitLorebookBatches } from '../utils/batchSplit';
+import { stripUrlsForCjkCheck } from '../utils/cjk';
 import { useCallback, useRef } from 'react';
 import { useStore } from '../store';
 import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError, ApiError, setExtraProviders, resetProviderPool, computePoolConcurrency } from '../utils/apiClient';
 import { extractTranslatableFields, applyTranslationsToCard, autoTranslateLorebookTriggerKeys, injectNewLorebookEntries } from '../utils/cardFields';
 import { syncMvuVariables, postProcessRegexHtml, normalizeSmartQuotesInCode, fixNestedQuoteBracketPaths, fixBrokenLodashPaths, fixDotNotationPaths, extractPotentialMvuKeyStrings, aiTranslateMvuKeys, aiRenameMvuKeys, extractZodDescriptions, extractSchemaContextFromCard, extractMappingFromTranslatedSchemas, enforceInitvarCovariance, extractMappingFromTranslatedInitvar, enforceExactConsistency, enforceVariableCasing, fixZodSyntaxErrors, validateDictionaryConflicts, aiResolveMvuConflicts } from '../utils/mvuSync';
-import { shouldSkipTranslation, detectLanguage } from '../utils/langDetect';
+import { shouldSkipTranslation, detectLanguage, detectResidualCjk } from '../utils/langDetect';
 import { clearRAGCache } from '../utils/ragContext';
 import { storeTranslation, lookupTranslationMemory } from '../utils/translationMemory';
 import { findReusableTwin } from '../utils/translationReuse';
@@ -17,6 +19,7 @@ import { detectEjsCard, extractEjsEntryNames, extractEjsKeywords, aiTranslateEjs
 import { getActivePresetPromptContent } from '../utils/presetParser';
 import { CallMonitor } from '../utils/callMonitor';
 import { runWorkerPool } from '../utils/runWorkerPool';
+import { smartPackFields } from '../utils/smartPack';
 import type { FieldGroup, FieldGroupConfig, TranslationField } from '../types/card';
 
 /**
@@ -30,22 +33,7 @@ import type { FieldGroup, FieldGroupConfig, TranslationField } from '../types/ca
  */
 const LONG_ENTRY_ISOLATE_CHARS = 16000;
 
-/**
- * Strip URL/link content from text before CJK residual detection.
- * Prevents false-positive retries when URLs intentionally contain CJK characters
- * (e.g., import('https://cdn.com/骰子系统/stable.js') should NOT trigger retry).
- */
-function stripUrlsForCjkCheck(text: string): string {
-  let s = text;
-  s = s.replace(/(?:https?|ftp):\/\/[^\s'"<>(){}\\]+|\/\/[a-zA-Z0-9][^\s'"<>(){}\\]*/gi, '');
-  s = s.replace(/(?:src|href|action|data-src|data-href|poster|srcset)\s*=\s*(?:"[^"]*"|'[^']*')/gi, '');
-  s = s.replace(/url\(\s*(?:"[^"]*"|'[^']*'|[^)]*?)\s*\)/gi, '');
-  s = s.replace(/(?:import|require)\s*\(\s*(?:[`'"][^`'"]*[`'"]|`[^`]*`)\s*\)/gi, '');
-  s = s.replace(/data:[a-zA-Z0-9+/.-]+;[^\s'"<>)]+/gi, '');
-  s = s.replace(/(?:\.\.?\/)[^\s'"<>(){}\\]+/g, '');
-  s = s.replace(/(!?\[[^\]]*\])\([^)]+\)/g, '$1()');
-  return s;
-}
+// (Audit dot 3) stripUrlsForCjkCheck gom ve utils/cjk.ts (truoc day dup 3 noi).
 
 
 /**
@@ -162,16 +150,20 @@ export function useTranslation() {
    * Prepare fields for translation.
    * If `continueMode` is true, merge new field groups with existing translated fields.
    */
-  const prepareFields = useCallback((continueMode = false) => {
+  const prepareFields = useCallback((continueMode = false, freshStart = false) => {
     if (!store.card) return [];
     const enabledGroups = store.translationConfig.fieldGroups
       .filter((g: FieldGroupConfig) => g.enabled)
       .map((g: FieldGroupConfig) => g.id) as FieldGroup[];
     const newFields = extractTranslatableFields(store.card, enabledGroups);
 
-    // In continue mode: preserve already-done fields from previous runs
+    // In continue mode: preserve already-done fields from previous runs.
+    // freshStart (Re-translate All): KHÔNG gộp — dùng thẳng field mới trích (toàn 'pending') để dịch
+    // lại TỪ ĐẦU. Không đọc store.fields ⇒ tránh lỗi "stale closure" (deleteCurrentCardCache đã xoá
+    // fields trong store nhưng snapshot React của hook chưa cập nhật ⇒ trước đây vẫn thấy fields 'done'
+    // rồi gộp lại ⇒ báo "All fields are already translated" thay vì restart).
     let mergedFields = newFields;
-    if (store.fields.length > 0) {
+    if (!freshStart && store.fields.length > 0) {
       // ALWAYS merge: preserve fields already done/skipped/ignored from store.
       // This respects manual per-field translations AND continue-mode resumptions.
       const existingMap = new Map(store.fields.map(f => [f.path, f]));
@@ -187,6 +179,18 @@ export function useTranslation() {
       for (const ef of store.fields) {
         if ((ef.status === 'done' || ef.status === 'skipped' || ef.status === 'ignored') && !mergedFields.find(m => m.path === ef.path)) {
           mergedFields.push(ef);
+        }
+      }
+    }
+
+    // Preset "Dịch nhẹ": trong core/lorebook chỉ dịch field TÊN (kết thúc .name) + comment
+    // lorebook; content TO (description/personality/scenario + thân entry) → ignore.
+    // Làm ở đây (khi Start, field luôn đã trích đủ) nên không phụ thuộc timing của nút.
+    if (store.translationConfig.lightSkipContent) {
+      const isNameOrComment = (p: string) => /(^|\.)name$/.test(p) || /\.comment$/.test(p);
+      for (const f of mergedFields) {
+        if ((f.group === 'core' || f.group === 'lorebook') && !isNameOrComment(f.path) && f.status !== 'done') {
+          f.status = 'ignored';
         }
       }
     }
@@ -448,7 +452,10 @@ export function useTranslation() {
             });
           },
           // cssCjkHandling
-          store.translationConfig.cssCjkHandling
+          store.translationConfig.cssCjkHandling,
+          // preferSecondary: nếu field đang THỬ LẠI (retries>0) → đẩy xuống model phụ (flash) cho nhanh,
+          // chừa lane chính (pro, RPM thấp) cho lượt đầu của các field khác. Lượt đầu vẫn dùng pro.
+          freshRetries() > 0
         );
       }
 
@@ -732,17 +739,75 @@ export function useTranslation() {
       const isTargetNonCJK = !(/chinese|中文|japanese|日本語|korean|한국어/i.test(store.translationConfig.targetLanguage));
       const isSchemaCritical = field.entryType === 'initvar' || field.entryType === 'controller' || field.entryType === 'mvu_logic' || field.group === 'tavern_helper';
       if (isTargetNonCJK && isSchemaCritical) {
-        const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef]/;
-        const translatedStripped = stripUrlsForCjkCheck(translated);
-        if (cjkRegex.test(translatedStripped)) {
+        if (field.group === 'tavern_helper') {
+          // (Sua bug #3) TavernHelper = SCRIPT JS LON (co the 100KB+, vd ERA变量框架 148KB) chua chu
+          // Han trong string data / comment ma AI doi khi GIU LAI hop le. Guard cu "con BAT KY 1 chu
+          // Han -> dich lai CA field" => re-dich ca 148KB toi maxRetries lan = treo 30-45 phut, roi bao
+          // "Schema translation failed" (dung bug user: dich toi day roi NAM IM). Nay theo TY LE: chi
+          // dich lai khi CHUA DICH that (echo / do nua chung, >35% Han song), bo qua vai chu con sot.
+          const { suspect, transCjk, origCjk, survival } = detectResidualCjk(field.original, translated);
+          if (suspect) {
+            if (freshRetries() < (store.proxy.maxRetries || 3)) {
+              store.updateField(field.path, { retries: freshRetries() + 1 });
+              store.addLog('retry', `⚠️ Script con ${transCjk}/${origCjk} chu Han (${(survival * 100).toFixed(0)}%) — nghi chua dich. Thu lai: ${field.label}…`);
+              await new Promise((r) => setTimeout(r, store.proxy.retryDelay || 1000));
+              return 'retry';
+            }
+            store.updateField(field.path, { status: 'error', error: `Script con ${transCjk}/${origCjk} chu Han sau ${store.proxy.maxRetries || 3} lan thu` });
+            store.addLog('error', `Chinese remaining in TavernHelper for ${field.label} after retries.`);
+            return 'error';
+          }
+        } else {
+          // initvar/controller/mvu_logic: schema bien (nho) -> giu nghiem (bat ky chu Han = bien chua
+          // dich). Chi dem CHU Han that (KHONG dem dau fullwidth nhu bug #2) + bo URL/import path.
+          const cjkRegex = /[一-鿿㐀-䶿]/;
+          const translatedStripped = stripUrlsForCjkCheck(translated);
+          if (cjkRegex.test(translatedStripped)) {
+            if (freshRetries() < (store.proxy.maxRetries || 3)) {
+              store.updateField(field.path, { retries: freshRetries() + 1 });
+              store.addLog('retry', `⚠️ Con chu Han trong Schema (${field.label}). Dang thu lai…`);
+              await new Promise((r) => setTimeout(r, store.proxy.retryDelay || 1000));
+              return 'retry';
+            }
+            store.updateField(field.path, { status: 'error', error: 'Schema translation failed (Chinese characters remaining)' });
+            store.addLog('error', `Chinese characters remaining in Schema for ${field.label} after retries.`);
+            return 'error';
+          }
+        }
+      }
+
+      // ═══ RESIDUAL-CJK GUARD (mọi trường VĂN BẢN thường) — chống "DONE giả" (bug #1) ═══
+      // AI đôi khi TRẢ LẠI NGUYÊN VĂN nguồn (echo) → field dài ≈ nguồn (ratio ~100%) nên lọt các guard
+      // độ dài và bị đánh dấu 'done' dù VẪN tiếng Trung. Guard schema-critical ở trên KHÔNG bao trường
+      // content/lorebook/messages/core… nên chúng lọt lưới. Chặn theo TỶ LỆ chữ Hán sống sót (>35% ⇒
+      // chưa dịch ⇒ retry; hết retry ⇒ 'error' đỏ, không DONE giả). KHÔNG áp cho lorebook_keys (merge),
+      // regex/tavern_helper (đã có guard riêng ở trên).
+      if (
+        isTargetNonCJK &&
+        !isSchemaCritical &&
+        field.group !== 'lorebook_keys' &&
+        field.group !== 'regex' &&
+        field.group !== 'tavern_helper'
+      ) {
+        const { suspect, origCjk, transCjk, survival } = detectResidualCjk(field.original, translated);
+        if (suspect) {
           if (freshRetries() < (store.proxy.maxRetries || 3)) {
             store.updateField(field.path, { retries: freshRetries() + 1 });
-            store.addLog('retry', `⚠️ Còn chữ Hán trong Schema (${field.label}). Đang thử lại…`);
+            store.addLog('retry',
+              `⚠️ Nghi CHƯA DỊCH: còn ${(survival * 100).toFixed(0)}% chữ Hán ` +
+              `(${transCjk}/${origCjk}) ở ${field.label}. AI có thể trả lại nguyên văn. Thử lại…`
+            );
             await new Promise((r) => setTimeout(r, store.proxy.retryDelay || 1000));
             return 'retry';
           }
-          store.updateField(field.path, { status: 'error', error: 'Schema translation failed (Chinese characters remaining)' });
-          store.addLog('error', `Chinese characters remaining in Schema for ${field.label} after retries.`);
+          store.updateField(field.path, {
+            status: 'error',
+            error: `Chưa dịch: còn ${transCjk}/${origCjk} chữ Hán (${(survival * 100).toFixed(0)}%) sau ${store.proxy.maxRetries || 3} lần thử`,
+          });
+          store.addLog('error',
+            `❌ ${field.label} vẫn còn ${(survival * 100).toFixed(0)}% tiếng Trung sau retry — ` +
+            `đánh dấu LỖI (không phải DONE giả).`
+          );
           return 'error';
         }
       }
@@ -886,7 +951,7 @@ export function useTranslation() {
     f.entryType === 'initvar' || f.entryType === 'controller' || f.entryType === 'mvu_logic';
 
   /* ─── Translate one batch of fields (single API call + fallback) ─── */
-  const translateOneBatch = async (batchFields: TranslationField[], retryCount = 0) => {
+  const translateOneBatch = async (batchFields: TranslationField[], retryCount = 0, preferSecondary = false) => {
     if (batchFields.length === 0) return;
     const targetModel = store.translationConfig.enableModelRouting
       ? (store.translationConfig.entryModelRouting[batchFields[0].path] || store.translationConfig.groupModelRouting[batchFields[0].group] || store.proxy.model)
@@ -1008,7 +1073,8 @@ export function useTranslation() {
         promptResult.schemaForApi,
         abortRef.current?.signal,
         promptResult.glossaryForApi,
-        store.translationConfig.chunkSize
+        store.translationConfig.chunkSize,
+        preferSecondary // lô gộp toàn entry ngắn (Dịch siêu tốc) → đi model phụ (flash)
       );
 
       // ═══ Apply results + Post-batch MVU validation ═══
@@ -1267,7 +1333,7 @@ export function useTranslation() {
           const failedLabels = emptyFields.map(f => f.label.replace(/^Lorebook: /, '')).slice(0, 5);
           store.addLog('retry', `⚠️ ${emptyFields.length} mục bị trống (AI chưa trả kết quả): [${failedLabels.join(', ')}${emptyFields.length > 5 ? '…' : ''}]. Đang thử lại sau ${(backoffDelay/1000).toFixed(1)}s…`);
           await new Promise((r) => setTimeout(r, backoffDelay));
-          await translateOneBatch(emptyFields, retryCount + 1);
+          await translateOneBatch(emptyFields, retryCount + 1, preferSecondary);
         } else {
           // ─── Fallback to individual using translateSingleField ───
           // Separate MVU-critical fields (process first) from regular ones
@@ -1342,7 +1408,7 @@ export function useTranslation() {
       if (retryCount < (store.proxy.maxRetries || 3)) {
         store.addLog('retry', `⚠️ Cả lô bị lỗi, đang thử lại sau ${(backoffDelay/1000).toFixed(1)}s… (${msg})`);
         await new Promise((r) => setTimeout(r, backoffDelay));
-        await translateOneBatch(batchFields, retryCount + 1);
+        await translateOneBatch(batchFields, retryCount + 1, preferSecondary);
         return;
       }
 
@@ -1392,8 +1458,8 @@ export function useTranslation() {
   };
 
   /* ─── Main translation loop ─── */
-  const startTranslation = useCallback(async (continueMode = false) => {
-    const allFields = prepareFields(continueMode);
+  const startTranslation = useCallback(async (continueMode = false, freshStart = false) => {
+    const allFields = prepareFields(continueMode, freshStart);
     if (allFields.length === 0) {
       store.addToast('info', 'No translatable fields found');
       return;
@@ -1555,6 +1621,7 @@ export function useTranslation() {
                   total,
                 });
               },
+              computePoolConcurrency(store.proxy),   // chạy các lô tên biến SONG SONG qua pool
             );
             store.setPreprocessProgress(null);
             
@@ -1812,113 +1879,25 @@ export function useTranslation() {
           i++;
         }
 
-        // Step 2: Split into sub-batches
-        const subBatches: TranslationField[][] = [];
-
+        // Step 2: Split into sub-batches — logic chia lô DÙNG CHUNG với pipeline Mod
+        // (utils/batchSplit, audit đợt 3 — trước đây đúp nguyên khối 2 nơi, sửa 1 nơi quên nơi kia).
+        const getTargetModelFor = (f: TranslationField) => store.translationConfig.enableModelRouting
+          ? (store.translationConfig.entryModelRouting[f.path] || store.translationConfig.groupModelRouting[f.group] || store.proxy.model)
+          : store.proxy.model;
+        const smartOn = store.translationConfig.smartBatchPacking;
+        const { batches: subBatches, prefer: subBatchPrefer, summary: splitSummary } = splitLorebookBatches(allLorebookFields, {
+          batchSize,
+          maxBatchChars: MAX_BATCH_CHARS,
+          mvuEnabled: isMvuEnabled,
+          getModelKey: getTargetModelFor,
+          isolateChars: LONG_ENTRY_ISOLATE_CHARS, // entry dài → lô riêng để dịch chunk
+          softCharCap: SOFT_CHAR_CAP,
+          softMinCount: 3,
+          smartPacking: smartOn, // ⚡ Dịch siêu tốc: gộp entry ngắn → model phụ
+        });
         if (isMvuEnabled) {
-          // ═══ MVU Smart Grouping: group by targetModel and entryType first, then split ═══
-          // This ensures initvar entries batch together (YAML format),
-          // mvu_logic entries batch together (code), and narrative batches separately
-          const typeGroups: Record<string, TranslationField[]> = {};
-          for (const f of allLorebookFields) {
-            const targetModel = store.translationConfig.enableModelRouting
-              ? (store.translationConfig.entryModelRouting[f.path] || store.translationConfig.groupModelRouting[f.group] || store.proxy.model)
-              : store.proxy.model;
-            const typeKey = `${f.entryType || 'other'}_|_${targetModel}`;
-            if (!typeGroups[typeKey]) typeGroups[typeKey] = [];
-            typeGroups[typeKey].push(f);
-          }
-
-          // Process each type group with appropriate batch sizes
-          const TYPE_BATCH_SIZES: Record<string, number> = {
-            initvar: 1,                  // YAML: ONE BY ONE
-              mvu_logic: 1,                // Code: ONE BY ONE
-              controller: 1,               // Code: ONE BY ONE
-            rules: batchSize,            // Rules: normal size
-            narrative: batchSize,        // Narrative: normal size
-            other: batchSize,            // Default: normal size
-          };
-
-          // Order: initvar first (schema variables), then logic, then rest
-          const typeOrder = ['initvar', 'controller', 'mvu_logic', 'rules', 'narrative', 'other'];
-          const sortedTypes = Object.keys(typeGroups).sort((a, b) => {
-            const baseA = a.split('_|_')[0];
-            const baseB = b.split('_|_')[0];
-            const ia = typeOrder.indexOf(baseA);
-            const ib = typeOrder.indexOf(baseB);
-            if (ia === ib) return a.localeCompare(b);
-            return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-          });
-
-          for (const typeKey of sortedTypes) {
-            const baseTypeKey = typeKey.split('_|_')[0];
-            const typeFields = typeGroups[typeKey];
-            const typeBatchSize = TYPE_BATCH_SIZES[baseTypeKey] || batchSize;
-            let currentBatch: TranslationField[] = [];
-            let currentChars = 0;
-
-            for (const f of typeFields) {
-              // Long entry → isolate into its own batch so translateOneBatch routes it
-              // through chunked single-field translation (avoids the un-chunked giant call).
-              if (f.original.length > LONG_ENTRY_ISOLATE_CHARS) {
-                if (currentBatch.length > 0) { subBatches.push(currentBatch); currentBatch = []; currentChars = 0; }
-                subBatches.push([f]);
-                continue;
-              }
-              if (currentBatch.length >= typeBatchSize || (currentBatch.length > 0 && currentChars + f.original.length > MAX_BATCH_CHARS)) {
-                subBatches.push(currentBatch);
-                currentBatch = [];
-                currentChars = 0;
-              }
-              currentBatch.push(f);
-              currentChars += f.original.length;
-            }
-            if (currentBatch.length > 0) subBatches.push(currentBatch);
-          }
-
-          // Log MVU grouping detail
-          const groupSummary = sortedTypes
-            .map(t => `${t}:${typeGroups[t].length}`)
-            .join(', ');
-          store.addLog('info', `🔧 MVU batch grouping: ${allLorebookFields.length} fields → [${groupSummary}] → ${subBatches.length} batch(es)`);
-
+          store.addLog('info', `🔧 MVU batch grouping: ${allLorebookFields.length} fields → [${splitSummary}] → ${subBatches.length} batch(es)`);
         } else {
-          // ═══ Standard splitting: group by targetModel first, then by batchSize + char limit ═══
-          const modelGroups: Record<string, TranslationField[]> = {};
-          for (const f of allLorebookFields) {
-            const targetModel = store.translationConfig.enableModelRouting
-              ? (store.translationConfig.entryModelRouting[f.path] || store.translationConfig.groupModelRouting[f.group] || store.proxy.model)
-              : store.proxy.model;
-            if (!modelGroups[targetModel]) modelGroups[targetModel] = [];
-            modelGroups[targetModel].push(f);
-          }
-
-          for (const targetModel of Object.keys(modelGroups)) {
-            const modelFields = modelGroups[targetModel];
-            let currentBatch: TranslationField[] = [];
-            let currentChars = 0;
-            for (const f of modelFields) {
-              // Long entry → isolate into its own batch so it gets chunked single-field
-              // translation instead of being sent inside one un-chunked giant batch call.
-              if (f.original.length > LONG_ENTRY_ISOLATE_CHARS) {
-                if (currentBatch.length > 0) { subBatches.push(currentBatch); currentBatch = []; currentChars = 0; }
-                subBatches.push([f]);
-                continue;
-              }
-              // Split when: count exceeds batchSize, OR char count exceeds soft cap
-              if (currentBatch.length >= batchSize ||
-                  (currentBatch.length > 0 && currentChars + f.original.length > MAX_BATCH_CHARS) ||
-                  (currentBatch.length > 0 && currentChars + f.original.length > SOFT_CHAR_CAP && currentBatch.length >= 3)) {
-                subBatches.push(currentBatch);
-                currentBatch = [];
-                currentChars = 0;
-              }
-              currentBatch.push(f);
-              currentChars += f.original.length;
-            }
-            if (currentBatch.length > 0) subBatches.push(currentBatch);
-          }
-          // Log with safety info
           const avgBatchSize = subBatches.length > 0 ? Math.round(allLorebookFields.length / subBatches.length) : 0;
           store.addLog('info', `${allLorebookFields.length} lorebook fields → ${subBatches.length} batch(es) (avg ${avgBatchSize}/batch), concurrency: ${concurrency}`);
         }
@@ -1929,10 +1908,14 @@ export function useTranslation() {
         // Mỗi worker xong 1 batch là KÉO batch kế NGAY, không đợi cả đợt → không phí thời gian
         // chờ straggler. RPM vẫn an toàn vì mỗi call qua pickLane. Cache lưu định kỳ thay vì mỗi đợt.
         let savedLb = 0; const saveEveryLb = Math.max(4, Math.floor(concurrency / 2));
+        if (smartOn) {
+          const packed = subBatchPrefer.filter(Boolean).length;
+          store.addLog('info', `⚡ Dịch siêu tốc: ${allLorebookFields.length} entry → ${subBatches.length} call (${packed} lô gộp đi model phụ, ${subBatches.length - packed} entry dài đi model chính)`);
+        }
         const lbPool = await runWorkerPool({
           total: subBatches.length,
           concurrency,
-          runOne: (idx) => translateOneBatch(subBatches[idx]),
+          runOne: (idx) => translateOneBatch(subBatches[idx], 0, subBatchPrefer[idx] || false),
           shouldStop: () => !!checkAbort(),
           waitIfPaused: waitForPause,
           onSettled: () => { if (++savedLb % saveEveryLb === 0) store.saveTranslationCache(); },
@@ -2195,11 +2178,81 @@ export function useTranslation() {
         continue;
       }
 
+      // ─── (Audit đợt 1) Chiến lược 'single' + lorebook: ĐA LUỒNG thay vì tuần tự ───
+      // Trước đây strategy 'single' dịch 74 entry lorebook TỪNG CÁI MỘT (chậm kinh khủng) — trong khi
+      // các entry độc lập nhau. Nay gom dải entry LIỀN NHAU cùng nhóm (lorebook / lorebook_keys),
+      // KHÔNG phải MVU-critical (initvar/controller/mvu_logic vẫn tuần tự để giữ đồng bộ biến), rồi
+      // chạy SONG SONG qua pool — mỗi entry vẫn 1 call riêng, prompt y hệt ⇒ chất lượng không đổi,
+      // chỉ nhanh hơn. Chỉ gom dải CÙNG NHÓM liền kề nên thứ tự giữa các nhóm (keys ↔ content) giữ nguyên.
+      if (
+        !isBatchLorebook &&
+        lorebookGroups.includes(field.group) &&
+        !isMvuCriticalField(field)
+      ) {
+        const waveGroup = field.group;
+        const waveIdx: number[] = [];
+        let j = i;
+        while (j < fields.length && fields[j].group === waveGroup && !isMvuCriticalField(fields[j])) {
+          const st = fields[j].status;
+          if (st === 'pending' || st === 'error') waveIdx.push(j);
+          j++;
+        }
+        if (waveIdx.length >= 2) {
+          const waveConc = computePoolConcurrency(store.proxy);
+          store.addLog('info', `⚡ ${waveIdx.length} mục ${waveGroup} độc lập → dịch SONG SONG qua pool (ngân sách ${waveConc} luồng)`);
+          let savedWv = 0; const saveEveryWv = Math.max(4, Math.floor(waveConc / 2));
+          const wvPool = await runWorkerPool({
+            total: waveIdx.length,
+            concurrency: waveConc,
+            runOne: async (k) => {
+              const fi = waveIdx[k];
+              const fresh = useStore.getState().fields.find(x => x.path === fields[fi].path) || fields[fi];
+              let r = await translateSingleField(fresh, fi, fields);
+              let guard = 0;
+              while (r === 'retry' && guard++ < 8) {
+                if (checkAbort()) throw new Error('Cancelled');
+                if (await waitForPause()) throw new Error('Cancelled');
+                const again = useStore.getState().fields.find(x => x.path === fields[fi].path) || fresh;
+                r = await translateSingleField(again, fi, useStore.getState().fields);
+              }
+              if (r === 'retry') {
+                store.updateField(fields[fi].path, { status: 'error', error: 'Vượt số lần thử lại — bỏ qua để dịch tiếp' });
+              }
+            },
+            shouldStop: () => !!checkAbort(),
+            waitIfPaused: waitForPause,
+            onSettled: () => { if (++savedWv % saveEveryWv === 0) store.saveTranslationCache(); },
+            betweenMs: store.proxy.requestDelay,
+          });
+          store.saveTranslationCache();
+          if (wvPool.cancelled) {
+            runningRef.current = false;
+            store.setPhase(pauseRef.current ? 'paused' : 'cancelled');
+            store.addLog('warning', '⏹ Đã dừng dịch.');
+            return;
+          }
+          i = j; // nhảy qua cả dải đã xử lý
+          continue;
+        }
+        // dải chỉ 0-1 mục cần dịch → rơi xuống single mode như cũ
+      }
+
       // ─── Single field mode ───
       try {
-        const result = await translateSingleField(field, i, fields);
+        let result = await translateSingleField(field, i, fields);
+        // (Sửa bug #3) Lưới an toàn: 'retry' vốn KHÔNG tăng i (dịch lại CÙNG field). Bọc trong vòng
+        // CÓ GIỚI HẠN để 1 field không thể kẹt vô hạn → treo cả bản dịch ("dịch tới đây rồi nằm im").
+        // Các guard tự dừng ở maxRetries; đây là chốt chặn cứng phòng trường hợp bất ngờ.
+        let retryGuard = 0;
+        while (result === 'retry' && retryGuard++ < 8) {
+          if (checkAbort()) throw new Error('Cancelled');
+          if (await waitForPause()) throw new Error('Cancelled');
+          result = await translateSingleField(field, i, useStore.getState().fields);
+        }
         if (result === 'retry') {
-          continue; // Don't increment i
+          // Vẫn 'retry' sau 8 lần → KHÔNG kẹt: đánh dấu lỗi rồi đi tiếp field kế (rơi xuống i++).
+          store.updateField(field.path, { status: 'error', error: 'Vượt số lần thử lại — bỏ qua để dịch tiếp' });
+          store.addLog('warning', `⚠️ ${field.label}: vượt số lần thử lại, bỏ qua để không kẹt.`);
         }
 
         // ═══ Live Schema Injection: capture translated TavernHelper as schema context ═══
@@ -2339,8 +2392,11 @@ export function useTranslation() {
     runningRef.current = false;
     store.setPhase('done');
     store.saveTranslationCache();
-    const doneCount = store.fields.filter((f) => f.status === 'done').length;
-    const failCount = store.fields.filter((f) => f.status === 'error').length;
+    // `store` là snapshot lúc render → store.fields còn status CŨ (pending). Phải đọc
+    // FRESH từ getState() nếu không toast báo "0/16" dù đã xong 16/16.
+    const freshFields = useStore.getState().fields;
+    const doneCount = freshFields.filter((f) => f.status === 'done').length;
+    const failCount = freshFields.filter((f) => f.status === 'error').length;
     store.addLog('info', `🎉 Dịch xong: ${doneCount} thành công, ${failCount} lỗi`);
     store.addToast('success', `Translation complete! ${doneCount}/${fields.length} fields translated`);
 
@@ -2349,7 +2405,7 @@ export function useTranslation() {
     // ═══ Post-Translation MVU-ZOD Sync Verification Report ═══
     if (store.translationConfig.enableMvuSync && Object.keys(store.translationConfig.mvuDictionary).length > 0) {
       const syncReport = generateSyncReport(
-        store.fields.filter(f => f.status === 'done').map(f => ({
+        freshFields.filter(f => f.status === 'done').map(f => ({
           original: f.original,
           translated: f.translated,
           label: f.label,
@@ -2375,7 +2431,7 @@ export function useTranslation() {
 
     // ═══ Post-Translation Entry Name ↔ Text Sync Verification ═══
     {
-      const doneFields = store.fields.filter(f => f.status === 'done');
+      const doneFields = freshFields.filter(f => f.status === 'done');
       const entryNameResult = validateEntryNameSync(doneFields.map(f => ({
         path: f.path,
         label: f.label,
@@ -2407,7 +2463,7 @@ export function useTranslation() {
       const ejsEntryDict = store.translationConfig.ejsEntryNameDict;
       const ejsKwDict = store.translationConfig.ejsKeywordDict;
       if (Object.keys(ejsEntryDict).length > 0 || Object.keys(ejsKwDict).length > 0) {
-        const doneFields = store.fields.filter(f => f.status === 'done');
+        const doneFields = freshFields.filter(f => f.status === 'done');
         const ejsSyncResult = validateEjsSync(
           doneFields.map(f => ({
             path: f.path,
@@ -2766,10 +2822,11 @@ export function useTranslation() {
         store.addLog('info', `🔒 Export exact consistency: fixed ${fixes.length} case/spelling variations: ${fixes.join(', ')}`);
       }
 
-      const enabledGroups = store.translationConfig.fieldGroups
-        .filter((g: FieldGroupConfig) => g.enabled)
-        .map((g: FieldGroupConfig) => g.id);
-      baseCard = syncMvuVariables(baseCard, fixes.length > 0 ? fixedDict : currentDict, enabledGroups);
+      // Chiến lược B đồng bộ tên biến trên TOÀN thẻ (schema, initvar, regex, lorebook,
+      // narrative) — KHÔNG giới hạn theo nhóm đang dịch. Nếu bó theo enabledGroups thì
+      // khi tắt dịch content lorebook (ví dụ chế độ "Dịch nhẹ"), tên biến trong content
+      // tiếng Trung không được đổi → lệch với schema/keys đã dịch. undefined = mọi nhóm.
+      baseCard = syncMvuVariables(baseCard, fixes.length > 0 ? fixedDict : currentDict, undefined);
     }
 
     // Now overlay AI translations on the MVU-synced card
@@ -3184,7 +3241,7 @@ export function useTranslation() {
         store.translationConfig.chunkSize,
         undefined, // previouslyCompletedChunks
         undefined, // onChunkComplete
-        undefined, // parallelChunks
+        computePoolConcurrency(store.proxy), // parallelChunks — field to (mod) cũng chunk song song qua pool
         undefined, // enableChunkVerification
         undefined, // onChunksReady
         store.translationConfig.cssCjkHandling,
@@ -3798,72 +3855,17 @@ export function useTranslation() {
           i++;
         }
 
-        // Step 2: Split into sub-batches
-        const subBatches: TranslationField[][] = [];
-
+        // Step 2: Split into sub-batches — dùng chung utils/batchSplit (audit đợt 3).
+        // Mod đếm theo bản ĐÃ mod (translated||original); không isolate/soft/smart (giữ hành vi cũ).
+        const { batches: subBatches, summary: modSummary } = splitLorebookBatches(allLorebookFields, {
+          batchSize,
+          maxBatchChars: MAX_BATCH_CHARS,
+          mvuEnabled: isMvuEnabled,
+          getLength: (f) => (f.translated || f.original).length,
+        });
         if (isMvuEnabled) {
-          // ═══ MVU Smart Grouping: group by entryType first, then split ═══
-          const typeGroups: Record<string, TranslationField[]> = {};
-          for (const f of allLorebookFields) {
-            const typeKey = f.entryType || 'other';
-            if (!typeGroups[typeKey]) typeGroups[typeKey] = [];
-            typeGroups[typeKey].push(f);
-          }
-
-          const TYPE_BATCH_SIZES: Record<string, number> = {
-            initvar: 1,
-            mvu_logic: 1,
-            controller: 1,
-            rules: batchSize,
-            narrative: batchSize,
-            other: batchSize,
-          };
-
-          const typeOrder = ['initvar', 'controller', 'mvu_logic', 'rules', 'narrative', 'other'];
-          const sortedTypes = Object.keys(typeGroups).sort((a, b) => {
-            const ia = typeOrder.indexOf(a);
-            const ib = typeOrder.indexOf(b);
-            return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-          });
-
-          for (const typeKey of sortedTypes) {
-            const typeFields = typeGroups[typeKey];
-            const typeBatchSize = TYPE_BATCH_SIZES[typeKey] || batchSize;
-            let currentBatch: TranslationField[] = [];
-            let currentChars = 0;
-
-            for (const f of typeFields) {
-              const fContent = (f.translated || f.original).length;
-              if (currentBatch.length >= typeBatchSize || (currentBatch.length > 0 && currentChars + fContent > MAX_BATCH_CHARS)) {
-                subBatches.push(currentBatch);
-                currentBatch = [];
-                currentChars = 0;
-              }
-              currentBatch.push(f);
-              currentChars += fContent;
-            }
-            if (currentBatch.length > 0) subBatches.push(currentBatch);
-          }
-
-          const groupSummary = sortedTypes
-            .map(t => `${t}:${typeGroups[t].length}`)
-            .join(', ');
-          store.addLog('info', `🔧 Mod MVU batch grouping: ${allLorebookFields.length} fields → [${groupSummary}] → ${subBatches.length} batch(es)`);
+          store.addLog('info', `🔧 Mod MVU batch grouping: ${allLorebookFields.length} fields → [${modSummary}] → ${subBatches.length} batch(es)`);
         } else {
-          // ═══ Standard splitting ═══
-          let currentBatch: TranslationField[] = [];
-          let currentChars = 0;
-          for (const f of allLorebookFields) {
-            const fContent = (f.translated || f.original).length;
-            if (currentBatch.length >= batchSize || (currentBatch.length > 0 && currentChars + fContent > MAX_BATCH_CHARS)) {
-              subBatches.push(currentBatch);
-              currentBatch = [];
-              currentChars = 0;
-            }
-            currentBatch.push(f);
-            currentChars += fContent;
-          }
-          if (currentBatch.length > 0) subBatches.push(currentBatch);
           store.addLog('info', `🔧 Mod: ${allLorebookFields.length} lorebook fields → ${subBatches.length} batch(es), concurrency: ${concurrency}`);
         }
 
@@ -3937,10 +3939,13 @@ export function useTranslation() {
 
     store.saveTranslationCache();
 
+    // Report hậu-mod cũng phải đọc field FRESH (store là snapshot cũ).
+    const freshFields = useStore.getState().fields;
+
     // ═══ Post-Mod MVU-ZOD Sync Verification Report ═══
     if (store.translationConfig.enableMvuSync && Object.keys(store.translationConfig.mvuDictionary).length > 0) {
       const syncReport = generateSyncReport(
-        store.fields.filter(f => f.status === 'done').map(f => ({
+        freshFields.filter(f => f.status === 'done').map(f => ({
           original: f.original,
           translated: f.translated,
           label: f.label,
@@ -3966,7 +3971,7 @@ export function useTranslation() {
 
     // ═══ Post-Mod Entry Name ↔ Text Sync Verification (EJS) ═══
     {
-      const doneFields = store.fields.filter(f => f.status === 'done');
+      const doneFields = freshFields.filter(f => f.status === 'done');
       const entryNameResult = validateEntryNameSync(doneFields.map(f => ({
         path: f.path,
         label: f.label,

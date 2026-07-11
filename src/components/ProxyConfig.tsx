@@ -320,149 +320,8 @@ export default function ProxyConfig() {
         {/* Provider bổ sung — đa provider chạy song song */}
         <ProviderPoolConfig />
 
-        {/* CORS Proxy Toggle */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 12px',
-            background: proxy.useCorsProxy
-              ? 'rgba(106, 240, 138, 0.06)'
-              : 'rgba(240, 180, 106, 0.06)',
-            borderRadius: 'var(--radius-sm)',
-            border: `1px solid ${proxy.useCorsProxy ? 'rgba(106,240,138,0.2)' : 'rgba(240,180,106,0.2)'}`,
-            transition: 'all 0.2s',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-            <ShieldCheck
-              size={15}
-              style={{ color: proxy.useCorsProxy ? 'var(--accent-success)' : 'var(--text-muted)', flexShrink: 0 }}
-            />
-            <div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t.corsProxy}</div>
-              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '1px' }}>
-                {proxy.useCorsProxy ? t.corsProxyActive : t.corsProxyInactive}
-              </div>
-            </div>
-          </div>
-          <label
-            style={{
-              position: 'relative',
-              display: 'inline-block',
-              width: '36px',
-              height: '20px',
-              flexShrink: 0,
-              cursor: 'pointer',
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={proxy.useCorsProxy}
-              onChange={(e) => {
-                setProxy({ useCorsProxy: e.target.checked });
-                setConnectionStatus('untested');
-                setTestMessage('');
-              }}
-              style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
-            />
-            <span
-              style={{
-                position: 'absolute',
-                inset: 0,
-                borderRadius: '10px',
-                background: proxy.useCorsProxy ? 'var(--accent-success)' : 'var(--border-default)',
-                transition: 'background 0.2s',
-              }}
-            />
-            <span
-              style={{
-                position: 'absolute',
-                top: '2px',
-                left: proxy.useCorsProxy ? '18px' : '2px',
-                width: '16px',
-                height: '16px',
-                borderRadius: '50%',
-                background: 'white',
-                transition: 'left 0.2s',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-              }}
-            />
-          </label>
-        </div>
-
-        {/* Expert Mode Toggle */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 12px',
-            background: proxy.expertMode
-              ? 'rgba(124, 106, 240, 0.06)'
-              : 'rgba(180, 180, 180, 0.04)',
-            borderRadius: 'var(--radius-sm)',
-            border: `1px solid ${proxy.expertMode ? 'rgba(124,106,240,0.2)' : 'rgba(180,180,180,0.1)'}`,
-            transition: 'all 0.2s',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-            <BrainCircuit
-              size={15}
-              style={{ color: proxy.expertMode ? 'var(--accent-primary)' : 'var(--text-muted)', flexShrink: 0 }}
-            />
-            <div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>Expert Mode</div>
-              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '1px' }}>
-                {proxy.expertMode
-                  ? 'XML reasoning active — higher quality, +30% tokens'
-                  : 'Standard mode — faster, lower token cost'}
-              </div>
-            </div>
-          </div>
-          <label
-            style={{
-              position: 'relative',
-              display: 'inline-block',
-              width: '36px',
-              height: '20px',
-              flexShrink: 0,
-              cursor: 'pointer',
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={proxy.expertMode}
-              onChange={(e) => {
-                setProxy({ expertMode: e.target.checked });
-              }}
-              style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
-            />
-            <span
-              style={{
-                position: 'absolute',
-                inset: 0,
-                borderRadius: '10px',
-                background: proxy.expertMode ? 'var(--accent-primary)' : 'var(--border-default)',
-                transition: 'background 0.2s',
-              }}
-            />
-            <span
-              style={{
-                position: 'absolute',
-                top: '2px',
-                left: proxy.expertMode ? '18px' : '2px',
-                width: '16px',
-                height: '16px',
-                borderRadius: '50%',
-                background: 'white',
-                transition: 'left 0.2s',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-              }}
-            />
-          </label>
-        </div>
+        {/* (Audit đợt 2) CORS Proxy + Expert Mode đã dời vào mục "Advanced Settings" bên dưới
+            — knob tình huống/chuyên sâu, người dùng thường không cần thấy ở tầng cơ bản. */}
 
         {/* Test Connection */}
         <button
@@ -534,6 +393,150 @@ export default function ProxyConfig() {
               className="fade-in"
               style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}
             >
+              {/* CORS Proxy Toggle */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  background: proxy.useCorsProxy
+                    ? 'rgba(106, 240, 138, 0.06)'
+                    : 'rgba(240, 180, 106, 0.06)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${proxy.useCorsProxy ? 'rgba(106,240,138,0.2)' : 'rgba(240,180,106,0.2)'}`,
+                  transition: 'all 0.2s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <ShieldCheck
+                    size={15}
+                    style={{ color: proxy.useCorsProxy ? 'var(--accent-success)' : 'var(--text-muted)', flexShrink: 0 }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t.corsProxy}</div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '1px' }}>
+                      {proxy.useCorsProxy ? t.corsProxyActive : t.corsProxyInactive}
+                    </div>
+                  </div>
+                </div>
+                <label
+                  style={{
+                    position: 'relative',
+                    display: 'inline-block',
+                    width: '36px',
+                    height: '20px',
+                    flexShrink: 0,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={proxy.useCorsProxy}
+                    onChange={(e) => {
+                      setProxy({ useCorsProxy: e.target.checked });
+                      setConnectionStatus('untested');
+                      setTestMessage('');
+                    }}
+                    style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                  />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: '10px',
+                      background: proxy.useCorsProxy ? 'var(--accent-success)' : 'var(--border-default)',
+                      transition: 'background 0.2s',
+                    }}
+                  />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: proxy.useCorsProxy ? '18px' : '2px',
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      background: 'white',
+                      transition: 'left 0.2s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }}
+                  />
+                </label>
+              </div>
+
+              {/* Expert Mode Toggle */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  background: proxy.expertMode
+                    ? 'rgba(124, 106, 240, 0.06)'
+                    : 'rgba(180, 180, 180, 0.04)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${proxy.expertMode ? 'rgba(124,106,240,0.2)' : 'rgba(180,180,180,0.1)'}`,
+                  transition: 'all 0.2s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <BrainCircuit
+                    size={15}
+                    style={{ color: proxy.expertMode ? 'var(--accent-primary)' : 'var(--text-muted)', flexShrink: 0 }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>Expert Mode</div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '1px' }}>
+                      {proxy.expertMode
+                        ? 'XML reasoning active — higher quality, +30% tokens'
+                        : 'Standard mode — faster, lower token cost'}
+                    </div>
+                  </div>
+                </div>
+                <label
+                  style={{
+                    position: 'relative',
+                    display: 'inline-block',
+                    width: '36px',
+                    height: '20px',
+                    flexShrink: 0,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={proxy.expertMode}
+                    onChange={(e) => {
+                      setProxy({ expertMode: e.target.checked });
+                    }}
+                    style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                  />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: '10px',
+                      background: proxy.expertMode ? 'var(--accent-primary)' : 'var(--border-default)',
+                      transition: 'background 0.2s',
+                    }}
+                  />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: proxy.expertMode ? '18px' : '2px',
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      background: 'white',
+                      transition: 'left 0.2s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }}
+                  />
+                </label>
+              </div>
+
               {/* Max Tokens */}
               <div>
                 <label className="label">{t.maxTokensPerRequest}</label>

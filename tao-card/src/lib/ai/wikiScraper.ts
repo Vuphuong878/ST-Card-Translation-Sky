@@ -304,6 +304,8 @@ export interface WikiScrapeContext {
   generationParams: GenerationParams;
   paused: boolean;
   stopped: boolean;
+  /** Hủy call AI đang bay khi bấm Dừng hẳn (stopped chỉ chặn call kế tiếp). */
+  signal?: AbortSignal;
   log: (msg: string) => void;
   onProgress: (progress: WikiScrapeProgress) => void;
   appendEntry: (entry: LorebookEntry) => void;
@@ -475,7 +477,7 @@ export async function runWikiScrape(config: WikiScrapeConfig, ctx: WikiScrapeCon
         if (ctx.stopped) return { chunkIdx: task.chunkIdx, entries: null };
         try {
           ctx.log(`📡 Chunk ${task.chunkIdx + 1}/${totalBatches} — gọi AI${attempt > 0 ? ` (thử lại ${attempt})` : ''}...`);
-          const raw = await callAI({ profile, params: ctx.generationParams, messages: task.messages });
+          const raw = await callAI({ profile, params: ctx.generationParams, messages: task.messages, signal: ctx.signal });
           result = tryExtractJsonArray(raw.text);
           if (result) break;
           ctx.log(`⚠️ Chunk ${task.chunkIdx + 1} — AI trả về không phải JSON array, thử lại...`);

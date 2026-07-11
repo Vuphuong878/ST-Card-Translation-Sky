@@ -25,7 +25,7 @@ export function extractJsonPatches(content: string): JsonPatchOp[][] {
   if (!content) return patches;
 
   // Strategy 1: Find JSON arrays that look like patch operations
-  const arrayRegex = /\[[\s\S]*?\{[\s\S]*?"op"\s*:\s*"(?:add|remove|replace|test|move|copy)"[\s\S]*?\}[\s\S]*?\]/g;
+  const arrayRegex = /\[[\s\S]*?\{[\s\S]*?"op"\s*:\s*"(?:add|remove|replace|test|move|copy|delta|insert)"[\s\S]*?\}[\s\S]*?\]/g;
   let match: RegExpExecArray | null;
 
   while ((match = arrayRegex.exec(content)) !== null) {
@@ -41,7 +41,7 @@ export function extractJsonPatches(content: string): JsonPatchOp[][] {
 
   // Strategy 2: Find individual patch objects (for non-array format)
   if (patches.length === 0) {
-    const singleOpRegex = /\{\s*"op"\s*:\s*"(add|remove|replace|test|move|copy)"\s*,\s*"path"\s*:\s*"([^"]+)"(?:\s*,\s*"value"\s*:\s*([^}]+))?\s*\}/g;
+    const singleOpRegex = /\{\s*"op"\s*:\s*"(add|remove|replace|test|move|copy|delta|insert)"\s*,\s*"path"\s*:\s*"([^"]+)"(?:\s*,\s*"value"\s*:\s*([^}]+))?\s*\}/g;
     const singleOps: JsonPatchOp[] = [];
 
     while ((match = singleOpRegex.exec(content)) !== null) {
@@ -62,7 +62,7 @@ function isJsonPatchOp(obj: unknown): obj is JsonPatchOp {
   if (typeof obj !== 'object' || obj === null) return false;
   const o = obj as Record<string, unknown>;
   return typeof o.op === 'string' &&
-    ['add', 'remove', 'replace', 'test', 'move', 'copy'].includes(o.op) &&
+    ['add', 'remove', 'replace', 'test', 'move', 'copy', 'delta', 'insert'].includes(o.op) &&
     typeof o.path === 'string';
 }
 
@@ -71,7 +71,7 @@ function isJsonPatchOp(obj: unknown): obj is JsonPatchOp {
  */
 export function hasJsonPatchOps(content: string): boolean {
   if (!content) return false;
-  return /"op"\s*:\s*"(?:add|remove|replace|test|move|copy)"/.test(content) &&
+  return /"op"\s*:\s*"(?:add|remove|replace|test|move|copy|delta|insert)"/.test(content) &&
     /"path"\s*:\s*"\//.test(content);
 }
 
@@ -230,7 +230,9 @@ export function applyPatchDryRun(
 
   try {
     const cloned = deepClone(state);
-    const fastOps = ops as Operation[];
+    // fast-json-patch chỉ hiểu op RFC 6902. Lọc bỏ 'delta'/'insert' (MVU-riêng)
+    // để validate/applyPatch không ném lỗi khi thẻ dùng chúng.
+    const fastOps = ops.filter(o => o.op !== 'delta' && o.op !== 'insert') as Operation[];
 
     // Validate first
     const errors = validate(fastOps, cloned);

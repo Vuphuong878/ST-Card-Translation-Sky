@@ -14,6 +14,8 @@ export interface ActiveCall {
   model: string;
   /** Provider used for this call (openai / anthropic / google / custom). */
   provider?: string;
+  /** Provider CONFIG id (default / <uuid>) — để map đúng dòng lane ở panel (đếm call đang chạy). */
+  providerId?: string;
   /** Human label for which API key is used, e.g. "Key #2". */
   keyLabel: string;
   /** What this call is translating, e.g. "lorebook[3].content" or "MVU vars 26-50". */

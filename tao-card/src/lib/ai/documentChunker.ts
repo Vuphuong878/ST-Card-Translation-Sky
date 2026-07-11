@@ -4,7 +4,7 @@
  */
 
 import type { CharacterCardV3, LorebookEntry, ChatMessage, ProxyProfile, GenerationParams, AIGeneratedEntry } from '../../types';
-import { callAI } from './client';
+import { callAI, computePoolConcurrency } from './client';
 import { materializeEntry, nextEntryId } from '../converters/cardDefaults';
 import { tryExtractJsonArray } from './batchGenerator';
 import type { EntryCategory, CardType } from '../worldbook/worldbookConfig';
@@ -300,6 +300,8 @@ export interface DocExtractContext {
   profile: ProxyProfile;
   generationParams: GenerationParams;
   stopped: boolean;
+  /** Hủy call AI đang bay khi bấm Dừng (ctx.stopped chỉ chặn call KẾ TIẾP). */
+  signal?: AbortSignal;
   log: (msg: string) => void;
   onProgress: (progress: DocExtractProgress) => void;
   appendEntry: (entry: LorebookEntry) => void;
@@ -377,8 +379,11 @@ Tuyệt đối không có text thừa bên ngoài, không markdown code blocks.`
       ctx.log(`ℹ️ Bước này là Singleton, chỉ quét chunk đầu tiên để thu thập tổng quát.`);
     }
 
-    for (let cIdx = 0; cIdx < chunksToRun.length; cIdx++) {
-      if (ctx.stopped) break;
+    // Xử lý 1 chunk — thân giữ nguyên. Chạy SONG SONG qua pool bên dưới: các chunk
+    // ĐỘC LẬP nhau (completeness loop chỉ nội bộ 1 chunk; dedup ngữ nghĩa cuối cùng
+    // gộp trùng giữa chunks), callAI tự gate RPM + xoay key nên trần an toàn.
+    const processChunk = async (cIdx: number): Promise<void> => {
+      if (ctx.stopped) return;
 
       const chunk = chunksToRun[cIdx];
       const chunkLabel = step.singleton ? 'Singleton Chunk' : `Chunk ${cIdx + 1}/${chunks.length}`;
@@ -424,7 +429,7 @@ Tuyệt đối không có text thừa bên ngoài, không markdown code blocks.`
             if (ctx.stopped) break;
             try {
               ctx.log(`📡 [${step.name}] - ${chunkLabel} (Vòng lặp completeness ${loopCount}/${maxLoops}${attempt > 0 ? `, thử lại ${attempt}` : ''})...`);
-              const raw = await callAI({ profile: ctx.profile, params: ctx.generationParams, messages });
+              const raw = await callAI({ profile: ctx.profile, params: ctx.generationParams, messages, signal: ctx.signal });
               attemptResult = tryExtractCompletenessJson(raw.text);
               if (attemptResult) {
                 success = true;
@@ -494,7 +499,7 @@ Tuyệt đối không có text thừa bên ngoài, không markdown code blocks.`
         for (let attempt = 0; attempt <= config.maxRetriesPerChunk; attempt++) {
           try {
             ctx.log(`📡 [${step.name}] - ${chunkLabel}${attempt > 0 ? ` (thử lại ${attempt})` : ''}...`);
-            const raw = await callAI({ profile: ctx.profile, params: ctx.generationParams, messages });
+            const raw = await callAI({ profile: ctx.profile, params: ctx.generationParams, messages, signal: ctx.signal });
             const entries = tryExtractJsonArray(raw.text);
             if (entries) {
               for (const ai of entries) {
@@ -533,7 +538,20 @@ Tuyệt đối không có text thừa bên ngoài, không markdown code blocks.`
         entriesCreated,
         status: 'running'
       });
-    }
+    };
+
+    // Pool worker liên tục: worker xong 1 chunk là kéo chunk kế ngay (không rào chắn đợt).
+    const chunkConc = Math.max(1, Math.min(computePoolConcurrency(ctx.profile), chunksToRun.length));
+    if (chunkConc > 1) ctx.log(`⚡ ${chunksToRun.length} chunks × ${chunkConc} luồng song song (pool đa provider/đa key).`);
+    let nextChunk = 0;
+    await Promise.all(Array.from({ length: chunkConc }, async () => {
+      for (;;) {
+        if (ctx.stopped) return;
+        const i = nextChunk++;
+        if (i >= chunksToRun.length) return;
+        await processChunk(i);
+      }
+    }));
   }
 
   // ─── Semantic Deduplication ───

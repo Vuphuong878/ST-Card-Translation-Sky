@@ -1,3 +1,4 @@
+import { stripUrlsForCjkCheck } from './cjk';
 import type { AIProvider, ProxySettings, ProviderConfig, GlossaryEntry, CharacterBookEntry } from '../types/card';
 import {
   buildMasterSystemPrompt,
@@ -471,32 +472,8 @@ function getCJKRatio(text: string): number {
   return text.length > 0 ? cjkChars / text.length : 0;
 }
 
-/**
- * Strip URL/link content from text before CJK residual detection.
- * Prevents false-positive retries when URLs intentionally contain CJK characters
- * (e.g., https://cdn.com/骰子系统/stable.js should NOT trigger a residual CJK retry).
- *
- * Strips: standard URLs, HTML src/href attributes, CSS url(), import()/require() paths,
- * data URIs, relative file paths, and markdown link URLs.
- */
-function stripUrlsForCjkCheck(text: string): string {
-  let stripped = text;
-  // 1. Standard URLs: http://, https://, ftp://, //
-  stripped = stripped.replace(/(?:https?|ftp):\/\/[^\s'"<>(){}\\]+|\/\/[a-zA-Z0-9][^\s'"<>(){}\\]*/gi, '');
-  // 2. HTML src/href/action/data-src/poster/srcset attribute values
-  stripped = stripped.replace(/(?:src|href|action|data-src|data-href|poster|srcset)\s*=\s*(?:"[^"]*"|'[^']*')/gi, '');
-  // 3. CSS url() references
-  stripped = stripped.replace(/url\(\s*(?:"[^"]*"|'[^']*'|[^)]*?)\s*\)/gi, '');
-  // 4. import()/require() paths (string and template literal)
-  stripped = stripped.replace(/(?:import|require)\s*\(\s*(?:[`'"][^`'"]*[`'"]|`[^`]*`)\s*\)/gi, '');
-  // 5. Data URIs
-  stripped = stripped.replace(/data:[a-zA-Z0-9+/.-]+;[^\s'"<>)]+/gi, '');
-  // 6. Relative file paths: ./... or ../...
-  stripped = stripped.replace(/(?:\.\.\?\/)[^\s'"<>(){}\\]+/g, '');
-  // 7. Markdown link URLs: [...](url) — strip only the URL part
-  stripped = stripped.replace(/(!?\[[^\]]*\])\([^)]+\)/g, '$1()');
-  return stripped;
-}
+// (Audit dot 3) stripUrlsForCjkCheck gom ve utils/cjk.ts - ban cu o day dinh typo
+// `(?:\.\.\?\/)` nen khong strip duoc duong dan tuong doi ./x (da sua o ban chung).
 
 /** Count only Chinese characters (CJK Unified Ideographs), excluding Japanese kana.
  *  Strips URLs first to avoid false positives from CJK chars in URL paths. */
@@ -1158,6 +1135,32 @@ function recordRateLimitRequest(model: string): void {
   bucket.push(Date.now());
 }
 
+/* ─── Lane failure tracking (proxy dùng chung có thể nghẽn NGOÀI giới hạn RPM) ───
+ * Đếm số lần call FAIL LIÊN TIẾP theo từng lane (provider+model). Fail (lỗi tạm thời:
+ * 429/5xx/timeout/mạng) ⇒ lane NGHỈ 15s — pickLane tự né sang lane khác trong lúc đó,
+ * khỏi đập tiếp vào proxy đang nghẽn. Thành công ⇒ reset về 0. UI (ActiveCallsPanel)
+ * đọc getLaneFailures() để tô ĐỎ lane + hiện số lần fail (≥5 = đỏ đậm). */
+const LANE_FAILURE_COOLDOWN_MS = 15_000;
+const _laneFailures = new Map<string, { count: number; lastAt: number }>();
+
+function recordLaneFailure(rlKey: string): void {
+  const cur = _laneFailures.get(rlKey);
+  _laneFailures.set(rlKey, { count: (cur?.count || 0) + 1, lastAt: Date.now() });
+}
+function recordLaneSuccess(rlKey: string): void {
+  if (_laneFailures.has(rlKey)) _laneFailures.delete(rlKey);
+}
+function isLaneCooling(rlKey: string): boolean {
+  const f = _laneFailures.get(rlKey);
+  return !!f && Date.now() - f.lastAt < LANE_FAILURE_COOLDOWN_MS;
+}
+/** Số lần fail liên tiếp của từng lane (key = `${providerId}::${model}`) — cho UI. */
+export function getLaneFailures(): Record<string, { count: number; lastAt: number }> {
+  const out: Record<string, { count: number; lastAt: number }> = {};
+  for (const [k, v] of _laneFailures) out[k] = { ...v };
+  return out;
+}
+
 /** How many requests each model has made in the current 60s window (for live UI). */
 export function getRateLimitUsage(): Record<string, number> {
   const now = Date.now();
@@ -1266,34 +1269,43 @@ export function computePoolConcurrency(base: ProxySettings): number {
  *  Ngưỡng đo theo SỐ KÝ TỰ để đồng nhất với UI + path không-pool (useTranslation so charCount trực
  *  tiếp). Trước đây path pool quy đổi token ≈ ceil(ký tự/4) nên entry 2200 ký tự (~550 token) vẫn
  *  lọt ngưỡng 800 → dùng nhầm model phụ; nay so thẳng số ký tự. */
-function laneOrder(p: PoolProvider, charCount?: number): { model: string; rpm: number }[] {
+function laneOrder(p: PoolProvider, charCount?: number, preferSecondary = false): { model: string; rpm: number }[] {
   const kc = Math.max(1, p.keys.length || 1);
   const primary = { model: p.primaryModel, rpm: p.primaryRpm * kc };
   if (!p.enableSecondary) return [primary];
   const secondary = { model: p.secondaryModel, rpm: p.secondaryRpm * kc };
+  // preferSecondary: dùng cho LẦN THỬ LẠI — model phụ (flash) thường RPM cao gấp mấy lần + nhanh hơn,
+  // nên đẩy retry xuống phụ để (a) xài phần RPM phụ đang rảnh, (b) chừa lane chính (pro) cho lượt đầu.
+  if (preferSecondary) return [secondary, primary];
   if (p.secondaryThreshold > 0 && charCount != null && charCount <= p.secondaryThreshold) return [secondary, primary];
   return [primary, secondary];
 }
 /** Chọn lane kế tiếp (round-robin đều) còn RPM; nếu tất cả đầy thì chờ lane con trỏ. */
-async function pickLane(pool: PoolProvider[], charCount: number | undefined, signal?: AbortSignal): Promise<ChosenLane> {
+async function pickLane(pool: PoolProvider[], charCount: number | undefined, signal?: AbortSignal, preferSecondary = false): Promise<ChosenLane> {
   const n = pool.length;
   const build = (p: PoolProvider, model: string): ChosenLane => {
     const { key, index, count } = getRotatedKeyFor(p.id, p.keys);
     return { providerId: p.id, provider: p.provider, proxyUrl: p.proxyUrl, model, key, keyIndex: index, keyTotal: count };
   };
-  for (let i = 0; i < n; i++) {
-    const p = pool[(_laneCursor + i) % n];
-    for (const L of laneOrder(p, charCount)) {
-      if (hasRateLimitCapacity(_rlKey(p.id, L.model), L.rpm)) {
-        recordRateLimitRequest(_rlKey(p.id, L.model));
-        _laneCursor = (_laneCursor + i + 1) % n;
-        return build(p, L.model);
+  // Lượt 1: né lane đang NGHỈ 15s vì vừa fail (proxy chung nghẽn) — dồn call sang lane khoẻ.
+  // Lượt 2: nếu mọi lane khoẻ đều đầy RPM thì chấp nhận cả lane đang nghỉ (tránh kẹt).
+  for (const skipCooling of [true, false]) {
+    for (let i = 0; i < n; i++) {
+      const p = pool[(_laneCursor + i) % n];
+      for (const L of laneOrder(p, charCount, preferSecondary)) {
+        const rk = _rlKey(p.id, L.model);
+        if (skipCooling && isLaneCooling(rk)) continue;
+        if (hasRateLimitCapacity(rk, L.rpm)) {
+          recordRateLimitRequest(rk);
+          _laneCursor = (_laneCursor + i + 1) % n;
+          return build(p, L.model);
+        }
       }
     }
   }
-  // Mọi lane đầy → chờ lane đầu của provider con trỏ.
+  // Mọi lane đầy → chờ lane đầu (theo thứ tự ưu tiên) của provider con trỏ.
   const p = pool[_laneCursor % n];
-  const L = laneOrder(p, charCount)[0];
+  const L = laneOrder(p, charCount, preferSecondary)[0];
   await waitForRateLimitModel(_rlKey(p.id, L.model), L.rpm, signal);
   _laneCursor = (_laneCursor + 1) % n;
   return build(p, L.model);
@@ -1306,14 +1318,15 @@ export async function callProvider(
   user: string,
   signal?: AbortSignal,
   images?: string[],
-  meta?: { label?: string; charCount?: number }
+  meta?: { label?: string; charCount?: number; preferSecondary?: boolean }
 ): Promise<string> {
   // ═══ Multi-provider pool: chọn lane (provider+model+key) round-robin, gate theo RPM ═══
   // `config` (= store.proxy) là provider #1; _extraProviders là các provider phụ đã bơm vào.
   // Field toàn cục (temperature/maxTokens/prompt…) lấy từ `config`; chỉ endpoint/keys/model/provider
   // được thay theo lane đã chọn. Single-provider ⇒ pool 1 phần tử ⇒ hành vi y như trước.
+  // meta.preferSecondary=true (lượt THỬ LẠI) ⇒ ưu tiên model phụ cho nhanh + chừa lane chính.
   const pool = buildPool(config);
-  const lane = await pickLane(pool, meta?.charCount, signal);
+  const lane = await pickLane(pool, meta?.charCount, signal, meta?.preferSecondary);
   const keyIndex = lane.keyIndex;
   const keyTotal = lane.keyTotal;
   const rotatedConfig = { ...config, provider: lane.provider, proxyUrl: lane.proxyUrl, model: lane.model, apiKey: lane.key };
@@ -1324,27 +1337,42 @@ export async function callProvider(
     id: callId,
     model: lane.model,
     provider: lane.provider,
+    providerId: lane.providerId,
     keyLabel: keyTotal > 1 ? `Key #${keyIndex + 1}/${keyTotal}` : 'Key #1',
     label: meta?.label || 'Đang dịch…',
     startedAt: Date.now(),
   });
 
+  const laneRlKey = _rlKey(lane.providerId, lane.model);
   try {
+    let result: string;
     switch (rotatedConfig.provider) {
       case 'anthropic':
-        return await callAnthropic(rotatedConfig, system, user, signal, images);
+        result = await callAnthropic(rotatedConfig, system, user, signal, images);
+        break;
       case 'google':
-        return await callGemini(rotatedConfig, system, user, signal, images);
+        result = await callGemini(rotatedConfig, system, user, signal, images);
+        break;
       case 'openai':
       case 'custom':
       default:
-        return await callOpenAICompatible(rotatedConfig, system, user, signal, images);
+        result = await callOpenAICompatible(rotatedConfig, system, user, signal, images);
+        break;
     }
+    recordLaneSuccess(laneRlKey); // lane khoẻ lại → xoá đếm fail + hết nghỉ
+    return result;
   } catch (err) {
     // On rate limit, advance to next key for THIS provider on retry
     if (err instanceof ApiError && err.statusCode === 429) {
       advanceKeyRotationFor(lane.providerId);
     }
+    // Lỗi TẠM THỜI (429/5xx/timeout/mạng) → đánh dấu lane fail (nghỉ 15s + UI tô đỏ).
+    // Lỗi do người dùng hủy (abort) thì KHÔNG tính.
+    const msg = err instanceof Error ? err.message : String(err);
+    const isAbort = /abort|cancel/i.test(msg);
+    const isTransient = (err instanceof ApiError && (err.retryable || (err.statusCode || 0) === 429 || (err.statusCode || 0) >= 500))
+      || /timeout|timed out|fetch failed|failed to fetch|network|econnreset|\b5\d\d\b/i.test(msg);
+    if (!isAbort && isTransient) recordLaneFailure(laneRlKey);
     throw err;
   } finally {
     CallMonitor.end(callId);
@@ -1899,6 +1927,8 @@ async function translateChunk(
   signal?: AbortSignal,
   /** Mod mode: skip bloat guards since output can legitimately be much larger than input */
   isModMode = false,
+  /** Lượt dịch này là THỬ LẠI ở tầng trên (field.retries>0) ⇒ ưu tiên model phụ (flash) ngay từ attempt 0. */
+  preferSecondary = false,
 ): Promise<string> {
   let lastError: Error | null = null;
 
@@ -1919,6 +1949,8 @@ async function translateChunk(
       let result = await callProvider(config, systemPrompt, userPrompt, combinedSignal, undefined, {
         label: totalChunks > 1 ? `${fieldName} (phần ${chunkIdx + 1}/${totalChunks})` : fieldName,
         charCount: chunk.length,
+        // Retry (attempt>0) HOẶC field đang thử lại ở tầng trên ⇒ đẩy xuống model phụ (flash) cho nhanh.
+        preferSecondary: preferSecondary || attempt > 0,
       });
       clearTimeout(timeoutId);
 
@@ -2770,6 +2802,8 @@ export async function translateText(
   onChunksReady?: (rawChunks: string[]) => void,
   /** CSS CJK handling mode: 'preserve' keeps CJK in CSS as-is, 'strip' removes them */
   cssCjkHandling?: 'preserve' | 'translate',
+  /** Lượt THỬ LẠI ở tầng trên (field.retries>0) ⇒ ưu tiên model phụ (flash) cho nhanh + chừa lane chính. */
+  preferSecondary?: boolean,
 ): Promise<string> {
   if (!text || text.trim() === '') return '';
 
@@ -2826,6 +2860,25 @@ export async function translateText(
       effectiveChunkSize = 12000; // ~10K tokens output — an toàn cho mọi model
     }
   }
+  // ⚡ (Tối ưu lane) Field VĂN BẢN thường + RẤT LỚN + còn dư nhiều lane → chia NHỎ hơn (tới sàn 8K)
+  // để phủ nhiều lane hơn, dịch song song nhanh hơn. Trước đây 1 field 148K chỉ ~10 chunk ⇒ tối đa
+  // 10 lane, dù pool có 72 lane thì 62 lane ngồi không. KHÔNG áp cho code-heavy (chia nhỏ dễ vỡ code)
+  // và giữ nguyên khi user tự đặt chunkSize. Chỉ chia thêm khi số lane > số chunk mặc định.
+  if (!effectiveChunkSize && !isCodeHeavy) {
+    const DEFAULT_CHUNK = 15000; // khớp mặc định chunkText
+    const MIN_CHUNK = 8000;      // sàn — không chia quá vụn (mỗi chunk còn kèm prompt/boundary)
+    const lanes = Math.max(1, parallelChunks || 1);
+    const lenN = maskedText.length;
+    const defaultChunks = Math.ceil(lenN / DEFAULT_CHUNK);
+    if (lenN > DEFAULT_CHUNK * 1.5 && lanes > defaultChunks) {
+      const wantChunks = Math.min(lanes, Math.ceil(lenN / MIN_CHUNK));
+      const adaptive = Math.max(MIN_CHUNK, Math.ceil(lenN / wantChunks));
+      if (adaptive < DEFAULT_CHUNK) {
+        effectiveChunkSize = adaptive;
+        console.log(`[translateText] ${fieldName}: ${lenN} ký tự + ${lanes} lane → chunk ~${adaptive} (~${wantChunks} phần) để phủ nhiều lane hơn`);
+      }
+    }
+  }
   const chunks = chunkText(maskedText, effectiveChunkSize, config.maxTokens);
 
   if (onChunksReady) {
@@ -2847,7 +2900,7 @@ export async function translateText(
       fieldType, isExpert, mvuDictionary
     );
     const result = await translateChunk(
-      chunks[0], 0, 1, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
+      chunks[0], 0, 1, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode, preferSecondary
     );
     let cleaned = cleanTranslationResponse(maskedText, result, isExpert, false);
     cleaned = unmaskUrls(cleaned, urlMap);  // Unmask URLs
@@ -2932,6 +2985,53 @@ export async function translateText(
     let queueIdx = 0; // Shared queue index (safe: JS single-threaded, yields only at await)
     const errors: { idx: number; err: Error }[] = [];
 
+    // ═══ TAIL-LATENCY HEDGE (bản dự phòng cho chunk quá chậm) ═══
+    // Nếu 1 chunk chạy quá lâu (> HEDGE_AFTER_MS — nghi proxy/lane bị nghẽn) → BẮN THÊM 1 bản trên
+    // lane KHÁC (pickLane tự né lane đang lỗi/nghẽn ⇒ thường rơi vào provider đang RẢNH), rồi lấy
+    // bản nào XONG trước, HUỶ bản còn lại. Chỉ 1 lần/chunk + chỉ khi vượt ngưỡng ⇒ chunk bình thường
+    // KHÔNG tốn call kép. Đây chính là lý do trước đây provider rảnh cứ "đứng đợi" khi 1 chunk treo
+    // 400s+: cả 15 chunk đã phát hết, chunk kẹt không được chạy lại trên lane rảnh.
+    const HEDGE_AFTER_MS = 150_000;
+    const translateChunkHedged = async (idx: number, system: string, user: string): Promise<string> => {
+      const spawn = () => {
+        const ctrl = new AbortController();
+        const linked = signal ? AbortSignal.any([signal, ctrl.signal]) : ctrl.signal;
+        const p = translateChunk(
+          chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, linked, isModMode, preferSecondary,
+        );
+        return { ctrl, p };
+      };
+      const a = spawn();
+      let hedgeTimer: ReturnType<typeof setTimeout> | undefined;
+      const hedge = new Promise<'SLOW'>((res) => { hedgeTimer = setTimeout(() => res('SLOW'), HEDGE_AFTER_MS); });
+      const first = await Promise.race([
+        a.p.then((r) => ({ k: 'ok' as const, r })).catch((e) => ({ k: 'err' as const, e })),
+        hedge.then(() => ({ k: 'slow' as const })),
+      ]);
+      if (hedgeTimer) clearTimeout(hedgeTimer);
+      if (first.k === 'ok') return first.r;
+      if (first.k === 'err') throw first.e; // A lỗi TRƯỚC ngưỡng → để tầng trên retry (khỏi hedge)
+      // A vẫn chạy sau ngưỡng → bắn B trên lane khác, đua lấy bản XONG (thành công) trước.
+      const b = spawn();
+      console.log(`[translateText] ${fieldName}: chunk ${idx + 1} > ${HEDGE_AFTER_MS / 1000}s → bắn bản dự phòng (hedge) trên lane khác`);
+      // "bản thành công đầu tiên" — như Promise.any nhưng không cần lib es2021.
+      const firstSuccess = new Promise<string>((resolve, reject) => {
+        let remaining = 2;
+        let firstErr: any;
+        const onErr = (e: any) => { if (firstErr === undefined) firstErr = e; if (--remaining === 0) reject(firstErr); };
+        a.p.then(resolve, onErr);
+        b.p.then(resolve, onErr);
+      });
+      try {
+        const winner = await firstSuccess;
+        a.ctrl.abort('hedge: bản kia đã xong'); b.ctrl.abort('hedge: bản kia đã xong');
+        return winner;
+      } catch (err) {
+        a.ctrl.abort(); b.ctrl.abort();
+        throw err; // cả 2 fail → ném lỗi đầu tiên
+      }
+    };
+
     const worker = async () => {
       while (queueIdx < pendingIndices.length) {
         if (signal?.aborted) return;
@@ -2963,9 +3063,7 @@ export async function translateText(
         );
 
         try {
-          const translated = await translateChunk(
-            chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
-          );
+          const translated = await translateChunkHedged(idx, system, user);
           const chunkCleaned = cleanTranslationResponse(chunks[idx], translated, isExpert, true);
           translatedChunks[idx] = chunkCleaned;
           // Structural integrity check for code-heavy chunks
@@ -2990,7 +3088,7 @@ export async function translateText(
               // Auto-retry the chunk once
               try {
                 const retryResult = await translateChunk(
-                  chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
+                  chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode, preferSecondary
                 );
                 const retryCleaned = cleanTranslationResponse(chunks[idx], retryResult, isExpert, true);
                 const retryVerify = await verifyChunkIntegrity(
@@ -3089,7 +3187,7 @@ export async function translateText(
 
       try {
         const translated = await translateChunk(
-          chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
+          chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode, preferSecondary
         );
         const chunkCleaned = cleanTranslationResponse(chunks[idx], translated, isExpert, true);
         translatedChunks[idx] = chunkCleaned;
@@ -3114,7 +3212,7 @@ export async function translateText(
             console.warn(`[translateText] Chunk ${idx + 1} failed verification, retrying once...`);
             try {
               const retryResult = await translateChunk(
-                chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
+                chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode, preferSecondary
               );
               const retryCleaned = cleanTranslationResponse(chunks[idx], retryResult, isExpert, true);
               const retryVerify = await verifyChunkIntegrity(
@@ -3260,7 +3358,9 @@ export async function translateBatch(
   customSchema?: string,
   signal?: AbortSignal,
   glossary?: GlossaryEntry[],
-  chunkSize?: number
+  chunkSize?: number,
+  /** Lô toàn entry NGẮN (Dịch siêu tốc) ⇒ ưu tiên model phụ (flash) — nhanh + RPM cao, chừa pro cho entry dài. */
+  preferSecondary?: boolean
 ): Promise<string[]> {
   if (items.length === 0) return [];
   if (items.length === 1) {
@@ -3352,6 +3452,8 @@ ${sectionList}
       const rawResult = await callProvider(config, system, user, combinedSignal, undefined, {
         label: items.length > 1 ? `Lô ${items.length} mục: ${firstName}…` : firstName,
         charCount: batchChars,
+        // Lô entry ngắn (siêu tốc) hoặc lượt THỬ LẠI ⇒ đi model phụ (flash) cho nhanh.
+        preferSecondary: preferSecondary || attempt > 0,
       });
       clearTimeout(timeoutId);
 

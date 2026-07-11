@@ -1,3 +1,4 @@
+import { countHanStripped } from './cjk';
 /**
  * Heuristic language detection optimized for Vietnamese + CJK detection.
  * Vietnamese is special: it uses Latin script + diacritics, so pure character
@@ -125,4 +126,40 @@ export function shouldSkipTranslation(text: string, targetLanguage: string, _sou
   const normalizedTarget = LANG_LABEL_MAP[targetLanguage] || targetLanguage;
   // ONLY skip if text is definitively already in the target language
   return detected === normalizedTarget;
+}
+
+/* --- Residual-CJK detection (chong "DONE gia") --- */
+// (Audit dot 3) stripUrls + regex dem Han gom ve utils/cjk.ts - truoc day dup 3 noi.
+export function countCjk(text: string): number {
+  return countHanStripped(text || '');
+}
+
+export interface ResidualCjkResult {
+  suspect: boolean;   // true ⇒ gần như chắc chắn CHƯA DỊCH (echo nguồn) hoặc dịch dở
+  origCjk: number;
+  transCjk: number;
+  survival: number;   // transCjk / origCjk (0 khi nguồn không có Hán)
+}
+
+/**
+ * Phát hiện field văn bản thường bị AI TRẢ LẠI NGUYÊN VĂN (echo) hoặc dịch dở nửa chừng.
+ * Bản dịch tốt zh→ngôn ngữ Latin hầu như 0% chữ Hán (chỉ vài danh từ riêng ≈ vài %).
+ * Nếu tỷ lệ chữ Hán SỐNG SÓT so với nguồn vượt `maxSurvival` (mặc định 0.35) và nguồn có ít nhất
+ * `minOrigCjk` chữ Hán (mặc định 20) ⇒ nghi CHƯA DỊCH.
+ * KHÔNG dùng cho lorebook_keys (merge mode cố ý giữ key gốc) hay code field (CJK trong code hợp lệ).
+ */
+export function detectResidualCjk(
+  original: string,
+  translated: string,
+  opts: { minOrigCjk?: number; maxSurvival?: number } = {}
+): ResidualCjkResult {
+  const minOrigCjk = opts.minOrigCjk ?? 20;
+  const maxSurvival = opts.maxSurvival ?? 0.35;
+  const origCjk = countCjk(original);
+  const transCjk = countCjk(translated);
+  if (origCjk < minOrigCjk) {
+    return { suspect: false, origCjk, transCjk, survival: origCjk ? transCjk / origCjk : 0 };
+  }
+  const survival = transCjk / origCjk;
+  return { suspect: survival > maxSurvival, origCjk, transCjk, survival };
 }

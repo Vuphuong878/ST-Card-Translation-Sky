@@ -772,6 +772,11 @@ const VirtualFieldTableRow = memo(({
   setRagDebugField: any;
 }) => {
   const ui = useUi();
+  // Chiều cao CHUNG cho ô Gốc và ô Dịch → 2 bên LUÔN cao bằng nhau (trước đây ô Gốc là <div> cao
+  // theo nội dung, ô Dịch là <textarea rows> cao theo số dòng gốc ⇒ lệch cao–thấp khó nhìn).
+  // Dùng ĐÚNG công thức mà estimateRowHeight đã ước lượng cho hàng ảo hoá (2–8 dòng × 20px + 12).
+  const cellBoxRows = Math.min(Math.max((field.original || '').split('\n').length, 2), 8);
+  const cellBoxHeight = cellBoxRows * 20 + 12;
   const handleRowCheckboxChange = (field: any, checked: boolean) => {
     if (checked) {
       const nextStatus = field.translated?.trim() ? 'done' : 'pending';
@@ -879,7 +884,7 @@ const VirtualFieldTableRow = memo(({
 
       {/* Original */}
       <div className="field-grid-cell">
-        <div className="field-original" style={{ position: 'relative', paddingRight: '24px', width: '100%' }}>
+        <div className="field-original" style={{ position: 'relative', paddingRight: '24px', width: '100%', height: `${cellBoxHeight}px`, maxHeight: `${cellBoxHeight}px`, boxSizing: 'border-box' }}>
           <div style={{ position: 'absolute', top: '2px', right: '2px', zIndex: 10 }}>
             <CopyButton text={field.original} />
           </div>
@@ -902,7 +907,7 @@ const VirtualFieldTableRow = memo(({
             });
           }}
           placeholder={field.status === 'pending' ? 'Not translated yet' : ''}
-          rows={Math.min(Math.max(field.original.split('\n').length, 2), 8)}
+          style={{ height: `${cellBoxHeight}px`, boxSizing: 'border-box' }}
         />
         {field.group === 'regex' && field.path.includes('findRegex') && (
           <RegexSimulatorToggle regexStr={field.translated || field.original} />

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractJsonPatches, hasJsonPatchOps } from '../jsonPatchValidator';
+import { extractJsonPatches, hasJsonPatchOps, extractPatchFieldNames } from '../jsonPatchValidator';
 
 /**
  * Trích JSON Patch từ nội dung entry [mvu_update] — hàm parse "khoan dung" (bắt được cả
@@ -29,6 +29,28 @@ describe('extractJsonPatches', () => {
     const patches = extractJsonPatches(content);
     expect(patches).toHaveLength(1);
     expect(patches[0][0]).toMatchObject({ op: 'replace', path: '/status' });
+  });
+});
+
+describe('op MVU-riêng delta/insert (guide MVU_ZOD 5.3)', () => {
+  it('extractJsonPatches gom được mảng chứa delta/insert', () => {
+    const content = '[{"op":"delta","path":"/白娅/依存度","value":5},{"op":"insert","path":"/主角/物品栏/新物品","value":"x"}]';
+    const patches = extractJsonPatches(content);
+    expect(patches).toHaveLength(1);
+    expect(patches[0][0]).toMatchObject({ op: 'delta', path: '/白娅/依存度' });
+    expect(patches[0][1]).toMatchObject({ op: 'insert' });
+  });
+
+  it('hasJsonPatchOps true với delta/insert', () => {
+    expect(hasJsonPatchOps('[{"op":"delta","path":"/hp","value":3}]')).toBe(true);
+    expect(hasJsonPatchOps('[{"op":"insert","path":"/bag/-","value":1}]')).toBe(true);
+  });
+
+  it('extractPatchFieldNames rút được tên biến CJK từ block delta/insert', () => {
+    const content = '[{"op":"delta","path":"/依存度","value":5},{"op":"insert","path":"/物品栏/新物品","value":"x"}]';
+    const names = extractPatchFieldNames(content);
+    expect(names).toContain('依存度');
+    expect(names).toContain('物品栏');
   });
 });
 

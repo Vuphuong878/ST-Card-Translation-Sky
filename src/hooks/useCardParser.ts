@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { validateCard, getCardSummary, extractTranslatableFields } from '../utils/cardFields';
 import { extractCharaFromPNG } from '../utils/pngHandler';
 import { isWorldbookFormat, worldbookToCard, getWorldbookSummary } from '../utils/worldbookParser';
-import type { CharacterCard, FieldGroup, FieldGroupConfig } from '../types/card';
+import type { CharacterCard, FieldGroup } from '../types/card';
 import CardParserWorker from '../workers/cardParser.worker.ts?worker';
 
 export function useCardParser() {
@@ -47,10 +47,11 @@ export function useCardParser() {
         console.timeEnd('[PARSER] file.arrayBuffer');
         const worker = getWorker();
 
-        // Get enabled groups for field extraction in worker
-        const enabledGroups = useStore.getState().translationConfig.fieldGroups
-          .filter((g: FieldGroupConfig) => g.enabled)
-          .map((g: FieldGroupConfig) => g.id) as FieldGroup[];
+        // Trích TẤT CẢ nhóm khi load (không lọc theo enabled) để Field Editor luôn hiện
+        // đủ field + preset "Dịch nhẹ" có sẵn field content mà ignore. Nhóm nào được DỊCH
+        // do prepareFields lọc lúc Start, không phải lúc trích. (Trước đây lọc ở đây khiến
+        // card load lại sau khi lưu preset Dịch nhẹ bị mất core/lorebook.)
+        const enabledGroups = ['core', 'messages', 'system', 'creator', 'lorebook', 'lorebook_keys', 'regex', 'depth_prompt', 'tavern_helper'] as FieldGroup[];
 
         const result = await new Promise<any>((resolve, reject) => {
           const requestId = crypto.randomUUID();

@@ -9,6 +9,7 @@ const ui = {
   // ─── Hub shell ───
   langLabel: 'Language',
   hubMadeBy: '✦ Made by',
+  hubReportBug: 'Report a bug',
 
   // Rail (thanh chuyển 5 công cụ)
   railTranslate: 'Translate Card',
@@ -822,6 +823,17 @@ const ui = {
   acMvuAssistant: 'MVU-Zod design assistant',
   acAiThinking: 'The AI is thinking...',
   acMvuChatPh: 'Ask the AI to adjust the Schema/Rules...',
+
+  tcPresetLabel: 'Quick preset:',
+  tcPresetLight: '⚡ Light translate',
+  tcPresetFull: '📖 Full translate',
+  tcPresetLightHint: 'Keys + regex + opening/greetings + card name + lorebook entry names/comments + MVU variable names. The big content (description, lorebook bodies) stays in the original language — the AI reads it fine and still replies in your language. Much faster for heavy cards.',
+  tcPresetLightDone: 'Light-translate applied: keys + regex + opening + card/lorebook names + MVU sync + surgical (protects regex) on, big content off.',
+  tcPresetFullDone: 'Full-translate preset applied: every group on.',
+  tcPresetTurbo: '🚀 Turbo translate',
+  tcPresetTurboHint: 'Smart bin-packing: SHORT entries are bundled into one API call each (routed to the fast secondary model), LONG entries go solo (primary model). Far fewer API calls, still fully parallel.',
+  tcPresetTurboDone: 'Turbo preset applied: every group on + batch mode + smart packing (short entries bundled → secondary model, long entries solo → primary model).',
+  tcAdvancedToggle: 'Advanced settings',
 };
 
 export default ui;
