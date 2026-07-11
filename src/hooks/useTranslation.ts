@@ -460,7 +460,10 @@ export function useTranslation() {
             });
           },
           // cssCjkHandling
-          store.translationConfig.cssCjkHandling
+          store.translationConfig.cssCjkHandling,
+          // preferSecondary: nếu field đang THỬ LẠI (retries>0) → đẩy xuống model phụ (flash) cho nhanh,
+          // chừa lane chính (pro, RPM thấp) cho lượt đầu của các field khác. Lượt đầu vẫn dùng pro.
+          freshRetries() > 0
         );
       }
 

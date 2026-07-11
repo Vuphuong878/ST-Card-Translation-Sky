@@ -1266,16 +1266,19 @@ export function computePoolConcurrency(base: ProxySettings): number {
  *  Ngưỡng đo theo SỐ KÝ TỰ để đồng nhất với UI + path không-pool (useTranslation so charCount trực
  *  tiếp). Trước đây path pool quy đổi token ≈ ceil(ký tự/4) nên entry 2200 ký tự (~550 token) vẫn
  *  lọt ngưỡng 800 → dùng nhầm model phụ; nay so thẳng số ký tự. */
-function laneOrder(p: PoolProvider, charCount?: number): { model: string; rpm: number }[] {
+function laneOrder(p: PoolProvider, charCount?: number, preferSecondary = false): { model: string; rpm: number }[] {
   const kc = Math.max(1, p.keys.length || 1);
   const primary = { model: p.primaryModel, rpm: p.primaryRpm * kc };
   if (!p.enableSecondary) return [primary];
   const secondary = { model: p.secondaryModel, rpm: p.secondaryRpm * kc };
+  // preferSecondary: dùng cho LẦN THỬ LẠI — model phụ (flash) thường RPM cao gấp mấy lần + nhanh hơn,
+  // nên đẩy retry xuống phụ để (a) xài phần RPM phụ đang rảnh, (b) chừa lane chính (pro) cho lượt đầu.
+  if (preferSecondary) return [secondary, primary];
   if (p.secondaryThreshold > 0 && charCount != null && charCount <= p.secondaryThreshold) return [secondary, primary];
   return [primary, secondary];
 }
 /** Chọn lane kế tiếp (round-robin đều) còn RPM; nếu tất cả đầy thì chờ lane con trỏ. */
-async function pickLane(pool: PoolProvider[], charCount: number | undefined, signal?: AbortSignal): Promise<ChosenLane> {
+async function pickLane(pool: PoolProvider[], charCount: number | undefined, signal?: AbortSignal, preferSecondary = false): Promise<ChosenLane> {
   const n = pool.length;
   const build = (p: PoolProvider, model: string): ChosenLane => {
     const { key, index, count } = getRotatedKeyFor(p.id, p.keys);
@@ -1283,7 +1286,7 @@ async function pickLane(pool: PoolProvider[], charCount: number | undefined, sig
   };
   for (let i = 0; i < n; i++) {
     const p = pool[(_laneCursor + i) % n];
-    for (const L of laneOrder(p, charCount)) {
+    for (const L of laneOrder(p, charCount, preferSecondary)) {
       if (hasRateLimitCapacity(_rlKey(p.id, L.model), L.rpm)) {
         recordRateLimitRequest(_rlKey(p.id, L.model));
         _laneCursor = (_laneCursor + i + 1) % n;
@@ -1291,9 +1294,9 @@ async function pickLane(pool: PoolProvider[], charCount: number | undefined, sig
       }
     }
   }
-  // Mọi lane đầy → chờ lane đầu của provider con trỏ.
+  // Mọi lane đầy → chờ lane đầu (theo thứ tự ưu tiên) của provider con trỏ.
   const p = pool[_laneCursor % n];
-  const L = laneOrder(p, charCount)[0];
+  const L = laneOrder(p, charCount, preferSecondary)[0];
   await waitForRateLimitModel(_rlKey(p.id, L.model), L.rpm, signal);
   _laneCursor = (_laneCursor + 1) % n;
   return build(p, L.model);
@@ -1306,14 +1309,15 @@ export async function callProvider(
   user: string,
   signal?: AbortSignal,
   images?: string[],
-  meta?: { label?: string; charCount?: number }
+  meta?: { label?: string; charCount?: number; preferSecondary?: boolean }
 ): Promise<string> {
   // ═══ Multi-provider pool: chọn lane (provider+model+key) round-robin, gate theo RPM ═══
   // `config` (= store.proxy) là provider #1; _extraProviders là các provider phụ đã bơm vào.
   // Field toàn cục (temperature/maxTokens/prompt…) lấy từ `config`; chỉ endpoint/keys/model/provider
   // được thay theo lane đã chọn. Single-provider ⇒ pool 1 phần tử ⇒ hành vi y như trước.
+  // meta.preferSecondary=true (lượt THỬ LẠI) ⇒ ưu tiên model phụ cho nhanh + chừa lane chính.
   const pool = buildPool(config);
-  const lane = await pickLane(pool, meta?.charCount, signal);
+  const lane = await pickLane(pool, meta?.charCount, signal, meta?.preferSecondary);
   const keyIndex = lane.keyIndex;
   const keyTotal = lane.keyTotal;
   const rotatedConfig = { ...config, provider: lane.provider, proxyUrl: lane.proxyUrl, model: lane.model, apiKey: lane.key };
@@ -1899,6 +1903,8 @@ async function translateChunk(
   signal?: AbortSignal,
   /** Mod mode: skip bloat guards since output can legitimately be much larger than input */
   isModMode = false,
+  /** Lượt dịch này là THỬ LẠI ở tầng trên (field.retries>0) ⇒ ưu tiên model phụ (flash) ngay từ attempt 0. */
+  preferSecondary = false,
 ): Promise<string> {
   let lastError: Error | null = null;
 
@@ -1919,6 +1925,8 @@ async function translateChunk(
       let result = await callProvider(config, systemPrompt, userPrompt, combinedSignal, undefined, {
         label: totalChunks > 1 ? `${fieldName} (phần ${chunkIdx + 1}/${totalChunks})` : fieldName,
         charCount: chunk.length,
+        // Retry (attempt>0) HOẶC field đang thử lại ở tầng trên ⇒ đẩy xuống model phụ (flash) cho nhanh.
+        preferSecondary: preferSecondary || attempt > 0,
       });
       clearTimeout(timeoutId);
 
@@ -2770,6 +2778,8 @@ export async function translateText(
   onChunksReady?: (rawChunks: string[]) => void,
   /** CSS CJK handling mode: 'preserve' keeps CJK in CSS as-is, 'strip' removes them */
   cssCjkHandling?: 'preserve' | 'translate',
+  /** Lượt THỬ LẠI ở tầng trên (field.retries>0) ⇒ ưu tiên model phụ (flash) cho nhanh + chừa lane chính. */
+  preferSecondary?: boolean,
 ): Promise<string> {
   if (!text || text.trim() === '') return '';
 
@@ -2847,7 +2857,7 @@ export async function translateText(
       fieldType, isExpert, mvuDictionary
     );
     const result = await translateChunk(
-      chunks[0], 0, 1, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
+      chunks[0], 0, 1, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode, preferSecondary
     );
     let cleaned = cleanTranslationResponse(maskedText, result, isExpert, false);
     cleaned = unmaskUrls(cleaned, urlMap);  // Unmask URLs
@@ -2964,7 +2974,7 @@ export async function translateText(
 
         try {
           const translated = await translateChunk(
-            chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
+            chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode, preferSecondary
           );
           const chunkCleaned = cleanTranslationResponse(chunks[idx], translated, isExpert, true);
           translatedChunks[idx] = chunkCleaned;
@@ -2990,7 +3000,7 @@ export async function translateText(
               // Auto-retry the chunk once
               try {
                 const retryResult = await translateChunk(
-                  chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
+                  chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode, preferSecondary
                 );
                 const retryCleaned = cleanTranslationResponse(chunks[idx], retryResult, isExpert, true);
                 const retryVerify = await verifyChunkIntegrity(
@@ -3089,7 +3099,7 @@ export async function translateText(
 
       try {
         const translated = await translateChunk(
-          chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
+          chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode, preferSecondary
         );
         const chunkCleaned = cleanTranslationResponse(chunks[idx], translated, isExpert, true);
         translatedChunks[idx] = chunkCleaned;
@@ -3114,7 +3124,7 @@ export async function translateText(
             console.warn(`[translateText] Chunk ${idx + 1} failed verification, retrying once...`);
             try {
               const retryResult = await translateChunk(
-                chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode
+                chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode, preferSecondary
               );
               const retryCleaned = cleanTranslationResponse(chunks[idx], retryResult, isExpert, true);
               const retryVerify = await verifyChunkIntegrity(

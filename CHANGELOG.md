@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.59.0 — Tăng tốc: retry đẩy xuống model phụ (flash) ⚡
+> Từ quan sát live khi dịch card MVU nặng: model chính (pro) RPM thấp (vd 3/phút) + là model *thinking* nên mỗi call chậm; các entry `initvar`/`controller` phải thử lại nhiều lần trên đúng lane pro chậm đó, trong khi **RPM của model phụ (flash) ngồi không** (0/17). 1 card 83 field mất ~40 phút.
+- **Sửa:** mỗi lần **thử lại** 1 field (bộ gác chữ Hán bắt còn tiếng Trung, kết quả rỗng/ngắn, hoặc lỗi mạng/timeout) nay **tự chọn lane model phụ (flash)** thay vì xếp hàng lại lane pro. Lượt **đầu tiên vẫn dùng pro** để giữ chất lượng; chỉ phần *retry* mới xuống flash.
+- **Lợi:** (a) tận dụng phần RPM flash đang rảnh (flash thường 5–6× RPM của pro), (b) chừa lane pro cho lượt đầu của các field khác → giảm nghẽn ở đuôi. Không tăng tổng RPM (vẫn qua rate-limit từng model), chỉ hết "chờ phí".
+- *An toàn:* nếu provider không bật model phụ → giữ nguyên pro (no-op). Bộ rate-limit vẫn đếm theo thời điểm bắt đầu nên call chồng nhau đúng trần/phút. tsc + 125 test + build xanh.
+- *Đòn config bổ sung (không cần cập nhật):* đặt **"Ngưỡng ký tự"** > 0 để entry ngắn/vừa đi flash ngay từ lượt đầu — nhanh hơn nữa nếu bạn chấp nhận flash cho phần văn xuôi.
+
 ## v1.58.0 — Sửa bug #1: field "DONE" nhưng vẫn tiếng Trung 🛑
 > Từ báo lỗi #1 (user tải thẻ về, dịch ra vẫn còn nguyên đoạn tiếng Trung). Đã lấy thẻ gốc + thẻ đã dịch trong báo lỗi, trích nội dung 2 bên ra so, và tìm ra gốc rễ.
 - **Gốc rễ:** khi dịch, AI đôi lúc **trả lại nguyên văn tiếng Trung** (echo) — hay gặp khi nội dung khó/bị model từ chối, hoặc **model phụ (flash)** trả lại y nguyên input. Field lúc đó dài **xấp xỉ nguồn** (tỉ lệ ~100%, đúng như badge "DONE 104%" trong ảnh báo lỗi) nên **lọt hết** các bộ kiểm độ dài và bị đánh dấu **DONE dù chưa dịch**. Bộ gác chữ Hán cũ **chỉ soi field schema** (initvar/tavern_helper…), **không soi** content/lorebook/mở đầu/mô tả — nên chúng lọt lưới.
