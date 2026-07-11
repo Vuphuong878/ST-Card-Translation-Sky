@@ -1,3 +1,4 @@
+import { countHanStripped } from './cjk';
 /**
  * Heuristic language detection optimized for Vietnamese + CJK detection.
  * Vietnamese is special: it uses Latin script + diacritics, so pure character
@@ -127,21 +128,10 @@ export function shouldSkipTranslation(text: string, targetLanguage: string, _sou
   return detected === normalizedTarget;
 }
 
-/* ─── Residual-CJK detection (chống "DONE giả") ─── */
-// URL/đường dẫn có thể chứa Hán hợp lệ (import('…/骰子系统/x.js')) → bỏ trước khi đếm để tránh
-// báo nhầm. Bản rút gọn của stripUrlsForCjkCheck, để hàm này tự chứa & test được độc lập.
-function stripUrlsLite(text: string): string {
-  return text
-    .replace(/(?:https?|ftp):\/\/[^\s'"<>(){}\\]+|\/\/[a-zA-Z0-9][^\s'"<>(){}\\]*/gi, '')
-    .replace(/(?:src|href|action|data-src|data-href|poster|srcset)\s*=\s*(?:"[^"]*"|'[^']*')/gi, '')
-    .replace(/(?:import|require)\s*\(\s*(?:[`'"][^`'"]*[`'"]|`[^`]*`)\s*\)/gi, '')
-    .replace(/(?:\.\.?\/)[^\s'"<>(){}\\]+/g, '');
-}
-
-const CJK_COUNT_G = /[\u4e00-\u9fff\u3400-\u4dbf]/g;
-
+/* --- Residual-CJK detection (chong "DONE gia") --- */
+// (Audit dot 3) stripUrls + regex dem Han gom ve utils/cjk.ts - truoc day dup 3 noi.
 export function countCjk(text: string): number {
-  return (stripUrlsLite(text || '').match(CJK_COUNT_G) || []).length;
+  return countHanStripped(text || '');
 }
 
 export interface ResidualCjkResult {

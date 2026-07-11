@@ -1,3 +1,5 @@
+import { splitLorebookBatches } from '../utils/batchSplit';
+import { stripUrlsForCjkCheck } from '../utils/cjk';
 import { useCallback, useRef } from 'react';
 import { useStore } from '../store';
 import { translateText, translateBatch, fieldGroupToFieldType, generateLorebookEntries, ChunkError, ApiError, setExtraProviders, resetProviderPool, computePoolConcurrency } from '../utils/apiClient';
@@ -31,22 +33,7 @@ import type { FieldGroup, FieldGroupConfig, TranslationField } from '../types/ca
  */
 const LONG_ENTRY_ISOLATE_CHARS = 16000;
 
-/**
- * Strip URL/link content from text before CJK residual detection.
- * Prevents false-positive retries when URLs intentionally contain CJK characters
- * (e.g., import('https://cdn.com/骰子系统/stable.js') should NOT trigger retry).
- */
-function stripUrlsForCjkCheck(text: string): string {
-  let s = text;
-  s = s.replace(/(?:https?|ftp):\/\/[^\s'"<>(){}\\]+|\/\/[a-zA-Z0-9][^\s'"<>(){}\\]*/gi, '');
-  s = s.replace(/(?:src|href|action|data-src|data-href|poster|srcset)\s*=\s*(?:"[^"]*"|'[^']*')/gi, '');
-  s = s.replace(/url\(\s*(?:"[^"]*"|'[^']*'|[^)]*?)\s*\)/gi, '');
-  s = s.replace(/(?:import|require)\s*\(\s*(?:[`'"][^`'"]*[`'"]|`[^`]*`)\s*\)/gi, '');
-  s = s.replace(/data:[a-zA-Z0-9+/.-]+;[^\s'"<>)]+/gi, '');
-  s = s.replace(/(?:\.\.?\/)[^\s'"<>(){}\\]+/g, '');
-  s = s.replace(/(!?\[[^\]]*\])\([^)]+\)/g, '$1()');
-  return s;
-}
+// (Audit dot 3) stripUrlsForCjkCheck gom ve utils/cjk.ts (truoc day dup 3 noi).
 
 
 /**
@@ -1892,133 +1879,25 @@ export function useTranslation() {
           i++;
         }
 
-        // Step 2: Split into sub-batches
-        const subBatches: TranslationField[][] = [];
-        // Song song với subBatches: lô nào là "GỘP entry ngắn" (Dịch siêu tốc) → đi model phụ (flash).
-        const subBatchPrefer: boolean[] = [];
-        const pushBatch = (b: TranslationField[], prefer = false) => { subBatches.push(b); subBatchPrefer.push(prefer); };
+        // Step 2: Split into sub-batches — logic chia lô DÙNG CHUNG với pipeline Mod
+        // (utils/batchSplit, audit đợt 3 — trước đây đúp nguyên khối 2 nơi, sửa 1 nơi quên nơi kia).
+        const getTargetModelFor = (f: TranslationField) => store.translationConfig.enableModelRouting
+          ? (store.translationConfig.entryModelRouting[f.path] || store.translationConfig.groupModelRouting[f.group] || store.proxy.model)
+          : store.proxy.model;
         const smartOn = store.translationConfig.smartBatchPacking;
-
+        const { batches: subBatches, prefer: subBatchPrefer, summary: splitSummary } = splitLorebookBatches(allLorebookFields, {
+          batchSize,
+          maxBatchChars: MAX_BATCH_CHARS,
+          mvuEnabled: isMvuEnabled,
+          getModelKey: getTargetModelFor,
+          isolateChars: LONG_ENTRY_ISOLATE_CHARS, // entry dài → lô riêng để dịch chunk
+          softCharCap: SOFT_CHAR_CAP,
+          softMinCount: 3,
+          smartPacking: smartOn, // ⚡ Dịch siêu tốc: gộp entry ngắn → model phụ
+        });
         if (isMvuEnabled) {
-          // ═══ MVU Smart Grouping: group by targetModel and entryType first, then split ═══
-          // This ensures initvar entries batch together (YAML format),
-          // mvu_logic entries batch together (code), and narrative batches separately
-          const typeGroups: Record<string, TranslationField[]> = {};
-          for (const f of allLorebookFields) {
-            const targetModel = store.translationConfig.enableModelRouting
-              ? (store.translationConfig.entryModelRouting[f.path] || store.translationConfig.groupModelRouting[f.group] || store.proxy.model)
-              : store.proxy.model;
-            const typeKey = `${f.entryType || 'other'}_|_${targetModel}`;
-            if (!typeGroups[typeKey]) typeGroups[typeKey] = [];
-            typeGroups[typeKey].push(f);
-          }
-
-          // Process each type group with appropriate batch sizes
-          const TYPE_BATCH_SIZES: Record<string, number> = {
-            initvar: 1,                  // YAML: ONE BY ONE
-              mvu_logic: 1,                // Code: ONE BY ONE
-              controller: 1,               // Code: ONE BY ONE
-            rules: batchSize,            // Rules: normal size
-            narrative: batchSize,        // Narrative: normal size
-            other: batchSize,            // Default: normal size
-          };
-
-          // Order: initvar first (schema variables), then logic, then rest
-          const typeOrder = ['initvar', 'controller', 'mvu_logic', 'rules', 'narrative', 'other'];
-          const sortedTypes = Object.keys(typeGroups).sort((a, b) => {
-            const baseA = a.split('_|_')[0];
-            const baseB = b.split('_|_')[0];
-            const ia = typeOrder.indexOf(baseA);
-            const ib = typeOrder.indexOf(baseB);
-            if (ia === ib) return a.localeCompare(b);
-            return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-          });
-
-          for (const typeKey of sortedTypes) {
-            const baseTypeKey = typeKey.split('_|_')[0];
-            const typeFields = typeGroups[typeKey];
-            const typeBatchSize = TYPE_BATCH_SIZES[baseTypeKey] || batchSize;
-
-            // ⚡ Dịch siêu tốc: với nhóm KHÔNG phải schema (rules/narrative/other) → bin-packing
-            // thông minh: entry ngắn GỘP chung 1 call (đi flash), entry dài để riêng (đi pro).
-            // Nhóm schema (initvar/controller/mvu_logic, typeBatchSize=1) giữ nguyên 1-1 để an toàn.
-            if (smartOn && typeBatchSize > 1) {
-              for (const p of smartPackFields(typeFields)) pushBatch(p.batch, p.preferSecondary);
-              continue;
-            }
-
-            let currentBatch: TranslationField[] = [];
-            let currentChars = 0;
-
-            for (const f of typeFields) {
-              // Long entry → isolate into its own batch so translateOneBatch routes it
-              // through chunked single-field translation (avoids the un-chunked giant call).
-              if (f.original.length > LONG_ENTRY_ISOLATE_CHARS) {
-                if (currentBatch.length > 0) { pushBatch(currentBatch); currentBatch = []; currentChars = 0; }
-                pushBatch([f]);
-                continue;
-              }
-              if (currentBatch.length >= typeBatchSize || (currentBatch.length > 0 && currentChars + f.original.length > MAX_BATCH_CHARS)) {
-                pushBatch(currentBatch);
-                currentBatch = [];
-                currentChars = 0;
-              }
-              currentBatch.push(f);
-              currentChars += f.original.length;
-            }
-            if (currentBatch.length > 0) pushBatch(currentBatch);
-          }
-
-          // Log MVU grouping detail
-          const groupSummary = sortedTypes
-            .map(t => `${t}:${typeGroups[t].length}`)
-            .join(', ');
-          store.addLog('info', `🔧 MVU batch grouping: ${allLorebookFields.length} fields → [${groupSummary}] → ${subBatches.length} batch(es)`);
-
+          store.addLog('info', `🔧 MVU batch grouping: ${allLorebookFields.length} fields → [${splitSummary}] → ${subBatches.length} batch(es)`);
         } else {
-          // ═══ Standard splitting: group by targetModel first, then by batchSize + char limit ═══
-          const modelGroups: Record<string, TranslationField[]> = {};
-          for (const f of allLorebookFields) {
-            const targetModel = store.translationConfig.enableModelRouting
-              ? (store.translationConfig.entryModelRouting[f.path] || store.translationConfig.groupModelRouting[f.group] || store.proxy.model)
-              : store.proxy.model;
-            if (!modelGroups[targetModel]) modelGroups[targetModel] = [];
-            modelGroups[targetModel].push(f);
-          }
-
-          for (const targetModel of Object.keys(modelGroups)) {
-            const modelFields = modelGroups[targetModel];
-
-            // ⚡ Dịch siêu tốc: bin-packing — entry ngắn gộp (flash), entry dài để riêng (pro).
-            if (smartOn) {
-              for (const p of smartPackFields(modelFields)) pushBatch(p.batch, p.preferSecondary);
-              continue;
-            }
-
-            let currentBatch: TranslationField[] = [];
-            let currentChars = 0;
-            for (const f of modelFields) {
-              // Long entry → isolate into its own batch so it gets chunked single-field
-              // translation instead of being sent inside one un-chunked giant batch call.
-              if (f.original.length > LONG_ENTRY_ISOLATE_CHARS) {
-                if (currentBatch.length > 0) { pushBatch(currentBatch); currentBatch = []; currentChars = 0; }
-                pushBatch([f]);
-                continue;
-              }
-              // Split when: count exceeds batchSize, OR char count exceeds soft cap
-              if (currentBatch.length >= batchSize ||
-                  (currentBatch.length > 0 && currentChars + f.original.length > MAX_BATCH_CHARS) ||
-                  (currentBatch.length > 0 && currentChars + f.original.length > SOFT_CHAR_CAP && currentBatch.length >= 3)) {
-                pushBatch(currentBatch);
-                currentBatch = [];
-                currentChars = 0;
-              }
-              currentBatch.push(f);
-              currentChars += f.original.length;
-            }
-            if (currentBatch.length > 0) pushBatch(currentBatch);
-          }
-          // Log with safety info
           const avgBatchSize = subBatches.length > 0 ? Math.round(allLorebookFields.length / subBatches.length) : 0;
           store.addLog('info', `${allLorebookFields.length} lorebook fields → ${subBatches.length} batch(es) (avg ${avgBatchSize}/batch), concurrency: ${concurrency}`);
         }
@@ -3976,72 +3855,17 @@ export function useTranslation() {
           i++;
         }
 
-        // Step 2: Split into sub-batches
-        const subBatches: TranslationField[][] = [];
-
+        // Step 2: Split into sub-batches — dùng chung utils/batchSplit (audit đợt 3).
+        // Mod đếm theo bản ĐÃ mod (translated||original); không isolate/soft/smart (giữ hành vi cũ).
+        const { batches: subBatches, summary: modSummary } = splitLorebookBatches(allLorebookFields, {
+          batchSize,
+          maxBatchChars: MAX_BATCH_CHARS,
+          mvuEnabled: isMvuEnabled,
+          getLength: (f) => (f.translated || f.original).length,
+        });
         if (isMvuEnabled) {
-          // ═══ MVU Smart Grouping: group by entryType first, then split ═══
-          const typeGroups: Record<string, TranslationField[]> = {};
-          for (const f of allLorebookFields) {
-            const typeKey = f.entryType || 'other';
-            if (!typeGroups[typeKey]) typeGroups[typeKey] = [];
-            typeGroups[typeKey].push(f);
-          }
-
-          const TYPE_BATCH_SIZES: Record<string, number> = {
-            initvar: 1,
-            mvu_logic: 1,
-            controller: 1,
-            rules: batchSize,
-            narrative: batchSize,
-            other: batchSize,
-          };
-
-          const typeOrder = ['initvar', 'controller', 'mvu_logic', 'rules', 'narrative', 'other'];
-          const sortedTypes = Object.keys(typeGroups).sort((a, b) => {
-            const ia = typeOrder.indexOf(a);
-            const ib = typeOrder.indexOf(b);
-            return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-          });
-
-          for (const typeKey of sortedTypes) {
-            const typeFields = typeGroups[typeKey];
-            const typeBatchSize = TYPE_BATCH_SIZES[typeKey] || batchSize;
-            let currentBatch: TranslationField[] = [];
-            let currentChars = 0;
-
-            for (const f of typeFields) {
-              const fContent = (f.translated || f.original).length;
-              if (currentBatch.length >= typeBatchSize || (currentBatch.length > 0 && currentChars + fContent > MAX_BATCH_CHARS)) {
-                subBatches.push(currentBatch);
-                currentBatch = [];
-                currentChars = 0;
-              }
-              currentBatch.push(f);
-              currentChars += fContent;
-            }
-            if (currentBatch.length > 0) subBatches.push(currentBatch);
-          }
-
-          const groupSummary = sortedTypes
-            .map(t => `${t}:${typeGroups[t].length}`)
-            .join(', ');
-          store.addLog('info', `🔧 Mod MVU batch grouping: ${allLorebookFields.length} fields → [${groupSummary}] → ${subBatches.length} batch(es)`);
+          store.addLog('info', `🔧 Mod MVU batch grouping: ${allLorebookFields.length} fields → [${modSummary}] → ${subBatches.length} batch(es)`);
         } else {
-          // ═══ Standard splitting ═══
-          let currentBatch: TranslationField[] = [];
-          let currentChars = 0;
-          for (const f of allLorebookFields) {
-            const fContent = (f.translated || f.original).length;
-            if (currentBatch.length >= batchSize || (currentBatch.length > 0 && currentChars + fContent > MAX_BATCH_CHARS)) {
-              subBatches.push(currentBatch);
-              currentBatch = [];
-              currentChars = 0;
-            }
-            currentBatch.push(f);
-            currentChars += fContent;
-          }
-          if (currentBatch.length > 0) subBatches.push(currentBatch);
           store.addLog('info', `🔧 Mod: ${allLorebookFields.length} lorebook fields → ${subBatches.length} batch(es), concurrency: ${concurrency}`);
         }
 

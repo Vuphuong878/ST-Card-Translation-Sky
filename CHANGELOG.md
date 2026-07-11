@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.69.0 — Audit đợt 3: khử code trùng lặp 🧬
+> Dọn nợ kỹ thuật — **không đổi hành vi dịch**, để về sau sửa 1 chỗ là mọi nơi hưởng, không còn cảnh "fix nơi này quên nơi kia".
+- **Gom hàm đếm/lọc CJK về 1 file** (`utils/cjk.ts`): trước đây `stripUrlsForCjkCheck` (bỏ URL trước khi đếm chữ Hán sót) bị **đúp 3 nơi** và regex đếm CJK đúp 2 nơi. Tiện thể bắt được **typo ở 1 bản đúp** khiến không bỏ được đường dẫn tương đối `./x` — đúng minh chứng vì sao code đúp nguy hiểm.
+- **Gom logic chia lô lorebook về 1 hàm** (`utils/batchSplit.ts`) dùng chung cho pipeline **Dịch** và **Mod**: trước đây đúp nguyên khối ~200 dòng ở 2 nơi và bản Mod đã lệch (thiếu các cải tiến mới). Hai pipeline giờ chỉ khác nhau ở tham số truyền vào (Dịch: tách theo model + isolate entry dài + smart-packing; Mod: đếm theo bản đã mod).
+- `useTranslation.ts` gọn đi ~120 dòng. **+14 test mới** khoá hành vi (154 test tổng) — mọi test cũ pass nguyên vẹn.
+
 ## v1.68.0 — Audit đợt 2: giao diện phân tầng Cơ bản / Nâng cao 🎛️
 > Mục tiêu: người mới chỉ cần **API key → bấm 1 preset → Start**; dân chuyên vẫn còn đủ đồ chơi trong "Nâng cao".
 - **3 nút preset lên ĐẦU:** ⚡ Dịch nhẹ / 📖 Dịch đầy đủ / 🚀 Dịch siêu tốc giờ nằm **trên cùng mục Cấu hình dịch** trong khung nổi bật (trước đây chìm giữa sidebar, thứ quan trọng nhất lại khó thấy nhất).

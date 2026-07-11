@@ -1,3 +1,4 @@
+import { countCjkText } from './cjk';
 import type { CharacterCard, ProxySettings, TranslationField } from '../types/card';
 import { detectStructuralTruncation, callProvider } from './apiClient';
 
@@ -325,7 +326,8 @@ export interface FieldIssue extends VerifyIssue {
  * `\uff00-\uffef` \u2192 check "c\u00f2n ti\u1ebfng Trung" b\u00e1o OAN cho \u3010\u3011/d\u1ea5u c\u00e2u gi\u1eef nguy\u00ean (kh\u00f4ng ph\u1ea3i ch\u1eef ch\u01b0a
  * d\u1ecbch). Nay ch\u1ec9 \u0111\u1ebfm K\u00dd T\u1ef0 V\u0102N B\u1ea2N th\u1eadt; th\u00eam kana/hangul cho card ngu\u1ed3n Nh\u1eadt/H\u00e0n. */
 export function countCJK(text: string): number {
-  return (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g) || []).length;
+  // (Audit dot 3) regex gom ve utils/cjk.ts (CJK_TEXT_RE_G) - semantics giu nguyen fix bug #2.
+  return countCjkText(text);
 }
 
 /** Count HTML and EJS tags */
