@@ -1,7 +1,7 @@
 import { useSyncExternalStore, useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { CallMonitor } from '../utils/callMonitor';
-import { getRateLimitUsage, getUniqueKeyCount } from '../utils/apiClient';
+import { getRateLimitUsage, getUniqueKeyCount, getLaneFailures } from '../utils/apiClient';
 import { Cpu, KeyRound, Activity, Gauge } from 'lucide-react';
 import { useUi } from '../i18n/useLocale';
 import { fmt } from '../i18n';
@@ -35,18 +35,21 @@ export default function ActiveCallsPanel() {
   const keyCount = getUniqueKeyCount(proxy)
     + providers.filter((p) => p.enabled && p.model?.trim()).reduce((s, p) => s + getUniqueKeyCount(p), 0);
   const usage = getRateLimitUsage();
+  // Lane FAIL liên tiếp (proxy chung nghẽn ngoài RPM): lane fail được nghỉ 15s/lần,
+  // hiện cảnh báo vàng; fail ≥5 lần liên tiếp → tô ĐỎ + số lần để user biết lane đang chết.
+  const failures = getLaneFailures();
   const accent = 'var(--accent-secondary)';
 
   // ─── Dựng lanes (provider + model) để hiện RPM tách theo từng provider ───
   const rlKey = (id: string, model: string) => (id === 'default' ? model : `${id}${model}`);
-  type Lane = { providerId: string; providerName: string; model: string; limit: number; used: number; isSecondary: boolean };
+  type Lane = { providerId: string; providerName: string; model: string; limit: number; used: number; isSecondary: boolean; failCount: number };
   const lanes: Lane[] = [];
   const enabledProviders = providers.filter((p) => p.enabled && p.model?.trim());
   const showProviderName = enabledProviders.length > 0; // chỉ hiện tên provider khi có >1 provider
   const addLanes = (id: string, name: string, cfg: { model: string; primaryModelRpm: number; enableSecondaryModel: boolean; secondaryModel: string; secondaryModelRpm: number; apiKey: string; apiKeys: string[] }) => {
     const kc = getUniqueKeyCount(cfg);
-    if (cfg.model) lanes.push({ providerId: id, providerName: name, model: cfg.model, isSecondary: false, limit: (cfg.primaryModelRpm > 0 ? cfg.primaryModelRpm : 5) * kc, used: usage[rlKey(id, cfg.model)] || 0 });
-    if (cfg.enableSecondaryModel && cfg.secondaryModel?.trim()) lanes.push({ providerId: id, providerName: name, model: cfg.secondaryModel, isSecondary: true, limit: (cfg.secondaryModelRpm > 0 ? cfg.secondaryModelRpm : 17) * kc, used: usage[rlKey(id, cfg.secondaryModel)] || 0 });
+    if (cfg.model) lanes.push({ providerId: id, providerName: name, model: cfg.model, isSecondary: false, limit: (cfg.primaryModelRpm > 0 ? cfg.primaryModelRpm : 5) * kc, used: usage[rlKey(id, cfg.model)] || 0, failCount: failures[rlKey(id, cfg.model)]?.count || 0 });
+    if (cfg.enableSecondaryModel && cfg.secondaryModel?.trim()) lanes.push({ providerId: id, providerName: name, model: cfg.secondaryModel, isSecondary: true, limit: (cfg.secondaryModelRpm > 0 ? cfg.secondaryModelRpm : 17) * kc, used: usage[rlKey(id, cfg.secondaryModel)] || 0, failCount: failures[rlKey(id, cfg.secondaryModel)]?.count || 0 });
   };
   addLanes('default', 'Provider #1', proxy);
   enabledProviders.forEach((p, i) => addLanes(p.id, p.name || `Provider #${i + 2}`, p));
@@ -93,8 +96,21 @@ export default function ActiveCallsPanel() {
                 <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-secondary)', minWidth: 0 }}>
                   <Cpu size={11} style={{ flexShrink: 0, color: lane.isSecondary ? '#fbbf24' : accent }} />
                   {showProviderName && <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '0 4px', borderRadius: '3px', flexShrink: 0 }}>{lane.providerName}</span>}
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lane.model}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: lane.failCount >= 5 ? 'var(--accent-danger)' : undefined, fontWeight: lane.failCount >= 5 ? 700 : undefined }}>{lane.model}</span>
                   {lane.isSecondary && <span style={{ fontSize: '0.55rem', color: '#fbbf24', flexShrink: 0 }}>{ui.acSecondary}</span>}
+                  {lane.failCount > 0 && (
+                    <span
+                      title={`Lane này đã fail ${lane.failCount} lần liên tiếp (429/5xx/timeout — proxy có thể đang nghẽn). Mỗi lần fail lane tự nghỉ 15s, call dồn sang lane khác; thành công sẽ tự reset.`}
+                      style={{
+                        flexShrink: 0, fontSize: '0.55rem', fontWeight: 800, padding: '0 5px', borderRadius: '3px',
+                        color: lane.failCount >= 5 ? '#fff' : 'var(--accent-danger)',
+                        background: lane.failCount >= 5 ? 'var(--accent-danger)' : 'rgba(239,68,68,0.15)',
+                        border: '1px solid var(--accent-danger)',
+                      }}
+                    >
+                      ⚠ lỗi ×{lane.failCount}
+                    </span>
+                  )}
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', flexShrink: 0 }}>
                   <Gauge size={10} /> {lane.used}/{lane.limit} RPM

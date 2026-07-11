@@ -2,6 +2,18 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.64.0 — Nút "🚀 Dịch siêu tốc" + đèn đỏ lane lỗi 🚀🔴
+### 🚀 Dịch siêu tốc (nút thứ 3 cạnh Dịch nhẹ / Dịch đầy đủ)
+- **Gom entry thông minh (bin-packing):** entry **NGẮN** được dồn chung **1 call API** (tối đa **12 entry & 10.000 ký tự/lô**, sắp giảm dần rồi nhét First-Fit) và **đi model PHỤ (flash)** — flash RPM cao gấp mấy lần pro và dư sức dịch entry ngắn. Entry **DÀI (>8K ký tự)** để **riêng 1 call, đi model CHÍNH (pro)** — nội dung khó cần chất lượng.
+- Kết quả: card nhiều entry ngắn giảm **hàng chục lần số call**; pro rảnh lo phần khó, flash gánh số lượng — đúng sở trường từng model (khớp combo 3.1-pro + 3-flash của bạn). Các lô vẫn chạy **đa luồng** qua pool như cũ.
+- An toàn: nhóm schema MVU (`initvar`/`controller`/`mvu_logic`) vẫn dịch **1-1** như cũ; ngưỡng 10K ký tự/lô để bản dịch (giãn ~3×) không vượt trần output của model.
+- Bấm nút là tự bật: mọi nhóm + chế độ hàng loạt lorebook + gom thông minh + đồng bộ MVU. (Có i18n VI/EN/中文.)
+
+### 🔴 Đèn đỏ lane lỗi (API dùng chung nghẽn ngoài RPM)
+- Call **fail** (429/5xx/timeout/mạng) → lane (provider+model) đó tự **nghỉ 15 giây** — call tiếp theo tự dồn sang lane khác, không đập tiếp vào proxy đang nghẽn; call **thành công** thì tự reset.
+- Panel luồng hiện huy hiệu **"⚠ lỗi ×N"** ngay trên hàng lane; **fail ≥5 lần liên tiếp → tên model tô ĐỎ đậm** để bạn biết lane đó đang chết dù RPM chưa chạm trần.
+- *Kỹ thuật:* +6 test bin-packing (146 test tổng). tsc + build xanh.
+
 ## v1.63.0 — Sửa bug #3: dịch tới TavernHelper rồi "nằm im" 🧊
 > Từ báo lỗi #3: card `Tuhu_V2.2` — "dịch tới một số mục rồi nằm im, không dịch tiếp".
 - **Gốc rễ:** script TavernHelper `ERA变量框架1.4.11` nặng **148 KB** (6748 chữ Hán), bị chia ~10 chunk. Bộ gác schema cũ kiểm **"còn BẤT KỲ 1 chữ Hán → dịch lại CẢ field"**. Vì JS chứa nhiều chữ Hán trong string data/comment mà AI giữ lại hợp lệ, bộ gác **luôn fail → re-dịch cả 148 KB tới 3 lần** = mất 30–45 phút cho **một** field (xử lý tuần tự nên nghẽn cả bản dịch) → nhìn như "treo", rồi báo *"Schema translation failed (Chinese characters remaining)"*.

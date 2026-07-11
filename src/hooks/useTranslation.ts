@@ -17,6 +17,7 @@ import { detectEjsCard, extractEjsEntryNames, extractEjsKeywords, aiTranslateEjs
 import { getActivePresetPromptContent } from '../utils/presetParser';
 import { CallMonitor } from '../utils/callMonitor';
 import { runWorkerPool } from '../utils/runWorkerPool';
+import { smartPackFields } from '../utils/smartPack';
 import type { FieldGroup, FieldGroupConfig, TranslationField } from '../types/card';
 
 /**
@@ -959,7 +960,7 @@ export function useTranslation() {
     f.entryType === 'initvar' || f.entryType === 'controller' || f.entryType === 'mvu_logic';
 
   /* ─── Translate one batch of fields (single API call + fallback) ─── */
-  const translateOneBatch = async (batchFields: TranslationField[], retryCount = 0) => {
+  const translateOneBatch = async (batchFields: TranslationField[], retryCount = 0, preferSecondary = false) => {
     if (batchFields.length === 0) return;
     const targetModel = store.translationConfig.enableModelRouting
       ? (store.translationConfig.entryModelRouting[batchFields[0].path] || store.translationConfig.groupModelRouting[batchFields[0].group] || store.proxy.model)
@@ -1081,7 +1082,8 @@ export function useTranslation() {
         promptResult.schemaForApi,
         abortRef.current?.signal,
         promptResult.glossaryForApi,
-        store.translationConfig.chunkSize
+        store.translationConfig.chunkSize,
+        preferSecondary // lô gộp toàn entry ngắn (Dịch siêu tốc) → đi model phụ (flash)
       );
 
       // ═══ Apply results + Post-batch MVU validation ═══
@@ -1340,7 +1342,7 @@ export function useTranslation() {
           const failedLabels = emptyFields.map(f => f.label.replace(/^Lorebook: /, '')).slice(0, 5);
           store.addLog('retry', `⚠️ ${emptyFields.length} mục bị trống (AI chưa trả kết quả): [${failedLabels.join(', ')}${emptyFields.length > 5 ? '…' : ''}]. Đang thử lại sau ${(backoffDelay/1000).toFixed(1)}s…`);
           await new Promise((r) => setTimeout(r, backoffDelay));
-          await translateOneBatch(emptyFields, retryCount + 1);
+          await translateOneBatch(emptyFields, retryCount + 1, preferSecondary);
         } else {
           // ─── Fallback to individual using translateSingleField ───
           // Separate MVU-critical fields (process first) from regular ones
@@ -1415,7 +1417,7 @@ export function useTranslation() {
       if (retryCount < (store.proxy.maxRetries || 3)) {
         store.addLog('retry', `⚠️ Cả lô bị lỗi, đang thử lại sau ${(backoffDelay/1000).toFixed(1)}s… (${msg})`);
         await new Promise((r) => setTimeout(r, backoffDelay));
-        await translateOneBatch(batchFields, retryCount + 1);
+        await translateOneBatch(batchFields, retryCount + 1, preferSecondary);
         return;
       }
 
@@ -1888,6 +1890,10 @@ export function useTranslation() {
 
         // Step 2: Split into sub-batches
         const subBatches: TranslationField[][] = [];
+        // Song song với subBatches: lô nào là "GỘP entry ngắn" (Dịch siêu tốc) → đi model phụ (flash).
+        const subBatchPrefer: boolean[] = [];
+        const pushBatch = (b: TranslationField[], prefer = false) => { subBatches.push(b); subBatchPrefer.push(prefer); };
+        const smartOn = store.translationConfig.smartBatchPacking;
 
         if (isMvuEnabled) {
           // ═══ MVU Smart Grouping: group by targetModel and entryType first, then split ═══
@@ -1928,6 +1934,15 @@ export function useTranslation() {
             const baseTypeKey = typeKey.split('_|_')[0];
             const typeFields = typeGroups[typeKey];
             const typeBatchSize = TYPE_BATCH_SIZES[baseTypeKey] || batchSize;
+
+            // ⚡ Dịch siêu tốc: với nhóm KHÔNG phải schema (rules/narrative/other) → bin-packing
+            // thông minh: entry ngắn GỘP chung 1 call (đi flash), entry dài để riêng (đi pro).
+            // Nhóm schema (initvar/controller/mvu_logic, typeBatchSize=1) giữ nguyên 1-1 để an toàn.
+            if (smartOn && typeBatchSize > 1) {
+              for (const p of smartPackFields(typeFields)) pushBatch(p.batch, p.preferSecondary);
+              continue;
+            }
+
             let currentBatch: TranslationField[] = [];
             let currentChars = 0;
 
@@ -1935,19 +1950,19 @@ export function useTranslation() {
               // Long entry → isolate into its own batch so translateOneBatch routes it
               // through chunked single-field translation (avoids the un-chunked giant call).
               if (f.original.length > LONG_ENTRY_ISOLATE_CHARS) {
-                if (currentBatch.length > 0) { subBatches.push(currentBatch); currentBatch = []; currentChars = 0; }
-                subBatches.push([f]);
+                if (currentBatch.length > 0) { pushBatch(currentBatch); currentBatch = []; currentChars = 0; }
+                pushBatch([f]);
                 continue;
               }
               if (currentBatch.length >= typeBatchSize || (currentBatch.length > 0 && currentChars + f.original.length > MAX_BATCH_CHARS)) {
-                subBatches.push(currentBatch);
+                pushBatch(currentBatch);
                 currentBatch = [];
                 currentChars = 0;
               }
               currentBatch.push(f);
               currentChars += f.original.length;
             }
-            if (currentBatch.length > 0) subBatches.push(currentBatch);
+            if (currentBatch.length > 0) pushBatch(currentBatch);
           }
 
           // Log MVU grouping detail
@@ -1969,28 +1984,35 @@ export function useTranslation() {
 
           for (const targetModel of Object.keys(modelGroups)) {
             const modelFields = modelGroups[targetModel];
+
+            // ⚡ Dịch siêu tốc: bin-packing — entry ngắn gộp (flash), entry dài để riêng (pro).
+            if (smartOn) {
+              for (const p of smartPackFields(modelFields)) pushBatch(p.batch, p.preferSecondary);
+              continue;
+            }
+
             let currentBatch: TranslationField[] = [];
             let currentChars = 0;
             for (const f of modelFields) {
               // Long entry → isolate into its own batch so it gets chunked single-field
               // translation instead of being sent inside one un-chunked giant batch call.
               if (f.original.length > LONG_ENTRY_ISOLATE_CHARS) {
-                if (currentBatch.length > 0) { subBatches.push(currentBatch); currentBatch = []; currentChars = 0; }
-                subBatches.push([f]);
+                if (currentBatch.length > 0) { pushBatch(currentBatch); currentBatch = []; currentChars = 0; }
+                pushBatch([f]);
                 continue;
               }
               // Split when: count exceeds batchSize, OR char count exceeds soft cap
               if (currentBatch.length >= batchSize ||
                   (currentBatch.length > 0 && currentChars + f.original.length > MAX_BATCH_CHARS) ||
                   (currentBatch.length > 0 && currentChars + f.original.length > SOFT_CHAR_CAP && currentBatch.length >= 3)) {
-                subBatches.push(currentBatch);
+                pushBatch(currentBatch);
                 currentBatch = [];
                 currentChars = 0;
               }
               currentBatch.push(f);
               currentChars += f.original.length;
             }
-            if (currentBatch.length > 0) subBatches.push(currentBatch);
+            if (currentBatch.length > 0) pushBatch(currentBatch);
           }
           // Log with safety info
           const avgBatchSize = subBatches.length > 0 ? Math.round(allLorebookFields.length / subBatches.length) : 0;
@@ -2003,10 +2025,14 @@ export function useTranslation() {
         // Mỗi worker xong 1 batch là KÉO batch kế NGAY, không đợi cả đợt → không phí thời gian
         // chờ straggler. RPM vẫn an toàn vì mỗi call qua pickLane. Cache lưu định kỳ thay vì mỗi đợt.
         let savedLb = 0; const saveEveryLb = Math.max(4, Math.floor(concurrency / 2));
+        if (smartOn) {
+          const packed = subBatchPrefer.filter(Boolean).length;
+          store.addLog('info', `⚡ Dịch siêu tốc: ${allLorebookFields.length} entry → ${subBatches.length} call (${packed} lô gộp đi model phụ, ${subBatches.length - packed} entry dài đi model chính)`);
+        }
         const lbPool = await runWorkerPool({
           total: subBatches.length,
           concurrency,
-          runOne: (idx) => translateOneBatch(subBatches[idx]),
+          runOne: (idx) => translateOneBatch(subBatches[idx], 0, subBatchPrefer[idx] || false),
           shouldStop: () => !!checkAbort(),
           waitIfPaused: waitForPause,
           onSettled: () => { if (++savedLb % saveEveryLb === 0) store.saveTranslationCache(); },

@@ -1158,6 +1158,32 @@ function recordRateLimitRequest(model: string): void {
   bucket.push(Date.now());
 }
 
+/* ─── Lane failure tracking (proxy dùng chung có thể nghẽn NGOÀI giới hạn RPM) ───
+ * Đếm số lần call FAIL LIÊN TIẾP theo từng lane (provider+model). Fail (lỗi tạm thời:
+ * 429/5xx/timeout/mạng) ⇒ lane NGHỈ 15s — pickLane tự né sang lane khác trong lúc đó,
+ * khỏi đập tiếp vào proxy đang nghẽn. Thành công ⇒ reset về 0. UI (ActiveCallsPanel)
+ * đọc getLaneFailures() để tô ĐỎ lane + hiện số lần fail (≥5 = đỏ đậm). */
+const LANE_FAILURE_COOLDOWN_MS = 15_000;
+const _laneFailures = new Map<string, { count: number; lastAt: number }>();
+
+function recordLaneFailure(rlKey: string): void {
+  const cur = _laneFailures.get(rlKey);
+  _laneFailures.set(rlKey, { count: (cur?.count || 0) + 1, lastAt: Date.now() });
+}
+function recordLaneSuccess(rlKey: string): void {
+  if (_laneFailures.has(rlKey)) _laneFailures.delete(rlKey);
+}
+function isLaneCooling(rlKey: string): boolean {
+  const f = _laneFailures.get(rlKey);
+  return !!f && Date.now() - f.lastAt < LANE_FAILURE_COOLDOWN_MS;
+}
+/** Số lần fail liên tiếp của từng lane (key = `${providerId}::${model}`) — cho UI. */
+export function getLaneFailures(): Record<string, { count: number; lastAt: number }> {
+  const out: Record<string, { count: number; lastAt: number }> = {};
+  for (const [k, v] of _laneFailures) out[k] = { ...v };
+  return out;
+}
+
 /** How many requests each model has made in the current 60s window (for live UI). */
 export function getRateLimitUsage(): Record<string, number> {
   const now = Date.now();
@@ -1284,13 +1310,19 @@ async function pickLane(pool: PoolProvider[], charCount: number | undefined, sig
     const { key, index, count } = getRotatedKeyFor(p.id, p.keys);
     return { providerId: p.id, provider: p.provider, proxyUrl: p.proxyUrl, model, key, keyIndex: index, keyTotal: count };
   };
-  for (let i = 0; i < n; i++) {
-    const p = pool[(_laneCursor + i) % n];
-    for (const L of laneOrder(p, charCount, preferSecondary)) {
-      if (hasRateLimitCapacity(_rlKey(p.id, L.model), L.rpm)) {
-        recordRateLimitRequest(_rlKey(p.id, L.model));
-        _laneCursor = (_laneCursor + i + 1) % n;
-        return build(p, L.model);
+  // Lượt 1: né lane đang NGHỈ 15s vì vừa fail (proxy chung nghẽn) — dồn call sang lane khoẻ.
+  // Lượt 2: nếu mọi lane khoẻ đều đầy RPM thì chấp nhận cả lane đang nghỉ (tránh kẹt).
+  for (const skipCooling of [true, false]) {
+    for (let i = 0; i < n; i++) {
+      const p = pool[(_laneCursor + i) % n];
+      for (const L of laneOrder(p, charCount, preferSecondary)) {
+        const rk = _rlKey(p.id, L.model);
+        if (skipCooling && isLaneCooling(rk)) continue;
+        if (hasRateLimitCapacity(rk, L.rpm)) {
+          recordRateLimitRequest(rk);
+          _laneCursor = (_laneCursor + i + 1) % n;
+          return build(p, L.model);
+        }
       }
     }
   }
@@ -1333,22 +1365,36 @@ export async function callProvider(
     startedAt: Date.now(),
   });
 
+  const laneRlKey = _rlKey(lane.providerId, lane.model);
   try {
+    let result: string;
     switch (rotatedConfig.provider) {
       case 'anthropic':
-        return await callAnthropic(rotatedConfig, system, user, signal, images);
+        result = await callAnthropic(rotatedConfig, system, user, signal, images);
+        break;
       case 'google':
-        return await callGemini(rotatedConfig, system, user, signal, images);
+        result = await callGemini(rotatedConfig, system, user, signal, images);
+        break;
       case 'openai':
       case 'custom':
       default:
-        return await callOpenAICompatible(rotatedConfig, system, user, signal, images);
+        result = await callOpenAICompatible(rotatedConfig, system, user, signal, images);
+        break;
     }
+    recordLaneSuccess(laneRlKey); // lane khoẻ lại → xoá đếm fail + hết nghỉ
+    return result;
   } catch (err) {
     // On rate limit, advance to next key for THIS provider on retry
     if (err instanceof ApiError && err.statusCode === 429) {
       advanceKeyRotationFor(lane.providerId);
     }
+    // Lỗi TẠM THỜI (429/5xx/timeout/mạng) → đánh dấu lane fail (nghỉ 15s + UI tô đỏ).
+    // Lỗi do người dùng hủy (abort) thì KHÔNG tính.
+    const msg = err instanceof Error ? err.message : String(err);
+    const isAbort = /abort|cancel/i.test(msg);
+    const isTransient = (err instanceof ApiError && (err.retryable || (err.statusCode || 0) === 429 || (err.statusCode || 0) >= 500))
+      || /timeout|timed out|fetch failed|failed to fetch|network|econnreset|\b5\d\d\b/i.test(msg);
+    if (!isAbort && isTransient) recordLaneFailure(laneRlKey);
     throw err;
   } finally {
     CallMonitor.end(callId);
@@ -3270,7 +3316,9 @@ export async function translateBatch(
   customSchema?: string,
   signal?: AbortSignal,
   glossary?: GlossaryEntry[],
-  chunkSize?: number
+  chunkSize?: number,
+  /** Lô toàn entry NGẮN (Dịch siêu tốc) ⇒ ưu tiên model phụ (flash) — nhanh + RPM cao, chừa pro cho entry dài. */
+  preferSecondary?: boolean
 ): Promise<string[]> {
   if (items.length === 0) return [];
   if (items.length === 1) {
@@ -3362,6 +3410,8 @@ ${sectionList}
       const rawResult = await callProvider(config, system, user, combinedSignal, undefined, {
         label: items.length > 1 ? `Lô ${items.length} mục: ${firstName}…` : firstName,
         charCount: batchChars,
+        // Lô entry ngắn (siêu tốc) hoặc lượt THỬ LẠI ⇒ đi model phụ (flash) cho nhanh.
+        preferSecondary: preferSecondary || attempt > 0,
       });
       clearTimeout(timeoutId);
 

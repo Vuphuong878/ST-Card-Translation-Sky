@@ -841,6 +841,9 @@ const ui: UiKeys = {
   tcPresetLightHint: 'Dịch keyword + regex + lời mở đầu/greetings + tên card + tên/comment mục lorebook + tên biến MVU. Content to (description, thân lorebook) giữ nguyên ngôn ngữ gốc — AI vẫn đọc hiểu và trả lời tiếng của bạn. Nhanh hơn nhiều với card nặng.',
   tcPresetLightDone: 'Đã áp dụng Dịch nhẹ: keys + regex + lời mở đầu + tên card/lorebook + đồng bộ MVU + Dịch phẫu thuật (bảo vệ regex), tắt content to.',
   tcPresetFullDone: 'Đã áp dụng preset Dịch đầy đủ: bật mọi nhóm.',
+  tcPresetTurbo: '🚀 Dịch siêu tốc',
+  tcPresetTurboHint: 'Gom thông minh (bin-packing): entry NGẮN dồn chung 1 call (đi model phụ nhanh), entry DÀI để riêng (đi model chính). Giảm mạnh số call API, vẫn chạy đa luồng.',
+  tcPresetTurboDone: 'Đã áp dụng Dịch siêu tốc: bật mọi nhóm + chế độ hàng loạt + gom thông minh (entry ngắn gộp → model phụ, entry dài để riêng → model chính).',
 };
 
 export default ui;

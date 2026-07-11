@@ -554,6 +554,28 @@ export default function TranslateConfig() {
                 >
                   {ui.tcPresetFull}
                 </button>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  title={ui.tcPresetTurboHint}
+                  onClick={() => {
+                    // 🚀 Dịch siêu tốc: dịch ĐẦY ĐỦ nhưng gom call thông minh —
+                    // bật mọi nhóm + chế độ hàng loạt lorebook + smart bin-packing:
+                    // entry ngắn dồn chung 1 call (đi model phụ/flash), entry dài để riêng (model chính/pro).
+                    setTranslationConfig({
+                      fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({ ...g, enabled: true })),
+                      lightSkipContent: false,
+                      lorebookStrategy: 'batch',
+                      smartBatchPacking: true,
+                      enableMvuSync: true,
+                      exportKeyMode: 'merge',
+                    });
+                    setFields(fields.map(f => f.status === 'ignored' ? { ...f, status: 'pending' as const } : f));
+                    addToast('success', ui.tcPresetTurboDone);
+                  }}
+                >
+                  {ui.tcPresetTurbo}
+                </button>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

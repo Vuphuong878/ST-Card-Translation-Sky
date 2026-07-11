@@ -332,6 +332,12 @@ export interface TranslationConfig {
    * việc field đã parse xong hay chưa.
    */
   lightSkipContent: boolean;
+  /**
+   * Preset "Dịch siêu tốc": gom entry theo BIN-PACKING thông minh — entry NGẮN dồn chung
+   * một call (đi model phụ/flash cho nhanh), entry DÀI để riêng (đi model chính/pro).
+   * Giảm mạnh số call API mà vẫn chạy đa luồng qua pool.
+   */
+  smartBatchPacking: boolean;
   fieldGroups: FieldGroupConfig[];
   customSchema?: string;
   exportKeyMode: ExportKeyMode; // How to handle lorebook keys on export
