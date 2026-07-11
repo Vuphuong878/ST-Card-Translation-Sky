@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.68.0 — Audit đợt 2: giao diện phân tầng Cơ bản / Nâng cao 🎛️
+> Mục tiêu: người mới chỉ cần **API key → bấm 1 preset → Start**; dân chuyên vẫn còn đủ đồ chơi trong "Nâng cao".
+- **3 nút preset lên ĐẦU:** ⚡ Dịch nhẹ / 📖 Dịch đầy đủ / 🚀 Dịch siêu tốc giờ nằm **trên cùng mục Cấu hình dịch** trong khung nổi bật (trước đây chìm giữa sidebar, thứ quan trọng nhất lại khó thấy nhất).
+- **Nút "⚙ Cài đặt nâng cao":** toàn bộ setting chuyên sâu — Model Routing, Custom Schema, Custom System Prompt, Chunk Size + AI Chunk Verification, RAG, Translation Memory, Dịch phẫu thuật, CSS CJK, Chiến lược B (MVU) / C (EJS) — được **gấp lại, mặc định đóng** (nhớ trạng thái mở/đóng). Preset đã tự lo các cờ quan trọng nên người dùng thường không cần mở.
+- **Phần API gọn hơn:** CORS Proxy + Expert Mode dời vào mục **Advanced Settings** có sẵn (chung chỗ với sampler/timeout). Tầng cơ bản của API chỉ còn: provider, Base URL, key, model, RPM, model phụ, provider bổ sung, Test Connection.
+- Tầng cơ bản sau dọn dẹp: **API → Preset → Ngôn ngữ/nhóm trường → Chiến lược Lorebook → Start.** Không đổi bất kỳ hành vi dịch nào — chỉ sắp xếp lại giao diện.
+
 ## v1.67.0 — Audit đợt 1: dọn nút chết + đa luồng triệt để 🧹⚡
 > Đợt 1 của cuộc tổng rà soát code Dịch Card (mục tiêu: dễ dùng, ít setup, nhanh nhất có thể).
 - **Gỡ 2 nút CHẾT** khỏi giao diện (chỉnh không có tác dụng, gây hiểu lầm):

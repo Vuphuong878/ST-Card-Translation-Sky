@@ -182,6 +182,10 @@ export default function TranslateConfig() {
     }
   };
   const isModMode = translationConfig.enableModMode;
+  // (Audit đợt 2) Gấp setting chuyên sâu vào mục "Nâng cao" — nhớ trạng thái qua LS.
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(() => {
+    try { return localStorage.getItem('st-tc-show-advanced') === '1'; } catch { return false; }
+  });
 
   return (
     <div className="section">
@@ -192,6 +196,99 @@ export default function TranslateConfig() {
         </span>
       </div>
       <div className="section-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+        {/* ═══ (Audit đợt 2) PRESET NHANH — đưa LÊN ĐẦU: thứ user cần nhất, bấm 1 nút là đủ config ═══ */}
+        {card && !isModMode && (
+          <div style={{
+            padding: '10px 12px',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid rgba(124,106,240,0.35)',
+            background: 'rgba(124,106,240,0.06)',
+          }}>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', fontWeight: 700, marginBottom: '6px' }}>
+              {ui.tcPresetLabel}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-sm"
+                title={ui.tcPresetLightHint}
+                onClick={() => {
+                  // Bật keys + regex + messages (opening/first_mes) + core + lorebook để LẤY
+                  // tên card + tên/comment lorebook. Cờ lightSkipContent để prepareFields (lúc
+                  // Start) bỏ content TO trong core/lorebook — declarative, không lệ thuộc timing
+                  // của nút. Chiến lược B đồng bộ tên biến MVU toàn thẻ nên content gốc vẫn khớp.
+                  const lightOn = new Set(['lorebook_keys', 'regex', 'messages', 'core', 'lorebook']);
+                  setTranslationConfig({
+                    fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({
+                      ...g, enabled: lightOn.has(g.id),
+                    })),
+                    enableMvuSync: true,
+                    exportKeyMode: 'merge',
+                    lorebookStrategy: 'batch', // đa luồng + gộp call (nhất quán mọi preset)
+                    lightSkipContent: true,
+                    // Dịch nhẹ dịch REGEX (code) → ép Dịch phẫu thuật để chỉ trích chuỗi CJK,
+                    // giữ 100% cấu trúc JS/HTML (mặc định surgical TẮT → dễ vỡ regex nếu quên bật).
+                    surgicalMode: true,
+                  });
+                  // Nếu field đã trích sẵn, ignore luôn content to cho UI phản ánh ngay
+                  // (prepareFields vẫn là nguồn chân lý lúc Start).
+                  const isNameOrComment = (p: string) => /(^|\.)name$/.test(p) || /\.comment$/.test(p);
+                  if (fields.length > 0) {
+                    setFields(fields.map(f => {
+                      if (f.group !== 'core' && f.group !== 'lorebook') return f;
+                      if (isNameOrComment(f.path)) {
+                        return f.status === 'ignored' ? { ...f, status: 'pending' as const } : f;
+                      }
+                      return f.status === 'done' ? f : { ...f, status: 'ignored' as const };
+                    }));
+                  }
+                  addToast('success', ui.tcPresetLightDone);
+                }}
+              >
+                {ui.tcPresetLight}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => {
+                  setTranslationConfig({
+                    fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({ ...g, enabled: true })),
+                    lightSkipContent: false,
+                    lorebookStrategy: 'batch', // đa luồng + gộp call (nhất quán mọi preset)
+                  });
+                  // Gỡ ignore mà "Dịch nhẹ" đã đặt cho content, để dịch lại đầy đủ.
+                  setFields(fields.map(f => f.status === 'ignored' ? { ...f, status: 'pending' as const } : f));
+                  addToast('success', ui.tcPresetFullDone);
+                }}
+              >
+                {ui.tcPresetFull}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                title={ui.tcPresetTurboHint}
+                onClick={() => {
+                  // 🚀 Dịch siêu tốc: dịch ĐẦY ĐỦ nhưng gom call thông minh —
+                  // bật mọi nhóm + chế độ hàng loạt lorebook + smart bin-packing:
+                  // entry ngắn dồn chung 1 call (đi model phụ/flash), entry dài để riêng (model chính/pro).
+                  setTranslationConfig({
+                    fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({ ...g, enabled: true })),
+                    lightSkipContent: false,
+                    lorebookStrategy: 'batch',
+                    smartBatchPacking: true,
+                    enableMvuSync: true,
+                    exportKeyMode: 'merge',
+                  });
+                  setFields(fields.map(f => f.status === 'ignored' ? { ...f, status: 'pending' as const } : f));
+                  addToast('success', ui.tcPresetTurboDone);
+                }}
+              >
+                {ui.tcPresetTurbo}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ═══ Mode Switch: Mod Mode toggle — always visible at the top ═══ */}
         <div style={{
@@ -494,91 +591,9 @@ export default function TranslateConfig() {
         {/* Fields & mode only shown when a card is loaded */}
         {card && (
           <>
-            {/* Field Groups */}
+            {/* Field Groups — preset nhanh đã dời LÊN ĐẦU section (audit đợt 2) */}
             <div>
               <label className="label" style={{ marginBottom: '8px' }}>{t.fieldsToTranslate}</label>
-
-              {/* Preset nhanh: Dịch nhẹ (chỉ keys+regex+MVU) / Dịch đầy đủ */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{ui.tcPresetLabel}</span>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  title={ui.tcPresetLightHint}
-                  onClick={() => {
-                    // Bật keys + regex + messages (opening/first_mes) + core + lorebook để LẤY
-                    // tên card + tên/comment lorebook. Cờ lightSkipContent để prepareFields (lúc
-                    // Start) bỏ content TO trong core/lorebook — declarative, không lệ thuộc timing
-                    // của nút. Chiến lược B đồng bộ tên biến MVU toàn thẻ nên content gốc vẫn khớp.
-                    const lightOn = new Set(['lorebook_keys', 'regex', 'messages', 'core', 'lorebook']);
-                    setTranslationConfig({
-                      fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({
-                        ...g, enabled: lightOn.has(g.id),
-                      })),
-                      enableMvuSync: true,
-                      exportKeyMode: 'merge',
-                      lorebookStrategy: 'batch', // đa luồng + gộp call (nhất quán mọi preset)
-                      lightSkipContent: true,
-                      // Dịch nhẹ dịch REGEX (code) → ép Dịch phẫu thuật để chỉ trích chuỗi CJK,
-                      // giữ 100% cấu trúc JS/HTML (mặc định surgical TẮT → dễ vỡ regex nếu quên bật).
-                      surgicalMode: true,
-                    });
-                    // Nếu field đã trích sẵn, ignore luôn content to cho UI phản ánh ngay
-                    // (prepareFields vẫn là nguồn chân lý lúc Start).
-                    const isNameOrComment = (p: string) => /(^|\.)name$/.test(p) || /\.comment$/.test(p);
-                    if (fields.length > 0) {
-                      setFields(fields.map(f => {
-                        if (f.group !== 'core' && f.group !== 'lorebook') return f;
-                        if (isNameOrComment(f.path)) {
-                          return f.status === 'ignored' ? { ...f, status: 'pending' as const } : f;
-                        }
-                        return f.status === 'done' ? f : { ...f, status: 'ignored' as const };
-                      }));
-                    }
-                    addToast('success', ui.tcPresetLightDone);
-                  }}
-                >
-                  {ui.tcPresetLight}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={() => {
-                    setTranslationConfig({
-                      fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({ ...g, enabled: true })),
-                      lightSkipContent: false,
-                      lorebookStrategy: 'batch', // đa luồng + gộp call (nhất quán mọi preset)
-                    });
-                    // Gỡ ignore mà "Dịch nhẹ" đã đặt cho content, để dịch lại đầy đủ.
-                    setFields(fields.map(f => f.status === 'ignored' ? { ...f, status: 'pending' as const } : f));
-                    addToast('success', ui.tcPresetFullDone);
-                  }}
-                >
-                  {ui.tcPresetFull}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  title={ui.tcPresetTurboHint}
-                  onClick={() => {
-                    // 🚀 Dịch siêu tốc: dịch ĐẦY ĐỦ nhưng gom call thông minh —
-                    // bật mọi nhóm + chế độ hàng loạt lorebook + smart bin-packing:
-                    // entry ngắn dồn chung 1 call (đi model phụ/flash), entry dài để riêng (model chính/pro).
-                    setTranslationConfig({
-                      fieldGroups: translationConfig.fieldGroups.map((g: FieldGroupConfig) => ({ ...g, enabled: true })),
-                      lightSkipContent: false,
-                      lorebookStrategy: 'batch',
-                      smartBatchPacking: true,
-                      enableMvuSync: true,
-                      exportKeyMode: 'merge',
-                    });
-                    setFields(fields.map(f => f.status === 'ignored' ? { ...f, status: 'pending' as const } : f));
-                    addToast('success', ui.tcPresetTurboDone);
-                  }}
-                >
-                  {ui.tcPresetTurbo}
-                </button>
-              </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {translationConfig.fieldGroups.map((group: FieldGroupConfig) => {
@@ -608,6 +623,52 @@ export default function TranslateConfig() {
               </div>
             </div>
 
+            {/* Lorebook Strategy — dời lên trên (audit đợt 2), thuộc tầng CƠ BẢN */}
+            {!isModMode && translationConfig.fieldGroups.find((g: FieldGroupConfig) => g.id === 'lorebook')?.enabled && (
+              <div>
+                <label className="label" style={{ marginBottom: '6px' }}>{t.lorebookStrategy}</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <RadioOption
+                    name="lore"
+                    value="single"
+                    checked={translationConfig.lorebookStrategy === 'single'}
+                    onChange={() => setTranslationConfig({ lorebookStrategy: 'single' as LorebookStrategy })}
+                    label={t.individualEntries}
+                    desc={t.individualEntriesDesc}
+                  />
+                  <RadioOption
+                    name="lore"
+                    value="batch"
+                    checked={translationConfig.lorebookStrategy === 'batch'}
+                    onChange={() => setTranslationConfig({ lorebookStrategy: 'batch' as LorebookStrategy })}
+                    label={t.batchEntries}
+                    desc={t.batchEntriesDesc}
+                  />
+                </div>
+                {translationConfig.lorebookStrategy === 'batch' && (
+                  <div style={{ marginTop: '8px', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                    {ui.tcBatchHint1} <b>{ui.tcBatchHint2}</b> {ui.tcBatchHint3}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══ (Audit đợt 2) NÂNG CAO — gấp toàn bộ setting chuyên sâu lại. Preset đã tự lo
+                các cờ quan trọng; người dùng thường không cần mở mục này. ═══ */}
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                const nv = !showAdvanced;
+                setShowAdvanced(nv);
+                try { localStorage.setItem('st-tc-show-advanced', nv ? '1' : '0'); } catch { /* quota */ }
+              }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.78rem' }}
+            >
+              ⚙️ {ui.tcAdvancedToggle} {showAdvanced ? '▾' : '▸'}
+            </button>
+
+            {showAdvanced && (<>
             {/* Model Routing */}
             <div style={{ marginTop: '16px', marginBottom: '16px' }}>
               <label className="checkbox-wrapper" style={{ marginBottom: '8px' }}>
@@ -721,39 +782,6 @@ export default function TranslateConfig() {
                 </div>
               )}
             </div>
-
-            {/* (Audit đợt 1) Đã GỠ radio "Translation Mode (Field/Batch)": knob CHẾT — không code nào
-                đọc translationConfig.mode; batch thật do "Chiến lược Lorebook" bên dưới quyết định. */}
-
-            {/* Lorebook Strategy — only in translate mode */}
-            {!isModMode && translationConfig.fieldGroups.find((g: FieldGroupConfig) => g.id === 'lorebook')?.enabled && (
-              <div>
-                <label className="label" style={{ marginBottom: '6px' }}>{t.lorebookStrategy}</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <RadioOption
-                    name="lore"
-                    value="single"
-                    checked={translationConfig.lorebookStrategy === 'single'}
-                    onChange={() => setTranslationConfig({ lorebookStrategy: 'single' as LorebookStrategy })}
-                    label={t.individualEntries}
-                    desc={t.individualEntriesDesc}
-                  />
-                  <RadioOption
-                    name="lore"
-                    value="batch"
-                    checked={translationConfig.lorebookStrategy === 'batch'}
-                    onChange={() => setTranslationConfig({ lorebookStrategy: 'batch' as LorebookStrategy })}
-                    label={t.batchEntries}
-                    desc={t.batchEntriesDesc}
-                  />
-                </div>
-                {translationConfig.lorebookStrategy === 'batch' && (
-                  <div style={{ marginTop: '8px', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                    {ui.tcBatchHint1} <b>{ui.tcBatchHint2}</b> {ui.tcBatchHint3}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Custom Schema — shared between modes */}
             <div>
@@ -1102,6 +1130,7 @@ export default function TranslateConfig() {
             <div style={{ marginTop: '8px' }}>
               <EjsSyncPanel />
             </div>
+            </>)}{/* hết khối NÂNG CAO */}
           </>
         )}
 
