@@ -2,6 +2,14 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.63.0 — Sửa bug #3: dịch tới TavernHelper rồi "nằm im" 🧊
+> Từ báo lỗi #3: card `Tuhu_V2.2` — "dịch tới một số mục rồi nằm im, không dịch tiếp".
+- **Gốc rễ:** script TavernHelper `ERA变量框架1.4.11` nặng **148 KB** (6748 chữ Hán), bị chia ~10 chunk. Bộ gác schema cũ kiểm **"còn BẤT KỲ 1 chữ Hán → dịch lại CẢ field"**. Vì JS chứa nhiều chữ Hán trong string data/comment mà AI giữ lại hợp lệ, bộ gác **luôn fail → re-dịch cả 148 KB tới 3 lần** = mất 30–45 phút cho **một** field (xử lý tuần tự nên nghẽn cả bản dịch) → nhìn như "treo", rồi báo *"Schema translation failed (Chinese characters remaining)"*.
+- **Sửa:** bộ gác TavernHelper nay dùng **tỷ lệ chữ Hán sống sót** (dùng chung `detectResidualCjk` với bug #1) — **chỉ dịch lại khi CHƯA DỊCH thật** (>35% chữ Hán còn nguyên = echo / dở nửa chừng), bỏ qua vài chữ Hán còn sót trong code/data. Không còn re-dịch phí cả 148 KB.
+- **Lưới an toàn:** vòng dịch từng field nay **giới hạn số lần thử lại** — dù có tình huống bất ngờ, 1 field cũng **không thể kẹt vô hạn** làm treo cả bản dịch (luôn đi tiếp field kế).
+- Guard `initvar`/`controller` vẫn giữ nghiêm nhưng **thôi đếm nhầm dấu ngoặc 【】/fullwidth** là "chữ Hán" (cùng lớp bug #2).
+- *Kỹ thuật:* +2 test hồi quy (script JS giữ vài chữ Hán → không re-dịch; echo → dịch lại). tsc + **140 test** + build xanh.
+
 ## v1.62.0 — Nút "🐞 Báo lỗi" trên header 🐞
 - Thêm nút **"Báo lỗi"** (viền đỏ) ở **header trên cùng bên phải**, cạnh nút đổi ngôn ngữ. Bấm → mở **file Excel báo lỗi (OneDrive)** ở tab mới để mọi người cùng ghi bug.
 - Có i18n: **Báo lỗi / Report a bug / 报告错误**. Link nằm ở hằng `BUG_REPORT_URL` trong `AppHub.tsx` (dễ đổi sau này).

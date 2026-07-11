@@ -47,6 +47,23 @@ describe('detectResidualCjk — chống "DONE giả" (echo nguồn tiếng Trung
     expect(r.suspect).toBe(false);
   });
 
+  // Bug #3: TavernHelper = script JS lớn (100KB+) có nhiều chữ Hán. Guard schema CŨ "còn 1 chữ Hán
+  // → dịch lại CẢ field" → re-dịch cả 148KB tới 3 lần = treo. Nay dùng detectResidualCjk (tỷ lệ):
+  // dịch tốt (giữ vài chữ Hán trong const/data) → KHÔNG nghi; echo nguyên script → nghi.
+  it('BUG #3: script JS dịch tốt, giữ vài chữ Hán trong data → KHÔNG nghi (không re-dịch phí)', () => {
+    // Giả lập: nguồn có 100 chữ Hán; bản dịch chỉ còn ~5 (tên biến/data giữ lại) → survival 5%.
+    const src = '"use strict";\nconst LABEL = "' + '状态'.repeat(50) + '";'; // 100 chữ Hán
+    const trans = '"use strict";\nconst LABEL = "Trạng thái";\n// giữ khóa: ' + '状态'.repeat(2) + '（数据）'; // ~5 Hán
+    const r = detectResidualCjk(src, trans);
+    expect(r.suspect).toBe(false);
+  });
+
+  it('BUG #3: script JS bị echo nguyên (chưa dịch) → nghi', () => {
+    const src = '"use strict";\nconst LABEL = "' + '状态'.repeat(50) + '";';
+    const r = detectResidualCjk(src, src); // trả lại nguyên văn
+    expect(r.suspect).toBe(true);
+  });
+
   it('CJK trong URL/đường dẫn không tính (import path hợp lệ)', () => {
     const src = "import { x } from 'https://cdn.example.com/骰子系统/stable.js';\n" + ZH_SRC;
     const trans = "import { x } from 'https://cdn.example.com/骰子系统/stable.js';\n" + VI_GOOD;

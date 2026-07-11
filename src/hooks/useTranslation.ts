@@ -747,32 +747,49 @@ export function useTranslation() {
       const isTargetNonCJK = !(/chinese|中文|japanese|日本語|korean|한국어/i.test(store.translationConfig.targetLanguage));
       const isSchemaCritical = field.entryType === 'initvar' || field.entryType === 'controller' || field.entryType === 'mvu_logic' || field.group === 'tavern_helper';
       if (isTargetNonCJK && isSchemaCritical) {
-        const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef]/;
-        const translatedStripped = stripUrlsForCjkCheck(translated);
-        if (cjkRegex.test(translatedStripped)) {
-          if (freshRetries() < (store.proxy.maxRetries || 3)) {
-            store.updateField(field.path, { retries: freshRetries() + 1 });
-            store.addLog('retry', `⚠️ Còn chữ Hán trong Schema (${field.label}). Đang thử lại…`);
-            await new Promise((r) => setTimeout(r, store.proxy.retryDelay || 1000));
-            return 'retry';
+        if (field.group === 'tavern_helper') {
+          // (Sua bug #3) TavernHelper = SCRIPT JS LON (co the 100KB+, vd ERA变量框架 148KB) chua chu
+          // Han trong string data / comment ma AI doi khi GIU LAI hop le. Guard cu "con BAT KY 1 chu
+          // Han -> dich lai CA field" => re-dich ca 148KB toi maxRetries lan = treo 30-45 phut, roi bao
+          // "Schema translation failed" (dung bug user: dich toi day roi NAM IM). Nay theo TY LE: chi
+          // dich lai khi CHUA DICH that (echo / do nua chung, >35% Han song), bo qua vai chu con sot.
+          const { suspect, transCjk, origCjk, survival } = detectResidualCjk(field.original, translated);
+          if (suspect) {
+            if (freshRetries() < (store.proxy.maxRetries || 3)) {
+              store.updateField(field.path, { retries: freshRetries() + 1 });
+              store.addLog('retry', `⚠️ Script con ${transCjk}/${origCjk} chu Han (${(survival * 100).toFixed(0)}%) — nghi chua dich. Thu lai: ${field.label}…`);
+              await new Promise((r) => setTimeout(r, store.proxy.retryDelay || 1000));
+              return 'retry';
+            }
+            store.updateField(field.path, { status: 'error', error: `Script con ${transCjk}/${origCjk} chu Han sau ${store.proxy.maxRetries || 3} lan thu` });
+            store.addLog('error', `Chinese remaining in TavernHelper for ${field.label} after retries.`);
+            return 'error';
           }
-          store.updateField(field.path, { status: 'error', error: 'Schema translation failed (Chinese characters remaining)' });
-          store.addLog('error', `Chinese characters remaining in Schema for ${field.label} after retries.`);
-          return 'error';
+        } else {
+          // initvar/controller/mvu_logic: schema bien (nho) -> giu nghiem (bat ky chu Han = bien chua
+          // dich). Chi dem CHU Han that (KHONG dem dau fullwidth nhu bug #2) + bo URL/import path.
+          const cjkRegex = /[一-鿿㐀-䶿]/;
+          const translatedStripped = stripUrlsForCjkCheck(translated);
+          if (cjkRegex.test(translatedStripped)) {
+            if (freshRetries() < (store.proxy.maxRetries || 3)) {
+              store.updateField(field.path, { retries: freshRetries() + 1 });
+              store.addLog('retry', `⚠️ Con chu Han trong Schema (${field.label}). Dang thu lai…`);
+              await new Promise((r) => setTimeout(r, store.proxy.retryDelay || 1000));
+              return 'retry';
+            }
+            store.updateField(field.path, { status: 'error', error: 'Schema translation failed (Chinese characters remaining)' });
+            store.addLog('error', `Chinese characters remaining in Schema for ${field.label} after retries.`);
+            return 'error';
+          }
         }
       }
 
-      // ═══ RESIDUAL-CJK GUARD (mọi trường VĂN BẢN thường) ═══
-      // Bug thực tế (bugNeedFix/1): AI đôi khi TRẢ LẠI NGUYÊN VĂN nguồn (echo) khi gặp refusal /
-      // nội dung khó / bị model phụ (flash) trả input y nguyên. Field khi đó dài ≈ nguồn (ratio
-      // ~100%) nên LỌT hết các guard độ dài phía trên và bị đánh dấu 'done' DÙ VẪN LÀ tiếng Trung
-      // (đúng triệu chứng "DONE 104%" mà content vẫn Hán). Guard schema-critical ở trên KHÔNG bao
-      // trường content/lorebook/messages/core… nên chúng lọt lưới. Ở đây chặn theo TỶ LỆ chữ Hán
-      // SỐNG SÓT: bản dịch tốt zh→vi hầu như 0% Hán (chỉ vài danh từ riêng ≈ vài %); nếu >35% số
-      // Hán của nguồn còn nguyên ⇒ gần như chắc chắn CHƯA DỊCH (echo) hoặc dịch dở nửa chừng ⇒ retry;
-      // hết retry ⇒ 'error' để field hiện ĐỎ, KHÔNG phải DONE giả (user thấy & dịch lại đúng chỗ).
-      // KHÔNG áp cho: target CJK (đang dịch SANG Trung/Nhật), lorebook_keys (merge mode CỐ Ý giữ key
-      // gốc + thêm key dịch), regex/tavern_helper (CJK trong code/URL hợp lệ; đã có guard riêng ở trên).
+      // ═══ RESIDUAL-CJK GUARD (mọi trường VĂN BẢN thường) — chống "DONE giả" (bug #1) ═══
+      // AI đôi khi TRẢ LẠI NGUYÊN VĂN nguồn (echo) → field dài ≈ nguồn (ratio ~100%) nên lọt các guard
+      // độ dài và bị đánh dấu 'done' dù VẪN tiếng Trung. Guard schema-critical ở trên KHÔNG bao trường
+      // content/lorebook/messages/core… nên chúng lọt lưới. Chặn theo TỶ LỆ chữ Hán sống sót (>35% ⇒
+      // chưa dịch ⇒ retry; hết retry ⇒ 'error' đỏ, không DONE giả). KHÔNG áp cho lorebook_keys (merge),
+      // regex/tavern_helper (đã có guard riêng ở trên).
       if (
         isTargetNonCJK &&
         !isSchemaCritical &&
@@ -2254,9 +2271,20 @@ export function useTranslation() {
 
       // ─── Single field mode ───
       try {
-        const result = await translateSingleField(field, i, fields);
+        let result = await translateSingleField(field, i, fields);
+        // (Sửa bug #3) Lưới an toàn: 'retry' vốn KHÔNG tăng i (dịch lại CÙNG field). Bọc trong vòng
+        // CÓ GIỚI HẠN để 1 field không thể kẹt vô hạn → treo cả bản dịch ("dịch tới đây rồi nằm im").
+        // Các guard tự dừng ở maxRetries; đây là chốt chặn cứng phòng trường hợp bất ngờ.
+        let retryGuard = 0;
+        while (result === 'retry' && retryGuard++ < 8) {
+          if (checkAbort()) throw new Error('Cancelled');
+          if (await waitForPause()) throw new Error('Cancelled');
+          result = await translateSingleField(field, i, useStore.getState().fields);
+        }
         if (result === 'retry') {
-          continue; // Don't increment i
+          // Vẫn 'retry' sau 8 lần → KHÔNG kẹt: đánh dấu lỗi rồi đi tiếp field kế (rơi xuống i++).
+          store.updateField(field.path, { status: 'error', error: 'Vượt số lần thử lại — bỏ qua để dịch tiếp' });
+          store.addLog('warning', `⚠️ ${field.label}: vượt số lần thử lại, bỏ qua để không kẹt.`);
         }
 
         // ═══ Live Schema Injection: capture translated TavernHelper as schema context ═══
