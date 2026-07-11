@@ -1028,7 +1028,7 @@ export default function TemplateTranslatorPage() {
 
       setTranslateAllProgress(prev => ({
         ...prev,
-        statusText: `Dịch lẻ: "${item.key.slice(0, 18)}..."`,
+        statusText: `Fallback lẻ (${batchIndices.indexOf(idx) + 1}/${batchIndices.length}): "${item.key.slice(0, 22)}..."`,
       }));
 
       await translateMortalItem(idx);
@@ -1062,11 +1062,16 @@ export default function TemplateTranslatorPage() {
       return next;
     });
 
+    setTranslateAllProgress(prev => ({
+      ...prev,
+      statusText: `Đang dịch batch ${batchIndices.length} dòng...`,
+    }));
+
     try {
       const { ok, data } = await fetchWithRotation({
         fileName: "batch_dictionary_terms.json",
         content: JSON.stringify(keysToTranslate),
-        fileType: "json",
+        fileType: "string-array",
         sourceLang,
         targetLang,
         variables: batchVars,
@@ -1076,7 +1081,6 @@ export default function TemplateTranslatorPage() {
         model,
         apiUrl,
         saveToWorkspace: false,
-        chunkSize: batchSize,
       });
 
       if (abortTranslateAllRef.current) return;
@@ -1166,6 +1170,19 @@ export default function TemplateTranslatorPage() {
     if (!abortTranslateAllRef.current) {
       alert("Đã hoàn thành dịch toàn bộ từ điển!");
     }
+  };
+
+  const handleClearAllMortalTranslations = () => {
+    if (mortalItems.length === 0) return;
+    const confirmClear = window.confirm("Bạn có chắc chắn muốn xóa toàn bộ bản dịch tiếng Việt hiện tại không? Thao tác này không thể hoàn tác.");
+    if (!confirmClear) return;
+    
+    setMortalItems((prev) => {
+      return prev.map((item) => ({
+        ...item,
+        value: "",
+      }));
+    });
   };
 
   const handleExportMortalJson = () => {
@@ -1400,35 +1417,7 @@ export default function TemplateTranslatorPage() {
                   </div>
                 </div>
 
-                {/* Batch Size */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-mono tracking-wider text-zinc-400 uppercase">
-                    Số dòng gộp mỗi lần gọi (Batch Size)
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={200}
-                    value={batchSize}
-                    onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500/80"
-                  />
-                </div>
 
-                {/* Concurrency */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-mono tracking-wider text-zinc-400 uppercase">
-                    Số luồng chạy song song (Concurrency)
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={concurrency}
-                    onChange={(e) => setConcurrency(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
-                    className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500/80"
-                  />
-                </div>
 
 
                 {/* API Key Pool Manager */}
@@ -1879,7 +1868,39 @@ export default function TemplateTranslatorPage() {
               </div>
             )}
 
-            {/* Search & Filters */}
+            {/* Card: Cấu hình Hiệu năng Dịch for Mortal UI */}
+            {mortalItems.length > 0 && (
+              <div className="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-5 backdrop-blur-md flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-mono tracking-wider text-zinc-400 uppercase">
+                    Số dòng gộp mỗi lần gọi (Batch Size)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={batchSize}
+                    onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500/80 font-mono"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-mono tracking-wider text-zinc-400 uppercase">
+                    Số luồng chạy song song (Concurrency)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={concurrency}
+                    onChange={(e) => setConcurrency(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
+                    className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500/80 font-mono"
+                  />
+                </div>
+              </div>
+            )}
+
             {mortalItems.length > 0 && (
               <div className="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-5 backdrop-blur-md flex flex-col gap-4">
                 <h2 className="text-md font-light text-zinc-200 tracking-wide flex items-center gap-2">
@@ -2101,6 +2122,15 @@ export default function TemplateTranslatorPage() {
                           <span>DỊCH AI TRANG HIỆN TẠI</span>
                         </>
                       )}
+                    </button>
+
+                    <button
+                      onClick={handleClearAllMortalTranslations}
+                      disabled={mortalItems.length === 0 || isTranslatingAll}
+                      className="px-3.5 py-1.5 text-[10px] font-semibold bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-750 disabled:bg-zinc-900 disabled:opacity-40 rounded text-rose-400 hover:text-rose-300 disabled:text-zinc-600 transition-all cursor-pointer disabled:cursor-not-allowed flex items-center gap-1.5 shadow"
+                    >
+                      <Trash className="w-3.5 h-3.5" />
+                      <span>XÓA TOÀN BỘ BẢN DỊCH</span>
                     </button>
 
                     {/* Pagination buttons */}

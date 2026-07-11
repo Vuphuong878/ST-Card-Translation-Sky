@@ -181,15 +181,91 @@ export async function POST(req: NextRequest) {
         : "";
 
     const systemPrompt = `Bạn là một biên dịch viên chuyên nghiệp dịch từ ${sourceLang} sang ${targetLang}.
+
+QUY TẮC BẮT BUỘC:
+1. KHÔNG ĐƯỢC dịch các biến số, nhãn code, thẻ hệ thống, hoặc các cụm từ tiếng Anh chuyên ngành đóng vai trò làm placeholder (ví dụ: 'timing', 'type', 'value0', 'value1', v.v.).
+2. Tuyệt đối giữ nguyên cấu trúc và nội dung của các placeholder nằm trong dấu ngoặc nhọn hoặc dấu ngoặc kép (ví dụ: {timing}, {{type}}, \${value0}).
+3. Nếu toàn bộ chuỗi gốc chỉ gồm các thẻ, biến hoặc ký tự Latin/số (không chứa tiếng Trung), hãy giữ nguyên chuỗi đó mà không dịch.
+
 Phong cách và hướng dẫn dịch bổ sung:
 ${customPrompt || "Dịch tự nhiên, lưu loát, phù hợp với ngữ cảnh ngữ pháp."}
 ${preservationRule}
 
 YÊU CẦU: Không viết lời giải thích, không bọc markdown codeblock trừ phi văn bản gốc là markdown. Chỉ trả về phần kết quả dịch.`;
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // CASE A: Flat String Array — Mortal UI Dictionary batch
+    // Client controls batch size (how many lines per request) and concurrency
+    // (how many requests run in parallel). Backend ALWAYS makes exactly ONE
+    // LLM call per request with the full array. Fallback to per-item only
+    // when LLM returns wrong number of items.
+    // ─────────────────────────────────────────────────────────────────────────
+    if (fileType === "string-array") {
+      let inputArray: string[];
+      try {
+        inputArray = JSON.parse(content);
+        if (!Array.isArray(inputArray)) throw new Error("Not an array");
+      } catch (e: any) {
+        return NextResponse.json({ error: `Invalid string-array format: ${e.message}` }, { status: 400 });
+      }
+
+      if (inputArray.length === 0) {
+        return NextResponse.json({ success: true, translated: "[]", savedPath: "" });
+      }
+
+      const resultArray: string[] = new Array(inputArray.length).fill("");
+
+      const batchPrompt = `${systemPrompt}
+
+Dưới đây là mảng JSON gồm ${inputArray.length} mục cần dịch từ ${sourceLang} sang ${targetLang}.
+Hãy trả về ĐÚNG MỘT mảng JSON với ĐÚNG ${inputArray.length} chuỗi đã dịch theo thứ tự tương ứng.
+KHÔNG thêm bất kỳ giải thích nào — chỉ trả về mảng JSON.`;
+
+      try {
+        const responseText = await callLLM(provider, model, apiKey, batchPrompt, JSON.stringify(inputArray), apiUrl);
+        const cleanText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+        const translated = JSON.parse(cleanText);
+
+        if (Array.isArray(translated) && translated.length === inputArray.length) {
+          // Perfect — use all returned translations
+          for (let j = 0; j < inputArray.length; j++) {
+            resultArray[j] = String(translated[j] ?? inputArray[j]);
+          }
+        } else {
+          // Count mismatch — fallback to per-item individually
+          for (let j = 0; j < inputArray.length; j++) {
+            try {
+              const singleRes = await callLLM(provider, model, apiKey, systemPrompt, inputArray[j], apiUrl);
+              resultArray[j] = singleRes.trim() || inputArray[j];
+            } catch {
+              resultArray[j] = inputArray[j]; // keep original on failure
+            }
+          }
+        }
+      } catch {
+        // Total failure — fallback to per-item individually
+        for (let j = 0; j < inputArray.length; j++) {
+          try {
+            const singleRes = await callLLM(provider, model, apiKey, systemPrompt, inputArray[j], apiUrl);
+            resultArray[j] = singleRes.trim() || inputArray[j];
+          } catch {
+            resultArray[j] = inputArray[j];
+          }
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        translated: JSON.stringify(resultArray),
+        savedPath: "",
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CASE B: JSON File — used by "Dịch Tệp Biến" tab
+    // ─────────────────────────────────────────────────────────────────────────
     let translatedContent = "";
 
-    // ─── CASE 1: JSON File type ───
     if (fileType === "json") {
       let parsedJson: any;
       try {
@@ -252,7 +328,7 @@ YÊU CẦU: Không viết lời giải thích, không bọc markdown codeblock t
         translatedContent = JSON.stringify(parsedJson, null, 2);
       }
     } else {
-      // ─── CASE 2: Text / Markdown / HTML ───
+      // ─── CASE C: Text / Markdown / HTML ───
       // Split content by paragraphs
       const paragraphs = content.split("\n\n");
       const chunks: string[] = [];
