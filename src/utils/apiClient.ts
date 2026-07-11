@@ -1360,6 +1360,7 @@ export async function callProvider(
     id: callId,
     model: lane.model,
     provider: lane.provider,
+    providerId: lane.providerId,
     keyLabel: keyTotal > 1 ? `Key #${keyIndex + 1}/${keyTotal}` : 'Key #1',
     label: meta?.label || 'Đang dịch…',
     startedAt: Date.now(),
@@ -2880,6 +2881,25 @@ export async function translateText(
       console.log(`[translateText] ${fieldName}: Heavy inline CSS/HTML detected (${inlineCssSignals} CSS, ${htmlBodySignals} HTML signals) — using 12K chunk size`);
     } else {
       effectiveChunkSize = 12000; // ~10K tokens output — an toàn cho mọi model
+    }
+  }
+  // ⚡ (Tối ưu lane) Field VĂN BẢN thường + RẤT LỚN + còn dư nhiều lane → chia NHỎ hơn (tới sàn 8K)
+  // để phủ nhiều lane hơn, dịch song song nhanh hơn. Trước đây 1 field 148K chỉ ~10 chunk ⇒ tối đa
+  // 10 lane, dù pool có 72 lane thì 62 lane ngồi không. KHÔNG áp cho code-heavy (chia nhỏ dễ vỡ code)
+  // và giữ nguyên khi user tự đặt chunkSize. Chỉ chia thêm khi số lane > số chunk mặc định.
+  if (!effectiveChunkSize && !isCodeHeavy) {
+    const DEFAULT_CHUNK = 15000; // khớp mặc định chunkText
+    const MIN_CHUNK = 8000;      // sàn — không chia quá vụn (mỗi chunk còn kèm prompt/boundary)
+    const lanes = Math.max(1, parallelChunks || 1);
+    const lenN = maskedText.length;
+    const defaultChunks = Math.ceil(lenN / DEFAULT_CHUNK);
+    if (lenN > DEFAULT_CHUNK * 1.5 && lanes > defaultChunks) {
+      const wantChunks = Math.min(lanes, Math.ceil(lenN / MIN_CHUNK));
+      const adaptive = Math.max(MIN_CHUNK, Math.ceil(lenN / wantChunks));
+      if (adaptive < DEFAULT_CHUNK) {
+        effectiveChunkSize = adaptive;
+        console.log(`[translateText] ${fieldName}: ${lenN} ký tự + ${lanes} lane → chunk ~${adaptive} (~${wantChunks} phần) để phủ nhiều lane hơn`);
+      }
     }
   }
   const chunks = chunkText(maskedText, effectiveChunkSize, config.maxTokens);

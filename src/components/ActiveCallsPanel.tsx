@@ -40,16 +40,26 @@ export default function ActiveCallsPanel() {
   const failures = getLaneFailures();
   const accent = 'var(--accent-secondary)';
 
+  // Đếm call ĐANG CHẠY (in-flight) theo từng lane (providerId+model) → hiện làm số CHÍNH để phân
+  // biệt bận/rảnh. (RPM là cửa sổ 60s tính theo LÚC BẮT ĐẦU call; call chạy >60s rơi khỏi cửa sổ
+  // nên hiện 0/RPM dù VẪN đang chạy → trước đây trông như lane rảnh.)
+  const inFlightMap: Record<string, number> = {};
+  for (const c of activeCalls) {
+    const k = (c.providerId || 'default') + '|' + c.model;
+    inFlightMap[k] = (inFlightMap[k] || 0) + 1;
+  }
+
   // ─── Dựng lanes (provider + model) để hiện RPM tách theo từng provider ───
   const rlKey = (id: string, model: string) => (id === 'default' ? model : `${id}${model}`);
-  type Lane = { providerId: string; providerName: string; model: string; limit: number; used: number; isSecondary: boolean; failCount: number };
+  const flKey = (id: string, model: string) => id + '|' + model;
+  type Lane = { providerId: string; providerName: string; model: string; limit: number; used: number; inFlight: number; isSecondary: boolean; failCount: number };
   const lanes: Lane[] = [];
   const enabledProviders = providers.filter((p) => p.enabled && p.model?.trim());
   const showProviderName = enabledProviders.length > 0; // chỉ hiện tên provider khi có >1 provider
   const addLanes = (id: string, name: string, cfg: { model: string; primaryModelRpm: number; enableSecondaryModel: boolean; secondaryModel: string; secondaryModelRpm: number; apiKey: string; apiKeys: string[] }) => {
     const kc = getUniqueKeyCount(cfg);
-    if (cfg.model) lanes.push({ providerId: id, providerName: name, model: cfg.model, isSecondary: false, limit: (cfg.primaryModelRpm > 0 ? cfg.primaryModelRpm : 5) * kc, used: usage[rlKey(id, cfg.model)] || 0, failCount: failures[rlKey(id, cfg.model)]?.count || 0 });
-    if (cfg.enableSecondaryModel && cfg.secondaryModel?.trim()) lanes.push({ providerId: id, providerName: name, model: cfg.secondaryModel, isSecondary: true, limit: (cfg.secondaryModelRpm > 0 ? cfg.secondaryModelRpm : 17) * kc, used: usage[rlKey(id, cfg.secondaryModel)] || 0, failCount: failures[rlKey(id, cfg.secondaryModel)]?.count || 0 });
+    if (cfg.model) lanes.push({ providerId: id, providerName: name, model: cfg.model, isSecondary: false, limit: (cfg.primaryModelRpm > 0 ? cfg.primaryModelRpm : 5) * kc, used: usage[rlKey(id, cfg.model)] || 0, inFlight: inFlightMap[flKey(id, cfg.model)] || 0, failCount: failures[rlKey(id, cfg.model)]?.count || 0 });
+    if (cfg.enableSecondaryModel && cfg.secondaryModel?.trim()) lanes.push({ providerId: id, providerName: name, model: cfg.secondaryModel, isSecondary: true, limit: (cfg.secondaryModelRpm > 0 ? cfg.secondaryModelRpm : 17) * kc, used: usage[rlKey(id, cfg.secondaryModel)] || 0, inFlight: inFlightMap[flKey(id, cfg.secondaryModel)] || 0, failCount: failures[rlKey(id, cfg.secondaryModel)]?.count || 0 });
   };
   addLanes('default', 'Provider #1', proxy);
   enabledProviders.forEach((p, i) => addLanes(p.id, p.name || `Provider #${i + 2}`, p));
@@ -89,7 +99,10 @@ export default function ActiveCallsPanel() {
       {/* RPM theo từng provider + model (mỗi lane 1 thanh) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: activeCalls.length > 0 ? '10px' : '0' }}>
         {lanes.map((lane) => {
-          const pct = lane.limit > 0 ? Math.min(100, (lane.used / lane.limit) * 100) : 0;
+          // Bar theo số call ĐANG CHẠY (in-flight) để nhìn phát biết lane bận/rảnh, không bị RPM
+          // "cửa sổ 60s" đánh lừa (call chạy lâu rơi khỏi cửa sổ).
+          const pct = lane.limit > 0 ? Math.min(100, (lane.inFlight / lane.limit) * 100) : 0;
+          const laneActiveColor = lane.isSecondary ? '#fbbf24' : accent;
           return (
             <div key={lane.providerId + '|' + lane.model + '|' + (lane.isSecondary ? 's' : 'p')}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.66rem', marginBottom: '3px' }}>
@@ -112,8 +125,19 @@ export default function ActiveCallsPanel() {
                     </span>
                   )}
                 </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', flexShrink: 0 }}>
-                  <Gauge size={10} /> {lane.used}/{lane.limit} RPM
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span
+                    title="Số call ĐANG CHẠY trên lane này ngay lúc này (in-flight). >0 = đang bận."
+                    style={{ display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700, color: lane.inFlight > 0 ? laneActiveColor : 'var(--text-muted)' }}
+                  >
+                    ▶ {lane.inFlight}
+                  </span>
+                  <span
+                    title="RPM: số call BẮT ĐẦU trong 60 giây qua / giới hạn. Chỉ đếm lúc BẮT ĐẦU nên call chạy >60s không còn tính ở đây (nhìn ▶ để biết lane có bận không)."
+                    style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--text-muted)', fontSize: '0.6rem' }}
+                  >
+                    <Gauge size={10} /> {lane.used}/{lane.limit}
+                  </span>
                 </span>
               </div>
               <div className="progress-track" style={{ height: '4px' }}>

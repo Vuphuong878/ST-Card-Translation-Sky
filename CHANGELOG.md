@@ -2,6 +2,16 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.66.0 — Chunk thích ứng theo số lane + panel hiện "▶ đang chạy" 📊⚡
+### ⚡ Chunk thích ứng theo số lane (tận dụng provider rảnh khi dịch field lớn)
+- **Trước:** 1 field lớn (vd 148 KB) chia cố định ~10 phần → dù pool có 72 lane thì cũng chỉ dùng được ~10 lane, 62 lane ngồi không suốt lúc dịch field đó.
+- **Nay:** field **văn bản** rất lớn tự chia **nhỏ hơn** (tới **sàn 8.000 ký tự/phần**) khi pool còn dư lane → phủ nhiều lane hơn, dịch song song **nhanh hơn nhiều**. Chỉ chia thêm khi *số lane > số phần mặc định*; **không** áp cho regex/TavernHelper (chia nhỏ code dễ vỡ cấu trúc); giữ nguyên nếu bạn tự đặt "Ngưỡng ký tự".
+- Kết hợp với HEDGE (1.65): field lớn vừa dùng nhiều lane hơn, vừa được cứu tail-latency.
+
+### 📊 Panel luồng: hiện số call ĐANG CHẠY ("▶ N")
+- **Vấn đề:** thanh RPM đo theo **cửa sổ 60 giây tính từ lúc BẮT ĐẦU** call. Call chạy >60s rơi khỏi cửa sổ → lane hiện **0/17** dù **vẫn đang chạy** → trông như rảnh rỗi, khó biết bận hay không.
+- **Sửa:** mỗi lane giờ hiện **"▶ N"** = số call **đang chạy** ngay lúc đó (xanh khi >0, xám khi 0), kèm **RPM nhỏ** bên cạnh. Nhìn ▶ là biết ngay lane bận hay rảnh, không bị RPM đánh lừa nữa. Thanh tiến trình cũng chạy theo số call đang chạy.
+
 ## v1.65.0 — HEDGE: chunk chậm không còn "kéo lê" cả field ⚡🎯
 - **Vấn đề (bạn hỏi):** dịch 1 field lớn chia ~15 chunk song song, có 3 chunk kẹt **400s+** trên 1 provider, còn các provider khác **đứng đợi** không chạy. Vì sao? Cả 15 chunk đã phát hết (12 xong + 3 kẹt), **không còn việc để giao** cho provider rảnh, mà chunk đang kẹt thì **không được chạy lại** trên lane khác → cả field phải chờ chunk chậm nhất (timeout 1 chunk có thể tới ~25 phút).
 - **Sửa — HEDGE (bản dự phòng, "the tail at scale"):** khi 1 chunk chạy **> 150 giây** (nghi lane/proxy nghẽn), hệ thống tự **bắn thêm 1 bản trên lane KHÁC** (pickLane né lane đang lỗi/nghẽn ⇒ rơi vào provider đang **rảnh**), rồi **lấy bản nào xong trước, huỷ bản kia**. Chunk kẹt 400s giờ được "cứu" bởi provider rảnh trong ~1-2 phút thay vì chờ mãi.
