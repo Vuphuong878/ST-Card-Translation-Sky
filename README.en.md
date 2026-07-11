@@ -9,7 +9,7 @@ Built for **translators** and card makers: translate cards with AI **without bre
 
 Everything runs locally — your **API key is never sent anywhere**, no middleman server.
 
-> 🌏 **Note:** The **Dịch Card** (Translate Card) tool has an **EN ↔ VI** language toggle. The other four tools currently have a Vietnamese-only interface — this README explains what each button does.
+> 🌐 **Language & feedback:** the top **header** (on every tool) has a **UI language switcher — Tiếng Việt / English / 中文** and a **🐞 Report a bug** button (opens a shared bug-report spreadsheet). Dịch Card, Mod Card, Create Preset and the main Create Card panels are fully tri-lingual; the advanced MVU-ZOD Studio panels and Extract Card are still Vietnamese-only for now.
 
 ---
 
@@ -132,6 +132,9 @@ Click **"Gộp thông minh"** (Smart Merge) and the app compares every entry:
 You get a live preview (♻ green = reused, ✏️ amber = needs translating) plus a counter: **"Reused 100 · To translate 10"**. Then click **"Đưa sang Dịch Card"** (Send to Translate Card) → only those 10 new entries get translated. **A huge time saver.**
 
 > The Compare screen also lets you view all 3 versions side by side per entry, **edit and save in place**, and filter to **"only show differences"**.
+
+### 📖 Light vs Full translate
+The **translate config** has two presets: **"📖 Full translate"** and **"⚡ Light translate"** — the latter only translates **keywords + regex + the opening message + card / Lorebook entry names + MVU variable names**, leaving the bulk content in the source language (the AI still reads it and replies in your target language). On heavy MVU cards, Light translate is **several times faster**.
 
 ### 🧠 Consistency
 - **Glossary** — force names and terms to be translated exactly how you want.
