@@ -572,7 +572,7 @@ function ModModePanel() {
 // ═══════════════════════════════════════════════
 
 function TranslationPanel() {
-  const { fields, phase, logs, startTime, translationConfig, preprocessProgress } = useStore();
+  const { fields, phase, logs, startTime, translationConfig, preprocessProgress, deleteCurrentCardCache } = useStore();
   const ui = useUi();
   const { startTranslation, continueTranslation, pauseTranslation, resumeTranslation, cancelTranslation, retryAllErrors, prepareFields } = useTranslation();
   const t = useT();
@@ -733,7 +733,21 @@ function TranslationPanel() {
                 <RotateCcw size={14} /> Retry {errorFields} Error{errorFields > 1 ? 's' : ''}
               </button>
             )}
-            <button className="btn btn-secondary" onClick={() => startTranslation()}>
+            <button
+              className="btn btn-secondary"
+              title="Xoá TOÀN BỘ bản dịch cũ của thẻ này (cả cache trên đĩa + từ điển biến MVU) rồi dịch lại từ đầu."
+              onClick={async () => {
+                // (Fix) Trước đây nút này chỉ gọi startTranslation() — mà prepareFields GIỮ field đã
+                // done + cache đĩa tự khôi phục ⇒ hoá ra là "Continue" trá hình, dịch tiếp từ chỗ cũ.
+                // Nay: xác nhận → xoá sạch bản dịch + cache + từ điển MVU → dịch lại TỪ ĐẦU thật sự.
+                const okToWipe = window.confirm(
+                  'Dịch lại TỪ ĐẦU sẽ XOÁ toàn bộ bản dịch hiện có của thẻ này (kể cả tiến trình đã lưu). Tiếp tục?'
+                );
+                if (!okToWipe) return;
+                await deleteCurrentCardCache();
+                startTranslation();
+              }}
+            >
               <RotateCcw size={14} /> {t.retranslateAll}
             </button>
           </>

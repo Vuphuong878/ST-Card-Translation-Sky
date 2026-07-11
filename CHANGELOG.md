@@ -2,6 +2,11 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.64.1 — Sửa nút "Re-translate All" không dịch lại từ đầu 🔁
+- **Bug:** bấm Cancel rồi **Re-translate All** → vẫn dịch tiếp từ chỗ cũ (vd 88/123). Nguyên nhân: nút chỉ gọi lại Start, mà app **giữ field đã dịch** (thiết kế resume) + **cache tiến trình trên đĩa tự khôi phục** ⇒ hoá ra là "Continue" trá hình.
+- **Sửa:** bấm nút giờ sẽ **hỏi xác nhận** rồi **xoá sạch** bản dịch cũ của thẻ (cả cache trên đĩa + từ điển biến MVU) và dịch lại **từ đầu thật sự** (0/N).
+- Muốn dịch tiếp chỗ dở thì dùng nút **Continue Translation** như cũ.
+
 ## v1.64.0 — Nút "🚀 Dịch siêu tốc" + đèn đỏ lane lỗi 🚀🔴
 ### 🚀 Dịch siêu tốc (nút thứ 3 cạnh Dịch nhẹ / Dịch đầy đủ)
 - **Gom entry thông minh (bin-packing):** entry **NGẮN** được dồn chung **1 call API** (tối đa **12 entry & 10.000 ký tự/lô**, sắp giảm dần rồi nhét First-Fit) và **đi model PHỤ (flash)** — flash RPM cao gấp mấy lần pro và dư sức dịch entry ngắn. Entry **DÀI (>8K ký tự)** để **riêng 1 call, đi model CHÍNH (pro)** — nội dung khó cần chất lượng.
