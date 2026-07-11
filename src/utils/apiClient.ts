@@ -2988,6 +2988,53 @@ export async function translateText(
     let queueIdx = 0; // Shared queue index (safe: JS single-threaded, yields only at await)
     const errors: { idx: number; err: Error }[] = [];
 
+    // ═══ TAIL-LATENCY HEDGE (bản dự phòng cho chunk quá chậm) ═══
+    // Nếu 1 chunk chạy quá lâu (> HEDGE_AFTER_MS — nghi proxy/lane bị nghẽn) → BẮN THÊM 1 bản trên
+    // lane KHÁC (pickLane tự né lane đang lỗi/nghẽn ⇒ thường rơi vào provider đang RẢNH), rồi lấy
+    // bản nào XONG trước, HUỶ bản còn lại. Chỉ 1 lần/chunk + chỉ khi vượt ngưỡng ⇒ chunk bình thường
+    // KHÔNG tốn call kép. Đây chính là lý do trước đây provider rảnh cứ "đứng đợi" khi 1 chunk treo
+    // 400s+: cả 15 chunk đã phát hết, chunk kẹt không được chạy lại trên lane rảnh.
+    const HEDGE_AFTER_MS = 150_000;
+    const translateChunkHedged = async (idx: number, system: string, user: string): Promise<string> => {
+      const spawn = () => {
+        const ctrl = new AbortController();
+        const linked = signal ? AbortSignal.any([signal, ctrl.signal]) : ctrl.signal;
+        const p = translateChunk(
+          chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, linked, isModMode, preferSecondary,
+        );
+        return { ctrl, p };
+      };
+      const a = spawn();
+      let hedgeTimer: ReturnType<typeof setTimeout> | undefined;
+      const hedge = new Promise<'SLOW'>((res) => { hedgeTimer = setTimeout(() => res('SLOW'), HEDGE_AFTER_MS); });
+      const first = await Promise.race([
+        a.p.then((r) => ({ k: 'ok' as const, r })).catch((e) => ({ k: 'err' as const, e })),
+        hedge.then(() => ({ k: 'slow' as const })),
+      ]);
+      if (hedgeTimer) clearTimeout(hedgeTimer);
+      if (first.k === 'ok') return first.r;
+      if (first.k === 'err') throw first.e; // A lỗi TRƯỚC ngưỡng → để tầng trên retry (khỏi hedge)
+      // A vẫn chạy sau ngưỡng → bắn B trên lane khác, đua lấy bản XONG (thành công) trước.
+      const b = spawn();
+      console.log(`[translateText] ${fieldName}: chunk ${idx + 1} > ${HEDGE_AFTER_MS / 1000}s → bắn bản dự phòng (hedge) trên lane khác`);
+      // "bản thành công đầu tiên" — như Promise.any nhưng không cần lib es2021.
+      const firstSuccess = new Promise<string>((resolve, reject) => {
+        let remaining = 2;
+        let firstErr: any;
+        const onErr = (e: any) => { if (firstErr === undefined) firstErr = e; if (--remaining === 0) reject(firstErr); };
+        a.p.then(resolve, onErr);
+        b.p.then(resolve, onErr);
+      });
+      try {
+        const winner = await firstSuccess;
+        a.ctrl.abort('hedge: bản kia đã xong'); b.ctrl.abort('hedge: bản kia đã xong');
+        return winner;
+      } catch (err) {
+        a.ctrl.abort(); b.ctrl.abort();
+        throw err; // cả 2 fail → ném lỗi đầu tiên
+      }
+    };
+
     const worker = async () => {
       while (queueIdx < pendingIndices.length) {
         if (signal?.aborted) return;
@@ -3019,9 +3066,7 @@ export async function translateText(
         );
 
         try {
-          const translated = await translateChunk(
-            chunks[idx], idx, chunks.length, fieldName, config, targetLang, sourceLang, system, user, signal, isModMode, preferSecondary
-          );
+          const translated = await translateChunkHedged(idx, system, user);
           const chunkCleaned = cleanTranslationResponse(chunks[idx], translated, isExpert, true);
           translatedChunks[idx] = chunkCleaned;
           // Structural integrity check for code-heavy chunks

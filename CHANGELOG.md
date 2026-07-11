@@ -2,6 +2,12 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.65.0 — HEDGE: chunk chậm không còn "kéo lê" cả field ⚡🎯
+- **Vấn đề (bạn hỏi):** dịch 1 field lớn chia ~15 chunk song song, có 3 chunk kẹt **400s+** trên 1 provider, còn các provider khác **đứng đợi** không chạy. Vì sao? Cả 15 chunk đã phát hết (12 xong + 3 kẹt), **không còn việc để giao** cho provider rảnh, mà chunk đang kẹt thì **không được chạy lại** trên lane khác → cả field phải chờ chunk chậm nhất (timeout 1 chunk có thể tới ~25 phút).
+- **Sửa — HEDGE (bản dự phòng, "the tail at scale"):** khi 1 chunk chạy **> 150 giây** (nghi lane/proxy nghẽn), hệ thống tự **bắn thêm 1 bản trên lane KHÁC** (pickLane né lane đang lỗi/nghẽn ⇒ rơi vào provider đang **rảnh**), rồi **lấy bản nào xong trước, huỷ bản kia**. Chunk kẹt 400s giờ được "cứu" bởi provider rảnh trong ~1-2 phút thay vì chờ mãi.
+- **Tiết kiệm:** chỉ hedge **1 lần/chunk** và **chỉ khi vượt ngưỡng 150s** ⇒ chunk bình thường (xong trong ~40-100s) **không** tốn call kép.
+- Kết hợp sẵn với: retry→flash (1.59) + đèn đỏ/nghỉ 15s cho lane lỗi (1.64) → provider rảnh luôn được tận dụng.
+
 ## v1.64.4 — Sửa TIẾP nút "Re-translate All" (bản 1.64.1 vẫn hỏng) 🔁
 - **Triệu chứng:** bấm Re-translate All → hiện *"All fields are already translated or skipped"* và báo hoàn thành, **không** dịch lại từ đầu (vẫn 88/88).
 - **Gốc rễ (mới):** bản 1.64.1 đã xoá bản dịch trong store, nhưng hàm dịch lại đọc `store.fields` từ **bản chụp React cũ** (stale closure) — chưa kịp cập nhật ⇒ vẫn thấy toàn field `done` rồi **gộp lại** ⇒ 0 field cần dịch ⇒ báo "đã dịch hết".
