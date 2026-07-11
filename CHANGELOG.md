@@ -2,6 +2,11 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.64.4 — Sửa TIẾP nút "Re-translate All" (bản 1.64.1 vẫn hỏng) 🔁
+- **Triệu chứng:** bấm Re-translate All → hiện *"All fields are already translated or skipped"* và báo hoàn thành, **không** dịch lại từ đầu (vẫn 88/88).
+- **Gốc rễ (mới):** bản 1.64.1 đã xoá bản dịch trong store, nhưng hàm dịch lại đọc `store.fields` từ **bản chụp React cũ** (stale closure) — chưa kịp cập nhật ⇒ vẫn thấy toàn field `done` rồi **gộp lại** ⇒ 0 field cần dịch ⇒ báo "đã dịch hết".
+- **Sửa:** thêm chế độ **freshStart** — khi Re-translate All, bước chuẩn bị **BỎ QUA hẳn** danh sách field cũ, **trích lại từ thẻ** (mọi field `pending`) và dịch từ **0/N**. Không còn phụ thuộc bản chụp cũ.
+
 ## v1.64.3 — Ô Gốc và ô Dịch trong Field Editor cao bằng nhau 📐
 - **Bug:** mỗi hàng, ô **ORIGINAL** và ô **TRANSLATED** cao–thấp lệch nhau → nhìn rối. Nguyên nhân: ô Gốc là `<div>` (cao theo nội dung, cap 120px), ô Dịch là `<textarea rows>` (cao theo số dòng gốc, tới ~172px) — hai công thức khác nhau.
 - **Sửa:** cả hai ô giờ dùng **chung một chiều cao** (2–8 dòng × 20px) nên **luôn thẳng hàng, cao bằng nhau**. Vẫn kéo giãn tay được nếu muốn xem dài hơn. Đã đo kiểm live: mọi hàng (kể cả nội dung nhiều dòng) ô Gốc = ô Dịch từng pixel.

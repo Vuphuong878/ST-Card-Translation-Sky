@@ -753,7 +753,9 @@ function TranslationPanel() {
                 );
                 if (!okToWipe) return;
                 await deleteCurrentCardCache();
-                startTranslation();
+                // freshStart=true ⇒ prepareFields BỎ QUA fields cũ (không đọc store, tránh stale
+                // closure) → dịch lại TỪ ĐẦU thật sự, không báo "all already translated".
+                startTranslation(false, true);
               }}
             >
               <RotateCcw size={14} /> {t.retranslateAll}

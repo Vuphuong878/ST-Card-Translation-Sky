@@ -163,16 +163,20 @@ export function useTranslation() {
    * Prepare fields for translation.
    * If `continueMode` is true, merge new field groups with existing translated fields.
    */
-  const prepareFields = useCallback((continueMode = false) => {
+  const prepareFields = useCallback((continueMode = false, freshStart = false) => {
     if (!store.card) return [];
     const enabledGroups = store.translationConfig.fieldGroups
       .filter((g: FieldGroupConfig) => g.enabled)
       .map((g: FieldGroupConfig) => g.id) as FieldGroup[];
     const newFields = extractTranslatableFields(store.card, enabledGroups);
 
-    // In continue mode: preserve already-done fields from previous runs
+    // In continue mode: preserve already-done fields from previous runs.
+    // freshStart (Re-translate All): KHÔNG gộp — dùng thẳng field mới trích (toàn 'pending') để dịch
+    // lại TỪ ĐẦU. Không đọc store.fields ⇒ tránh lỗi "stale closure" (deleteCurrentCardCache đã xoá
+    // fields trong store nhưng snapshot React của hook chưa cập nhật ⇒ trước đây vẫn thấy fields 'done'
+    // rồi gộp lại ⇒ báo "All fields are already translated" thay vì restart).
     let mergedFields = newFields;
-    if (store.fields.length > 0) {
+    if (!freshStart && store.fields.length > 0) {
       // ALWAYS merge: preserve fields already done/skipped/ignored from store.
       // This respects manual per-field translations AND continue-mode resumptions.
       const existingMap = new Map(store.fields.map(f => [f.path, f]));
@@ -1467,8 +1471,8 @@ export function useTranslation() {
   };
 
   /* ─── Main translation loop ─── */
-  const startTranslation = useCallback(async (continueMode = false) => {
-    const allFields = prepareFields(continueMode);
+  const startTranslation = useCallback(async (continueMode = false, freshStart = false) => {
+    const allFields = prepareFields(continueMode, freshStart);
     if (allFields.length === 0) {
       store.addToast('info', 'No translatable fields found');
       return;
