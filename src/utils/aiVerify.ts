@@ -1,6 +1,46 @@
 import type { CharacterCard, ProxySettings, TranslationField } from '../types/card';
 import { detectStructuralTruncation, callProvider } from './apiClient';
 
+/* ═══ Template-literal interpolation check (sửa bug #2) ═══
+ * Trích các block `${...}` CÂN BẰNG NGOẶC (chịu được lồng nhau `${ `${x}` }`), rồi CHỈ soi những
+ * biến JS THUẦN (định danh / thuộc tính / index số / gọi rỗng — không literal, không toán tử, không
+ * chữ Hán, không HTML). Trả về danh sách biến thuần ở GỐC bị MẤT HẲN khỏi bản dịch (nghi vỡ code).
+ * KHÔNG ghép cặp đoán mò như bản cũ (cũ lấy `${...}` bất kỳ ở bản dịch rồi bảo "gốc X dịch thành Y"
+ * dù không liên quan), KHÔNG đụng chuỗi literal ('怪物'→'Quái Vật' là đúng) hay biến MVU đổi tên
+ * (类型→Loại — covariance lo). */
+export function extractBalancedInterpolations(text: string): string[] {
+  const out: string[] = [];
+  if (!text) return out;
+  for (let i = 0; i < text.length - 1; i++) {
+    if (text[i] === '$' && text[i + 1] === '{') {
+      let depth = 1, j = i + 2;
+      while (j < text.length && depth > 0) {
+        if (text[j] === '{') depth++;
+        else if (text[j] === '}') depth--;
+        j++;
+      }
+      if (depth === 0) { out.push(text.slice(i, j)); i = j - 1; }
+    }
+  }
+  return out;
+}
+
+/** Biến JS THUẦN: `foo`, `obj.prop`, `arr[0]`, `obj.fn()` — KHÔNG toán tử/nháy/khoảng trắng-chữ/Hán. */
+export function isPureCodeInterpolation(inner: string): boolean {
+  return /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\d+\]|\(\))*$/.test(inner.trim());
+}
+
+/** Biến JS thuần ở GỐC bị mất hẳn khỏi bản dịch → nghi bị xoá/đổi nhầm (chỉ đây mới đáng cảnh báo). */
+export function findMissingCodeInterpolations(orig: string, translated: string): string[] {
+  const missing: string[] = [];
+  for (const expr of new Set(extractBalancedInterpolations(orig))) {
+    const inner = expr.slice(2, -1).trim();
+    if (!isPureCodeInterpolation(inner)) continue;      // bỏ literal / ternary / HTML / biến-Hán
+    if (!translated.includes(inner)) missing.push(expr); // biến thuần biến mất → nghi vỡ
+  }
+  return missing;
+}
+
 /* ═══ Types ═══ */
 
 export interface VerifyIssue {
@@ -1124,54 +1164,28 @@ export function verifyFields(
       }
     }
 
-    // ─── 13. Template literal interpolation content (B11 verification) ───
+    // ─── 13. Template literal interpolation: chỉ bắt BIẾN JS THUẦN bị mất ───
+    // (Sửa bug #2) Bản CŨ sai nặng: (a) regex `\${[^}]+}` KHÔNG parse được `${}` lồng nhau
+    // (template literal HTML phức tạp) nên trích cụt/sai; (b) "ghép mò" — lấy BẤT KỲ `${...}` nào
+    // ở bản dịch không trùng gốc rồi báo "gốc X đã dịch thành Y" dù X,Y chẳng liên quan; (c) không
+    // phân biệt CHUỖI literal ('怪物'→'Quái Vật' là ĐÚNG) với biến MVU đổi tên có chủ đích
+    // (类型→Loại) → báo lỗi oan tràn lan cho thứ không cần/không phải "chưa dịch".
+    // Bản MỚI: trích `${...}` CÂN BẰNG NGOẶC, và CHỈ soi biến JS THUẦN (định danh/thuộc tính, không
+    // literal, không ternary, không Hán, không HTML). Nếu 1 biến thuần ASCII ở gốc biến MẤT HẲN khỏi
+    // bản dịch → cảnh báo (warning). Tuyệt đối KHÔNG ghép cặp đoán mò, KHÔNG động tới chuỗi literal
+    // hay biến MVU đổi tên (đã có covariance lo).
     if (field.group === 'tavern_helper' || field.group === 'regex' || field.group === 'lorebook') {
-      // Extract ${...} expressions from template literals
-      const origInterpolations = (orig.match(/\$\{[^}]+\}/g) || []);
-      const transInterpolations = (currentAutoFix.match(/\$\{[^}]+\}/g) || []);
-      
-      if (origInterpolations.length > 0) {
-        const origSet = new Set(origInterpolations);
-        const transSet = new Set(transInterpolations);
-        
-        for (const expr of origSet) {
-          if (!transSet.has(expr)) {
-            // Check if the content was translated (variable name changed)
-            const innerOrig = expr.slice(2, -1).trim();
-            const possibleTranslated = [...transSet].find(te => {
-              const innerTrans = te.slice(2, -1).trim();
-              return !origSet.has(te) && innerTrans.length > 0;
-            });
-            
-            if (possibleTranslated) {
-              issues.push({
-                id: crypto.randomUUID(), fieldPath: field.path,
-                severity: 'error', category: 'template_literal_content',
-                location: field.label,
-                description: `Template interpolation ${expr} was translated to ${possibleTranslated}. JS expressions inside \${} must NOT be translated.`,
-                original: expr,
-                current: possibleTranslated,
-                suggestion: `Restore ${expr} — template literal expressions are JavaScript code.`,
-                autoFixable: false,
-              });
-            } else if (!innerOrig.match(/^['"`]/) && innerOrig.length > 1) {
-              // Only flag if it's not a string literal and not found at all
-              const found = transInterpolations.some(te => te.includes(innerOrig));
-              if (!found) {
-                issues.push({
-                  id: crypto.randomUUID(), fieldPath: field.path,
-                  severity: 'warning', category: 'template_literal_content',
-                  location: field.label,
-                  description: `Template interpolation ${expr} not found in translation. Verify it wasn't accidentally removed or translated.`,
-                  original: expr,
-                  current: '(missing)',
-                  suggestion: `Check that ${expr} is preserved in the translated template literal.`,
-                  autoFixable: false,
-                });
-              }
-            }
-          }
-        }
+      for (const expr of findMissingCodeInterpolations(orig, currentAutoFix)) {
+        issues.push({
+          id: crypto.randomUUID(), fieldPath: field.path,
+          severity: 'warning', category: 'template_literal_content',
+          location: field.label,
+          description: `Biến JS ${expr} trong template literal không còn thấy ở bản dịch — kiểm tra xem có bị xoá/đổi nhầm không.`,
+          original: expr,
+          current: '(missing)',
+          suggestion: `Giữ nguyên ${expr} — đây là mã JavaScript, không dịch.`,
+          autoFixable: false,
+        });
       }
     }
 

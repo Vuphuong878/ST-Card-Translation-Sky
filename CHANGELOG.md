@@ -2,6 +2,13 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.60.0 — Sửa bug #2: Kiểm tra lỗi dịch báo oan "Template Literal" 🧯
+> Từ báo lỗi #2: panel **Kiểm tra lỗi dịch** ở mục template literal báo lỗi loạn — "không so cái đã dịch mà đi so chỗ chẳng liên quan", và báo cả cho thứ không cần dịch.
+- **Gốc rễ:** bộ kiểm cũ dùng regex `${[^}]+}` **không parse được `${}` lồng nhau** (template literal HTML phức tạp) nên trích cụt; rồi **ghép cặp đoán mò** — lấy *bất kỳ* `${...}` nào ở bản dịch không trùng gốc và tuyên bố "gốc `${bodyStateStr…}` đã dịch thành `${enemies[k]['Loại']…}`" dù hai cái chẳng liên quan. Nó cũng không phân biệt **chuỗi literal** (`'怪物'`→`'Quái Vật'` là ĐÚNG) với **biến MVU đổi tên có chủ đích** (`类型`→`Loại`), nên báo "chưa dịch / dịch sai" oan cho hàng loạt thứ đúng.
+- **Sửa:** trích `${...}` **cân bằng ngoặc** (chịu được lồng nhau), và **chỉ soi biến JS THUẦN** (định danh/thuộc tính/index/gọi rỗng — không literal, không ternary, không HTML, không chữ Hán). Chỉ khi một biến thuần ở gốc **mất hẳn** khỏi bản dịch mới cảnh báo (warning). Bỏ hoàn toàn kiểu ghép cặp đoán mò.
+- *Kết quả:* các ca trong ảnh báo lỗi (`'怪物'`→`'Quái Vật'`, `enemies[k].类型`→`['Loại']`, `_.get(edata, '基础信息…')`→`'Thông tin cơ bản…'`) **không còn bị báo lỗi**; biến JS bị xoá thật vẫn bắt được.
+- *Kỹ thuật:* tách logic ra 3 hàm thuần (`extractBalancedInterpolations`, `isPureCodeInterpolation`, `findMissingCodeInterpolations`) + 9 test hồi quy lấy đúng fixture từ ảnh báo lỗi. tsc + **134 test** + build xanh.
+
 ## v1.59.0 — Tăng tốc: retry đẩy xuống model phụ (flash) ⚡
 > Từ quan sát live khi dịch card MVU nặng: model chính (pro) RPM thấp (vd 3/phút) + là model *thinking* nên mỗi call chậm; các entry `initvar`/`controller` phải thử lại nhiều lần trên đúng lane pro chậm đó, trong khi **RPM của model phụ (flash) ngồi không** (0/17). 1 card 83 field mất ~40 phút.
 - **Sửa:** mỗi lần **thử lại** 1 field (bộ gác chữ Hán bắt còn tiếng Trung, kết quả rỗng/ngắn, hoặc lỗi mạng/timeout) nay **tự chọn lane model phụ (flash)** thay vì xếp hàng lại lane pro. Lượt **đầu tiên vẫn dùng pro** để giữ chất lượng; chỉ phần *retry* mới xuống flash.
