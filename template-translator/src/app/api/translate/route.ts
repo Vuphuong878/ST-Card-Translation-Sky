@@ -161,6 +161,7 @@ export async function POST(req: NextRequest) {
       apiUrl,
       saveToWorkspace = true,
       workspaceSessionName = "",
+      chunkSize = 20,
     } = body;
 
     if (!content) {
@@ -203,9 +204,9 @@ YÊU CẦU: Không viết lời giải thích, không bọc markdown codeblock t
         translatedContent = content; // Nothing to translate
       } else {
         // Chunk translatable leaves (e.g. 20 leaves per prompt call)
-        const chunkSize = 20;
-        for (let i = 0; i < leaves.length; i += chunkSize) {
-          const chunk = leaves.slice(i, i + chunkSize);
+        const currentChunkSize = Number(chunkSize) || 20;
+        for (let i = 0; i < leaves.length; i += currentChunkSize) {
+          const chunk = leaves.slice(i, i + currentChunkSize);
           const valuesToTranslate = chunk.map((c) => c.value);
 
           const jsonPrompt = `${systemPrompt}\n\nYêu cầu: Hãy dịch mảng JSON chứa các chuỗi sau và trả về kết quả dưới dạng mảng các chuỗi dịch chính xác theo thứ tự, giữ nguyên cấu trúc JSON (định dạng mảng string). KHÔNG viết thêm bất kỳ từ giải thích nào ngoài mảng JSON này.`;
