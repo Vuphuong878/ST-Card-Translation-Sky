@@ -2,5 +2,5 @@
 // BUMP `APP_VERSION` on every fix so builds are distinguishable in the UI (shown in the
 // sidebar header). Use the patch number for small fixes; keep `APP_VERSION_NOTE` to a one-line
 // summary of the most recent change (shown on hover).
-export const APP_VERSION = '1.64.2';
-export const APP_VERSION_NOTE = 'SỬA: cứ dịch xong 1 entry là màn hình bị GIẬT XUỐNG (auto-scroll) — do log dùng scrollIntoView() nên trình duyệt kéo cả trang xuống để lộ hộp log mỗi khi có dòng log mới. Nay hộp log CHỈ tự cuộn NỘI BỘ trong khung của nó (không đụng scroll trang), và chỉ dính đáy khi bạn đang xem dòng mới nhất — cuộn lên đọc/theo dõi chỗ khác thì không bị giật nữa. | 1.64.1: nút Re-translate All giờ dịch lại TỪ ĐẦU thật (hỏi xác nhận rồi xoá bản dịch cũ). | 1.64: nút 🚀 Dịch siêu tốc (gom entry ngắn 1 call → model phụ) + đèn đỏ lane lỗi. | 1.63: sửa bug #3 TavernHelper 148KB nằm im. | 1.62: nút 🐞 Báo lỗi.';
+export const APP_VERSION = '1.64.3';
+export const APP_VERSION_NOTE = 'SỬA: trong Field Editor, ô GỐC và ô DỊCH của mỗi hàng cao–thấp lệch nhau (ô Gốc là <div> cao theo nội dung, ô Dịch là <textarea> cao theo số dòng gốc). Nay cả hai LUÔN cao bằng nhau (dùng chung 1 công thức chiều cao 2–8 dòng), nhìn thẳng hàng; vẫn kéo giãn tay được. | 1.64.2: hết giật trang xuống khi dịch xong mỗi entry (log chỉ cuộn nội bộ). | 1.64.1: Re-translate All dịch lại TỪ ĐẦU thật. | 1.64: nút 🚀 Dịch siêu tốc + đèn đỏ lane lỗi. | 1.63: sửa bug #3 TavernHelper 148KB nằm im.';

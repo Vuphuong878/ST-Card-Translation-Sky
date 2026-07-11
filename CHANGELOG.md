@@ -2,6 +2,10 @@
 
 > Cách cập nhật: mở thư mục cài đặt, chạy `git pull origin main`, rồi **tắt hẳn và chạy lại `start.bat`** (không chỉ F5).
 
+## v1.64.3 — Ô Gốc và ô Dịch trong Field Editor cao bằng nhau 📐
+- **Bug:** mỗi hàng, ô **ORIGINAL** và ô **TRANSLATED** cao–thấp lệch nhau → nhìn rối. Nguyên nhân: ô Gốc là `<div>` (cao theo nội dung, cap 120px), ô Dịch là `<textarea rows>` (cao theo số dòng gốc, tới ~172px) — hai công thức khác nhau.
+- **Sửa:** cả hai ô giờ dùng **chung một chiều cao** (2–8 dòng × 20px) nên **luôn thẳng hàng, cao bằng nhau**. Vẫn kéo giãn tay được nếu muốn xem dài hơn. Đã đo kiểm live: mọi hàng (kể cả nội dung nhiều dòng) ô Gốc = ô Dịch từng pixel.
+
 ## v1.64.2 — Hết giật màn hình xuống mỗi khi dịch xong 1 entry 🧷
 - **Bug:** đang dịch, cứ xong 1 entry là **view bị kéo xuống** khung log (khó theo dõi Card Preview / Field Editor / chỗ khác).
 - **Nguyên nhân:** hộp log tự cuộn bằng `scrollIntoView()` — lệnh này khiến trình duyệt cuộn **cả trang** để đưa hộp log vào tầm nhìn, mỗi khi thêm 1 dòng log (mỗi entry xong).
